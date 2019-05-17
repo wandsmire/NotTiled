@@ -1,0 +1,14 @@
+{
+properties: [
+			{
+				name: type
+				type: String
+				value: clearobjects
+			}
+			{
+				name: objectgroup
+				type: String
+				value: 0
+			}
+		]
+}

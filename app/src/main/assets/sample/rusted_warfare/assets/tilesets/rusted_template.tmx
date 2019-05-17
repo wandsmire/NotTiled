@@ -1,0 +1,29 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+<map version="1.2" orientation="orthogonal" renderorder="right-down" width="40" height="40" tilewidth="20" tileheight="20" nextobjectid="2">
+  <tileset source="terrain/Long Grass.tsx" firstgid="1" />
+  <tileset source="ridges/LongGrass Dirt - Flat.tsx" firstgid="41" />
+  <tileset source="units.tsx" firstgid="62" />
+  <tileset source="misc.tsx" firstgid="341" />
+  <layer name="Ground" width="40" height="40">
+    <data encoding="base64" compression="gzip">
+   H4sIAAAAAAAAAO3DAQkAAAwEofv+pddjKLhqqqqqqqqqjx7+ij1jABkAAA==
+  </data>
+  </layer>
+  <layer name="Items" width="40" height="40">
+    <data encoding="base64" compression="gzip">
+   H4sIAAAAAAAAAO3YOwrAMAyDYeeQTV/p/a9RjV4KBRciyv+BB28CL8IRqFpaRNeszTPHpn3XHJPzPeU4tQ/NNTmfSw4AAPC93JNculuWe5JLd8tyT3LsTNy3xv2+AADgH1x6Gj/UGpccb91X8QZGABkAAA==
+  </data>
+  </layer>
+  <layer name="Units" width="40" height="40">
+    <data encoding="base64" compression="gzip">
+   H4sIAAAAAAAAAO3OMQ0AIAwAwYrDEGLQgE0sdGmakrv5h4+YZ3UPkLa7BwAAAADgEyfZ3dILmOMBeiHkLwAZAAA=
+  </data>
+  </layer>
+  <objectgroup name="Triggers">
+    <object name="map-info" type="" id="1" x="80" y="140" width="20" height="20">
+      <properties>
+        <property name="type" type="String" value="skirmish" />
+      </properties>
+    </object>
+  </objectgroup>
+</map>
