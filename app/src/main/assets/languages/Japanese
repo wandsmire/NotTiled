@@ -158,4 +158,5 @@ exportfinished:"Export finished"
 resizetiles:"Resize tiles"
 fontsize:"Font size"
 loadingfiles:"NotTiledはファイルをロードしています、\nしばらくお待ちください"
+exporttolua:"Export to Lua"
 }

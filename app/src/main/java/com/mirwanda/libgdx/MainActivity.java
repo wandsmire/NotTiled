@@ -12,7 +12,7 @@ import javax.annotation.*;
 import org.solovyev.android.checkout.*;
 
 import com.mirwanda.nottiled.BuildConfig;
-//import com.google.android.gms.ads.*;//
+import com.google.android.gms.ads.*;//
 
 
 public class MainActivity extends AndroidApplication implements Interface
@@ -29,10 +29,10 @@ public class MainActivity extends AndroidApplication implements Interface
 	private ActivityCheckout mCheckout;
 	private static final String AD_FREE = "adfree";
 	boolean proVersion = false;
-	/*
+	/**/
 	public AdView adView;//
 	private InterstitialAd mInterstitialAd;//
-	*/
+	/**/
 	
 	@Override
 	public void showinterstitial(){
@@ -40,7 +40,7 @@ public class MainActivity extends AndroidApplication implements Interface
 				@Override
 				public void run() {
 					if (proVersion) return;
-					//mInterstitialAd.show();//
+					mInterstitialAd.show();//
 				}
 			});
 	}
@@ -51,7 +51,7 @@ public class MainActivity extends AndroidApplication implements Interface
 		runOnUiThread(new Runnable() {
 				@Override
 				public void run() {
-					/*
+					/**/
 					if (proVersion) 
 					{
 						adView.setVisibility(View.GONE);
@@ -63,7 +63,7 @@ public class MainActivity extends AndroidApplication implements Interface
 					{
 						adView.setVisibility(View.GONE);
 					}
-					*/
+					/**/
 				}
 			});
 	}
@@ -136,8 +136,8 @@ public class MainActivity extends AndroidApplication implements Interface
 		if (intent.getData()!=null) intend=intent.getData().toString();
 		
         AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
-		initialize(new MyGdxGame(intend,this), cfg);
-		/*
+		//initialize(new MyGdxGame(intend,this), cfg);
+		/**/
 		
 		RelativeLayout layout = new RelativeLayout(this);
 
@@ -200,7 +200,7 @@ public class MainActivity extends AndroidApplication implements Interface
 		
         // Hook it all up
         setContentView(layout);
-		*/
+		/**/
 		
     }
 }

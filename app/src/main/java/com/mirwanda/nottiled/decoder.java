@@ -79,6 +79,7 @@ public class decoder
 		{
 			layer l = layers.get(index);
 			byte[] b = new byte[l.getStr().size()*4];
+			//byte[] b = new byte[l.getStr().size()];
 			for (int i = 0; i < l.getStr().size(); i++)
 			{ 
 			 	String s = "00000000"+Long.toHexString(l.getStr().get(i));
@@ -95,14 +96,20 @@ public class decoder
 				b[i*4+2]=(byte) ig[1];
 				b[i*4+3]=(byte) ig[0];
 			} 
+			//byte[] output= new byte[l.getStr().size()];
 			byte[] output= new byte[l.getStr().size()*4];
+			
 			Deflater compresser = new Deflater();
 			compresser.setInput(b);
 			compresser.finish();
 			int compressedDataLength = compresser.deflate(output);
 			compresser.end();
-
-			String nyoy = Base64.encodeToString(output,Base64.NO_WRAP);
+			byte[] outputcut = new byte[compressedDataLength];
+			for (int x=0;x<compressedDataLength;x++)
+			{
+				outputcut[x]=output[x];
+			}
+			String nyoy = Base64.encodeToString(outputcut,Base64.NO_WRAP);
 			return nyoy;
 		}
 		catch (Exception e)

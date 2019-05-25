@@ -3641,138 +3641,236 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener
 	}
 	private void exporttolua()
 	{
-		com.badlogic.gdx.utils.StringBuilder sb=new com.badlogic.gdx.utils.StringBuilder();
-		sb.appendLine("return{");
-		sb.appendLine("  version = \"1.2\",")
-		.appendLine("  luaversion = \"5.1\",")
-		.appendLine("  tiledversion = \"1.2.3\",")
-		.appendLine("  orientation = \""+orientation+"\",")
-		.appendLine("  renderorder = \""+renderorder+"\",")
-		.appendLine("  width = "+Tw+",")
-		.appendLine("  height = "+Th+",")
-		.appendLine("  tilewidth = "+Tsw+",")
-		.appendLine("  tileheight = "+Tsh+",")
-		.appendLine("  nextlayerid = "+layers.size()+",")
-		.appendLine("  nextobjectid = "+curid+",");
+		StringBuilderPlus sb=new StringBuilderPlus();
+		sb.wlo("return{");
+		sb.wl("version = \"1.2\",");
+		sb.wl("luaversion = \"5.1\",");
+		sb.wl("tiledversion = \"1.2.3\",");
+		sb.wl("orientation = \""+orientation+"\",");
+		sb.wl("renderorder = \""+renderorder+"\",");
+		sb.wl("width = "+Tw+",");
+		sb.wl("height = "+Th+",");
+		sb.wl("tilewidth = "+Tsw+",");
+		sb.wl("tileheight = "+Tsh+",");
+		sb.wl("nextlayerid = "+(1+layers.size()+objgroups.size())+",");
+		sb.wl("nextobjectid = "+curid+",");
+		sb.wprop(properties);
 		
-		java.util.List<property> pr=properties;
-		if (pr.size()>0){
-		sb.appendLine("  properties = {");
-		for(int i=0;i<pr.size();i++)
-		{
-			property p=pr.get(i);
-			sb.append("    [\""+p.getName()+"\"] = \""+p.getValue()+"\"");
-			if (i!=pr.size()-1) sb.appendLine(",");
-		}
-		sb.appendLine("  },");
-		}else
-		{
-			sb.appendLine("  properties = {},");
-		}
-		
-		sb.appendLine("  tilesets = {");
+		sb.wlo("tilesets = {");
 		for(int n=0;n<tilesets.size();n++)
 		{
 			tileset t=tilesets.get(n);
-			sb.appendLine("    {");
-			sb.appendLine("      name = \""+t.getName()+"\",")
-				.appendLine("      firstgid = "+t.getFirstgid()+",")
-				.appendLine("      tilewidth = "+t.getTilewidth()+",")
-				.appendLine("      tileheight = "+t.getTileheight()+",")
-				.appendLine("      spacing = "+t.getSpacing()+",")
-				.appendLine("      margin = "+t.getMargin()+",")
-				.appendLine("      columns = "+t.getColumns()+",")
-				.appendLine("      tilecount = "+t.getTilecount()+",")
-				.appendLine("      image = \""+t.getSource()+"\",")
-				.appendLine("      imagewidth = "+t.getOriginalwidth()+",")
-				.appendLine("      imageheight = "+t.getOriginalheight()+",")
-				.appendLine("      tileoffset = {\n        x = 0,\n        y = 0\n      },")
-				.appendLine("      grid = {\n        orientation = \""+orientation+"\",\n        width = "+Tsw+", \n        height = "+Tsh+"\n      },");
-				
-			pr=tilesets.get(n).getProperties();
-			if (pr.size()>0){
-				sb.appendLine("      properties = {");
-				for(int i=0;i<pr.size();i++)
-				{
-					property p=pr.get(i);
-					sb.append("        [\""+p.getName()+"\"] = \""+p.getValue()+"\"");
-					if (i!=pr.size()-1) sb.appendLine(",");
-				}
-				sb.appendLine("      },");
-			}else
-			{
-				sb.appendLine("      properties = {},");
-			}
+			sb.wlo("{");//tileset inside
+			sb.wl("name = \""+t.getName()+"\",");
+			sb.wl("firstgid = "+t.getFirstgid()+",");
+			sb.wl("tilewidth = "+t.getTilewidth()+",");
+			sb.wl("tileheight = "+t.getTileheight()+",");
+			sb.wl("spacing = "+t.getSpacing()+",");
+			sb.wl("margin = "+t.getMargin()+",");
+			sb.wl("columns = "+t.getColumns()+",");
+			sb.wl("tilecount = "+t.getTilecount()+",");
+			sb.wl("image = \""+t.getSource()+"\",");
+			sb.wl("imagewidth = "+t.getOriginalwidth()+",");
+			sb.wl("imageheight = "+t.getOriginalheight()+",");
+			sb.wl("tileoffset = {\n        x = 0,\n        y = 0\n      },");
+			sb.wl("grid = {\n        orientation = \""+orientation+"\",\n        width = "+Tsw+", \n        height = "+Tsh+"\n      },");
+			sb.wprop(tilesets.get(n).getProperties());
+			sb.wl("terrains = {},");
 			
-			sb.appendLine("      terrains = {},");
-			sb.appendLine("      tiles = {}");
-			sb.append("    }");
-			if (n!=tilesets.size()-1) {
-				sb.appendLine(",");
+			if(tilesets.get(n).getTiles().size()!=0)
+			{
+				sb.wlo("tiles = {");//tiles
+				for (int m=0;m<tilesets.get(n).getTiles().size();m++)
+				{
+					tile tt=tilesets.get(n).getTiles().get(m);
+					sb.wlo("{");//tile
+					sb.wl("id = "+tt.getTileID()+",");
+					sb.wprop(tt.getProperties());
+					
+					if (tt.getAnimation().size()>0)
+					{
+						sb.wlo("animation = {");
+						for (int am=0;am<tt.getAnimation().size();am++)
+						{
+							sb.wlo("{");
+							sb.wl("tileid = "+tt.getAnimation().get(am).getTileID()+",");
+							sb.wl("duration = "+tt.getAnimation().get(am).getDuration());
+							
+							if (am!=tt.getAnimation().size()-1){
+								sb.wlc("},");
+							}else{
+								sb.wlc("}");
+							}
+						}
+						sb.wlc("}");
+					}
+					
+					
+					if (m!=tilesets.get(n).getTiles().size()-1){
+						sb.wlc("},");
+					}else{
+						sb.wlc("}");
+					}
+				}
+				sb.wlc("}");
 			}else{
-				sb.appendLine("");
+			sb.wl("tiles = {}");}
+			
+			if (n!=tilesets.size()-1) {
+				sb.wlc("},");//tileset inside
+			}else{
+				sb.wlc("}");//tileset inside
 			}
 		}
-		sb.appendLine("  },");
+		sb.wlc("},"); //tileset;
 		
-		sb.appendLine("  layers = {");
+		sb.wlo("layers = {");//layers
+		
+		//tilelayers
 		for(int n=0;n<layers.size();n++)
 		{
 			layer l=layers.get(n);
-			sb.appendLine("    {");
-			sb.appendLine("      type = \"tilelayer\",")
-				.appendLine("      id = "+n+",")
-				.appendLine("      name = \""+l.getName()+"\",")
-				.appendLine("      x = 0,")
-				.appendLine("      y = 0,")
-				.appendLine("      width = "+Tw+",")
-				.appendLine("      height = "+Th+",")
-				.appendLine("      visible = true,");
+			sb.wlo("{");//tile layer
+			sb.wl("type = \"tilelayer\",");
+			sb.wl("id = "+(n+1)+",");
+			sb.wl("name = \""+l.getName()+"\",");
+			sb.wl("x = 0,");
+			sb.wl("y = 0,");
+			sb.wl("width = "+Tw+",");
+			sb.wl("height = "+Th+",");
+			sb.wl("visible = true,");
 				
-				if (l.getOpacity()==0)
-				{
-					sb.appendLine("      opacity = 1,");
-				}else
-				{
-					sb.appendLine("      opacity = "+l.getOpacity()+",");
-				}
-				sb.appendLine("      offsetx = 0,")
-				.appendLine("      offsety = 0,");
-				
-			pr=layers.get(n).getProperties();
-			if (pr.size()>0){
-				sb.appendLine("      properties = {");
-				for(int i=0;i<pr.size();i++)
-				{
-					property p=pr.get(i);
-					sb.append("        [\""+p.getName()+"\"] = \""+p.getValue()+"\"");
-					if (i!=pr.size()-1) sb.appendLine(",");
-				}
-				sb.appendLine("      },");
-			}else
-			{
-				sb.appendLine("      properties = {},");
+			if (l.getOpacity()==0){
+				sb.wl("opacity = 1,");
+			}else{
+				sb.wl("opacity = "+l.getOpacity()+",");
 			}
-
-			sb.appendLine("      encoding = \"lua\",");
-			sb.appendLine("      data = {");
+			
+			sb.wl("offsetx = 0,");
+			sb.wl("offsety = 0,");
+			sb.wprop(layers.get(n).getProperties());
+			sb.wl("encoding = \"lua\",");
+			sb.wlo("data = {");
+			
 			for (int k=0;k<Th;k++)
 			{
-				sb.append("        ");
+				sb.w("        ");
 				for (int j=0;j<Tw;j++)
 				{
 					sb.append(l.getStr().get(k*Tw+j));
 					if (!(k==Th-1 && j==Tw-1)) sb.append(", ");
 				}
-				sb.appendLine("");
+				sb.wl("");
 			}
-			sb.appendLine("      }");
-			sb.appendLine("    },");
+			sb.wlc("}");//data
+			
+			if (n!=layers.size()-1) {
+				sb.wlc("},");//tilelayer
+			}else{
+				if (objgroups.size()>0){
+				sb.wlc("},");//tilelayer
+				}else
+				{
+					sb.wlc("}");//tilelayer
+				}
+			}
 		}
 		
-		sb.appendLine("  },");
+		//objectgroups
+		for(int n=0;n<objgroups.size();n++)
+		{
+			objgroup l=objgroups.get(n);
+			sb.wlo("{");//tile layer
+			sb.wl("type = \"objectgroup\",");
+			int nid=n+layers.size()+1;
+			sb.wl("id = "+nid+",");
+			sb.wl("name = \""+l.getName()+"\",");
+			sb.wl("visible = true,");
+			sb.wl("opacity = 1,");
+			sb.wl("offsetx = 0,");
+			sb.wl("offsety = 0,");
+			sb.wl("draworder = \"topdown\",");
+			sb.wl("properties ={},");
+			
+			if (l.getObjects().size()>0)
+			{
+				sb.wlo("objects = {");
+				for (int ao=0;ao<l.getObjects().size();ao++)
+				{
+					obj oo=l.getObjects().get(ao);
+					sb.wlo("{");
+					sb.wl("id = "+oo.getId()+",");
+					sb.wl("name = \""+oo.getName()+"\",");
+					sb.wl("type = \""+oo.getType()+"\",");
+					if (oo.getShape()=="")
+					{
+						sb.wl("shape = \"rectangle\",");
+						
+					}else
+					{
+						sb.wl("shape = \""+oo.getShape()+"\",");
+					}
+					sb.wl("x = "+oo.getX()+",");
+					sb.wl("y = "+oo.getY()+",");
+					
+					if (oo.getShape().equalsIgnoreCase("point"))
+					{
+						sb.wl("width = 0,");
+						sb.wl("height = 0,");
+						
+					}else
+					{
+						sb.wl("width = "+oo.getW()+",");
+						sb.wl("height = "+oo.getH()+",");
+						
+					}
+					sb.wl("rotation = "+oo.getRotation()+",");
+					sb.wl("visible = true,");
+					if (oo.getShape().equalsIgnoreCase("polygon")||oo.getShape().equalsIgnoreCase("polyline"))
+					{
+						sb.wlo(oo.getShape() + " = {");
+						for (int ok=0;ok<oo.getPoints().size();ok++)
+						{
+							float xar = oo.getPoints().get(ok).getX();
+							float yar = oo.getPoints().get(ok).getY();
+							if (ok!=oo.getPoints().size()-1){
+								sb.wl("{ x = "+xar+", y = "+yar+" },");
+							}else{
+								sb.wl("{ x = "+xar+", y = "+yar+" }");
+							}
+						}
+						sb.wlc("},");
+					}
+					
+					sb.wprop(oo.getProperties());
+					
+					if (ao !=l.getObjects().size())
+					{
+						sb.wlc("},");
+					}else
+					{
+						sb.wlc("}");
+					}
+					
+				}
+				sb.wlc("}");//objects
+			}else
+			{
+				sb.wl("objects = {}");
+			}
+			
+
+			if (n!=objgroups.size()-1) {
+				sb.wlc("},");//tilelayer
+			}else{
+				sb.wlc("}");//tilelayer
+			}
+		}
 		
-		sb.appendLine("}");
+		
+		sb.wlc("}");//layers
+		sb.wlc("}");//map
+		
 		FileHandle fh = Gdx.files.absolute(curdir+"/"+curfile.substring(0,curfile.length()-4)+".lua");
 		fh.writeString(sb.toString(),false);
 		backToMap();
@@ -10075,7 +10173,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener
 								if ((numa + xx + (yy * Tw)) % Tw >= numa % Tw)
 								{
 									
-									 int nyum= num + xx + (yy * Tw);
+									 int nyum= numa + xx + (yy * Tw);
 									 if (nyum >= Tw*Th) continue;
 									 int orinyum= mapstartSelect + xx + (yy * Tw);
 									 oi= layers.get(jo).getStr().get(orinyum);
@@ -11102,6 +11200,63 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener
 					prefs.putBoolean("showtools",showtools).flush();
 					return true;
 				}
+				
+				if (tapped(touch2,gui.map))
+				{
+					if (mode=="object"||mode=="tile")
+					{
+						saveMap(curdir+"/"+curfile);
+						msgbox(z.yourmaphasbeensaved);
+						return true;
+					}
+
+				}
+				
+				if (tapped(touch2,gui.menu))
+				{
+					if (mode=="object"||mode=="tile")
+					{
+						FileDialog(z.opentmxfile,"open","file",new String[]{".tmx"},null);
+						return true;
+					}
+
+				}
+				
+				if (tapped(touch2,gui.rotation))
+
+				{
+					if (mode=="tile")
+					{
+
+						rotate -= 1;
+						if (rotate == -1)
+						{
+							rotate = 6;
+						}
+						String nfo= "0";
+						switch (rotate)
+						{
+							case 0:
+								nfo = "0"; break;
+							case 1:
+								nfo = "90"; break;
+							case 2:
+								nfo = "180"; break;
+							case 3:
+								nfo = "270"; break;
+							case 4:
+								nfo = z.x;break;
+							case 5:
+								nfo = z.y;break;
+							case 6:
+								nfo = z.x+z.y;break;
+						}
+						rotationName=nfo;
+						return true;
+					}
+
+				}
+				
 				if (tapped(touch2,gui.layer))
 				{
 					loadList("layer");

@@ -5316,5 +5316,1294 @@ autotiles: [
 			}
 		]
 	}
+	{
+		name: Concrete
+		properties: [
+			{
+				name: type
+				type: String
+				value: completion
+			}
+			{
+				name: source
+				type: String
+				value: 4608
+			}
+			{
+				name: sourcelayer
+				type: String
+				value: 3
+			}
+			{
+				name: destlayer
+				type: String
+				value: 0
+			}
+		]
+	}
+	{
+		name: Stonetile
+		properties: [
+			{
+				name: type
+				type: String
+				value: completion
+			}
+			{
+				name: source
+				type: String
+				value: 4983
+			}
+			{
+				name: sourcelayer
+				type: String
+				value: 3
+			}
+			{
+				name: destlayer
+				type: String
+				value: 0
+			}
+		]
+	}
+	{
+		name: Concrete - Sand
+		properties: [
+			{
+				name: type
+				type: String
+				value: bitmask
+			}
+			{
+				name: source
+				type: String
+				value: 4608
+			}
+			{
+				name: sourcelayer
+				type: String
+				value: 3
+			}
+			{
+				name: destlayer
+				type: String
+				value: 0
+			}
+			{
+				name: against
+				type: String
+				value: 504
+			}
+			{
+				name: topleft
+				type: String
+				value: 4658
+			}
+			{
+				name: topright
+				type: String
+				value: 4660
+			}
+			{
+				name: bottomleft
+				type: String
+				value: 4702
+			}
+			{
+				name: bottomright
+				type: String
+				value: 4704
+			}
+			{
+				name: top
+				type: String
+				value: 4659
+			}
+			{
+				name: left
+				type: String
+				value: 4680
+			}
+			{
+				name: right
+				type: String
+				value: 4682
+			}
+			{
+				name: bottom
+				type: String
+				value: 4703
+			}
+			{
+				name: center
+				type: String
+				value: 4608
+			}
+			{
+				name: bigtopleft
+				type: String
+				value: 4879
+			}
+			{
+				name: bigtopright
+				type: String
+				value: 4880
+			}
+			{
+				name: bigbottomleft
+				type: String
+				value: 4901
+			}
+			{
+				name: bigbottomright
+				type: String
+				value: 4902
+			}
+			{
+				name: topleftbottomright
+				type: String
+				value: 0
+			}
+			{
+				name: toprightbottomleft
+				type: String
+				value: 0
+			}
+			{
+				name: hidden
+				type: String
+			}
+		]
+	}
+	{
+		name: Concrete - Mountain
+		properties: [
+			{
+				name: type
+				type: String
+				value: bitmask
+			}
+			{
+				name: source
+				type: String
+				value: 4608
+			}
+			{
+				name: sourcelayer
+				type: String
+				value: 3
+			}
+			{
+				name: destlayer
+				type: String
+				value: 0
+			}
+			{
+				name: against
+				type: String
+				value: 469
+			}
+			{
+				name: topleft
+				type: String
+				value: 4727
+			}
+			{
+				name: topright
+				type: String
+				value: 4729
+			}
+			{
+				name: bottomleft
+				type: String
+				value: 4771
+			}
+			{
+				name: bottomright
+				type: String
+				value: 4773
+			}
+			{
+				name: top
+				type: String
+				value: 4728
+			}
+			{
+				name: left
+				type: String
+				value: 4749
+			}
+			{
+				name: right
+				type: String
+				value: 4751
+			}
+			{
+				name: bottom
+				type: String
+				value: 4772
+			}
+			{
+				name: center
+				type: String
+				value: 4750
+			}
+			{
+				name: bigtopleft
+				type: String
+				value: 4750
+			}
+			{
+				name: bigtopright
+				type: String
+				value: 4750
+			}
+			{
+				name: bigbottomleft
+				type: String
+				value: 4750
+			}
+			{
+				name: bigbottomright
+				type: String
+				value: 4750
+			}
+			{
+				name: topleftbottomright
+				type: String
+				value: 0
+			}
+			{
+				name: toprightbottomleft
+				type: String
+				value: 0
+			}
+			{
+				name: hidden
+				type: String
+			}
+		]
+	}
+	{
+		name: Concrete - Dirt
+		properties: [
+			{
+				name: type
+				type: String
+				value: bitmask
+			}
+			{
+				name: source
+				type: String
+				value: 4608
+			}
+			{
+				name: sourcelayer
+				type: String
+				value: 3
+			}
+			{
+				name: destlayer
+				type: String
+				value: 0
+			}
+			{
+				name: against
+				type: String
+				value: 334
+			}
+			{
+				name: topleft
+				type: String
+				value: 4585
+			}
+			{
+				name: topright
+				type: String
+				value: 4587
+			}
+			{
+				name: bottomleft
+				type: String
+				value: 4629
+			}
+			{
+				name: bottomright
+				type: String
+				value: 4631
+			}
+			{
+				name: top
+				type: String
+				value: 4586
+			}
+			{
+				name: left
+				type: String
+				value: 4607
+			}
+			{
+				name: right
+				type: String
+				value: 4609
+			}
+			{
+				name: bottom
+				type: String
+				value: 4630
+			}
+			{
+				name: center
+				type: String
+				value: 4608
+			}
+			{
+				name: bigtopleft
+				type: String
+				value: 4608
+			}
+			{
+				name: bigtopright
+				type: String
+				value: 4608
+			}
+			{
+				name: bigbottomleft
+				type: String
+				value: 4608
+			}
+			{
+				name: bigbottomright
+				type: String
+				value: 4608
+			}
+			{
+				name: topleftbottomright
+				type: String
+				value: 0
+			}
+			{
+				name: toprightbottomleft
+				type: String
+				value: 0
+			}
+			{
+				name: hidden
+				type: String
+			}
+		]
+	}
+	{
+		name: Concrete - Grass
+		properties: [
+			{
+				name: type
+				type: String
+				value: bitmask
+			}
+			{
+				name: source
+				type: String
+				value: 4608
+			}
+			{
+				name: sourcelayer
+				type: String
+				value: 3
+			}
+			{
+				name: destlayer
+				type: String
+				value: 0
+			}
+			{
+				name: against
+				type: String
+				value: 429
+			}
+			{
+				name: topleft
+				type: String
+				value: 4671
+			}
+			{
+				name: topright
+				type: String
+				value: 4673
+			}
+			{
+				name: bottomleft
+				type: String
+				value: 4715
+			}
+			{
+				name: bottomright
+				type: String
+				value: 4717
+			}
+			{
+				name: top
+				type: String
+				value: 4672
+			}
+			{
+				name: left
+				type: String
+				value: 4693
+			}
+			{
+				name: right
+				type: String
+				value: 4695
+			}
+			{
+				name: bottom
+				type: String
+				value: 4716
+			}
+			{
+				name: center
+				type: String
+				value: 4608
+			}
+			{
+				name: bigtopleft
+				type: String
+				value: 4611
+			}
+			{
+				name: bigtopright
+				type: String
+				value: 4612
+			}
+			{
+				name: bigbottomleft
+				type: String
+				value: 4633
+			}
+			{
+				name: bigbottomright
+				type: String
+				value: 4634
+			}
+			{
+				name: topleftbottomright
+				type: String
+				value: 0
+			}
+			{
+				name: toprightbottomleft
+				type: String
+				value: 0
+			}
+			{
+				name: hidden
+				type: String
+			}
+		]
+	}
+	{
+		name: Concrete - Stone
+		properties: [
+			{
+				name: type
+				type: String
+				value: bitmask
+			}
+			{
+				name: source
+				type: String
+				value: 4608
+			}
+			{
+				name: sourcelayer
+				type: String
+				value: 3
+			}
+			{
+				name: destlayer
+				type: String
+				value: 0
+			}
+			{
+				name: against
+				type: String
+				value: 640
+			}
+			{
+				name: topleft
+				type: String
+				value: 4790
+			}
+			{
+				name: topright
+				type: String
+				value: 4792
+			}
+			{
+				name: bottomleft
+				type: String
+				value: 4834
+			}
+			{
+				name: bottomright
+				type: String
+				value: 4836
+			}
+			{
+				name: top
+				type: String
+				value: 4791
+			}
+			{
+				name: left
+				type: String
+				value: 4812
+			}
+			{
+				name: right
+				type: String
+				value: 4814
+			}
+			{
+				name: bottom
+				type: String
+				value: 4835
+			}
+			{
+				name: center
+				type: String
+				value: 4608
+			}
+			{
+				name: bigtopleft
+				type: String
+				value: 4608
+			}
+			{
+				name: bigtopright
+				type: String
+				value: 4608
+			}
+			{
+				name: bigbottomleft
+				type: String
+				value: 4608
+			}
+			{
+				name: bigbottomright
+				type: String
+				value: 4608
+			}
+			{
+				name: topleftbottomright
+				type: String
+				value: 0
+			}
+			{
+				name: toprightbottomleft
+				type: String
+				value: 0
+			}
+			{
+				name: hidden
+				type: String
+			}
+		]
+	}
+	{
+		name: Concrete - Water
+		properties: [
+			{
+				name: type
+				type: String
+				value: bitmask
+			}
+			{
+				name: source
+				type: String
+				value: 4608
+			}
+			{
+				name: sourcelayer
+				type: String
+				value: 3
+			}
+			{
+				name: destlayer
+				type: String
+				value: 0
+			}
+			{
+				name: against
+				type: String
+				value: 546
+			}
+			{
+				name: topleft
+				type: String
+				value: 4724
+			}
+			{
+				name: topright
+				type: String
+				value: 4726
+			}
+			{
+				name: bottomleft
+				type: String
+				value: 4768
+			}
+			{
+				name: bottomright
+				type: String
+				value: 4770
+			}
+			{
+				name: top
+				type: String
+				value: 4725
+			}
+			{
+				name: left
+				type: String
+				value: 4746
+			}
+			{
+				name: right
+				type: String
+				value: 4748
+			}
+			{
+				name: bottom
+				type: String
+				value: 4769
+			}
+			{
+				name: center
+				type: String
+				value: 4608
+			}
+			{
+				name: bigtopleft
+				type: String
+				value: 4730
+			}
+			{
+				name: bigtopright
+				type: String
+				value: 4731
+			}
+			{
+				name: bigbottomleft
+				type: String
+				value: 4752
+			}
+			{
+				name: bigbottomright
+				type: String
+				value: 4753
+			}
+			{
+				name: topleftbottomright
+				type: String
+				value: 0
+			}
+			{
+				name: toprightbottomleft
+				type: String
+				value: 0
+			}
+			{
+				name: hidden
+				type: String
+			}
+		]
+	}
+	{
+		name: Concrete - Lava
+		properties: [
+			{
+				name: type
+				type: String
+				value: bitmask
+			}
+			{
+				name: source
+				type: String
+				value: 4608
+			}
+			{
+				name: sourcelayer
+				type: String
+				value: 3
+			}
+			{
+				name: destlayer
+				type: String
+				value: 0
+			}
+			{
+				name: against
+				type: String
+				value: 418
+			}
+			{
+				name: topleft
+				type: String
+				value: 4661
+			}
+			{
+				name: topright
+				type: String
+				value: 4663
+			}
+			{
+				name: bottomleft
+				type: String
+				value: 4705
+			}
+			{
+				name: bottomright
+				type: String
+				value: 4707
+			}
+			{
+				name: top
+				type: String
+				value: 4662
+			}
+			{
+				name: left
+				type: String
+				value: 4683
+			}
+			{
+				name: right
+				type: String
+				value: 4685
+			}
+			{
+				name: bottom
+				type: String
+				value: 4706
+			}
+			{
+				name: center
+				type: String
+				value: 4608
+			}
+			{
+				name: bigtopleft
+				type: String
+				value: 4730
+			}
+			{
+				name: bigtopright
+				type: String
+				value: 4731
+			}
+			{
+				name: bigbottomleft
+				type: String
+				value: 4752
+			}
+			{
+				name: bigbottomright
+				type: String
+				value: 4753
+			}
+			{
+				name: topleftbottomright
+				type: String
+				value: 0
+			}
+			{
+				name: toprightbottomleft
+				type: String
+				value: 0
+			}
+			{
+				name: hidden
+				type: String
+			}
+		]
+	}
+	{
+		name: Concrete - Snow
+		properties: [
+			{
+				name: type
+				type: String
+				value: bitmask
+			}
+			{
+				name: source
+				type: String
+				value: 4608
+			}
+			{
+				name: sourcelayer
+				type: String
+				value: 3
+			}
+			{
+				name: destlayer
+				type: String
+				value: 0
+			}
+			{
+				name: against
+				type: String
+				value: 553
+			}
+			{
+				name: topleft
+				type: String
+				value: 4793
+			}
+			{
+				name: topright
+				type: String
+				value: 4795
+			}
+			{
+				name: bottomleft
+				type: String
+				value: 4837
+			}
+			{
+				name: bottomright
+				type: String
+				value: 4839
+			}
+			{
+				name: top
+				type: String
+				value: 4794
+			}
+			{
+				name: left
+				type: String
+				value: 4815
+			}
+			{
+				name: right
+				type: String
+				value: 4817
+			}
+			{
+				name: bottom
+				type: String
+				value: 4838
+			}
+			{
+				name: center
+				type: String
+				value: 4608
+			}
+			{
+				name: bigtopleft
+				type: String
+				value: 4676
+			}
+			{
+				name: bigtopright
+				type: String
+				value: 4677
+			}
+			{
+				name: bigbottomleft
+				type: String
+				value: 4698
+			}
+			{
+				name: bigbottomright
+				type: String
+				value: 4699
+			}
+			{
+				name: topleftbottomright
+				type: String
+				value: 0
+			}
+			{
+				name: toprightbottomleft
+				type: String
+				value: 0
+			}
+			{
+				name: hidden
+				type: String
+			}
+		]
+	}
+	{
+		name: Stonetile - Lava
+		properties: [
+			{
+				name: type
+				type: String
+				value: bitmask
+			}
+			{
+				name: source
+				type: String
+				value: 4983
+			}
+			{
+				name: sourcelayer
+				type: String
+				value: 3
+			}
+			{
+				name: destlayer
+				type: String
+				value: 0
+			}
+			{
+				name: against
+				type: String
+				value: 418
+			}
+			{
+				name: topleft
+				type: String
+				value: 4892
+			}
+			{
+				name: topright
+				type: String
+				value: 4891
+			}
+			{
+				name: bottomleft
+				type: String
+				value: 4870
+			}
+			{
+				name: bottomright
+				type: String
+				value: 4869
+			}
+			{
+				name: top
+				type: String
+				value: 5002
+			}
+			{
+				name: left
+				type: String
+				value: 4981
+			}
+			{
+				name: right
+				type: String
+				value: 4979
+			}
+			{
+				name: bottom
+				type: String
+				value: 4958
+			}
+			{
+				name: center
+				type: String
+				value: 4983
+			}
+			{
+				name: bigtopleft
+				type: String
+				value: 5003
+			}
+			{
+				name: bigtopright
+				type: String
+				value: 5001
+			}
+			{
+				name: bigbottomleft
+				type: String
+				value: 4959
+			}
+			{
+				name: bigbottomright
+				type: String
+				value: 4957
+			}
+			{
+				name: topleftbottomright
+				type: String
+				value: 0
+			}
+			{
+				name: toprightbottomleft
+				type: String
+				value: 0
+			}
+			{
+				name: hidden
+				type: String
+			}
+		]
+	}
+	{
+		name: Stonetile - Dirt
+		properties: [
+			{
+				name: type
+				type: String
+				value: bitmask
+			}
+			{
+				name: source
+				type: String
+				value: 4983
+			}
+			{
+				name: sourcelayer
+				type: String
+				value: 3
+			}
+			{
+				name: destlayer
+				type: String
+				value: 0
+			}
+			{
+				name: against
+				type: String
+				value: 334
+			}
+			{
+				name: topleft
+				type: String
+				value: 4874
+			}
+			{
+				name: topright
+				type: String
+				value: 4873
+			}
+			{
+				name: bottomleft
+				type: String
+				value: 4852
+			}
+			{
+				name: bottomright
+				type: String
+				value: 4851
+			}
+			{
+				name: top
+				type: String
+				value: 4940
+			}
+			{
+				name: left
+				type: String
+				value: 4919
+			}
+			{
+				name: right
+				type: String
+				value: 4917
+			}
+			{
+				name: bottom
+				type: String
+				value: 4896
+			}
+			{
+				name: center
+				type: String
+				value: 4983
+			}
+			{
+				name: bigtopleft
+				type: String
+				value: 4941
+			}
+			{
+				name: bigtopright
+				type: String
+				value: 4939
+			}
+			{
+				name: bigbottomleft
+				type: String
+				value: 4897
+			}
+			{
+				name: bigbottomright
+				type: String
+				value: 4895
+			}
+			{
+				name: topleftbottomright
+				type: String
+				value: 0
+			}
+			{
+				name: toprightbottomleft
+				type: String
+				value: 0
+			}
+			{
+				name: hidden
+				type: String
+			}
+		]
+	}
+	{
+		name: Plowed Ground
+		properties: [
+			{
+				name: type
+				type: String
+				value: completion
+			}
+			{
+				name: source
+				type: String
+				value: 4991
+			}
+			{
+				name: sourcelayer
+				type: String
+				value: 3
+			}
+			{
+				name: destlayer
+				type: String
+				value: 0
+			}
+		]
+	}
+	{
+		name: Plowed Ground - Others
+		properties: [
+			{
+				name: type
+				type: String
+				value: bitmask
+			}
+			{
+				name: source
+				type: String
+				value: 4991
+			}
+			{
+				name: sourcelayer
+				type: String
+				value: 3
+			}
+			{
+				name: destlayer
+				type: String
+				value: 0
+			}
+			{
+				name: against
+				type: String
+				value: 429
+			}
+			{
+				name: topleft
+				type: String
+				value: 4968
+			}
+			{
+				name: topright
+				type: String
+				value: 4970
+			}
+			{
+				name: bottomleft
+				type: String
+				value: 5012
+			}
+			{
+				name: bottomright
+				type: String
+				value: 5014
+			}
+			{
+				name: top
+				type: String
+				value: 4969
+			}
+			{
+				name: left
+				type: String
+				value: 4990
+			}
+			{
+				name: right
+				type: String
+				value: 4992
+			}
+			{
+				name: bottom
+				type: String
+				value: 5013
+			}
+			{
+				name: center
+				type: String
+				value: 4991
+			}
+			{
+				name: bigtopleft
+				type: String
+				value: 4993
+			}
+			{
+				name: bigtopright
+				type: String
+				value: 4994
+			}
+			{
+				name: bigbottomleft
+				type: String
+				value: 5015
+			}
+			{
+				name: bigbottomright
+				type: String
+				value: 5016
+			}
+			{
+				name: topleftbottomright
+				type: String
+				value: 0
+			}
+			{
+				name: toprightbottomleft
+				type: String
+				value: 0
+			}
+			{
+				name: hidden
+				type: String
+			}
+			{
+				name: against2
+				type: String
+				value: 469
+			}
+			{
+				name: against3
+				type: String
+				value: 640
+			}
+			{
+				name: against4
+				type: String
+				value: 504
+			}
+		]
+	}
 ]
 }

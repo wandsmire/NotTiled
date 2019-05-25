@@ -158,4 +158,5 @@ exportfinished:"Export finished"
 resizetiles:"Resize tiles"
 fontsize:"taille de police"
 loadingfiles:"NotTiled charge les fichiers, \nveuillez patienter"
+exporttolua:"Export to Lua"
 }
