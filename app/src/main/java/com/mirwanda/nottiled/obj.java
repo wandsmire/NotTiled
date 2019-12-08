@@ -287,7 +287,7 @@ public float getYantingelag(float f){
 }
 	
 	
-private class point{
+public class point{
 	private float x;
 	private float y;
 	
