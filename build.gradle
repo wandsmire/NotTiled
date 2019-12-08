@@ -7,11 +7,13 @@ buildscript {
         mavenCentral()
         //snapshot repository (in case this script depends on snapshot/prerelease artifacts)
         maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
+        google()
+        jcenter()
     }
     //Defines the artifacts this script depends on, e.g. the android plugin
     dependencies {
         //Adds the android gradle plugin as a dependency of this buildscript
-        classpath 'com.android.tools.build:gradle:1.+'
+        classpath 'com.android.tools.build:gradle:3.5.3'
     }
 }
 
@@ -19,8 +21,6 @@ buildscript {
 allprojects {
     //Defines gradle plugins used by all projects.
     //A plugin extends gradle with additional tasks, configurations, etc., with defaults set according to conventions.
-    apply plugin: "eclipse"
-    apply plugin: "idea"
 
     //Version of your game
     version = "1.0"
@@ -41,5 +41,7 @@ allprojects {
         mavenCentral()
         maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
         maven { url "https://oss.sonatype.org/content/repositories/releases/" }
+        google()
+        jcenter()
     }
 }
