@@ -1,0 +1,19 @@
+{
+properties: [
+			{
+				name: credits
+				type: String
+				value: 100
+			}
+			{
+				name: team
+				type: String
+				value: 2
+			}
+{
+				name: allyGroup
+				type: String
+				value:0
+			}
+		]
+}

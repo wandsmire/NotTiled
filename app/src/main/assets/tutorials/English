@@ -1,0 +1,70 @@
+{
+T: [
+	{
+		name: 01 Getting started
+		steps: [
+			{
+				text: "Welcome to Not Tiled, I'll explain some of the basic so that you can quickly get a graps on this app. First, let's make a new file. Click the menu button on the bottom left corner"
+				trigger: welcome
+			}
+			{
+				text: "Good job! now, click on New File button"
+				trigger: menu
+			}
+			{
+				text: "Okay! you can set your tile size and map size here, change the map size to 50 to 50, and then click the Create new File button"
+				trigger: new
+			}
+			{
+				text: "Great! You should see an empty map on your screen. Before you begin working, you need to add tileset. Tileset is a collection of images that you can use for your drawing. Click the button in the bottom center."
+				trigger: newmap
+			}
+			{
+				text: "Well done! to add a new tileset, click on Add new tileset button"
+				trigger: tilepick
+			}
+			{
+				text: Nice! Find tilesets that match your tile size. You can find some in Not tiled folder in your SD card.
+				trigger: addtileset
+			}
+			{
+				text: Awesome! now choose any tile that you want to use.
+				trigger: tilesetadded
+			}
+			{
+				text: "Good! you've got your tileset ready, put it on your map. Click the center of the screen."
+				trigger: tilepickclick
+			}
+			{
+				text: "Well done! let's change the tile, click to tile selection button again."
+				trigger: tileclick
+			}
+			{
+				text: Pick whichever you like.
+				trigger: tilepick
+			}
+			{
+				text: "Well, you know the drill."
+				trigger: tilepickclick
+			}
+			{
+				text: "Great! You are a fast learner! anyway, don't forget to save your map, click on the menu button one more time"
+				trigger: tileclick
+			}
+			{
+				text: Click on the save button
+				trigger: menu
+			}
+			{
+				text: "Fantastic! now you know the basic. Thank you and have fun using Not Tiled! If you need more tutorials, find it on the main menu."
+				trigger: save
+			}
+			{
+				text: ""
+				trigger: end
+			}
+		]
+	}
+	
+]
+}

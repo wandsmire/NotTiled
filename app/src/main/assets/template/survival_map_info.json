@@ -1,0 +1,30 @@
+{
+properties: [
+			{
+				name: fog
+				type: String
+				value: map
+			}
+			{
+				name: introText
+				type: String
+				value: "Protect the Command Center"
+			}
+			{
+				name: loseCondition
+				type: String
+				value: commandCenter
+			}
+			{
+				name: type
+				type: String
+				value: survival
+			}
+			{
+				name: winCondition
+				type: String
+				value: none
+			}
+		
+		]
+}
