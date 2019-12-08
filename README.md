@@ -31,12 +31,7 @@ Still not implemented yet:
 
 This app is far from perfect and is under active development. Updates will be delivered each week. My goal is to make NotTiled a free, robust, and bug free tiled map editor for everyone.
 
-I rarely read reviews, so please contact me via email or discord if you found bugs/errors or if you have any suggestions. Thank you.
-
-For you information, ads are shown only on the menu (not on the main UI), and when saving. In app purchase is used only for donation (which will remove ads). There is no pay wall in the app, all features is available for everyone.
-
-
-Link: 
+Link: <br>
 <a href="https://play.google.com/store/apps/details?id=com.mirwanda.nottiled">Download on Playstore</a><br>
 <a href="https://www.youtube.com/channel/UCbH_vLnWmCxgwW3UUApnVfg">Tutorials in Youtube channels</a><br>
 <a href="https://www.mirwanda.com">Main website</a><br>
