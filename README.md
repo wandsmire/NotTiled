@@ -33,6 +33,6 @@ This app is far from perfect and is under active development. Updates will be de
 
 Link: <br>
 <a href="https://play.google.com/store/apps/details?id=com.mirwanda.nottiled">Download on Playstore</a><br>
-<a href="https://www.youtube.com/channel/UCbH_vLnWmCxgwW3UUApnVfg">Tutorials in Youtube channels</a><br>
+<a href="https://www.youtube.com/channel/UCbH_vLnWmCxgwW3UUApnVfg">Tutorials in the Youtube channel</a><br>
 <a href="https://www.mirwanda.com">Main website</a><br>
 <a href="https://www.patreon.com/wandsmire">Patreon</a><br>
