@@ -1869,7 +1869,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener
 				
 				if (layers.get(jo).getOpacity()!=0 && sEnableBlending){
 					Gdx.gl.glEnable(GL10.GL_BLEND);
-					Gdx.gl.glBlendFunc(GL10.GL_SRC_ALPHA, GL10.GL_ONE_MINUS_SRC_ALPHA);
+					Gdx.gl.glBlendFunc(GL10.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 					batch.setColor(1,1,1,layers.get(jo).getOpacity());
 				}
 				drawers.clear();
@@ -3635,6 +3635,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener
 				@Override
 				public void changed(ChangeEvent event, Actor actor)
 				{
+					try{
 					loadingfile=true;
 					errors=" ";
 					if (fImportWidth.getText().equalsIgnoreCase(""))
@@ -3669,6 +3670,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener
 					seltset=tilesets.size()-1;
 					onToPicker();
 					recenterpick();
+					}
+					catch(Exception e)
+					{
+						loadingfile=false;
+						onToPicker();
+					}
 				}
 			});
 		
@@ -7947,6 +7954,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener
 					if (frompick)
 					{
 						onToPicker();
+						lastStage=nullTable;
 					}else{
 						gotoStage(tTsetMgmt);
 					}
@@ -8132,6 +8140,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener
 					if (frompick)
 					{
 						onToPicker();
+						lastStage=nullTable;
 					}else{
 						gotoStage(tTsetMgmt);
 					}
@@ -8271,6 +8280,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener
 					if (frompick)
 					{
 						onToPicker();
+						lastStage=nullTable;
 					}else{
 						gotoStage(tTsetMgmt);
 					}
@@ -8546,7 +8556,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener
 					try
 					{
 						FileHandle file;
-	
+						exitDialog(exitpoint);
 						if (fileordir.equalsIgnoreCase("file")){
 						file = getFile();
 							
@@ -8572,7 +8582,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener
 						}
 						
 						
-						exitDialog(exitpoint);
+						
 					}
 					catch (Exception e)
 					{
@@ -10662,7 +10672,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener
 			frompick=true;
 			if (kartu.equalsIgnoreCase("tile")){
 				if (tapped(touch2,gui.tool1)){
-					FileDialog(z.selectfile,"quickaddtset","file",new String[]{".tsx",".png",".jpg",".jpeg",".bmp",".gif"},tImport);
+					FileDialog(z.selectfile,"quickaddtset","file",new String[]{".tsx",".png",".jpg",".jpeg",".bmp",".gif"},nullTable);
 					return true;
 				}
 			
@@ -10736,12 +10746,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener
 					tilesets.remove(seltset);
 					if(tilesets.size()>0)
 					{
-						seltset-=1;
+						if (seltset!=0) seltset-=1;
 						recenterpick();
 					}else
 					{
 						seltset=0;
 					}
+					CacheAllTset();
 					return true;
 				}
 			
@@ -10811,7 +10822,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener
 				
 				
 			}else{
-				FileDialog(z.selectfile,"quickaddtset","file",new String[]{".tsx",".png",".jpg",".jpeg",".bmp",".gif"},tImport);
+				FileDialog(z.selectfile,"quickaddtset","file",new String[]{".tsx",".png",".jpg",".jpeg",".bmp",".gif"},nullTable);
 				cue("addtileset");
 			}
 			return true;
@@ -12891,7 +12902,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener
 				}
 				if (tapped(touch2,gui.picker))
 				{
-					FileDialog(z.selectfile,"quickaddtset","file",new String[]{".tsx",".png",".jpg",".jpeg",".bmp",".gif"},tImport);
+					FileDialog(z.selectfile,"quickaddtset","file",new String[]{".tsx",".png",".jpg",".jpeg",".bmp",".gif"},nullTable);
 					return true;
 				}
 					if (tilesets.size()==0) return true;
