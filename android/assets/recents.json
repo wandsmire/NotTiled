@@ -1,0 +1,24 @@
+{
+paths: [
+	NotTiled/sample/level1.tmx
+	NotTiled/sample/template/NotTiled Platformer/template.tmx
+	NotTiled/sample/level5.tmx
+	NotTiled/sample/template/Pixel Editor/template.tmx
+	NotTiled/map01.tmx
+	NotTiled/sample/Other examples/isometric.tmx
+	"NotTiled//notes.tmx"
+	"NotTiled//musictest.tmx"
+	NotTiled/notes.tmx
+	NotTiled/musictest.tmx
+	"NotTiled//map01.tmx"
+	NotTiled/sample/template/Rusted Warfare/template.tmx
+	NotTiled/sample/Map01.tmx
+	NotTiled/Isoplastic_material-EOR-v0.2/GAME_1.tmx
+	NotTiled/Isoplastic_material-EOR-v0.2/GAME_0.tmx
+	NotTiled/Isoplastic_material-EOR-v0.2/GAME_2.tmx
+	NotTiled/Isoplastic_material-EOR-v0.2/GAME_5.tmx
+	NotTiled/sample/musictest.tmx
+	RustedWarfare/maps/Map01.tmx
+	NotTiled/sample/island.tmx
+]
+}

@@ -1,0 +1,24 @@
+{
+properties: [
+			{
+				name: globalMessage
+				type: String
+				value: "Unit found!"
+			}
+			{
+				name: maxUnit
+				type: String
+				value: 0
+			}
+			{
+				name: showonMap
+				type: String
+				value: true
+			}
+			{
+				name: team
+				type: String
+				value: -1
+			}
+		]
+}

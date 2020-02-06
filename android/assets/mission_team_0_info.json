@@ -1,0 +1,14 @@
+{
+properties: [
+			{
+				name: credits
+				type: String
+				value: 10000
+			}
+			{
+				name: team
+				type: String
+				value: 0
+			}
+		]
+}

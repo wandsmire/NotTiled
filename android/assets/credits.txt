@@ -1,0 +1,37 @@
+l>NotTiled Credits
+m>Developer
+s>WandsMire
+m>Patrons
+s>Luke (Rusted Warfare developer)
+m>Contributors
+s>Reik-RTS
+s>Jose
+s>Ralsei (General Airon)
+s>Tstis
+s>PoLLeN
+s>RT1_JMJS
+s>KusVoSlavuSatane
+m>Translators
+s>WandsMire (English & Bahasa)
+s>Paon (Japanese)
+s>PasteK (French)
+s>Reik-RTS Youtube (Spanish)
+s>Tstis (Russian & Ukraine)
+s>General Airon (Tagalog)
+s>RT1_JMJS (Chinese)
+s>Mustafa Hilmi Pehlivanlı (Turkish)
+m>Credits for Ruby & Kitty
+s>Music by www.bensound.com
+s>Background by RavenTale
+m>Credits for Music Composer
+s>Samples adapted from LMMS
+m>Special thanks to
+s>Thorbjorn Lindeijer
+s>Luke
+s>VIP Janta 
+s>Rusted Warfare community
+s>All NotTiled users
+s>Contact me if you think I should put you name here :)
+
+
+

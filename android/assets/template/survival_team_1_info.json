@@ -1,0 +1,19 @@
+{
+properties: [
+{
+				name: ai
+				type: String
+				value: survival
+			}
+			{
+				name: credits
+				type: String
+				value: 1000
+			}
+			{
+				name: team
+				type: String
+				value: 1
+			}
+		]
+}
