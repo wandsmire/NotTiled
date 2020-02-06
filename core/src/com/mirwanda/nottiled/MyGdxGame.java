@@ -4847,7 +4847,7 @@ String texta="";
                 saveMap(curdir + "/" + curfile);
                 cue("save");
                 msgbox(z.yourmaphasbeensaved);
-                face.showinterstitial();
+                if (!bypassads) face.showinterstitial();
             }
         });
 

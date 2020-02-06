@@ -547,7 +547,7 @@ public class game {
                 }
             }
         }
-//        checkpoint.set(player.b2body.getPosition().x,player.b2body.getPosition().y);
+        checkpoint.set(player.b2body.getPosition().x,player.b2body.getPosition().y);
         victory=false;
             return false;
 
