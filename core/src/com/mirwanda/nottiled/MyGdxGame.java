@@ -26,6 +26,8 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import org.xmlpull.v1.*;
 
@@ -3914,15 +3916,68 @@ String texta="";
     public void checkAndReloadSamples(){
         FileHandle fh2 = Gdx.files.external("NotTiled/");
         if (!fh2.exists()) fh2.mkdirs();
+        FileHandle fh3 = Gdx.files.external("NotTiled/sample");
+        if (fh3.exists() && !fh3.isDirectory()) fh3.delete();
         FileHandle fhc = Gdx.files.external("NotTiled/sample/island.tmx");
         if (!fhc.exists()) {
-            FileHandle from = Gdx.files.internal("sample/");
-            from.copyTo(Gdx.files.external("NotTiled/"));
+
+            FileHandle from = Gdx.files.internal("sample.zip");
+            FileHandle to = Gdx.files.external("NotTiled");
+            from.copyTo(to);
+            FileHandle zipo = Gdx.files.external("NotTiled/sample.zip");
+            unzip(zipo,to);
+           // zipo.delete();
+//            FileHandle from = Gdx.files.internal("sample/");
+  //          from.copyTo(Gdx.files.external("NotTiled/"));
             prefs.putString("lof", "NotTiled/sample/island.tmx");
-            prefs.putString("lastpath", "NotTiled/");
+            prefs.putString("lastpath", "NotTiled");
             lastpath = "NotTiled/sample";
         }
         prefs.flush();
+    }
+
+    public void unzip(FileHandle src, FileHandle dest) {
+
+        // create output directory if it doesn't exist
+        if(!dest.exists()) dest.mkdirs();
+        FileInputStream fis;
+        //buffer for read and write data to file
+        byte[] buffer = new byte[1024];
+        try {
+            fis = new FileInputStream(src.file());
+            ZipInputStream zis = new ZipInputStream(fis);
+            ZipEntry ze = zis.getNextEntry();
+            while(ze != null){
+
+                String fileName = ze.getName();
+                FileHandle newFile = Gdx.files.external(dest.path() + File.separator + fileName);
+                System.out.println("Unzipping to "+newFile.path());
+
+                if (ze.isDirectory())
+                {
+                    newFile.mkdirs();
+                }
+                else
+                {
+                    FileOutputStream fos = new FileOutputStream(newFile.file());
+                    int len;
+                    while ((len = zis.read(buffer)) > 0) {
+                        fos.write(buffer, 0, len);
+                    }
+                    fos.close();
+                }
+                //close this ZipEntry
+                zis.closeEntry();
+                ze = zis.getNextEntry();
+            }
+            //close last ZipEntry
+            zis.closeEntry();
+            zis.close();
+            fis.close();
+        } catch (IOException e) {
+            ErrorBung(e,"nyok.txt");
+        }
+
     }
 
     public void initializeThings() {
@@ -4734,11 +4789,7 @@ String texta="";
         bReload.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                FileHandle from = Gdx.files.internal("sample/");
-                from.copyTo(Gdx.files.external("NotTiled/"));
-                prefs.putString("lof", "NotTiled/" + "sample/island.tmx");
-                prefs.putString("lastpath", "NotTiled/");
-
+                checkAndReloadSamples();
                 msgbox(z.sampleshasbeenreloaded);
 
             }
