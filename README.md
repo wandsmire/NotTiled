@@ -1,8 +1,9 @@
-<h1>NotTiled 1.2.9a</h1>
+<h1>NotTiled </h1>
+Latest version: 1.4.2
 
 NotTiled is a simple tiled map editor (tmx editor) for gamers and game developers. It is based on Tiled Map Editor (https://www.mapeditor.org/) by Thorbjørn Lindeijer.
 
-Sample maps & tilesets included (credit to their own respective creators). test
+Sample maps & tilesets included (credit to their own respective creators).
 
 Features:
 - Orientation: Orthogonal, Isometric
