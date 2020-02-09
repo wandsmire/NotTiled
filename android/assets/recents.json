@@ -1,6 +1,5 @@
 {
 paths: [
-	NotTiled/sample/level1.tmx
 	NotTiled/sample/template/NotTiled Platformer/template.tmx
 	NotTiled/sample/level5.tmx
 	NotTiled/sample/template/Pixel Editor/template.tmx
@@ -20,5 +19,6 @@ paths: [
 	NotTiled/sample/musictest.tmx
 	RustedWarfare/maps/Map01.tmx
 	NotTiled/sample/island.tmx
+	NotTiled/sample/level3.tmx
 ]
 }

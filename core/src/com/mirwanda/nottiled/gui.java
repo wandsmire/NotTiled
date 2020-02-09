@@ -2,14 +2,14 @@ package com.mirwanda.nottiled;
 
 public class gui
 {
-	float x;
-	float y;
-	float w;
-	float h;
-	float xl;
-	float yl;
-	float wl;
-	float hl;
+	float x=0;
+	float y=0;
+	float w=0;
+	float h=0;
+	float xl=0;
+	float yl=0;
+	float wl=0;
+	float hl=0;
 	boolean touched;
 	
 	public gui(){}

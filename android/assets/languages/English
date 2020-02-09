@@ -205,4 +205,5 @@ no: "No"
 canceltutorial: "Cancel Tutorial"
 masstileproperties: "Mass Tile Properties"
 sendfeedback: "Send Feedback"
+checkupdate: "Check for updates"
 }

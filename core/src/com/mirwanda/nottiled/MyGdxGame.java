@@ -8328,6 +8328,18 @@ String texta="";
 
     }
 
+    public void loadInterface(String filename){
+        try {
+            guis at;
+            Json json = new Json();
+            FileHandle f = Gdx.files.external("NotTiled/custom interface/"+filename);
+            at = json.fromJson(guis.class, f);
+            gui = at;
+        } catch (Exception e) {
+            ErrorBung(e,"BUG.tXT");
+        }
+    }
+
     public void loadAutoManagement() {
         Label lAutotitle = new Label(z.autotile, skin);
         lautolist = new com.badlogic.gdx.scenes.scene2d.ui.List<String>(skin);
@@ -8440,7 +8452,7 @@ String texta="";
 
                     autotiles at = new autotiles();
                     Json json = new Json();
-                    FileHandle f = new FileHandle(curdir + "/auto.json");
+                    FileHandle f = Gdx.files.external(curdir + "/auto.json");
                     at = json.fromJson(autotiles.class, f);
                     autotiles = at.getAutotiles();
                     refreshAutoMgmt();
@@ -8907,6 +8919,7 @@ String texta="";
                     mapFormat = sbMapFormat.getSelected().toString();
                     renderorder = sbMapRenderOrder.getSelected().toString();
                     orientation = sbMapOrientation.getSelected().toString();
+                    resetMinimap();
                     backToMap();
 
                 } catch (Exception e) {
@@ -14391,6 +14404,21 @@ String texta="";
                     rotating = ! rotating;
                     return true;
                 }
+                if (tapped(touch2, gui.undo)) {
+                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    //loadInterface("custom1.json");
+                    /*
+                    Json json = new Json();
+                    writeThisAbs(curdir + "/auto.json", json.prettyPrint(gui));
+                    msgbox("auto.json saved!");
+
+                     */
+                    return true;
+                }
+
+
+
+
                 if (tapped(touch2, gui.picker)) {
                     FileDialog(z.selectfile, "quickaddtset", "file", new String[]{".tsx", ".png", ".jpg", ".jpeg", ".bmp", ".gif"}, nullTable);
                     return true;
