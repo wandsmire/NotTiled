@@ -198,6 +198,7 @@ public class language
 	String masstileproperties;
 	String sendfeedback;
 	String checkupdate;
+	String customui;
 	String t100;
 	String t101;
 	String t102;

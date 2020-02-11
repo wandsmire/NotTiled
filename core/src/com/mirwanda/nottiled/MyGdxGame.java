@@ -101,6 +101,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     String info;
     obj copyobj = null;
     boolean sShowGrid = true, sShowFPS, sAutoSave, sSaveTsx = false, sShowGID = false, sMinimap;
+    boolean sCustomUI;
     boolean sShowCustomGrid = false;
     boolean sResizeTiles = false;
     int sGridX, sGridY;
@@ -159,6 +160,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     tileset tempTset;
     float initialZoom;
     CheckBox cbShowGrid, cbShowFPS, cbShowGid, cbAutoSave, cbShowGidmap, cbResize, cbMinimap;
+    CheckBox cbCustomUI;
     TextButton bBack3;
     CheckBox cbShowCustomGrid;
     TextField fGridX, fGridY, fBgcolor;
@@ -3894,8 +3896,12 @@ String texta="";
         parameter.shadowOffsetY = 4;
 
         String filenam = "font.ttf";
-        if (language.equalsIgnoreCase("Japanese") || language.equalsIgnoreCase("Chinese"))
-            filenam = "Japanese.otf";
+        if (language.equalsIgnoreCase("Chinese")) {
+            filenam = "chinese.ttf";
+        }
+        if (language.equalsIgnoreCase("Japanese")) {
+            filenam = "japanese.otf";
+        }
         FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal(filenam));
         str1 = generator.generateFont(parameter);
         generator.dispose();
@@ -3933,6 +3939,26 @@ String texta="";
             prefs.putString("lastpath", "NotTiled");
             lastpath = "NotTiled/sample";
         }
+        prefs.flush();
+    }
+
+    public void justReloadSamples(){
+        FileHandle fh2 = Gdx.files.external("NotTiled/");
+        if (!fh2.exists()) fh2.mkdirs();
+        FileHandle fh3 = Gdx.files.external("NotTiled/sample");
+        if (fh3.exists() && !fh3.isDirectory()) fh3.delete();
+
+            FileHandle from = Gdx.files.internal("sample.zip");
+            FileHandle to = Gdx.files.external("NotTiled");
+            from.copyTo(to);
+            FileHandle zipo = Gdx.files.external("NotTiled/sample.zip");
+            unzip(zipo,to);
+            // zipo.delete();
+//            FileHandle from = Gdx.files.internal("sample/");
+            //          from.copyTo(Gdx.files.external("NotTiled/"));
+            prefs.putString("lof", "NotTiled/sample/island.tmx");
+            prefs.putString("lastpath", "NotTiled");
+            lastpath = "NotTiled/sample";
         prefs.flush();
     }
 
@@ -4789,7 +4815,7 @@ String texta="";
         bReload.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                checkAndReloadSamples();
+                justReloadSamples();
                 msgbox(z.sampleshasbeenreloaded);
 
             }
@@ -6732,6 +6758,11 @@ String texta="";
 
         sMinimap = prefs.getBoolean("minimap", true);
         sShowFPS = prefs.getBoolean("fps", false);
+        sCustomUI = prefs.getBoolean("customui", false);
+        if (sCustomUI){
+            loadInterface("custominterface.json");
+        }
+
         sAutoSave = prefs.getBoolean("autosave", true);
         sShowGID = prefs.getBoolean("gid", false);
         sShowGIDmap = prefs.getBoolean("gidmap", false);
@@ -6772,6 +6803,7 @@ String texta="";
                 cbMinimap.setChecked(sMinimap);
                 cbShowGrid.setChecked(sShowGrid);
                 cbShowFPS.setChecked(sShowFPS);
+                cbCustomUI.setChecked(sCustomUI);
                 cbAutoSave.setChecked(sAutoSave);
                 cbEnableBlending.setChecked(sEnableBlending);
                 sdScrollSpeed.setValue(scrollspeed);
@@ -6792,6 +6824,7 @@ String texta="";
         });
 
         cbMinimap = new CheckBox(z.minimap, skin);
+        cbCustomUI = new CheckBox(z.customui, skin);
         cbShowGrid = new CheckBox(z.showgrid, skin);
         cbShowFPS = new CheckBox(z.showfps, skin);
         cbEnableBlending = new CheckBox(z.enableblending, skin);
@@ -6828,6 +6861,8 @@ String texta="";
                 prefs.putBoolean("fps", sShowFPS).flush();
                 sAutoSave = cbAutoSave.isChecked();
                 prefs.putBoolean("autosave", sAutoSave).flush();
+                sCustomUI = cbCustomUI.isChecked();
+                prefs.putBoolean("customui", sCustomUI).flush();
                 sShowGID = cbShowGid.isChecked();
                 prefs.putBoolean("gid", sShowGID).flush();
                 sShowGIDmap = cbShowGidmap.isChecked();
@@ -6836,6 +6871,14 @@ String texta="";
                 prefs.putInteger("fontsize", fontsize).flush();
                 sResizeTiles = cbResize.isChecked();
                 prefs.putBoolean("resize", sResizeTiles).flush();
+
+                if (sCustomUI){
+                    loadInterface("custominterface.json");
+                }else{
+                    guis gsu = new guis();
+                    gui = gsu;
+                }
+
 
                 sBgcolor = fBgcolor.getText();
                 if (sBgcolor.length() != 6) sBgcolor = "888888";
@@ -6878,43 +6921,52 @@ String texta="";
         tPreference = new Table();
         tPreference.setFillParent(true);
 
-        tPreference.defaults().width(btnx).height(btny * 4 / 5);
+        Table tPreference2 = new Table();
+        tPreference2.setFillParent(true);
+        tPreference2.defaults().width(btnx).height(btny * 4 / 5);
+
+        ScrollPane sp123 = new ScrollPane(tPreference2);
+        tPreference.add(sp123);
+
 		/*
 		cbShowGrid.getLabelCell().padLeft(5);
 		cbShowFPS.getLabelCell().padLeft(5);
 		cbShowCustomGrid.getLabelCell().padLeft(5);
 		*/
-        tPreference.add(new Label(z.language, skin)).width(btnx / 2);
-        tPreference.add(sbLanguage).width(btnx / 2).padBottom(5).row();
-        tPreference.add(new Label(z.zoomlimit, skin)).width(btnx / 2);
-        tPreference.add(fzoomtresh).width(btnx / 2).padBottom(2).row();
-        tPreference.add(new Label(z.background, skin)).width(btnx / 2);
-        tPreference.add(fBgcolor).width(btnx / 2).padBottom(2).row();
 
-        tPreference.add(new Label(z.fontsize, skin)).width(btnx / 2);
-        tPreference.add(fFontsize).width(btnx / 2).padBottom(2).row();
-        tPreference.add(cbAutoSave).align(Align.left).colspan(2).width(btnx).row();
-        tPreference.add(cbMinimap).align(Align.left).colspan(2).width(btnx).row();
-        tPreference.add(cbEnableBlending).align(Align.left).colspan(2).width(btnx).row();
-        tPreference.add(cbShowGrid).width(btnx).left().colspan(2).row();
-        tPreference.add(cbResize).align(Align.left).left().colspan(2).width(btnx).row();
+        tPreference2.add(new Label(z.language, skin)).width(btnx / 2);
+        tPreference2.add(sbLanguage).width(btnx / 2).padBottom(5).row();
+        tPreference2.add(new Label(z.zoomlimit, skin)).width(btnx / 2);
+        tPreference2.add(fzoomtresh).width(btnx / 2).padBottom(2).row();
+        tPreference2.add(new Label(z.background, skin)).width(btnx / 2);
+        tPreference2.add(fBgcolor).width(btnx / 2).padBottom(2).row();
 
-        tPreference.add(cbShowFPS).colspan(2).align(Align.left).width(btnx).left().row();
-        tPreference.add(cbShowGid).align(Align.left).colspan(2).left().width(btnx).row();
-        tPreference.add(cbShowGidmap).align(Align.left).colspan(2).left().width(btnx).row();
-        tPreference.add(new Label(z.scrollspeed, skin)).align(Align.left).width(btnx).colspan(2).left().row();
+        tPreference2.add(new Label(z.fontsize, skin)).width(btnx / 2);
+        tPreference2.add(fFontsize).width(btnx / 2).padBottom(2).row();
+        tPreference2.add(cbAutoSave).align(Align.left).colspan(2).width(btnx).row();
+        tPreference2.add(cbMinimap).align(Align.left).colspan(2).width(btnx).row();
+        tPreference2.add(cbCustomUI).align(Align.left).colspan(2).width(btnx).row();
+        tPreference2.add(cbEnableBlending).align(Align.left).colspan(2).width(btnx).row();
+        tPreference2.add(cbShowGrid).width(btnx).left().colspan(2).row();
+        tPreference2.add(cbResize).align(Align.left).left().colspan(2).width(btnx).row();
 
-        tPreference.add(sdScrollSpeed).align(Align.left).width(btnx).colspan(2).left().row();
+        tPreference2.add(cbShowFPS).colspan(2).align(Align.left).width(btnx).left().row();
+        tPreference2.add(cbShowGid).align(Align.left).colspan(2).left().width(btnx).row();
+        tPreference2.add(cbShowGidmap).align(Align.left).colspan(2).left().width(btnx).row();
+        tPreference2.add(new Label(z.scrollspeed, skin)).align(Align.left).width(btnx).colspan(2).left().row();
 
-        tPreference.add(cbShowCustomGrid).align(Align.left).colspan(2).left().row();
-        tPreference.add(new Label(z.gridx, skin)).padBottom(5).width(btnx / 2);
-        tPreference.add(fGridX).width(btnx / 2).padBottom(5).row();
+        tPreference2.add(sdScrollSpeed).align(Align.left).width(btnx).colspan(2).left().row();
 
-        tPreference.add(new Label(z.gridy, skin)).padBottom(10).width(btnx / 2);
-        tPreference.add(fGridY).width(btnx / 2).padBottom(10).row();
+        tPreference2.add(cbShowCustomGrid).align(Align.left).colspan(2).left().row();
+        tPreference2.add(new Label(z.gridx, skin)).padBottom(5).width(btnx / 2);
+        tPreference2.add(fGridX).width(btnx / 2).padBottom(5).row();
 
-        tPreference.add(bSavePref).width(btnx).padBottom(5).height(btny).colspan(2).row();
-        tPreference.add(bBack3).width(btnx).padBottom(5).height(btny).colspan(2);
+        tPreference2.add(new Label(z.gridy, skin)).padBottom(10).width(btnx / 2);
+        tPreference2.add(fGridY).width(btnx / 2).padBottom(10).row();
+
+        tPreference2.add(bSavePref).width(btnx).padBottom(5).height(btny).colspan(2).row();
+        tPreference2.add(bBack3).width(btnx).padBottom(5).height(btny).colspan(2);
+
 
     }
 
@@ -8332,11 +8384,16 @@ String texta="";
         try {
             guis at;
             Json json = new Json();
-            FileHandle f = Gdx.files.external("NotTiled/custom interface/"+filename);
-            at = json.fromJson(guis.class, f);
-            gui = at;
+            FileHandle f = Gdx.files.external("NotTiled/sample/"+filename);
+            if (f.exists()) {
+                at = json.fromJson(guis.class, f);
+                gui = at;
+            }else
+            {
+                status("Custom interface not found, please reload samples.",5);
+            }
         } catch (Exception e) {
-            ErrorBung(e,"BUG.tXT");
+            ErrorBung(e,"errorlog.txt");
         }
     }
 
@@ -9436,7 +9493,6 @@ String texta="";
                 backToMap();
             }
         });
-
 
     }
 
@@ -14411,7 +14467,6 @@ String texta="";
                     Json json = new Json();
                     writeThisAbs(curdir + "/auto.json", json.prettyPrint(gui));
                     msgbox("auto.json saved!");
-
                      */
                     return true;
                 }
