@@ -5003,7 +5003,7 @@ String texta="";
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 if (!face.buyadfree()) {
-                    Gdx.net.openURI("https://www.patreon.com/wandsmire");
+                    Gdx.net.openURI("https://www.mirwanda.com");
                 }
             }
         });
@@ -5013,7 +5013,7 @@ String texta="";
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 if (!face.buyadfree()) {
-                    Gdx.net.openURI("https://www.patreon.com/wandsmire");
+                    Gdx.net.openURI("https://www.mirwanda.com");
                 }
             }
         });
@@ -11952,6 +11952,11 @@ String texta="";
                     }
 
 
+                    return true;
+                }
+
+                if (tapped(touch2, gui.tool1)) {
+                    FileDialog(z.selectfile, "quickaddtset", "file", new String[]{".tsx", ".png", ".jpg", ".jpeg", ".bmp", ".gif"}, nullTable);
                     return true;
                 }
                 //tile management
