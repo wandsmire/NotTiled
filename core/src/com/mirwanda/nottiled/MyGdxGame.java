@@ -94,6 +94,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     boolean backing;
     String shapeName = "rectangle", rotationName = "0", toolName = "Tile", viewModeName = "Stack", objViewModeName = "All";
     int magnet = 1;
+    boolean eraser=false;
     String magnetName = "lock";
     int activetool = 0, activeobjtool = 0;
     float blink = 0;
@@ -289,6 +290,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     AssetManager manager = new AssetManager();
     String vers;
     boolean startup = false;
+    enum ShapeTool { RECTANGLE,CIRCLE, LINE }
+    ShapeTool currentShape = ShapeTool.RECTANGLE;
     float timeToPan, panTargetX, panTargetY, panTargetZoom, panOriginX, panOriginY, panOriginZoom, panDuration;
     float timeToPan2, panTargetZoom2, panOriginZoom2, panDuration2;
     int panType = 0;
@@ -2003,7 +2006,26 @@ String texta="";
                     //sr.rect((mapstartSelect % SprW) * Tsw, -(mapstartSelect / SprW) * Tsh + Tsh, ((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw, -(mapendSelect / SprW) * Tsh + (mapstartSelect / SprW) * Tsh - Tsh);
 
                 } else if (orientation.equalsIgnoreCase("orthogonal")) {
+                    if (activetool==0)
+                    {
+                        switch (currentShape)
+                        {
+                            case RECTANGLE:
+                                sr.rect((mapstartSelect % SprW) * Tsw, -(mapstartSelect / SprW) * Tsh + Tsh, ((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw, -(mapendSelect / SprW) * Tsh + (mapstartSelect / SprW) * Tsh - Tsh);
+                                break;
+                            case CIRCLE:
+                                sr.rect((mapstartSelect % SprW) * Tsw, -(mapstartSelect / SprW) * Tsh + Tsh, ((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw, -(mapendSelect / SprW) * Tsh + (mapstartSelect / SprW) * Tsh - Tsh);
+                                break;
+                            case LINE:
+                                sr.rect((mapstartSelect % SprW) * Tsw, -(mapstartSelect / SprW) * Tsh + Tsh, ((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw, -(mapendSelect / SprW) * Tsh + (mapstartSelect / SprW) * Tsh - Tsh);
+                                break;
+                        }
+
+
+
+                    }else{
                     sr.rect((mapstartSelect % SprW) * Tsw, -(mapstartSelect / SprW) * Tsh + Tsh, ((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw, -(mapendSelect / SprW) * Tsh + (mapstartSelect / SprW) * Tsh - Tsh);
+                    }
                 }
                 sr.setColor(0, 0, 0, 1);
             }
@@ -3432,7 +3454,6 @@ String texta="";
                         c1 = new Color(1f, 1f, 0f, .4f);
                         break;
                     case 1:
-                        c2 = new Color(1f, 1f, 0f, .4f);
                         break;
                     case 2:
                         c3 = new Color(1f, 1f, 0f, .4f);
@@ -3444,6 +3465,9 @@ String texta="";
                         c5 = new Color(1f, 1f, 0f, .4f);
                         break;
                 }
+
+                if (eraser) c2 = new Color(1f, 0.3f, 0f, .4f);
+
 
                 if (!tutoring) {
                     uisrect(gui.tool1, mouse, c1);
@@ -3640,7 +3664,22 @@ String texta="";
                         uidrawbutton(txauto, z.refresh, gui.autotile, 2);
                     }
 
-                    uidrawbutton(txrectangle, z.rectangle, gui.tool1, 3);
+
+                    switch (currentShape)
+                    {
+                        case RECTANGLE:
+                            uidrawbutton(txrectangle, z.rectangle, gui.tool1, 3);
+                            break;
+                        case CIRCLE:
+                            uidrawbutton(txrectangle, "Circle", gui.tool1, 3);
+                            break;
+                        case LINE:
+                            uidrawbutton(txrectangle, "Line", gui.tool1, 3);
+                            break;
+                    }
+
+
+
                     uidrawbutton(txeraser, z.eraser, gui.tool2, 3);
                     uidrawbutton(txfill, z.fill, gui.tool3, 3);
                     if (movetool) {
@@ -12852,7 +12891,7 @@ String texta="";
                     break;
             }
             long oi = Long.decode("#" + spc + hex.substring(2));
-
+            if (eraser) oi=0;
 
             switch (activetool) {
 
@@ -13051,7 +13090,7 @@ String texta="";
 
                 case 2: //fill
                     if (roll) activetool = 0;
-                    oi = Long.decode("#" + spc + hex.substring(2));
+                    //oi = Long.decode("#" + spc + hex.substring(2));
                     from = layers.get(selLayer).getStr().get(num);
                     tzet = layers.get(selLayer).getTset().get(num);
 
@@ -13328,14 +13367,14 @@ String texta="";
             }
             if (tapped(touch2, gui.tool2)) {
                 if (!cue("tool2") && lockUI) return true;
-                activetool = 1;
+                eraser = !eraser;
+                //activetool = 1;
                 stamp = false;
                 return true;
             }
             if (tapped(touch2, gui.tool3)) {
                 if (!cue("tool3") && lockUI) return true;
                 activetool = 2;
-
                 stamp = false;
                 return true;
             }
@@ -14390,8 +14429,26 @@ String texta="";
                 if (tapped(touch2, gui.tool4)) {
                     movetool = ! movetool;
                     //readandsaveAudio();
-                    recordAudio();
+                    //recordAudio();
                     activetool=3;
+                    return true;
+                }
+
+                //switch between tool shape
+                if (tapped(touch2, gui.tool1)) {
+                    switch (currentShape)
+                    {
+                        case RECTANGLE:
+                            currentShape=ShapeTool.CIRCLE;
+                            break;
+                        case CIRCLE:
+                            currentShape=ShapeTool.LINE;
+                            break;
+                        case LINE:
+                            currentShape=ShapeTool.RECTANGLE;
+                            break;
+                    }
+                    activetool=0;
                     return true;
                 }
 
@@ -15301,7 +15358,8 @@ String texta="";
                 //now I have the clipboard layer, just put it on tap...
             }
 
-            if (activetool == 0 || activetool == 1) {
+            //no more activetool =1
+            if (activetool == 0) {
 
                 int awidih = 0, aheih = 0, anum = 0;
                 int widih = mapendSelect % Tw - mapstartSelect % Tw;
@@ -15356,11 +15414,13 @@ String texta="";
                 //and then, draw the stamp here, check this later for stamp on isometric...
                 //tag: isometric stamp, stamp iso, iso stamp, whatever...
 
+                boolean firstone=true;
                 for (int yy = 0; yy <= heih; yy++) {
                     for (int xx = 0; xx <= widih; xx++) {
                         if ((num + xx + (yy * Tw)) < Th * Tw) {
                             if ((num + xx + (yy * Tw)) % Tw >= num % Tw) {
                                 int oldcurspr = curspr;
+                                //ini buat yg smart stamp rect
                                 if (stamp) {
 
                                     if (xx == 0 && yy == 0) curspr = pon[0];
@@ -15376,11 +15436,45 @@ String texta="";
                                     if (xx > 0 && xx < widih && yy == heih) curspr = pon[7];
                                     if (xx == widih && yy == heih) curspr = pon[8];
                                 }
-                                if (xx == 0 && yy == 0) {
-                                    tapTile(num + xx + (yy * Tw), false);
 
+                                if (xx == 0 && yy == 0) {
+
+                                    if (currentShape==ShapeTool.RECTANGLE) tapTile(num + xx + (yy * Tw), false);
                                 } else {
-                                    tapTile(num + xx + (yy * Tw), true);
+
+                                    switch (currentShape)
+                                    {
+                                        case RECTANGLE:
+                                            tapTile(num + xx + (yy * Tw), true);
+                                            break;
+                                        case CIRCLE:
+                                            float midx = widih/2+0.5f;
+                                            float midy = heih/2+0.5f;
+                                            float radx = Math.abs(midx-xx);
+                                            float rady = Math.abs(midy-yy);
+                                            double myrad =0;
+                                            myrad = (midx > midy) ? midy : midx;
+                                            double skor = (radx*radx+rady*rady);
+                                            //double skor = Math.sqrt(Math.pow(radx,2)*Math.pow(rady,2));
+
+                                           if (skor <=myrad*myrad) tapTile(num + xx + (yy * Tw), firstone);
+                                            if (firstone) firstone = false;
+                                            break;
+                                        case LINE:
+                                            midx = widih/2+0.5f;
+                                             midy = heih/2+0.5f;
+                                             radx = Math.abs(xx-midx);
+                                             rady = Math.abs(yy-midy);
+                                             myrad =0;
+                                            myrad = (midx > midy) ? midy : midx;
+                                            //skor = Math.pow(radx+rady,2)/Math.pow(myrad,2); //DIAMOND
+                                            skor = (Math.pow(radx,2)*Math.pow(rady,2))/(Math.pow(myrad,2)*Math.pow(myrad,2));
+                                            if (skor <=1) tapTile(num + xx + (yy * Tw), firstone);
+                                            if (firstone) firstone = false;
+                                            break;
+
+                                    }
+
                                 }
 
                                 curspr = oldcurspr;
