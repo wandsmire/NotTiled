@@ -126,6 +126,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     int jon, joni;
     int selat;
     int startSelect, endSelect, initialSelect;
+    boolean rising=false;
     boolean tutoring = false;
     int activetutor = 0;
     String mapFormat = "csv", tsxFile = "", activeFilename;
@@ -326,6 +327,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private int mapstartSelect;
     private int mapendSelect;
     private int mapinitialSelect;
+    private int mapfinalSelect;
     private String errors;
     private boolean sShowGIDmap;
     private boolean caching;
@@ -2017,7 +2019,11 @@ String texta="";
                                 sr.rect((mapstartSelect % SprW) * Tsw, -(mapstartSelect / SprW) * Tsh + Tsh, ((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw, -(mapendSelect / SprW) * Tsh + (mapstartSelect / SprW) * Tsh - Tsh);
                                 break;
                             case LINE:
-                                sr.rect((mapstartSelect % SprW) * Tsw, -(mapstartSelect / SprW) * Tsh + Tsh, ((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw, -(mapendSelect / SprW) * Tsh + (mapstartSelect / SprW) * Tsh - Tsh);
+                                if (rising){
+                                    sr.rectLine((mapstartSelect % SprW) * Tsw + Tsw/2, -(mapendSelect / SprW) * Tsh + Tsh/2, ((mapendSelect % SprW) * Tsw + Tsw/2), -(mapstartSelect / SprW) * Tsh + Tsh/2,Tsw/2);
+                                }else{
+                                    sr.rectLine((mapstartSelect % SprW) * Tsw + Tsw/2, -(mapstartSelect / SprW) * Tsh + Tsh/2, ((mapendSelect % SprW) * Tsw + Tsw/2), -(mapendSelect / SprW) * Tsh + Tsh/2,Tsw/2);
+                                }
                                 break;
                         }
 
@@ -3637,7 +3643,19 @@ String texta="";
                     } else {
                         if (roll) {
                             if (activetool == 0) {
-                                str1draw(ui, z.rectangle, gui.info);
+                                switch (currentShape)
+                                {
+                                    case RECTANGLE:
+                                        str1draw(ui, z.rectangle, gui.info);
+                                        break;
+                                    case CIRCLE:
+                                        str1draw(ui, "Circle", gui.info);
+                                        break;
+                                    case LINE:
+                                        str1draw(ui, "Line", gui.info);
+                                        break;
+                                }
+
                             } else if (activetool == 1) {
                                 str1draw(ui, z.eraser, gui.info);
                             } else if (activetool == 3) {
@@ -15085,6 +15103,7 @@ String texta="";
             if (posx >= initx && posy >= inity) {
                 startSelect = initialSelect;
                 endSelect = num;
+
             }
             //kanan atas
             if (posx >= initx && posy < inity) {
@@ -15181,23 +15200,27 @@ String texta="";
             if (posx >= initx && posy >= inity) {
                 mapstartSelect = mapinitialSelect;
                 mapendSelect = num;
+                rising=false;
             }
             //kanan atas
             if (posx >= initx && posy < inity) {
                 mapstartSelect = posy * Tw + initx;
                 mapendSelect = inity * Tw + posx;
+                rising=true;
             }
             //kiri bawah
             if (posx < initx && posy >= inity) {
                 mapstartSelect = inity * Tw + posx;
                 mapendSelect = posy * Tw + initx;
+                rising=true;
             }
             //kiri atas
             if (posx < initx && posy < inity) {
                 mapstartSelect = num;
                 mapendSelect = mapinitialSelect;
+                rising=false;
             }
-
+            mapfinalSelect=num;
             return true;
         } else {
 
@@ -15437,43 +15460,26 @@ String texta="";
                                     if (xx == widih && yy == heih) curspr = pon[8];
                                 }
 
-                                if (xx == 0 && yy == 0) {
 
-                                    if (currentShape==ShapeTool.RECTANGLE) tapTile(num + xx + (yy * Tw), false);
-                                } else {
-
-                                    switch (currentShape)
-                                    {
-                                        case RECTANGLE:
-                                            tapTile(num + xx + (yy * Tw), true);
-                                            break;
-                                        case CIRCLE:
-                                            float midx = widih/2+0.5f;
-                                            float midy = heih/2+0.5f;
-                                            float radx = Math.abs(midx-xx);
-                                            float rady = Math.abs(midy-yy);
-                                            double myrad =0;
-                                            myrad = (midx > midy) ? midy : midx;
-                                            double skor = (radx*radx+rady*rady);
-                                            //double skor = Math.sqrt(Math.pow(radx,2)*Math.pow(rady,2));
-
-                                           if (skor <=myrad*myrad) tapTile(num + xx + (yy * Tw), firstone);
-                                            if (firstone) firstone = false;
-                                            break;
-                                        case LINE:
-                                            midx = widih/2+0.5f;
-                                             midy = heih/2+0.5f;
-                                             radx = Math.abs(xx-midx);
-                                             rady = Math.abs(yy-midy);
-                                             myrad =0;
-                                            myrad = (midx > midy) ? midy : midx;
-                                            //skor = Math.pow(radx+rady,2)/Math.pow(myrad,2); //DIAMOND
-                                            skor = (Math.pow(radx,2)*Math.pow(rady,2))/(Math.pow(myrad,2)*Math.pow(myrad,2));
-                                            if (skor <=1) tapTile(num + xx + (yy * Tw), firstone);
-                                            if (firstone) firstone = false;
-                                            break;
-
-                                    }
+                                switch (currentShape)
+                                {
+                                    case RECTANGLE:
+                                        tapTile(num + xx + (yy * Tw), !firstone);
+                                        if (firstone) firstone = false;
+                                        break;
+                                    case CIRCLE:
+                                        float midx = widih/2+0.5f;
+                                        float midy = heih/2+0.5f;
+                                        float radx = Math.abs(midx-xx);
+                                        float rady = Math.abs(midy-yy);
+                                        double myrad =0;
+                                        myrad = (midx > midy) ? midy : midx;
+                                        double skor = (radx*radx+rady*rady);
+                                        //double skor = Math.sqrt(Math.pow(radx,2)*Math.pow(rady,2));
+                                        //skor = Math.pow(radx+rady,2)/Math.pow(myrad,2); //DIAMOND
+                                       if (skor <=myrad*myrad) tapTile(num + xx + (yy * Tw), !firstone);
+                                        if (firstone) firstone = false;
+                                        break;
 
                                 }
 
@@ -15500,6 +15506,49 @@ String texta="";
                             }
                         }
                     }
+                }//
+
+                if (currentShape==ShapeTool.LINE) {
+                    //backhere
+
+                    boolean vert = heih > widih ? true : false;
+
+                    if (vert)
+                    {
+                        firstone=true;
+                        if (rising) {
+                            for (int yy = 0; yy <= heih; yy++) {
+                                int xx = widih-Math.round((float) yy / (float) heih * (float) widih);
+                                tapTile(num + xx + (yy * Tw), !firstone);
+                                if (firstone) firstone = false;
+                            }
+                        }else
+                        {
+                            for (int yy = 0; yy <= heih; yy++) {
+                                int xx = Math.round((float) yy / (float) heih * (float) widih);
+                                tapTile(num + xx + (yy * Tw), !firstone);
+                                if (firstone) firstone = false;
+                            }
+                        }
+                    }
+                    else {
+                        firstone=true;
+                        if (rising) {
+                            for (int xx = 0; xx <= widih; xx++) {
+                                int yy = heih-Math.round((float) xx / (float) widih * (float) heih);
+                                tapTile(num + xx + (yy * Tw), !firstone);
+                                if (firstone) firstone = false;
+                            }
+                        }else
+                        {
+                            for (int xx = 0; xx <= widih; xx++) {
+                                int yy = Math.round((float) xx / (float) widih * (float) heih);
+                                tapTile(num + xx + (yy * Tw), !firstone);
+                                if (firstone) firstone = false;
+                            }
+                        }
+                    }
+
                 }
 
             }
