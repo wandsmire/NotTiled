@@ -11,6 +11,7 @@ import com.badlogic.gdx.physics.box2d.ContactListener;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.Manifold;
 
+import static com.mirwanda.nottiled.game.gameobject.objecttype.BOX;
 import static com.mirwanda.nottiled.game.gameobject.objecttype.MONSTER;
 import static com.mirwanda.nottiled.game.gameobject.objecttype.PLATFORMH;
 import static com.mirwanda.nottiled.game.gameobject.objecttype.PLATFORMV;
@@ -122,11 +123,14 @@ public class WorldContactListener implements ContactListener {
                                 } else if (myobject.moving == gameobject.move.LEFT) {
                                     myobject.moving = gameobject.move.RIGHT;
                                 }
-                                if (myobject2.moving == gameobject.move.RIGHT) {
-                                    myobject2.moving = gameobject.move.LEFT;
+                            }
 
-                                } else if (myobject2.moving == gameobject.move.LEFT) {
-                                    myobject2.moving = gameobject.move.RIGHT;
+                            if (myobject2.objtype == BOX) {
+                                if (myobject.moving == gameobject.move.RIGHT) {
+                                    myobject.moving = gameobject.move.LEFT;
+
+                                } else if (myobject.moving == gameobject.move.LEFT) {
+                                    myobject.moving = gameobject.move.RIGHT;
                                 }
                             }
                         if (myobject2.objtype ==gameobject.objecttype.SWITCH) {
@@ -208,12 +212,7 @@ public class WorldContactListener implements ContactListener {
                             } else if (myobject2.moving == gameobject.move.LEFT) {
                                 myobject2.moving = gameobject.move.RIGHT;
                             }
-                            if (myobject.moving == gameobject.move.RIGHT) {
-                                myobject.moving = gameobject.move.LEFT;
 
-                            } else if (myobject.moving == gameobject.move.LEFT) {
-                                myobject.moving = gameobject.move.RIGHT;
-                            }
                         }
                         if (myobject.objtype ==gameobject.objecttype.SWITCH) {
                             TextureRegion regon = null;
@@ -498,7 +497,7 @@ public class WorldContactListener implements ContactListener {
                             mygame.playSfx(mygame.sfxlock);
                             break;
                         case BREAKABLE:
-                            if (mygame.player.b2body.getLinearVelocity().y > -8) return;
+
                             mygame.player.b2body.setLinearVelocity(0,2);
                             myobject.setCategoryFilter(game.DESTROYED_BIT);
                             mygame.objects.remove(myobject);

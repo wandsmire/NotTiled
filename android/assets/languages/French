@@ -207,4 +207,7 @@ masstileproperties: "Propriétés de carreaux de masse"
 sendfeedback: "Envoyer des commentaires"
 checkupdate: "Vérifier les mises à jour"
 customui: "Utilisez l'interface utilisateur personnalisée"
+circle: "Cercle"
+line: "Ligne"
+imagelayer: "Couche d'image"
 }

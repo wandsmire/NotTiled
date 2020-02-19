@@ -22,6 +22,7 @@ import com.badlogic.gdx.maps.tiled.TiledMapTileSet;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.Box2D;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
@@ -147,7 +148,6 @@ public class game {
 
 
             map = new TmxMapLoader(new ExternalFileHandleResolver()).load(path + "/" + filename);
-
             renderer = new OrthogonalTiledMapRenderer(map);
 
             Box2D.init();
@@ -520,7 +520,7 @@ public class game {
                             } else if (tlplatformv.contains(cece.getTile())) {
                                 newbrick.setupGameObject(world, tlcece, xx, yy, 7, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLATFORMV);
                             } else if (tlplatforms.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlempty, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.PLATFORMS);
+                                newbrick.setupGameObject(world, tlempty, xx, yy, 5, BodyDef.BodyType.StaticBody, gameobject.objecttype.PLATFORMS);
                             } else if (tlmonsters.contains(cece.getTile())) {
                                 newbrick.setupGameObject(world, tlcece, xx, yy, 6, BodyDef.BodyType.DynamicBody, gameobject.objecttype.MONSTER);
                             } else if (tlladder.contains(cece.getTile())) {
@@ -548,6 +548,7 @@ public class game {
             }
         }
         checkpoint.set(player.b2body.getPosition().x,player.b2body.getPosition().y);
+
         victory=false;
             return false;
 
@@ -584,7 +585,18 @@ public class game {
 
 
 
-        gamecam.position.set(player.b2body.getPosition().x,player.b2body.getPosition().y,0);
+        //gamecam.position.set(player.b2body.getPosition().x,player.b2body.getPosition().y,0);
+
+        //if (gamecam.position.x >)
+        float posex = player.b2body.getPosition().x;
+        float posey = player.b2body.getPosition().y;
+
+        float lerp = 5f;
+        Vector3 position = gamecam.position;
+        position.x += (posex - position.x) * lerp * delta;
+        position.y += (posey - position.y) * lerp * delta;
+
+
         gamecam.update();
 
         for (wall wl:walls)
@@ -679,6 +691,7 @@ public class game {
         if ((!jumping || onplatformv) && !ladder && !sinker && !floater) {
             player.b2body.applyLinearImpulse(0f,2.8f,player.getX(),player.getY(),true);
             jumping=true;
+            onplatformv=false;
         }
         if (ladder||floater||sinker) {
             player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x, 0.5f);

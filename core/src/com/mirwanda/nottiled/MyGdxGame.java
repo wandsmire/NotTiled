@@ -392,6 +392,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private float nofling;
     private Stage stage;
     private Texture txpencil;
+    private Texture txline,txcircle;
     private Texture txeraser;
     private Texture txfill;
     private Texture txcopy, txmove;
@@ -929,7 +930,7 @@ String texta="";
                         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
                         batch.setProjectionMatrix(gamecam.combined);
                         batch.begin();
-                        batch.draw(mygame.txBackground, mygame.player.b2body.getPosition().x-2f,mygame.player.b2body.getPosition().y-2f,4,4);
+                        batch.draw(mygame.txBackground, gamecam.position.x-2f,gamecam.position.y-2f,4,4);
                         batch.end();
 
                         mygame.renderer.setView(gamecam);
@@ -1037,6 +1038,8 @@ String texta="";
                                 mode = "tile";
                             } else if (layers.get(selLayer).getType() == layer.Type.OBJECT) {
                                 mode = "object";
+                            } else if (layers.get(selLayer).getType() == layer.Type.IMAGE) {
+                                mode = "image";
                             }
                         }
 
@@ -2016,13 +2019,28 @@ String texta="";
                                 sr.rect((mapstartSelect % SprW) * Tsw, -(mapstartSelect / SprW) * Tsh + Tsh, ((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw, -(mapendSelect / SprW) * Tsh + (mapstartSelect / SprW) * Tsh - Tsh);
                                 break;
                             case CIRCLE:
-                                sr.rect((mapstartSelect % SprW) * Tsw, -(mapstartSelect / SprW) * Tsh + Tsh, ((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw, -(mapendSelect / SprW) * Tsh + (mapstartSelect / SprW) * Tsh - Tsh);
+                                xpos = mapstartSelect % Tw;
+                                ypos = mapstartSelect / Tw;
+                                int xpos2 = mapendSelect % Tw;
+                                int ypos2 = mapendSelect / Tw;
+                                int widih = xpos2 - xpos;
+                                int heih = ypos2 - ypos;
+                                float radi = widih > heih ? heih : widih;
+                                radi = radi * Tsw/2f;
+                                if (widih > heih){
+                                    sr.circle((xpos * Tsw)+radi - radi/2f + widih*Tsw/2f - Tsw, -ypos * Tsh + Tsh-radi, radi);
+                                }else
+                                {
+                                    sr.circle((xpos* Tsw)+radi, -ypos* Tsh + Tsh-radi +radi/2f - heih*Tsh/2f + Tsh, radi);
+                                }
+                               // float widihh = (((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw)/2f;
+                                //sr.circle((mapstartSelect % SprW * Tsw)+radi, -(mapstartSelect / SprW) * Tsh + Tsh-radi, radi);
                                 break;
                             case LINE:
                                 if (rising){
-                                    sr.rectLine((mapstartSelect % SprW) * Tsw + Tsw/2, -(mapendSelect / SprW) * Tsh + Tsh/2, ((mapendSelect % SprW) * Tsw + Tsw/2), -(mapstartSelect / SprW) * Tsh + Tsh/2,Tsw/2);
+                                    sr.rectLine((mapstartSelect % SprW) * Tsw + Tsw/2f, -(mapendSelect / SprW) * Tsh + Tsh/2f, ((mapendSelect % SprW) * Tsw + Tsw/2f), -(mapstartSelect / SprW) * Tsh + Tsh/2f,Tsw/2f);
                                 }else{
-                                    sr.rectLine((mapstartSelect % SprW) * Tsw + Tsw/2, -(mapstartSelect / SprW) * Tsh + Tsh/2, ((mapendSelect % SprW) * Tsw + Tsw/2), -(mapendSelect / SprW) * Tsh + Tsh/2,Tsw/2);
+                                    sr.rectLine((mapstartSelect % SprW) * Tsw + Tsw/2f, -(mapstartSelect / SprW) * Tsh + Tsh/2f, ((mapendSelect % SprW) * Tsw + Tsw/2f), -(mapendSelect / SprW) * Tsh + Tsh/2f,Tsw/2f);
                                 }
                                 break;
                         }
@@ -2430,7 +2448,11 @@ String texta="";
                             Gdx.gl.glDisable(GL20.GL_BLEND);
                             batch.setColor(1, 1, 1, 1);
                         }
-                    }//tile layer
+                    }
+                    else if (layers.get(jo).getType() == layer.Type.IMAGE && isShown) {
+                        layer lay = layers.get(jo);
+                        batch.draw(lay.getTexture(),lay.getOffsetX(),-lay.getImageheight()-lay.getOffsetY()+Tsh);
+                    }
                 }//for jo
 
 
@@ -3100,7 +3122,7 @@ String texta="";
 
             float xredux = .5f; //if (w==100||x==0) xredux=0;
             float yredux = .3f; //if (h==100||y==0) yredux=0;
-            uis.roundedRect((x + xredux) / 100 * ssx, (y + yredux) / 100 * ssy, (w - x - xredux * 2) / 100 * ssx, (h - y - yredux * 2) / 100 * ssy, 30f);
+            uis.roundedRect((x + xredux) / 100 * ssx, (y + yredux) / 100 * ssy, (w - x - xredux * 2) / 100 * ssx, (h - y - yredux * 2) / 100 * ssy, 20f);
         } else {
 
             if (Gdx.input.isTouched() && mousepos.x >= x / 100 * ssy && mousepos.x <= w / 100 * ssy && mousepos.y >= y / 100 * ssx && mousepos.y <= h / 100 * ssx && drag == false) {
@@ -3414,7 +3436,7 @@ String texta="";
                 uisrect(gui.canceltutorial, mouse, vis("cancel"));//tile/obj switch
             }
 
-            if (mode == "tile" || mode == "object") {
+            if (mode == "tile" || mode == "object"|| mode == "image") {
                 uisrect(gui.mode, mouse, vis("addlayer"));//tile/obj switch
                 uisrect(gui.layer, mouse, vis("layerlist"));//layer switch
                 uisrect(gui.viewmode, mouse, vis("viewmode"));//viewmode switch
@@ -3584,12 +3606,13 @@ String texta="";
                 if (!takingss) str1draw(ui, debugMe, gui.status);
                 str1.setColor(1, 1, 1, 1);
             }
-            z.canceltutorial="Cancel Tutorial";
+            //z.canceltutorial="Cancel Tutorial";
             if (tutoring) str1draw(ui, z.canceltutorial, gui.canceltutorial);
 
             if (cammode != "View only") {
 
-                if (mode == "tile" || mode == "object") {
+                if (mode == "tile" || mode == "object"|| mode == "image") {
+                    str1draw(ui, layers.get(selLayer).getName(), gui.layer);
                     uidrawbutton(txlayer, z.layer, gui.layerpick, 1);
                     uidrawbutton(txmenu, z.menu, gui.menu, 2);
                     uidrawbutton(txmap, z.map, gui.map, 2);
@@ -3649,10 +3672,10 @@ String texta="";
                                         str1draw(ui, z.rectangle, gui.info);
                                         break;
                                     case CIRCLE:
-                                        str1draw(ui, "Circle", gui.info);
+                                        str1draw(ui, z.circle, gui.info);
                                         break;
                                     case LINE:
-                                        str1draw(ui, "Line", gui.info);
+                                        str1draw(ui, z.line, gui.info);
                                         break;
                                 }
 
@@ -3671,7 +3694,7 @@ String texta="";
                 if (mode == "tile") {
                     if (sShowFPS) str1draw(ui, fps, gui.fps);
 
-                    str1draw(ui, layers.get(selLayer).getName(), gui.layer);
+
 
 
 
@@ -3689,10 +3712,10 @@ String texta="";
                             uidrawbutton(txrectangle, z.rectangle, gui.tool1, 3);
                             break;
                         case CIRCLE:
-                            uidrawbutton(txrectangle, "Circle", gui.tool1, 3);
+                            uidrawbutton(txcircle, z.circle, gui.tool1, 3);
                             break;
                         case LINE:
-                            uidrawbutton(txrectangle, "Line", gui.tool1, 3);
+                            uidrawbutton(txline, z.line, gui.tool1, 3);
                             break;
                     }
 
@@ -3719,7 +3742,7 @@ String texta="";
                     uidrawbutton(txredo, z.redo, gui.redo, 3.1f);
                 } else if (mode == "object") {
 
-                    str1draw(ui, layers.get(selLayer).getName(), gui.layer);
+
                     str1draw(ui, shapeName, gui.objectpicker);
                     str1draw(ui, "<<", gui.objectpickerlefticon);
                     str1draw(ui, ">>", gui.objectpickerrighticon);
@@ -3739,7 +3762,7 @@ String texta="";
 
                 str1.getData().setScale(.7f);
                 str1.setColor(1, 1, 0, 1);
-                if (mode == "tile" || mode == "object") {
+                if (mode == "tile" || mode == "object"|| mode == "image") {
                  //   str1drawlabel(ui, z.activelayer, gui.layer);
                     if (mode=="tile"){
                         str1drawlabel(ui, z.tilelayer, gui.layer);
@@ -3747,7 +3770,9 @@ String texta="";
                     else if (mode =="object"){
                         str1drawlabel(ui, z.objectgroup, gui.layer);
                     }
-
+                    else if (mode =="image"){
+                        str1drawlabel(ui, z.imagelayer, gui.layer);
+                    }
                 }
 
 
@@ -3847,6 +3872,8 @@ String texta="";
             btny = 100 * ssy / 1080;
         }
 
+        txline = new Texture(Gdx.files.internal("images/line.png"));
+        txcircle = new Texture(Gdx.files.internal("images/circle.png"));
         txpencil = new Texture(Gdx.files.internal("images/pencil.png"));
         txfill = new Texture(Gdx.files.internal("images/fill.png"));
         txcopy = new Texture(Gdx.files.internal("images/copy.png"));
@@ -10268,6 +10295,28 @@ String texta="";
                     }
                     srz.endTag(null, "data");
                     srz.endTag(null, "layer");
+                }else if (lay.getType() == layer.Type.IMAGE) {
+
+                    srz.startTag(null, "imagelayer");
+                    srz.attribute("", "id", Integer.toString(j));
+                    srz.attribute("", "name", lay.getName());
+                    srz.attribute("", "offsetx", Float.toString(lay.getOffsetX()));
+                    srz.attribute("", "offsety",  Float.toString(lay.getOffsetY()));
+                    int lckd = lay.isLocked() ? 1 : 0;
+                    if (lckd==1) srz.attribute("", "locked",  Integer.toString(lckd));
+                    if (!lay.isVisible()) srz.attribute("", "visible", "0");
+                    if (lay.getOpacity() != 0)
+                        srz.attribute("", "opacity", Float.toString(lay.getOpacity()));
+
+                    srz.startTag(null, "image");
+                    srz.attribute("", "source", lay.getImage());
+                    srz.attribute("", "trans", lay.getTrans());
+                    srz.attribute("", "width", Integer.toString(lay.getImagewidth()));
+                    srz.attribute("", "height", Integer.toString(lay.getImageheight()));
+                    srz.endTag(null, "image");
+
+                    srz.endTag(null, "imagelayer");
+
                 } else if (lay.getType() == layer.Type.OBJECT) {
 
 
@@ -10464,7 +10513,7 @@ String texta="";
                     srz.startTag(null, "property");
                     if (t.getProperties().get(m).getName() != null)
                         srz.attribute("", "name", t.getProperties().get(m).getName());
-                    if (!t.getProperties().get(m).getType().equalsIgnoreCase("") && t.getProperties().get(m).getType() != "string")
+                    if (!t.getProperties().get(m).getType().equalsIgnoreCase("") && !t.getProperties().get(m).getType().equalsIgnoreCase("string"))
                     if (t.getProperties().get(m).getValue() != "")
                         srz.attribute("", "value", t.getProperties().get(m).getValue());
                     srz.endTag(null, "property");
@@ -10514,7 +10563,7 @@ String texta="";
                             srz.startTag(null, "property");
                             if (oj.getProperties().get(m).getName() != null)
                                 srz.attribute("", "name", oj.getProperties().get(m).getName());
-                            if (!oj.getProperties().get(m).getType().equalsIgnoreCase("") && oj.getProperties().get(m).getType() != "string")
+                            if (!oj.getProperties().get(m).getType().equalsIgnoreCase("") && !oj.getProperties().get(m).getType().equalsIgnoreCase("string"))
                                 srz.attribute("", "type", oj.getProperties().get(m).getType());
                             if (oj.getProperties().get(m).getValue() != null)
                                 srz.attribute("", "value", oj.getProperties().get(m).getValue());
@@ -10822,8 +10871,10 @@ String texta="";
 
                                     String foredirint, foredirext, foredir, tempdiro, tempdiri, combo;
                                     foredir = curdir;//should be tsxpath to folloe tsx pathing but whatever!!
-                                    if (foredir.substring(foredir.length() - 1).equalsIgnoreCase("/")) {
-                                        foredir = foredir.substring(0, foredir.length() - 1);
+                                    if (foredir!="") {
+                                        if (foredir.substring(foredir.length() - 1).equalsIgnoreCase("/")) {
+                                            foredir = foredir.substring(0, foredir.length() - 1);
+                                        }
                                     }
                                     tempdiro = tempTset.getSource();
                                     tempdiri = tempTset.getSource();
@@ -10890,6 +10941,101 @@ String texta="";
 
                                 templastID += tempTset.getWidth() * tempTset.getHeight();
                             }
+                            else if (owner.equalsIgnoreCase("imagelayer")) {
+                                if (myParser.getAttributeValue(null, "trans") != null) {
+                                    tempLayer.setTrans(myParser.getAttributeValue(null, "trans"));
+                                }
+
+                                if (myParser.getAttributeValue(null, "source") != null) {
+                                    tempLayer.setImage(myParser.getAttributeValue(null, "source"));
+                                }
+                                tempLayer.setImagewidth(Integer.parseInt(myParser.getAttributeValue(null, "width")));
+                                tempLayer.setImageheight(Integer.parseInt(myParser.getAttributeValue(null, "height")));
+
+                                if (tempLayer.getImage()!=null) {
+
+                                    String foredirint, foredirext, foredir, tempdiro, tempdiri, combo;
+                                    foredir = curdir;//should be tsxpath to folloe tsx pathing but whatever!!
+                                    if (foredir!="") {
+                                        if (foredir.substring(foredir.length() - 1).equalsIgnoreCase("/")) {
+                                            foredir = foredir.substring(0, foredir.length() - 1);
+                                        }
+                                    }
+                                    tempdiro = tempLayer.getImage();
+                                    tempdiri = tempLayer.getImage();
+
+                                    foredirext = curdir;
+
+
+                                    while (tempdiro.substring(0, 3).equalsIgnoreCase("../")) {
+                                        tempdiro = tempdiro.substring(3);
+                                        if (foredirext.lastIndexOf("/")==-1){
+                                            foredirext = "";
+
+                                        }else
+                                        {
+                                            foredirext = foredirext.substring(0, foredirext.lastIndexOf("/"));
+                                        }
+                                    }
+
+
+                                    if (tempdiri.lastIndexOf("/", tempdiri.lastIndexOf("/") - 1) != -1) {
+                                        tempdiri = tempdiri.substring(tempdiri.lastIndexOf("/", tempdiri.lastIndexOf("/") - 1));
+                                    }
+
+                                        FileHandle filehand = Gdx.files.external(foredirext + "/" + tempdiro);
+                                        if (!filehand.exists()) {
+                                            filehand = Gdx.files.internal("empty.jpeg");
+                                        }
+
+
+                                    try {
+
+                                        tempLayer.setTexture(new Texture(filehand));
+                                        tempLayer.setPixmap(pixmapfromtexture(tempLayer.getTexture(), tempLayer.getTrans()));
+                                        if (tempLayer.getTrans() != null) {
+                                            tempLayer.setTexture(chromaKey(tempLayer.getTexture(), tempLayer.getTrans()));
+                                        }
+
+                                    } catch (Exception e) {
+                                    }
+                                }
+
+                            }
+
+                        }
+
+                        if (name.equals("imagelayer")) {
+
+                            owner = "imagelayer";
+                            tempLayer = new layer();
+                            tempLayer.setType(layer.Type.IMAGE);
+
+                            if (myParser.getAttributeValue(null, "visible") != null) {
+                                tempLayer.setVisible(Boolean.parseBoolean(myParser.getAttributeValue(null, "visible")));
+                            } else {
+                                tempLayer.setVisible(true);
+                            }
+
+                            if (myParser.getAttributeValue(null, "locked") != null) {
+                                tempLayer.setLocked(Boolean.parseBoolean(myParser.getAttributeValue(null, "locked")));
+                            } else {
+                                tempLayer.setLocked(true);
+                            }
+
+                            if (myParser.getAttributeValue(null, "opacity") != null) {
+                                tempLayer.setOpacity(Float.parseFloat(myParser.getAttributeValue(null, "opacity")));
+                            }
+                            if (myParser.getAttributeValue(null, "offsetx") != null) {
+                                tempLayer.setOffsetX(Float.parseFloat(myParser.getAttributeValue(null, "offsetx")));
+                            }
+                            if (myParser.getAttributeValue(null, "offsety") != null) {
+                                tempLayer.setOffsetY(Float.parseFloat(myParser.getAttributeValue(null, "offsety")));
+                            }
+
+                            tempLayer.setName(myParser.getAttributeValue(null, "name"));
+                            layers.add(tempLayer);
+
                         }
 
                         if (name.equals("objectgroup")) {
@@ -11190,6 +11336,18 @@ String texta="";
         }
         CacheAllTset();
         cacheTiles();
+
+
+        if (layers.size()>0) selLayer = layers.size()-1;
+
+        //for rusted warfare, because some people are just ...
+        if (layers.size()>4)
+        {
+            if (layers.get(3).getName().equalsIgnoreCase("set"))
+            {
+                selLayer=3;
+            }
+        }
 
 
         loadautotiles();
@@ -13290,15 +13448,16 @@ String texta="";
             if (layers.get(selLayer).getType() == layer.Type.TILE) {
                 mode = "tile";
                 if (sMinimap) cacheTiles();
-            } else if (layers.get(selLayer).getType() == layer.Type.TILE) {
+            } else if (layers.get(selLayer).getType() == layer.Type.OBJECT) {
                 mode = "object";
+            } else if (layers.get(selLayer).getType() == layer.Type.IMAGE) {
+                mode = "image";
             }
-
             return true;
         }
 
         if (tapped(touch2, gui.layerpick)) {
-            if (mode == "tile" || mode == "object") {
+            if (mode == "tile" || mode == "object"|| mode == "image") {
                 if (!softcue("layerpick") && lockUI) return true;
                 loadList("layer");
                 return true;
@@ -13696,7 +13855,7 @@ String texta="";
         }
 
         if (tapped(touch2, gui.menu)) {
-            if (mode == "object" || mode == "tile") {
+            if (mode == "object" || mode == "tile"|| mode == "image") {
                 gotoStage(tMenu);
                 cue("menu");
                 return true;
@@ -13706,7 +13865,7 @@ String texta="";
         }
 
         if (tapped(touch2, gui.save)) {
-            if (mode == "object" || mode == "tile") {
+            if (mode == "object" || mode == "tile"|| mode == "image") {
                 saveMap(curdir + "/" + curfile);
                 status(z.yourmaphasbeensaved, 2);
                 cue("quicksave");
@@ -13716,7 +13875,7 @@ String texta="";
         }
 
         if (tapped(touch2, gui.map)) {
-            if (mode == "object" || mode == "tile") {
+            if (mode == "object" || mode == "tile"|| mode == "image") {
                 gotoStage(tMap);
                 cue("map");
                 return true;

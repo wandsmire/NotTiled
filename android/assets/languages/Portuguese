@@ -207,4 +207,7 @@ masstileproperties: "Propriedades de telha de massa"
 sendfeedback: "Enviar comentários"
 checkupdate: "Verificar atualizações"
 customui: "Use UI personalizada"
+circle: "Círculo"
+line: "Linha"
+imagelayer: "Camada de imagem"
 }

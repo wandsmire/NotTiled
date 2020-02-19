@@ -207,4 +207,7 @@ masstileproperties: "Mass Tile Properties"
 sendfeedback: "Send Feedback"
 checkupdate: "Check for updates"
 customui: "Use Custom UI"
+circle: "Circle"
+line: "Line"
+imagelayer: "Image Layer"
 }

@@ -207,4 +207,7 @@ masstileproperties: "Propiedades Azulejos de masas"
 sendfeedback: "Enviar Comentarios"
 checkupdate: "Comprobar si hay actualizaciones"
 customui: "El uso de interfaz de usuario personalizada"
+circle: "Circulo"
+line: "Línea"
+imagelayer: "capa de imagen"
 }

@@ -1,4 +1,7 @@
 package com.mirwanda.nottiled;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
+
 import java.util.*;
 
 public class layer
@@ -9,6 +12,92 @@ public class layer
 	private String name;
 	private boolean visible;
 	private float opacity;
+	private boolean locked = false;
+	private float offsetX=0f;
+	private float offsetY=0f;
+	private String image;
+	private int imagewidth;
+	private int imageheight;
+
+	public Texture getTexture() {
+		return texture;
+	}
+
+	public void setTexture(Texture texture) {
+		this.texture = texture;
+	}
+
+	private Texture texture;
+
+	public Pixmap getPixmap() {
+		return pixmap;
+	}
+
+	public void setPixmap(Pixmap pixmap) {
+		this.pixmap = pixmap;
+	}
+
+	private Pixmap pixmap;
+
+	public String getTrans() {
+		return trans;
+	}
+
+	public void setTrans(String trans) {
+		this.trans = trans;
+	}
+
+	private String trans;
+
+	public boolean isLocked() {
+		return locked;
+	}
+
+	public void setLocked(boolean locked) {
+		this.locked = locked;
+	}
+
+	public float getOffsetX() {
+		return offsetX;
+	}
+
+	public void setOffsetX(float offsetX) {
+		this.offsetX = offsetX;
+	}
+
+	public float getOffsetY() {
+		return offsetY;
+	}
+
+	public void setOffsetY(float offsetY) {
+		this.offsetY = offsetY;
+	}
+
+	public String getImage() {
+		return image;
+	}
+
+	public void setImage(String image) {
+		this.image = image;
+	}
+
+	public int getImagewidth() {
+		return imagewidth;
+	}
+
+	public void setImagewidth(int imagewidth) {
+		this.imagewidth = imagewidth;
+	}
+
+	public int getImageheight() {
+		return imageheight;
+	}
+
+	public void setImageheight(int imageheight) {
+		this.imageheight = imageheight;
+	}
+
+
 
 	public Type getType() {
 		return type;

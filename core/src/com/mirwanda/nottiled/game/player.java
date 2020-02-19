@@ -80,6 +80,10 @@ public class player extends Sprite {
 
     public void update(float dt){
         if (state != playerState.DEAD) setPosition(b2body.getPosition().x-8/100f,b2body.getPosition().y-8/100f);
+        if (b2body.getLinearVelocity().y <-200/100f)
+        {
+            b2body.setLinearVelocity(b2body.getLinearVelocity().x,-200/100f) ;
+        }
 
 
     }

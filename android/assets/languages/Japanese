@@ -207,4 +207,7 @@ masstileproperties: "マスタイルのプロパティ"
 sendfeedback: "送信フィードバック"
 checkupdate: "アップデートを確認"
 customui: "[カスタムUI"
+circle: "サークル"
+line: "ライン"
+imagelayer: "画像層"
 }

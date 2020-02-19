@@ -199,6 +199,9 @@ public class language
 	String sendfeedback;
 	String checkupdate;
 	String customui;
+	String circle;
+	String line;
+	String imagelayer;
 	String t100;
 	String t101;
 	String t102;

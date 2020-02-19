@@ -207,4 +207,7 @@ masstileproperties: "Devasa desen özellikleri"
 sendfeedback: "Geri bildirim gönder"
 checkupdate: "Güncellemeleri kontrol et"
 customui: "Kullanım Özel UI"
+circle: "Daire"
+line: "Hat"
+imagelayer: "Görüntü Katmanı"
 }
