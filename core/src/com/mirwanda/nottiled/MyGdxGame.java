@@ -4873,7 +4873,7 @@ String texta="";
         try {
             recents = new recents();
             Json json = new Json();
-            FileHandle f = Gdx.files.local("recents.json");
+            FileHandle f = Gdx.files.external("NotTiled/recents.json");
             recents = json.fromJson(recents.class, f);
         } catch (Exception e) {
         }
@@ -8822,7 +8822,7 @@ String texta="";
 
     public void saveRecents() {
         Json json = new Json();
-        FileHandle fh = Gdx.files.local("recents.json");
+        FileHandle fh = Gdx.files.external("NotTiled/recents.json");
         fh.writeString(json.prettyPrint(recents), false);
     }
 
@@ -13280,8 +13280,10 @@ String texta="";
 
                             layerhistory lh2 = new layerhistory(follower, from, oi, nyum, selLayer, tzet, tzeto);
 
+
                             if (from != oi) {
                                 undolayer.add(lh2);
+                                uploaddata(lh2);
                                 redolayer.clear();
 
                                 layers.get(selLayer).getStr().set(nyum, oi);
@@ -13390,8 +13392,11 @@ String texta="";
                     int tzet = layers.get(selLayer).getTset().get(num);
 
                     layerhistory lh2 = new layerhistory(follower, from, oi, num, selLayer, tzet, seltset);
+
+
                     if (from != oi) {
                         undolayer.add(lh2);
+                        uploaddata(lh2);
                         redolayer.clear();
                     }
                     layers.get(selLayer).getStr().set(num, oi);
@@ -13511,8 +13516,11 @@ String texta="";
                                     from = layers.get(selLayer).getStr().get(gogo);
                                     tzet = layers.get(selLayer).getTset().get(gogo);
                                     lh2 = new layerhistory(true, from, (long) y.getTileID() + tilesets.get(seltset).getFirstgid(), gogo, selLayer, tzet, seltset);
+
+
                                     if (from != (long) y.getTileID() + tilesets.get(seltset).getFirstgid()) {
                                         undolayer.add(lh2);
+                                        uploaddata(lh2);
                                         redolayer.clear();
                                     }
 
@@ -13535,7 +13543,7 @@ String texta="";
                     tzet = layers.get(selLayer).getTset().get(num);
 
                     lh2 = new layerhistory(false, from, oi, num, selLayer, tzet, seltset);
-
+                    uploaddata(lh2);
                     undolayer.add(lh2);
                     redolayer.clear();
 
@@ -13583,6 +13591,7 @@ String texta="";
                                         newmapendselect=nyum;
                                         lh2 = new layerhistory(followe, from, 0, orinyum, clipsource, tzet, -1);
                                         undolayer.add(lh2);
+                                        uploaddata(lh2);
                                         redolayer.clear();
                                         followe = true;
                                     }
@@ -13621,6 +13630,7 @@ String texta="";
 
                                         //if (from != oi) {
                                             undolayer.add(lh2);
+                                            uploaddata(lh2);
                                             redolayer.clear();
                                             layers.get(selLayer).getStr().set(nyum, oi);
                                             layers.get(selLayer).getTset().set(nyum, oritzet);
@@ -13681,6 +13691,7 @@ String texta="";
     Kryo serverkryo;
     Kryo clientkryo;
     TextField tfRemoteIP;
+    String localIP;
     enum ConnectionState{SERVER,CLIENT,DISCONNECTED}
     ConnectionState constate = ConnectionState.DISCONNECTED;
 
@@ -13689,11 +13700,13 @@ String texta="";
         serverkryo = server.getKryo();
         serverkryo.register(SomeRequest.class);
         serverkryo.register(SomeResponse.class);
+        serverkryo.register(layerhistory.class);
 
         client = new Client();
         clientkryo = client.getKryo();
         clientkryo.register(SomeRequest.class);
         clientkryo.register(SomeResponse.class);
+        clientkryo.register(layerhistory.class);
 
         tCollab = new Table();
         tCollab.setFillParent(true);
@@ -13797,6 +13810,28 @@ String texta="";
         }catch(Exception e){}
     }
 
+    private void uploaddata(layerhistory lh){
+        try {
+            if (constate ==ConnectionState.CLIENT) {
+                lh.sender = localIP;
+                Gdx.app.log("hi","upload data");
+                client.sendTCP(lh);
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    private void pushdata(layerhistory lh){
+        try {
+            //if (constate ==ConnectionState.SERVER) {
+            Gdx.app.log("hi","push data");
+            server.sendToAllTCP(lh);
+            //}
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
 
     private void runServer(){
         try {
@@ -13808,13 +13843,23 @@ String texta="";
                 public void received (Connection connection, Object object) {
                     if (object instanceof SomeRequest) {
                         SomeRequest request = (SomeRequest)object;
+                        broadcast(request.text);
                         lcollabstatus.setText(request.text);
+
+                    }
+
+                    if (object instanceof layerhistory) {
+                        layerhistory response = (layerhistory)object;
+                        Gdx.app.log("hi","received from client");
+                        pushdata(response);
                     }
                 }
             });
             lcollabstatus.setText(z.status+": "+z.listeningon+" "+getLocalIpAddress());
+            localIP = getLocalIpAddress();
             tfRemoteIP.setText(getLocalIpAddress());
             Gdx.app.log("HOST","Host ready!");
+            runClient(localIP);
 
 
         }catch(Exception e){}
@@ -13831,12 +13876,38 @@ String texta="";
                    if (object instanceof SomeResponse) {
                         SomeResponse response = (SomeResponse)object;
                         lcollabstatus.setText(response.text);
+                        status(response.text,3);
+                    }
+                    if (object instanceof layerhistory) {
+                        Gdx.app.log("hi","received from server...");
+                        layerhistory h = (layerhistory)object;
+                        if (!h.sender.equalsIgnoreCase(localIP)){
+                            if (h.undo){
+
+                            long frm = h.from;
+                            long toe = h.to;
+                            int frmts = h.oldtset;
+                            int toets = h.newtset;
+                            h.from=toe;h.to=frm;
+                            h.oldtset=toets;h.newtset=frmts;
+                            h.undo=false;
+
+                            }
+                            undolayer.add(h);
+                            redolayer.clear();
+                            layers.get(h.getLayer()).getStr().set(h.getLocation(), h.getTo());
+                            layers.get(h.getLayer()).getTset().set(h.getLocation(), h.getNewtset());
+                            Gdx.app.log("hi","message accepted :)");
+                        }else{
+                            Gdx.app.log("hi","message rejected, from me!");
+                        }
                     }
                 }
             });
             lcollabstatus.setText(z.status+": "+z.connectedto + " "+aipi);
             Gdx.app.log("CLIENT","Client ready!");
             constate = ConnectionState.CLIENT;
+            localIP = getLocalIpAddress();
 
 
         }catch(Exception e){
@@ -14063,7 +14134,11 @@ String texta="";
                             lh = undolayer.get(n);
                             layers.get(lh.getLayer()).getStr().set(lh.getLocation(), lh.getFrom());
                             layers.get(lh.getLayer()).getTset().set(lh.getLocation(), lh.getoldTset());
+
                             redolayer.add(lh);
+                            lh.undo=true;
+                            uploaddata(lh);
+
                             histcount++;
                             if (!lh.isFollower()) {
                                 java.util.List<layerhistory> templist = new ArrayList<layerhistory>();
@@ -14123,6 +14198,7 @@ String texta="";
                         layers.get(lh.getLayer()).getTset().set(lh.getLocation(), lh.getNewtset());
                         //status(lh.getTset()+"",5);
                         undolayer.add(lh);
+                        uploaddata(lh);
                         histcount++;
                         //redolayer.remove(lh);
                     }
@@ -14905,8 +14981,10 @@ String texta="";
             int tzet = layers.get(selLayer).getTset().get(num);
 
             layerhistory lh2 = new layerhistory(true, fromnew, oi, num, selLayer, tzet, seltset);
+
             if (fromnew != oi) {
                 undolayer.add(lh2);
+                uploaddata(lh2);
                 redolayer.clear();
             }
 

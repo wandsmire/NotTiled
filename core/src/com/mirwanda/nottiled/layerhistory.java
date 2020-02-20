@@ -2,15 +2,18 @@ package com.mirwanda.nottiled;
 
 public class layerhistory
 {
-	private boolean follower;
-	private int location;
-	private long to;
-	private long from;
-	private int layer;
-	private int oldtset;
-	private int newtset;
+	public boolean follower;
+	public int location;
+	public long to;
+	public long from;
+	public int layer;
+	public int oldtset;
+	public int newtset;
+	public String sender;
+	public boolean undo;
 
-
+	public layerhistory(){
+	}
 	public layerhistory(boolean follower, long from, long to, int location, int layer, int oldtset,int newtset){
 		this.follower=follower;
 		this.to=to;
