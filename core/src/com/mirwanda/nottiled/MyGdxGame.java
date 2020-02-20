@@ -13729,7 +13729,7 @@ String texta="";
         }
 
         if (tapped(touch2, gui.minimap) && sMinimap) {
-            if (mode == "tile") {
+            if (mode == "tile" || mode == "object" || mode == "image") {
                 cacheTiles();
                 Vector3 ve = new Vector3();
                 minicam.unproject(ve.set(Gdx.input.getX(), Gdx.input.getY(), 0));
