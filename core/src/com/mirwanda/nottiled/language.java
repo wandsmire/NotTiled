@@ -202,6 +202,17 @@ public class language
 	String circle;
 	String line;
 	String imagelayer;
+	String collaboration;
+	String remoteip;
+	String opacity;
+	String host;
+	String join;
+	String status;
+	String readytoconnect;
+	String connectedto;
+	String listeningon;
+	String failedtoconnect;
+	String disconnect;
 	String t100;
 	String t101;
 	String t102;

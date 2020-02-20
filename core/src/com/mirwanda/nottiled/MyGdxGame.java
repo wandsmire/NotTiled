@@ -23,9 +23,14 @@ import com.bitfire.postprocessing.filters.*;
 import com.bitfire.utils.*;
 
 import java.io.*;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.*;
+import java.util.logging.Formatter;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -34,9 +39,12 @@ import org.xmlpull.v1.*;
 import com.badlogic.gdx.utils.async.*;
 import com.badlogic.gdx.assets.*;
 import com.badlogic.gdx.assets.loaders.resolvers.*;
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryonet.Client;
+import com.esotericsoftware.kryonet.Connection;
+import com.esotericsoftware.kryonet.Listener;
+import com.esotericsoftware.kryonet.Server;
 import com.mirwanda.nottiled.game.player;
-
-import static javax.sound.sampled.AudioSystem.getAudioInputStream;
 
 
 public class MyGdxGame extends ApplicationAdapter implements GestureListener {
@@ -195,6 +203,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     Table tMap, tLayerMgmt, tTileMgmt, tObjMgmt, tFrameMgmt, tPropsMgmt, tPreference, tProperties, tTsetMgmt, tAutoMgmt, tAutoform;
     TextButton bTileMgmt, bTileSettingsMgmt, bPreference, bProperties, bTsetMgmt, bBack2, bAutoMgmt, bFeedback;
     Table tRecent;
+    Table tCollab;
+    Label lcollabstatus;
     TextButton bRecent, bRecentOpen, bRecentBack;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> lrecentlist;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> ltutorial;
@@ -509,6 +519,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         loadPropEditor();
         loadPropTemplate();
         loadImageLayer();
+        loadKryonet();
         initializePostProcessor();
         //animation = GifDecoder.loadGIFAnimation(2, Gdx.files.external("loading.gif").read());
         manager.setLoader(
@@ -4840,6 +4851,7 @@ String texta="";
         TextButton bPatreon2 = new TextButton(z.supportnottiled, skin);
         TextButton credito = new TextButton(z.credits, skin);
         TextButton bBackground = new TextButton(z.background, skin);
+        TextButton bCollaboration = new TextButton(z.collaboration, skin);
         bReload = new TextButton(z.reloadsamples, skin);
         TextButton bCopyto = new TextButton(z.copytorustedwarfare, skin);
         bRusted = new TextButton("Rusted Warfare", skin);
@@ -4984,6 +4996,14 @@ String texta="";
             public void changed(ChangeEvent event, Actor actor) {
                 gotoStage(tLinks);
                 cue("links");
+            }
+        });
+
+        bCollaboration.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                gotoStage(tCollab);
+                cue("collab");
             }
         });
 
@@ -5199,6 +5219,7 @@ String texta="";
         tMap.defaults().width(btnx).height(btny + 3).padBottom(2);
         if (!face.ispro()) tMap.add(bPatreon2).row();
         tMap.add(bFeedback).row();
+        tMap.add(bCollaboration).row();
         tMap.add(bProperties).row();
         tMap.add(bBackground).row();
         tMap.add(bTools).row();
@@ -13655,6 +13676,183 @@ String texta="";
         }
     }
 
+    Server server;
+    Client client;
+    Kryo serverkryo;
+    Kryo clientkryo;
+    TextField tfRemoteIP;
+    enum ConnectionState{SERVER,CLIENT,DISCONNECTED}
+    ConnectionState constate = ConnectionState.DISCONNECTED;
+
+    private void loadKryonet(){
+        server = new Server();
+        serverkryo = server.getKryo();
+        serverkryo.register(SomeRequest.class);
+        serverkryo.register(SomeResponse.class);
+
+        client = new Client();
+        clientkryo = client.getKryo();
+        clientkryo.register(SomeRequest.class);
+        clientkryo.register(SomeResponse.class);
+
+        tCollab = new Table();
+        tCollab.setFillParent(true);
+        tCollab.defaults().width(btnx).height(btny).padBottom(2);
+
+        Label lTitle = new Label(z.collaboration,skin);
+        TextButton tbHost = new TextButton(z.host,skin);
+        Label lRemote = new Label(z.remoteip,skin);
+        tfRemoteIP = new TextField("192.168.0.1",skin);
+        TextButton tbJoin = new TextButton(z.join,skin);
+        TextButton tbBack = new TextButton(z.back,skin);
+        lcollabstatus = new Label(z.status+": "+z.readytoconnect,skin);
+        final TextField tfMessage = new TextField("",skin);
+        TextButton tbSendMsg = new TextButton("Send Message",skin);
+
+
+        tbSendMsg.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                switch (constate)
+                {
+                    case SERVER:
+                        broadcast(tfMessage.getText());
+                        tfMessage.setText("");
+                        break;
+                    case CLIENT:
+                        talktoserver(tfMessage.getText());
+                        tfMessage.setText("");
+                        break;
+                    case DISCONNECTED:
+                        break;
+                }
+            }
+        });
+
+
+        tbBack.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                backToMap();
+            }
+        });
+
+        tbHost.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                runServer();
+            }
+        });
+
+        tbJoin.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                runClient(tfRemoteIP.getText());
+            }
+        });
+
+        tCollab.add(lTitle).colspan(2).row();
+        tCollab.add(tbHost).colspan(2).row();
+        tCollab.add(lRemote).width(btnx/2);
+        tCollab.add(tfRemoteIP).width(btnx/2).row();
+        tCollab.add(tbJoin).colspan(2).row();
+        tCollab.add(tbBack).colspan(2).row();
+        tCollab.add(lcollabstatus).colspan(2).row();
+        tCollab.add(tfMessage).colspan(2).row();
+        tCollab.add(tbSendMsg).colspan(2).row();
+
+    }
+
+    public static String getLocalIpAddress() {
+        try {
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+                NetworkInterface intf = en.nextElement();
+                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+                    InetAddress inetAddress = enumIpAddr.nextElement();
+                    if (!inetAddress.isLoopbackAddress() && inetAddress instanceof Inet4Address) {
+                        return inetAddress.getHostAddress();
+                    }
+                }
+            }
+        } catch (SocketException ex) {
+            ex.printStackTrace();
+        }
+        return null;
+    }
+
+
+    private void broadcast(String text){
+        try {
+            SomeResponse sr = new SomeResponse();
+            sr.text=text;
+            server.sendToAllTCP(sr);
+        }catch(Exception e){}
+    }
+
+    private void talktoserver(String text){
+        try {
+            SomeRequest request = new SomeRequest();
+            request.text = text;
+            client.sendTCP(request);
+        }catch(Exception e){}
+    }
+
+
+    private void runServer(){
+        try {
+
+            server.start();
+            server.bind(54555, 54777);
+            constate = ConnectionState.SERVER;
+            server.addListener(new Listener() {
+                public void received (Connection connection, Object object) {
+                    if (object instanceof SomeRequest) {
+                        SomeRequest request = (SomeRequest)object;
+                        lcollabstatus.setText(request.text);
+                    }
+                }
+            });
+            lcollabstatus.setText(z.status+": "+z.listeningon+" "+getLocalIpAddress());
+            tfRemoteIP.setText(getLocalIpAddress());
+            Gdx.app.log("HOST","Host ready!");
+
+
+        }catch(Exception e){}
+    }
+
+    private void runClient(String aipi){
+        try {
+
+            client.start();
+            client.connect(5000, aipi, 54555, 54777);
+
+            client.addListener(new Listener() {
+                public void received (Connection connection, Object object) {
+                   if (object instanceof SomeResponse) {
+                        SomeResponse response = (SomeResponse)object;
+                        lcollabstatus.setText(response.text);
+                    }
+                }
+            });
+            lcollabstatus.setText(z.status+": "+z.connectedto + " "+aipi);
+            Gdx.app.log("CLIENT","Client ready!");
+            constate = ConnectionState.CLIENT;
+
+
+        }catch(Exception e){
+            lcollabstatus.setText(z.status+": "+z.failedtoconnect);
+            constate = ConnectionState.DISCONNECTED;
+
+        }
+    }
+
+    public static class SomeRequest {
+        public String text;
+    }
+    public static class SomeResponse {
+        public String text;
+    }
+
     private boolean tapWorldMenu(Vector3 touch2) {
         if (cammode == "View only") {
             if (tapped(touch2, gui.center)) {
@@ -13733,7 +13931,6 @@ String texta="";
                 cacheTiles();
                 Vector3 ve = new Vector3();
                 minicam.unproject(ve.set(Gdx.input.getX(), Gdx.input.getY(), 0));
-
                 //cam.position.set(ve.x,ve.y,ve.z);
                 //cam.update();
                 int onset = 0;
@@ -13755,6 +13952,7 @@ String texta="";
 
         if (tapped(touch2, gui.center)) {
             resetcam(true);
+            runServer();
             return true;
         }
 

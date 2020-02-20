@@ -6,12 +6,14 @@ buildscript {
         mavenCentral()
         maven { url "https://plugins.gradle.org/m2/" }
         maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
+
         jcenter()
         google()
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:3.5.3'
         classpath 'com.mobidevelop.robovm:robovm-gradle-plugin:2.3.8'
+
         
 
     }
@@ -36,6 +38,7 @@ allprojects {
         google()
         maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
         maven { url "https://oss.sonatype.org/content/repositories/releases/" }
+        maven { url "http://repo.clojars.org/" }
     }
 }
 
@@ -49,6 +52,11 @@ project(":desktop") {
         api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
         api "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
         api "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"
+        implementation (group: 'kryonet', name: 'kryonet', version: '2.21') {
+            exclude group: 'com.esotericsoftware.reflectasm', module: 'reflectasm'
+            exclude group: 'com.esotericsoftware.minlog', module: 'minlog'
+        }
+        implementation group: 'com.esotericsoftware', name: 'kryo', version: '4.0.1'
         
     }
 }
@@ -80,6 +88,11 @@ project(":android") {
         natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-x86_64"
         implementation "com.google.android.gms:play-services-ads:16.0.0"
         implementation 'org.solovyev.android:checkout:1.0.0'
+        implementation (group: 'kryonet', name: 'kryonet', version: '2.21') {
+            exclude group: 'com.esotericsoftware.reflectasm', module: 'reflectasm'
+            exclude group: 'com.esotericsoftware.minlog', module: 'minlog'
+        }
+        implementation group: 'com.esotericsoftware', name: 'kryo', version: '4.0.1'
         
     }
 }
@@ -97,7 +110,11 @@ project(":ios") {
         api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-ios"
         api "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-ios"
         api "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-ios"
-        
+        implementation (group: 'kryonet', name: 'kryonet', version: '2.21') {
+            exclude group: 'com.esotericsoftware.reflectasm', module: 'reflectasm'
+            exclude group: 'com.esotericsoftware.minlog', module: 'minlog'
+        }
+        implementation group: 'com.esotericsoftware', name: 'kryo', version: '4.0.1'
     }
 }
 
@@ -109,6 +126,11 @@ project(":core") {
         api "com.badlogicgames.gdx:gdx:$gdxVersion"
         api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
         api "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
+        implementation (group: 'kryonet', name: 'kryonet', version: '2.21') {
+            exclude group: 'com.esotericsoftware.reflectasm', module: 'reflectasm'
+            exclude group: 'com.esotericsoftware.minlog', module: 'minlog'
+        }
+        implementation group: 'com.esotericsoftware', name: 'kryo', version: '4.0.1'
     }
 }
 
