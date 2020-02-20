@@ -528,7 +528,7 @@ public class game {
                             } else if (tlfloater.contains(cece.getTile())) {
                                 newbrick.setupGameObject(world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.FLOATER);
                             } else if (tlsinker.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.SINKER);
+                                newbrick.setupGameObject(world, tlcece, xx, yy, 6, BodyDef.BodyType.StaticBody, gameobject.objecttype.SINKER);
                             } else if (tlleftslope.contains(cece.getTile())) {
                                 newbrick.setupGameObject(world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.LEFTSLOPE);
                             } else if (tlrightslope.contains(cece.getTile())) {

@@ -67,6 +67,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     Boolean pv;
     String oldlang;
     Integer oldfontsize;
+    String oldcustomfont;
     PostProcessor postProcessor;
     Slider slfirstgen;
     //Animation<TextureRegion> animation;
@@ -102,6 +103,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     String info;
     obj copyobj = null;
     boolean sShowGrid = true, sShowFPS, sAutoSave, sSaveTsx = false, sShowGID = false, sMinimap;
+    String sCustomFont = "";
     boolean sCustomUI;
     boolean sShowCustomGrid = false;
     boolean sResizeTiles = false;
@@ -163,6 +165,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     float initialZoom;
     CheckBox cbShowGrid, cbShowFPS, cbShowGid, cbAutoSave, cbShowGidmap, cbResize, cbMinimap;
     CheckBox cbCustomUI;
+    TextField tfCustomFont;
     TextButton bBack3;
     CheckBox cbShowCustomGrid;
     TextField fGridX, fGridY, fBgcolor;
@@ -213,9 +216,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     com.badlogic.gdx.Input.TextInputListener pAutoadd;
     com.badlogic.gdx.Input.TextInputListener pAutorename;
     Table tLayerNew;
-    TextButton bLayerTile, bLayerObject, bLayerImage, bLayerGroup, blayerBack;
+    TextButton bLayerGroup, blayerBack;
     Table tPropEditor;
     TextField fPropName;
+    Table tImageLayer;
+    TextField tfImageName, tfImageSource, tfImageKey, tfImageOpacity, tfImageOffsetX, tfImageOffsetY;
     SelectBox sbPropType, sbPropValbool;
     TextArea fPropVal; //str,int,float,color
     TextButton bPropValfile, bPropApply, bPropCancel, bPropCopy, bPropPaste, bPropGid, bProppng;
@@ -466,7 +471,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         prefs = Gdx.app.getPreferences("My Preferences");
         language = prefs.getString("language", "English");
         fontsize = prefs.getInteger("fontsize", 0);
-
+        sCustomFont = prefs.getString("customfont","");
 
         try {
             reloadLanguage();
@@ -503,6 +508,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         loadTemplate();
         loadPropEditor();
         loadPropTemplate();
+        loadImageLayer();
         initializePostProcessor();
         //animation = GifDecoder.loadGIFAnimation(2, Gdx.files.external("loading.gif").read());
         manager.setLoader(
@@ -2451,7 +2457,20 @@ String texta="";
                     }
                     else if (layers.get(jo).getType() == layer.Type.IMAGE && isShown) {
                         layer lay = layers.get(jo);
-                        batch.draw(lay.getTexture(),lay.getOffsetX(),-lay.getImageheight()-lay.getOffsetY()+Tsh);
+                        if (lay.getTexture()!=null)
+                        {
+                            try {
+                                if (lay.getOpacity() != 0f){
+                                    batch.setColor(1f, 1f, 1f, lay.getOpacity());
+                                    batch.draw(lay.getTexture(), lay.getOffsetX(), -lay.getImageheight() - lay.getOffsetY() + Tsh);
+                                    batch.setColor(1f, 1f, 1f, 1);
+
+                                }else {
+                                    batch.draw(lay.getTexture(), lay.getOffsetX(), -lay.getImageheight() - lay.getOffsetY() + Tsh);
+
+                                }
+                            }catch(Exception e){}
+                        }
                     }
                 }//for jo
 
@@ -2463,6 +2482,7 @@ String texta="";
             //fbo.begin();
             batch.begin();
             try {
+
                 batch.draw(background, 0, -Tsh * Th + Tsh, Tsw * Tw, Tsh * Th, 0, 0, background.getWidth(), background.getHeight(), false, false);
             } catch (Exception e) {
             }
@@ -3446,7 +3466,20 @@ String texta="";
                 uisrect(gui.save, mouse, vis("quicksave"));//main menu button
                 uisrect(gui.layerpick, mouse, vis("layerpick"));//layerpicker
                 //uisrect(gui.minimap,mouse,vis("minimap"));//map props. button
+
+                for (property p : properties)
+                {
+                    if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled platformer") )
+                    {
+                        uisrect(gui.play, mouse, vis("play"));//redo
+                    }
+                    else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
+                        uisrect(gui.play, mouse, vis("play"));//redo
+                    }
+
+                }
             }
+
 
             if (mode == "tile") {
 
@@ -3463,17 +3496,6 @@ String texta="";
                     uisrect(gui.autotile, mouse, vis("refresh"));//tool switch
 
 
-                for (property p : properties)
-                {
-                    if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled platformer") )
-                    {
-                        uisrect(gui.play, mouse, vis("play"));//redo
-                    }
-                    else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
-                        uisrect(gui.play, mouse, vis("play"));//redo
-                    }
-
-                }
 
 
                 Color c1 = null, c2 = null, c3 = null, c4 = null, c5 = null;
@@ -3517,6 +3539,10 @@ String texta="";
             if (mode == "object") {
                 uisrect(gui.objectpicker, mouse, null);//objtools switch
                 uisrect(gui.lock, mouse, null);//tool switch
+
+            }
+            if (mode == "image") {
+                uisrect(gui.objectpicker, mouse, null);//objtools switch
 
             }
             if (mode == "newpoly") {
@@ -3756,6 +3782,8 @@ String texta="";
                 } else if (mode == "newpoly") {
                     uidrawbutton(txundo, z.undo, gui.undo, 3);
                     str1draw(ui, z.ok, gui.tool);
+                } else if (mode.equalsIgnoreCase("image")){
+                    str1draw(ui, z.properties, gui.objectpicker);
                 }
 
                 //smaller yellow font for label
@@ -3986,7 +4014,17 @@ String texta="";
         if (language.equalsIgnoreCase("Japanese")) {
             filenam = "japanese.otf";
         }
-        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal(filenam));
+        FreeTypeFontGenerator generator=null;
+        if (sCustomFont.equalsIgnoreCase("")){
+        generator = new FreeTypeFontGenerator(Gdx.files.internal(filenam));
+        }else
+        {
+            try{
+                generator = new FreeTypeFontGenerator(Gdx.files.external(sCustomFont));
+            }  catch(Exception e){
+                generator = new FreeTypeFontGenerator(Gdx.files.internal(filenam));
+            }
+        }
         str1 = generator.generateFont(parameter);
         generator.dispose();
 
@@ -6825,6 +6863,111 @@ String texta="";
 
     }
 
+    public void fillImageLayerData(){
+        tfImageName.setText(layers.get(selLayer).getName());
+        tfImageSource.setText(layers.get(selLayer).getImage());
+        tfImageKey.setText(layers.get(selLayer).getTrans());
+        tfImageOpacity.setText(Float.toString(layers.get(selLayer).getOpacity()));
+        tfImageOffsetX.setText(Float.toString(layers.get(selLayer).getOffsetX()));
+        tfImageOffsetY.setText(Float.toString(layers.get(selLayer).getOffsetY()));
+    }
+
+    public void loadImageLayer(){
+        //    TextField tImageName, tImageSource, tImageKey, tImageOpacity, tImageOffsetX, tImageOffsetY;
+        tImageLayer = new Table();
+        tImageLayer.setFillParent(true);
+        tImageLayer.defaults().width(btnx/2f).height(btny).pad(2);
+        tfImageName = new TextField("",skin);
+        tfImageSource = new TextField("",skin);
+        tfImageKey = new TextField("",skin);
+        tfImageOpacity = new TextField("",skin);
+        tfImageOffsetX = new TextField("",skin);
+        tfImageOffsetY = new TextField("",skin);
+
+        tfImageKey.setTextFieldFilter(tffcolor);
+        tfImageKey.setMaxLength(6);
+        tfImageOpacity.setTextFieldFilter(tfffloat);
+        tfImageOffsetX.setTextFieldFilter(tfffloat);
+        tfImageOffsetY.setTextFieldFilter(tfffloat);
+
+        TextButton tbSource = new TextButton(z.selectfile,skin);
+        TextButton tbOK = new TextButton(z.ok,skin);
+        TextButton tbCancel = new TextButton(z.cancel,skin);
+
+        tbSource.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                FileDialog(z.selectfile, "imagesource", "file", new String[]{".png", ".jpg", ".jpeg", ".bmp", ".gif"}, tImageLayer);
+            }
+        });
+
+        tbOK.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (tfImageName.getText()!="") layers.get(selLayer).setName(tfImageName.getText());
+                layers.get(selLayer).setTrans(tfImageKey.getText());
+                if (tfImageOpacity.getText()!="") layers.get(selLayer).setOpacity(Float.parseFloat(tfImageOpacity.getText()));
+                if (tfImageOffsetX.getText()!="") layers.get(selLayer).setOffsetX(Float.parseFloat(tfImageOffsetX.getText()));
+                if (tfImageOffsetY.getText()!="") layers.get(selLayer).setOffsetY(Float.parseFloat(tfImageOffsetY.getText()));
+
+                if (tfImageSource.getText()!="")
+                {
+                    layers.get(selLayer).setImage(tfImageSource.getText());
+                    FileHandle fh = Gdx.files.external(curdir + "/"+ tfImageSource.getText());
+                    if (fh.exists()){
+                        try {
+                            Texture tmptx = new Texture(Gdx.files.external(curdir + "/"+ tfImageSource.getText()));
+                            SimpleImageInfo s = new SimpleImageInfo(fh.file());
+                            layers.get(selLayer).setImagewidth(s.getWidth());
+                            layers.get(selLayer).setImageheight(s.getHeight());
+                            layers.get(selLayer).setTexture(tmptx);
+                            layers.get(selLayer).setPixmap(pixmapfromtexture(layers.get(selLayer).getTexture(), layers.get(selLayer).getTrans()));
+                            if (layers.get(selLayer).getTrans() != null) {
+                                layers.get(selLayer).setTexture(chromaKey(layers.get(selLayer).getTexture(), layers.get(selLayer).getTrans()));
+                            }
+
+                        }catch (Exception e) {}
+                    }
+                }
+
+                backToMap();
+            }
+        });
+
+        tbCancel.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                backToMap();
+            }
+        });
+
+
+        tImageLayer.add(new Label(z.imagelayer,skin)).colspan(2).width(btnx).row();
+
+        tImageLayer.add(new Label(z.name,skin));
+        tImageLayer.add(tfImageName).row();
+
+        tImageLayer.add(new Label(z.source,skin));
+        tImageLayer.add(tfImageSource).row();
+
+        tImageLayer.add(tbSource).colspan(2).width(btnx).row();
+
+        tImageLayer.add(new Label(z.x,skin));
+        tImageLayer.add(tfImageOffsetX).row();
+
+        tImageLayer.add(new Label(z.y,skin));
+        tImageLayer.add(tfImageOffsetY).row();
+
+        tImageLayer.add(new Label(z.keycolor,skin));
+        tImageLayer.add(tfImageKey).row();
+
+        tImageLayer.add(new Label(z.setopacity,skin));
+        tImageLayer.add(tfImageOpacity).row();
+
+        tImageLayer.add(tbOK).colspan(2).width(btnx).row();
+        tImageLayer.add(tbCancel).colspan(2).width(btnx).row();
+    }
+
     public void loadPreferences() {
         lastpath = prefs.getString("lastpath", "NotTiled");
         if (lastpath.startsWith(Gdx.files.getExternalStoragePath()))
@@ -6894,10 +7037,12 @@ String texta="";
                 cbShowGid.setChecked(sShowGID);
                 fBgcolor.setText(sBgcolor);
                 fFontsize.setText(Integer.toString(fontsize));
+                tfCustomFont.setText(sCustomFont);
                 sbLanguage.setSelected(language);
                 cbResize.setChecked(sResizeTiles);
                 oldlang = language;
                 oldfontsize = fontsize;
+                oldcustomfont = sCustomFont;
                 cbShowGidmap.setChecked(sShowGIDmap);
                 cbShowCustomGrid.setChecked(sShowCustomGrid);
                 fGridX.setText(Integer.toString(sGridX));
@@ -6919,8 +7064,10 @@ String texta="";
         cbShowGidmap = new CheckBox(z.showgidinmap, skin);
         cbShowCustomGrid = new CheckBox(z.showcustomgrid, skin);
         fzoomtresh = new TextField(Integer.toString(zoomTreshold), skin);
+        tfCustomFont = new TextField("",skin);
         fzoomtresh.setTextFieldFilter(tffint);
         fBgcolor = new TextField(sBgcolor, skin);
+        TextButton tbcustomfont = new TextButton(z.selectfile,skin);
         fBgcolor.setTextFieldFilter(tffcolor);
         fFontsize = new TextField(Integer.toString(fontsize), skin);
         fFontsize.setTextFieldFilter(tffint);
@@ -6928,6 +7075,14 @@ String texta="";
         fGridX.setTextFieldFilter(tffint);
         fGridY = new TextField(Integer.toString(sGridY), skin);
         fGridY.setTextFieldFilter(tffint);
+
+        tbcustomfont.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                FileDialog(z.selectfile, "customfont", "file", new String[]{".otf", ".ttf"}, tPreference);
+
+            }
+        });
 
         Button bSavePref = new TextButton(z.save, skin);
         bSavePref.addListener(new ChangeListener() {
@@ -6945,6 +7100,10 @@ String texta="";
                 prefs.putBoolean("fps", sShowFPS).flush();
                 sAutoSave = cbAutoSave.isChecked();
                 prefs.putBoolean("autosave", sAutoSave).flush();
+
+                sCustomFont = tfCustomFont.getText();
+                prefs.putString("customfont", sCustomFont).flush();
+
                 sCustomUI = cbCustomUI.isChecked();
                 prefs.putBoolean("customui", sCustomUI).flush();
                 sShowGID = cbShowGid.isChecked();
@@ -6994,7 +7153,7 @@ String texta="";
                 if (sGridY == 0) sGridY = 10;
                 prefs.putInteger("gridy", sGridY).flush();
                 backToMap();
-                if (!language.equalsIgnoreCase(oldlang) || fontsize != oldfontsize) {
+                if (!language.equalsIgnoreCase(oldlang) || fontsize != oldfontsize  || sCustomFont != oldcustomfont) {
                     msgbox(z.restart);
                 }
             }
@@ -7024,7 +7183,9 @@ String texta="";
         tPreference2.add(fzoomtresh).width(btnx / 2).padBottom(2).row();
         tPreference2.add(new Label(z.background, skin)).width(btnx / 2);
         tPreference2.add(fBgcolor).width(btnx / 2).padBottom(2).row();
-
+        tPreference2.add(new Label("Custom Font", skin)).width(btnx / 2);
+        tPreference2.add(tfCustomFont).width(btnx / 2).row();
+        tPreference2.add(tbcustomfont).colspan(2).row();
         tPreference2.add(new Label(z.fontsize, skin)).width(btnx / 2);
         tPreference2.add(fFontsize).width(btnx / 2).padBottom(2).row();
         tPreference2.add(cbAutoSave).align(Align.left).colspan(2).width(btnx).row();
@@ -7374,6 +7535,9 @@ String texta="";
                 } else if (newLayerType==layer.Type.OBJECT) {
                     newlayer.setName(input);
                     newlayer.setType(layer.Type.OBJECT);
+                } else if (newLayerType==layer.Type.IMAGE) {
+                    newlayer.setName(input);
+                    newlayer.setType(layer.Type.IMAGE);
                 }
                 newlayer.setVisible(true);
                 layers.add(newlayer);
@@ -9061,6 +9225,7 @@ String texta="";
                     renderorder = sbMapRenderOrder.getSelected().toString();
                     orientation = sbMapOrientation.getSelected().toString();
                     resetMinimap();
+                    cacheTiles();
                     backToMap();
 
                 } catch (Exception e) {
@@ -9549,13 +9714,28 @@ String texta="";
     private void loadNewLayer(){
         tLayerNew = new Table();
         tLayerNew.setFillParent(true);
-        bLayerTile = new TextButton(z.tilelayer, skin);
-        bLayerObject = new TextButton(z.objectgroup, skin);
+        Button bLayerTile = new Button(skin);
+        Button bLayerObject = new Button(skin);
+        Button bLayerImage = new Button(skin);
         blayerBack = new TextButton(z.back, skin);
+
+        Image img1 = new Image(txTypeTile);
+        bLayerTile.add(img1).width(btnx*0.15f).padLeft(20);
+        bLayerTile.add(new Label(z.tilelayer,skin)).width(btnx*0.80f);
+
+        Image img2 = new Image(txTypeObject);
+        bLayerObject.add(img2).width(btnx*0.15f).padLeft(20);
+        bLayerObject.add(new Label(z.objectgroup,skin)).width(btnx*0.80f);
+
+        Image img3 = new Image(txTypeImage);
+        bLayerImage.add(img3).width(btnx*0.15f).padLeft(20);
+        bLayerImage.add(new Label(z.imagelayer,skin)).width(btnx*0.80f);
+
         tLayerNew.add(new Label(z.addnew, skin)).width(btnx).row();
         tLayerNew.add(bLayerTile).width(btnx).height(btny*2).row();
         tLayerNew.add(bLayerObject).width(btnx).height(btny*2).row();
-        tLayerNew.add(blayerBack).height(btny*2).width(btnx);
+        tLayerNew.add(bLayerImage).width(btnx).height(btny*2).row();
+        tLayerNew.add(blayerBack).height(btny).width(btnx);
 
         blayerBack.addListener(listBack);
 
@@ -9573,6 +9753,16 @@ String texta="";
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 newLayerType = layer.Type.OBJECT;
+                Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                backToMap();
+            }
+        });
+
+
+        bLayerImage.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                newLayerType = layer.Type.IMAGE;
                 Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                 backToMap();
             }
@@ -9852,6 +10042,61 @@ String texta="";
             case "background":
                 background = new Texture(Gdx.files.external(openedfile));
                 break;
+            case "customfont":
+                tfCustomFont.setText(openedfile);
+                break;
+            case "imagesource":
+                String nn = file.name();
+                FileHandle f = file;
+                if (f.name().indexOf(".") > 0) {
+                    nn = f.name().substring(0, f.name().lastIndexOf("."));
+                }
+
+                String[] tc = curdir.split("/");
+                String[] ts = f.path().split("/");
+
+                boolean git = false;
+                String pre = "", post = "";
+                for (int i = 0; i < tc.length; i++) {
+                    if (git) {
+                        pre += "../";
+                        continue;
+                    }
+                    if (ts.length <= i) {
+                        git = true;
+                        pre += "../";
+                        continue;
+                    }
+                    if (!ts[i].equalsIgnoreCase(tc[i])) {
+                        git = true;
+                        pre += "../";
+                    }
+                }
+
+                git = false;
+                for (int i = 0; i < ts.length; i++) {
+                    if (git) {
+                        post += ts[i];
+                        if (i < ts.length - 1) post += "/";
+                        continue;
+                    }
+                    if (tc.length <= i) {
+                        git = true;
+                        post += ts[i];
+                        if (1 < ts.length - 1) post += "/";
+                        continue;
+                    }
+                    if (!tc[i].equalsIgnoreCase(ts[i])) {
+                        git = true;
+                        post += ts[i];
+                        if (i < ts.length - 1) post += "/";
+                    }
+                }
+                String cocos = pre + post;
+                if (cocos.endsWith("/")) cocos = cocos.substring(0, cocos.length() - 1);
+
+                tfImageSource.setText(cocos);
+                break;
             case "saveas":
                 saveasdir = file.path();
                 Gdx.input.getTextInput(pSaveAs, "Set new filename", "new.tmx", "");
@@ -9932,9 +10177,9 @@ String texta="";
 
                 return;
             case "replacetset":
-                File f = file.file();
-                f = file.file();
-                fTsPropSource.setText(f.getName());
+                File fd = file.file();
+                fd = file.file();
+                fTsPropSource.setText(fd.getName());
                 CacheAllTset();
 
 
@@ -12307,7 +12552,7 @@ String texta="";
                     return true;
                 }
             } else {
-                lastStage.setVisible(true);
+                //lastStage.setVisible(true);
                 //ANOTHER STUPIDITY, A REALLY STUPID ONE
                 switch (tilePicker) {
                     case "props":
@@ -12465,8 +12710,8 @@ String texta="";
                     case "newimgobj":
 
                         newobject.setGid(num);
-                        gotoStage(tPropsMgmt);
-
+                        //gotoStage(tPropsMgmt);
+                        backToMap();
                         break;
                     case "newterrain":
                         newTerrainID = num - ts.getFirstgid();
@@ -12856,11 +13101,9 @@ String texta="";
 
 
                     }
-
-
+                }else{
                         nyok.setX((int) touch.x);
                         nyok.setY(-(int) touch.y + Tsh);
-
                 }
                 layers.get(selLayer).getObjects().add(nyok);
 
@@ -13727,6 +13970,12 @@ String texta="";
 
         }
 
+        if (tapped(touch2, gui.objectpicker)) {
+            if (mode == "image") {
+                fillImageLayerData();
+                gotoStage(tImageLayer);
+            }
+        }
         //object tool selector
         if (tapped(touch2, gui.objectpickerleft)) {
             if (mode == "object") {
@@ -14589,6 +14838,48 @@ String texta="";
                     return true;
                 }
             }
+            if (mode == "object" || mode == "tile" || mode == "image") {
+
+                if (tapped(touch2, gui.save)) {
+                    sAutoSave = !sAutoSave;
+                    prefs.putBoolean("autosave", sAutoSave).flush();
+                    return true;
+                }
+
+                if (tapped(touch2, gui.layer)) {
+                    selLayer -= 1;
+                    if (selLayer <= -1) {
+                        selLayer = layers.size() - 1;
+                    }
+                    return true;
+                }
+                if (tapped(touch2, gui.viewmode)) {
+                    layers.get(selLayer).setVisible(!layers.get(selLayer).isVisible());
+                    return true;
+                }
+                if (tapped(touch2, gui.redo)) {
+                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    rotating = !rotating;
+                    return true;
+                }
+                if (tapped(touch2, gui.undo)) {
+                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    //loadInterface("custom1.json");
+                        /*
+                        Json json = new Json();
+                        writeThisAbs(curdir + "/auto.json", json.prettyPrint(gui));
+                        msgbox("auto.json saved!");
+                         */
+                    return true;
+                }
+
+                if (tapped(touch2, gui.menu)) {
+                    FileDialog(z.opentmxfile, "open", "file", new String[]{".tmx"}, null);
+                    return true;
+                }
+            }
+
+
             if (mode == "tile") {
 
 
@@ -14629,22 +14920,7 @@ String texta="";
                     return true;
                 }
 
-                if (tapped(touch2, gui.save)) {
-                    if (mode == "object" || mode == "tile") {
-                        sAutoSave = !sAutoSave;
-                        prefs.putBoolean("autosave", sAutoSave).flush();
-                        return true;
-                    }
 
-                }
-
-                if (tapped(touch2, gui.menu)) {
-                    if (mode == "object" || mode == "tile") {
-                        FileDialog(z.opentmxfile, "open", "file", new String[]{".tmx"}, null);
-                        return true;
-                    }
-
-                }
 
                 if (tapped(touch2, gui.rotation)) {
                     if (mode == "tile") {
@@ -14683,32 +14959,7 @@ String texta="";
 
                 }
 
-                if (tapped(touch2, gui.layer)) {
-                    selLayer-=1;
-                    if (selLayer<=-1){
-                        selLayer = layers.size()-1;
-                    }
-                    return true;
-                }
-                if (tapped(touch2, gui.viewmode)) {
-                    layers.get(selLayer).setVisible(!layers.get(selLayer).isVisible());
-                    return true;
-                }
-                if (tapped(touch2, gui.redo)) {
-                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
-                    rotating = ! rotating;
-                    return true;
-                }
-                if (tapped(touch2, gui.undo)) {
-                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
-                    //loadInterface("custom1.json");
-                    /*
-                    Json json = new Json();
-                    writeThisAbs(curdir + "/auto.json", json.prettyPrint(gui));
-                    msgbox("auto.json saved!");
-                     */
-                    return true;
-                }
+
 
 
 
