@@ -141,6 +141,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     int activetutor = 0;
     String mapFormat = "csv", tsxFile = "", activeFilename;
     String kartu = "", mode, lastpath, openedfile, tilePicker = "", saveasdir;
+    boolean isSampleReloaded;
     int curspr, curid;
     obj curobj;
     String curgroup = "default";
@@ -384,6 +385,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private boolean zooming;
     private float autosave = 0f;
     private float rotator = 0f;
+    private float undohistory = 0f;
     private Table trandomgen, treplacetiles;
     private TextField ffirstgen;
     private TextField fgencount;
@@ -902,6 +904,19 @@ String texta="";
                     }
                 }
 
+                undohistory += delta;
+
+                if (undohistory > 5f) {
+                    undohistory = 0;
+                  //  Gdx.app.log("Cache","Clearing...");
+                        if (undolayer.size()>Tw*Th*2){
+                            undolayer.subList(0,undolayer.size()-(Tw*Th*2)).clear();
+                        }
+                   // Gdx.app.log("Cache","Cleared");
+                }
+
+
+
                 rotator += delta;
 
                 if (rotator > 0.1f) {
@@ -1269,7 +1284,6 @@ String texta="";
             if (!Gdx.input.isTouched()) {
                 if (mapstartSelect == mapendSelect) {
                     roll = false;
-                    if (sMinimap) cacheTiles();
                 }
 
 
@@ -1374,7 +1388,6 @@ String texta="";
                 } catch (Exception e) {
                     ErrorBung(e, "undo.txt");
                 }
-                if (sMinimap) cacheTiles();
             }
             if (mode == "newpoly") {
 
@@ -2421,23 +2434,26 @@ String texta="";
                                     Tshad = Tsha;
                                 }
                                 switch (flag) {
-                                    case "20"://diagonal flip
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, true);
+                                    case "20"://diagonal flip 'THIS ONE"
+                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
                                         break;
-                                    case "40"://flipy
+                                    case "40"://flipy nd
                                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
                                         break;
-                                    case "60"://270 degrees clockwise
+                                    case "60"://270 degrees clockwise nd
                                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
                                         break;
-                                    case "80"://flipx
+                                    case "80"://flipx nd
                                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
                                         break;
                                     case "a0"://90 degress cw
                                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
                                         break;
-                                    case "c0"://180 degrees cw
+                                    case "c0"://180 degrees cw nd
                                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        break;
+                                    case "e0"://180 degrees ccw "AND THIS ONE"
+                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
                                         break;
                                     case "00":
                                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
@@ -2600,6 +2616,7 @@ String texta="";
     }
 
     private void cacheTiles() {
+
         caching = true;
         caches.clear();
         cacheIDs.clear();
@@ -2611,43 +2628,7 @@ String texta="";
             long ini;
             int total = Tw * Th;
 
-            //no optimization for iso map yet
-		 /*
-		 if (orientation.equalsIgnoreCase("orthogonal"))
-		 {
 
-		 for (int i=0;i <= Tw;i++)//vertical
-		 {
-
-		 if(i * Tsw <cam.position.x-120*cam.zoom)
-		 {
-		 startx=i;
-		 continue;
-		 }
-
-		 if(i * Tsw > cam.position.x+120*cam.zoom){
-		 stopx=i;
-		 break;
-		 }
-
-		 }
-		 for (int j=0;j < Th;j++)//horizontal
-		 {
-
-		 if((-Tsh*j)+Tsh <cam.position.y-200*cam.zoom){
-		 stopy=j;
-		 break;
-		 }
-		 //starts from
-
-		 if((-Tsh*j)-2*Tsh >cam.position.y+((200+Tsh)*cam.zoom)) {
-		 starty=j;
-		 continue;
-		 }
-
-		 }
-		 }
-		 */
             int startx = 0, stopx = Tw;
             int starty = 0, stopy = Th;
             int aa = 0, bb = 0, cc = 0, dd = 0;
@@ -2746,28 +2727,35 @@ String texta="";
                             }
                             drawer tempdrawer = new drawer();
                             switch (flag) {
-                                case "20"://diagonal flip
-                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, true);
+                                case "20"://diagonal flip 'THIS ONE"
+                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
                                     break;
-                                case "40"://flipy
+                                case "40"://flipy nd
                                     tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
                                     break;
-                                case "60"://270 degrees clockwise
+                                case "60"://270 degrees clockwise nd
                                     tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
                                     break;
-                                case "80"://flipx
+                                case "80"://flipx nd
                                     tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
                                     break;
                                 case "a0"://90 degress cw
                                     tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
                                     break;
-                                case "c0"://180 degrees cw
+                                case "c0"://180 degrees cw nd
                                     tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                    break;
+                                case "e0"://180 degrees ccw "AND THIS ONE"
+                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
                                     break;
                                 case "00":
                                     tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
                                     break;
+
                             }
+
+
+
 
                             drawers.add(tempdrawer);
 
@@ -3403,14 +3391,19 @@ String texta="";
                 flipy = false;
                 break;
             case 5://"C0"://180 degrees cw
-                roti = 0f;
-                flipx = false;
-                flipy = true;
+                roti = 270f;
+                flipx = true;
+                flipy = false;
                 break;
             case 6://
-                roti = 0f;
+                roti = 180f;
                 flipx = true;
-                flipy = true;
+                flipy = false;
+                break;
+            case 7://
+                roti = 90f;
+                flipx = true;
+                flipy = false;
                 break;
         }
 
@@ -4053,26 +4046,28 @@ String texta="";
     }
 
     public void checkAndReloadSamples(){
-        FileHandle fh2 = Gdx.files.external("NotTiled/");
-        if (!fh2.exists()) fh2.mkdirs();
-        FileHandle fh3 = Gdx.files.external("NotTiled/sample");
-        if (fh3.exists() && !fh3.isDirectory()) fh3.delete();
-        FileHandle fhc = Gdx.files.external("NotTiled/sample/island.tmx");
-        if (!fhc.exists()) {
 
-            FileHandle from = Gdx.files.internal("sample.zip");
-            FileHandle to = Gdx.files.external("NotTiled");
-            from.copyTo(to);
-            FileHandle zipo = Gdx.files.external("NotTiled/sample.zip");
-            unzip(zipo,to);
-           // zipo.delete();
-//            FileHandle from = Gdx.files.internal("sample/");
-  //          from.copyTo(Gdx.files.external("NotTiled/"));
-            prefs.putString("lof", "NotTiled/sample/island.tmx");
-            prefs.putString("lastpath", "NotTiled");
-            lastpath = "NotTiled/sample";
+        if (!isSampleReloaded) {
+            FileHandle fh2 = Gdx.files.external("NotTiled/");
+            if (!fh2.exists()) fh2.mkdirs();
+            FileHandle fh3 = Gdx.files.external("NotTiled/sample");
+            if (fh3.exists() && !fh3.isDirectory()) fh3.delete();
+            FileHandle fhc = Gdx.files.external("NotTiled/sample/island.tmx");
+            if (!fhc.exists()) {
+
+                FileHandle from = Gdx.files.internal("sample.zip");
+                FileHandle to = Gdx.files.external("NotTiled");
+                from.copyTo(to);
+                FileHandle zipo = Gdx.files.external("NotTiled/sample.zip");
+                unzip(zipo, to);
+
+                prefs.putString("lof", "NotTiled/sample/island.tmx").flush();
+                prefs.putString("lastpath", "NotTiled").flush();
+                lastpath = "NotTiled/sample";
+            }
+            isSampleReloaded = true;
+            prefs.putBoolean("reloaded", isSampleReloaded).flush();
         }
-        prefs.flush();
     }
 
     public void justReloadSamples(){
@@ -4167,13 +4162,7 @@ String texta="";
             if (tst.exists()) {
                 loadtmx(lf);
             } else {
-
-                FileHandle axs = Gdx.files.external("NotTiled/" + "sample/island.tmx");
-                if (axs.exists()) {
-                    loadtmx("NotTiled/" + "sample/island.tmx");
-                } else {
-                    checkAndReloadSamples();
-                }
+                newtmxfile(false);
             }
         }catch(Exception e){
             status("Error, check storage permission.",5);
@@ -6272,7 +6261,6 @@ String texta="";
         for (int i = 0; i < generationcount; i++) {
             newgeneration(birthlimit, deathlimit, livestr, livetset, deadstr, deadtset);
         }
-        if (sMinimap) cacheTiles();
 
     }
 
@@ -6991,6 +6979,7 @@ String texta="";
 
     public void loadPreferences() {
         lastpath = prefs.getString("lastpath", "NotTiled");
+        isSampleReloaded = prefs.getBoolean("reloaded", false);
         if (lastpath.startsWith(Gdx.files.getExternalStoragePath()))
         {
             lastpath = lastpath.substring(Gdx.files.getExternalStoragePath().length());
@@ -7004,7 +6993,7 @@ String texta="";
         bgg = (float) Integer.parseInt(sBgcolor.substring(2, 4), 16) / 256;
         bgb = (float) Integer.parseInt(sBgcolor.substring(4, 6), 16) / 256;
 
-        sMinimap = prefs.getBoolean("minimap", true);
+        sMinimap = prefs.getBoolean("minimap", false);
         sShowFPS = prefs.getBoolean("fps", false);
         sCustomUI = prefs.getBoolean("customui", false);
         if (sCustomUI){
@@ -8353,7 +8342,6 @@ String texta="";
                         @Override
                         public void changed(ChangeEvent event, Actor actor) {
                             selLayer = Integer.parseInt(actor.getName());
-                            if (sMinimap) cacheTiles();
                             backToMap();
                             cue("layerselected");
                         }
@@ -8374,7 +8362,6 @@ String texta="";
                             {
                                 vis.setDrawable(new SpriteDrawable(new Sprite(txInvisible)));
                             }
-                            if (sMinimap) cacheTiles();
                         }
                     });
 
@@ -10336,21 +10323,44 @@ String texta="";
     //////////////////////////////////////////////////////
 //            XML PROCESSOR
 //////////////////////////////////////////////////////
-    public void saveMap(String allpath) {
-        FileHandle file = Gdx.files.external(allpath);
-        recents.addrecent(allpath);
+    public void saveMap(String actualPath) {
+
+        //Craete handle for the actual file
+        FileHandle actualFile = Gdx.files.external(actualPath);
+        recents.addrecent(actualPath);
         saveRecents();
-        prefs.putString("lof", file.path());
+        prefs.putString("lof", actualFile.path());
         prefs.flush();
-        ///
+
+        //Check and create the temp folder
+        FileHandle fh2 = Gdx.files.external("NotTiled/");
+        if (!fh2.exists()) fh2.mkdirs();
+        FileHandle fh3 = Gdx.files.external("NotTiled/Temp");
+        if (fh3.exists() && !fh3.isDirectory()) fh3.delete();
+        if (!fh3.exists()) fh3.mkdirs();
+
+        //Saving the file to the temp folder first
+        String tempPath = "NotTiled/Temp/" + Integer.toString((int) (Math.random()*100000)) +".tmx";
+        buildTMX(tempPath);
+        FileHandle tempFile = Gdx.files.external(tempPath);
+
+        //copy the temp file to the actual file
+        tempFile.copyTo(actualFile);
+
+        //delete the temp file.
+        tempFile.delete();
+    }
+
+    public void buildTMX(String tempPath) {
+        FileHandle tempfile = Gdx.files.external(tempPath);
         autotiles at = new autotiles(autotiles);
         Json json = new Json();
         writeThisAbs(curdir + "/auto.json", json.prettyPrint(at));
         ////
 
         try {
-            if (file.exists()) file.delete();
-            FileOutputStream fos = new FileOutputStream(file.file());
+            if (tempfile.exists()) tempfile.delete();
+            FileOutputStream fos = new FileOutputStream(tempfile.file());
 
             XmlPullParserFactory factory = XmlPullParserFactory.newInstance(
                     System.getProperty(XmlPullParserFactory.PROPERTY_NAME), null);
@@ -12155,7 +12165,6 @@ String texta="";
 
             }
         }
-        //cacheTiles(); //using buffer
         return false;
 
     }
@@ -13310,7 +13319,7 @@ String texta="";
             String spc = "";
 
             switch (rotate) {
-                case 0://"20"://diagonal flip
+                case 0://"20"://
                     spc = "00";
                     break;
                 case 1://"40"://flipy
@@ -13326,9 +13335,12 @@ String texta="";
                     spc = "80";
                     break;
                 case 5://"C0"://180 degrees cw
+                    spc = "E0";
+                    break;
+                case 6://diagonal flip
                     spc = "40";
                     break;
-                case 6://
+                case 7://diagonal flip2
                     spc = "20";
                     break;
             }
@@ -13550,7 +13562,6 @@ String texta="";
                     //layers.get(selLayer).getStr().set(num, oi);
 
                     fillthis(num, oi, from, 0);
-                    if (sMinimap) cacheTiles();
                     break;
                 case 3: //paste, at last.
                     //status(mapstartSelect+"/"+mapendSelect,5);
@@ -13659,7 +13670,6 @@ String texta="";
                         cliplayer = lay;
                     }
 
-                    if (sMinimap) cacheTiles();
             }
 
         }
@@ -13698,15 +13708,15 @@ String texta="";
     private void loadKryonet(){
         server = new Server();
         serverkryo = server.getKryo();
-        serverkryo.register(SomeRequest.class);
-        serverkryo.register(SomeResponse.class);
+        serverkryo.register(TextChat.class);
         serverkryo.register(layerhistory.class);
+        serverkryo.register(PlayerState.class);
 
         client = new Client();
         clientkryo = client.getKryo();
-        clientkryo.register(SomeRequest.class);
-        clientkryo.register(SomeResponse.class);
+        clientkryo.register(TextChat.class);
         clientkryo.register(layerhistory.class);
+        clientkryo.register(PlayerState.class);
 
         tCollab = new Table();
         tCollab.setFillParent(true);
@@ -13796,7 +13806,7 @@ String texta="";
 
     private void broadcast(String text){
         try {
-            SomeResponse sr = new SomeResponse();
+            TextChat sr = new TextChat();
             sr.text=text;
             server.sendToAllTCP(sr);
         }catch(Exception e){}
@@ -13804,17 +13814,16 @@ String texta="";
 
     private void talktoserver(String text){
         try {
-            SomeRequest request = new SomeRequest();
+            TextChat request = new TextChat();
             request.text = text;
             client.sendTCP(request);
         }catch(Exception e){}
     }
 
-    private void uploaddata(layerhistory lh){
+    private void uploaddata(packet lh){
         try {
             if (constate ==ConnectionState.CLIENT) {
                 lh.sender = localIP;
-                Gdx.app.log("hi","upload data");
                 client.sendTCP(lh);
             }
         }catch(Exception e){
@@ -13822,12 +13831,9 @@ String texta="";
         }
     }
 
-    private void pushdata(layerhistory lh){
+    private void pushdata(packet lh){
         try {
-            //if (constate ==ConnectionState.SERVER) {
-            Gdx.app.log("hi","push data");
             server.sendToAllTCP(lh);
-            //}
         }catch(Exception e){
             e.printStackTrace();
         }
@@ -13838,17 +13844,19 @@ String texta="";
 
             server.start();
             server.bind(54555, 54777);
+            if (mygame !=null){
+                mygame.server = server;
+            }
             constate = ConnectionState.SERVER;
             server.addListener(new Listener() {
                 public void received (Connection connection, Object object) {
-                    if (object instanceof SomeRequest) {
-                        SomeRequest request = (SomeRequest)object;
+                    if (object instanceof TextChat) {
+                        TextChat request = (TextChat)object;
                         broadcast(request.text);
                         lcollabstatus.setText(request.text);
 
                     }
-
-                    if (object instanceof layerhistory) {
+                    else if (object instanceof layerhistory) {
                         layerhistory response = (layerhistory)object;
                         Gdx.app.log("hi","received from client");
                         pushdata(response);
@@ -13870,39 +13878,49 @@ String texta="";
 
             client.start();
             client.connect(5000, aipi, 54555, 54777);
+            if (mygame !=null){
+                mygame.client = client;
+            }
+
 
             client.addListener(new Listener() {
                 public void received (Connection connection, Object object) {
-                   if (object instanceof SomeResponse) {
-                        SomeResponse response = (SomeResponse)object;
-                        lcollabstatus.setText(response.text);
-                        status(response.text,3);
-                    }
-                    if (object instanceof layerhistory) {
-                        Gdx.app.log("hi","received from server...");
-                        layerhistory h = (layerhistory)object;
-                        if (!h.sender.equalsIgnoreCase(localIP)){
-                            if (h.undo){
+                    if (object instanceof packet) {
+                        packet pkt = (packet) object;
+                        if (!pkt.sender.equalsIgnoreCase(localIP)) {
+                            if (object instanceof TextChat) {
+                                TextChat response = (TextChat) object;
+                                lcollabstatus.setText(response.text);
+                                status(response.text, 3);
+                            } else if (object instanceof layerhistory) {
+                                Gdx.app.log("hi", "received from server...");
+                                layerhistory h = (layerhistory) object;
+                                if (h.undo) {
 
-                            long frm = h.from;
-                            long toe = h.to;
-                            int frmts = h.oldtset;
-                            int toets = h.newtset;
-                            h.from=toe;h.to=frm;
-                            h.oldtset=toets;h.newtset=frmts;
-                            h.undo=false;
+                                    long frm = h.from;
+                                    long toe = h.to;
+                                    int frmts = h.oldtset;
+                                    int toets = h.newtset;
+                                    h.from = toe;
+                                    h.to = frm;
+                                    h.oldtset = toets;
+                                    h.newtset = frmts;
+                                    h.undo = false;
 
-                            }
-                            undolayer.add(h);
-                            redolayer.clear();
-                            layers.get(h.getLayer()).getStr().set(h.getLocation(), h.getTo());
-                            layers.get(h.getLayer()).getTset().set(h.getLocation(), h.getNewtset());
-                            Gdx.app.log("hi","message accepted :)");
-                        }else{
-                            Gdx.app.log("hi","message rejected, from me!");
-                        }
-                    }
+                                }
+                                undolayer.add(h);
+                                redolayer.clear();
+                                layers.get(h.getLayer()).getStr().set(h.getLocation(), h.getTo());
+                                layers.get(h.getLayer()).getTset().set(h.getLocation(), h.getNewtset());
+                                Gdx.app.log("hi", "message accepted :)");
+                            }  //object instance of
+
+                        } else {
+                            Gdx.app.log("hi", "message rejected, from me!");
+                        } //packet
+                    } //packet
                 }
+
             });
             lcollabstatus.setText(z.status+": "+z.connectedto + " "+aipi);
             Gdx.app.log("CLIENT","Client ready!");
@@ -13917,12 +13935,15 @@ String texta="";
         }
     }
 
-    public static class SomeRequest {
+    public static class TextChat extends packet{
         public String text;
     }
-    public static class SomeResponse {
-        public String text;
+
+    public static class PlayerState extends packet{
+        public float posx;
+        public float posy;
     }
+
 
     private boolean tapWorldMenu(Vector3 touch2) {
         if (cammode == "View only") {
@@ -13959,7 +13980,6 @@ String texta="";
 
             if (layers.get(selLayer).getType() == layer.Type.TILE) {
                 mode = "tile";
-                if (sMinimap) cacheTiles();
             } else if (layers.get(selLayer).getType() == layer.Type.OBJECT) {
                 mode = "object";
             } else if (layers.get(selLayer).getType() == layer.Type.IMAGE) {
@@ -14155,7 +14175,7 @@ String texta="";
                 } catch (Exception e) {
                     ErrorBung(e, "undo.txt");
                 }
-                if (sMinimap) cacheTiles();
+                //if (sMinimap) cacheTiles();
                 return true;
             }
             if (mode == "newpoly") {
@@ -14203,7 +14223,6 @@ String texta="";
                         //redolayer.remove(lh);
                     }
                 }
-                if (sMinimap) cacheTiles();
                 return true;
             }
 
@@ -14227,7 +14246,6 @@ String texta="";
                     break;
             }
             saveViewMode();
-            if (sMinimap) cacheTiles();
             return true;
         }
 
@@ -14344,7 +14362,7 @@ String texta="";
             if (mode == "tile") {
 
                 rotate += 1;
-                if (rotate == 7) {
+                if (rotate == 8) {
                     rotate = 0;
                 }
                 String nfo = "0";
@@ -14362,13 +14380,16 @@ String texta="";
                         nfo = "270";
                         break;
                     case 4:
-                        nfo = z.x;
+                        nfo = "0*";
                         break;
                     case 5:
-                        nfo = z.y;
+                        nfo = "90*";
                         break;
                     case 6:
-                        nfo = z.x + z.y;
+                        nfo = "180*";
+                        break;
+                    case 7:
+                        nfo = "270*";
                         break;
                 }
                 rotationName = nfo;
@@ -15109,7 +15130,6 @@ String texta="";
                     //msgbox("Longpress to run Auto tiles");
                     if (!softcue("refresh") && lockUI) return true;
                     runAutoTiles();
-                    if (sMinimap) cacheTiles();
                     cue("refresh");
                     return true;
                 }
@@ -15203,7 +15223,7 @@ String texta="";
 
                         rotate -= 1;
                         if (rotate == -1) {
-                            rotate = 6;
+                            rotate = 7;
                         }
                         String nfo = "0";
                         switch (rotate) {
@@ -15220,13 +15240,16 @@ String texta="";
                                 nfo = "270";
                                 break;
                             case 4:
-                                nfo = z.x;
+                                nfo = "0*";
                                 break;
                             case 5:
-                                nfo = z.y;
+                                nfo = "90*";
                                 break;
                             case 6:
-                                nfo = z.x + z.y;
+                                nfo = "180*";
+                                break;
+                            case 7:
+                                nfo = "270*";
                                 break;
                         }
                         rotationName = nfo;
@@ -15872,7 +15895,9 @@ String texta="";
                     if (num % Tw != Tw - 1 && num < Tw * (Th - 1)) tapTile(num + Tw + 1, true);
                 }
 
-
+                nofling=0.4f;
+                velx=0;
+                vely=0;
                 return true;
             }
 
@@ -16263,7 +16288,6 @@ String texta="";
         prevx = (p3.x + p4.x) / 2;
         prevy = (p3.y + p4.y) / 2;
         //pan((p1.x+p2.x)/2,(p1.y+p2.y)/2,((p1.x+p2.x)/2)/((p3.x+p4.x)/2),((p1.y+p2.y)/2)/((p3.y+p4.y)/2));
-        //cacheTiles();
         //zooming=true;
         if (cammode == "View only") {
             if (cam.zoom < zoomTreshold) {

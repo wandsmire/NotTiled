@@ -27,6 +27,8 @@ import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.Box2D;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
 import com.badlogic.gdx.physics.box2d.World;
+import com.esotericsoftware.kryonet.Client;
+import com.esotericsoftware.kryonet.Server;
 import com.mirwanda.nottiled.gui;
 
 import java.util.ArrayList;
@@ -38,6 +40,9 @@ import static com.mirwanda.nottiled.game.gameobject.objecttype.MONSTER;
 import static com.mirwanda.nottiled.game.gameobject.objecttype.SPIKE;
 
 public class game {
+    public Server server;
+    public Client client;
+
     public TiledMap map;
     public OrthogonalTiledMapRenderer renderer;
     public Box2DDebugRenderer b2dr;

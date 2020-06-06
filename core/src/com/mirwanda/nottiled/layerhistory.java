@@ -1,6 +1,6 @@
 package com.mirwanda.nottiled;
 
-public class layerhistory
+public class layerhistory extends packet
 {
 	public boolean follower;
 	public int location;
@@ -9,7 +9,6 @@ public class layerhistory
 	public int layer;
 	public int oldtset;
 	public int newtset;
-	public String sender;
 	public boolean undo;
 
 	public layerhistory(){
