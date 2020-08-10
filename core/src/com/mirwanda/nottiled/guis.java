@@ -60,7 +60,13 @@ public class guis
 	gui respawn=new gui();
 	gui gamestatus=new gui();
 	gui canceltutorial=new gui();
-
+	//gui swatches=new gui();
+	gui sw1=new gui();
+	gui sw2=new gui();
+	gui sw3=new gui();
+	gui sw4=new gui();
+	gui sw5=new gui();
+	gui sw6=new gui();
 
 	public guis(){
 		menu.setp(0,20,0,10);
@@ -90,7 +96,7 @@ public class guis
 
 
 		info.setp(0, 100, 70, 80);
-		fps.setp(70,85,81,90);
+		fps.setp(85,100,81,90);
 		status.setp(0,100,70,80);
 		mode.setp(15,30,90,100);
 		layer.setp(30,70,90,100);
@@ -125,10 +131,18 @@ public class guis
 		gamestatus.setp(0,100,50,60);
 		lock.setp(85,100,10,19);
 
-		menu.setl(0,10,0,10);
-		map.setl(0,10,10,20);
-		save.setl(0,10,20,30);
-		play.setl(0,10,30,40);
+		//swatches.setp(25,75,10,28);
+		sw1.setp(25,42,10,19);
+		sw2.setp(42,58,10,19);
+		sw3.setp(58,75,10,19);
+		sw4.setp(25,42,19,28);
+		sw5.setp(42,58,19,28);
+		sw6.setp(58,75,19,28);
+
+		menu.setl(0,10,0,15);
+		map.setl(0,10,15,25);
+		save.setl(0,10,25,35);
+		play.setl(0,10,35,45);
 		layerpick.setl(90,100,0,15);
 		center.setl(10,20,0,10);
 		picker.setl(45,55,0,15);
@@ -189,6 +203,17 @@ public class guis
 		exit.setl(90,100,90,100);
 		respawn.setl(40,60,40,50);
 		gamestatus.setl(0,100,50,60);
+
+		//swatches.setl(10,35,0,28);
+		sw1.setl(10,18,0,14);
+		sw2.setl(18,26,0,14);
+		sw3.setl(26,34,0,14);
+		sw4.setl(10,18,14,28);
+		sw5.setl(18,26,14,28);
+		sw6.setl(26,34,14,28);
+
+
+
 	}
 	
 	

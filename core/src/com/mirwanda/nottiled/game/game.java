@@ -754,6 +754,11 @@ public class game {
     }
 
     public void keyinput(){
+
+
+
+
+
         if (Gdx.app.getType() == Application.ApplicationType.Desktop) {
 
             if (victory||starting) return;

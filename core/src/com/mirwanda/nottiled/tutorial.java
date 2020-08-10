@@ -26,9 +26,15 @@ public class tutorial
 	{
 		return steps;
 	}
-	public void setName(String name)
+	public void setName(String transl, String name)
 	{
-		this.name = name;
+
+		if (transl==""){
+			this.name = name;
+		}else
+		{
+			this.name = transl;
+		}
 	}
 
 	public String getName()
@@ -49,12 +55,26 @@ public class tutorial
 		return steps.get(position-1).text;
 	}
 
-	public void addStep(String text, String trigger, String criteria)
+	public void addStep2(String text, String trigger, String criteria)
 	{
 		step a = new step();
 		a.text=text;
 		a.trigger=trigger;
 		a.criteria=criteria;
+		steps.add(a);
+	}
+
+	public void addStep(String transl, String trigger, String text)
+	{
+		step a = new step();
+
+		if (transl==""){
+			a.text=text;
+		}else
+		{
+			a.text=transl;
+		}
+		a.trigger=trigger;
 		steps.add(a);
 	}
 
@@ -65,7 +85,7 @@ public class tutorial
 		a.trigger=trigger;
 		steps.add(a);
 	}
-	
+
 	public void start()
 	{
 		position=0;

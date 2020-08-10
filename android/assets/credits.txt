@@ -20,6 +20,7 @@ s>Tstis (Russian & Ukraine)
 s>General Airon (Tagalog)
 s>RT1_JMJS (Chinese)
 s>Mustafa Hilmi Pehlivanlı (Turkish)
+s>REDGRAUN (Belarusian)
 m>Credits for Ruby & Kitty
 s>Music by www.bensound.com
 s>Background by RavenTale

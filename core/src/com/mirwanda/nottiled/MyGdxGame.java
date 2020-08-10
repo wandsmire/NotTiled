@@ -30,7 +30,6 @@ import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.*;
-import java.util.logging.Formatter;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -83,6 +82,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     String temproname = "";
     String temprotype = "";
     String temprovalue = "";
+    private java.util.List<Integer> swatchValue = new ArrayList<Integer>();
     //////////////////////////////////////////////////////
 //            VARIABLES
 //////////////////////////////////////////////////////
@@ -96,6 +96,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     String debugMe = " ", debugYou = " ";
     Table lastStage;
     String sender;
+    boolean swatches = false;
     int senderID; //custom properties
     int selTsetID; //tiles
     String fps = "";
@@ -132,6 +133,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     int rotate = 0;
     int ssx = 480;
     int ssy = 800;
+    int nssx = 480;
+    int nssy = 800;
+
     int btnx = 440, btny = 50;
     int jon, joni;
     int selat;
@@ -140,7 +144,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     boolean tutoring = false;
     int activetutor = 0;
     String mapFormat = "csv", tsxFile = "", activeFilename;
-    String kartu = "", mode, lastpath, openedfile, tilePicker = "", saveasdir;
+    String kartu = "", mode, lastpath, openedfile, tilePicker = "", saveasdir, rwpath;
+    int autosaveInterval=1;
+    int gridOpacity=5;
     boolean isSampleReloaded;
     int curspr, curid;
     obj curobj;
@@ -196,12 +202,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     CheckBox cbUseTsx;
     TextButton bUseTsx, bApplyMP, bCancelMP, bPropertiesMap;
     ChangeListener listBack;
-    Table tMenu, tOpen, tNewFile, tSaveAs, tLicense, tTutorial;
-    TextButton bNew, bOpen, bSave, bSaveAs, bExit, bBack, bLicense, bReload, bTutorial;
+    Table tMenu, tMenu1, tMenu2, tOpen, tNewFile, tSaveAs, tLicense, tTutorial;
+    TextButton bNew, bOpen, bSave, bSaveAs, bExit, bBack, bLicense, bReload, bTutorial, bCopyto;
     ImageButton bcc;
-    TextButton btiled;
-    TextButton bTutorOK, bTutorBack;
+    TextButton btiled, bCollaboration, bPatreon2, bTools, bBackground;
+    TextButton bTutorOK, bTutorBack, bPatreon, bExporter, credito;
     Table tMap, tLayerMgmt, tTileMgmt, tObjMgmt, tFrameMgmt, tPropsMgmt, tPreference, tProperties, tTsetMgmt, tAutoMgmt, tAutoform;
+    Table tMap1, tMap2;
     TextButton bTileMgmt, bTileSettingsMgmt, bPreference, bProperties, bTsetMgmt, bBack2, bAutoMgmt, bFeedback;
     Table tRecent;
     Table tCollab;
@@ -318,7 +325,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     int loadtime = 10;
     private CheckBox[] newcb;
     private int scrollspeed;
-    private Slider sdScrollSpeed;
+    private Slider sdScrollSpeed, sdGridOpacity;
     private SelectBox sbLanguage;
     private Online templates = new Online();
     private java.util.List<SpriteCache> caches = new ArrayList<SpriteCache>();
@@ -356,7 +363,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private int redux;
     private int reduy;
     private TextButton bLinks;
-    private TextButton bVideos;
+    private TextButton bVideos, bDiscord, bWhatsapp, bManualCN;
     private String wl;
     private TextButton bTsPropCustomProp;
     private String oldowner;
@@ -379,7 +386,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private Texture txresources;
     private TextButton bMassAddProp, bTileCollision;
     private int zoomTreshold;
-    private TextField fzoomtresh;
+    private TextField fzoomtresh, frwpath;
     private CheckBox cball;
     private Table bigman;
     private boolean zooming;
@@ -405,7 +412,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private float velredx;
     private float velredy;
     private int fontsize;
-    private TextField fFontsize;
+    private TextField fFontsize, fAutoSaveInterval;
     private float nofling;
     private Stage stage;
     private Texture txpencil;
@@ -498,6 +505,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         initSD();
         loadGdxStuff();
         loadExport();
+        loadListener();
         loadMenuMap();
         loadPreferences();
         initErrorHandling();
@@ -523,6 +531,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         loadImageLayer();
         loadKryonet();
         initializePostProcessor();
+        createSwatches();
+
+
         //animation = GifDecoder.loadGIFAnimation(2, Gdx.files.external("loading.gif").read());
         manager.setLoader(
                 TmxMap.class,
@@ -532,6 +543,32 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         );
 
     }
+
+    private void createSwatches(){
+        Integer sw = 0;
+        for (int ii=0;ii<6;ii++) {
+            swatchValue.add( sw );
+        }
+    }
+
+    private void resetSwatches(){
+        Integer sw = 0;
+        for (int ii=0;ii<6;ii++) {
+            swatchValue.set(ii,0);
+        }
+
+
+        for (property p: properties){
+            if (p.getName().equalsIgnoreCase( "sw1" )) {swatchValue.set( 0, Integer.parseInt(p.getValue()));}
+            if (p.getName().equalsIgnoreCase( "sw2" )) {swatchValue.set( 1, Integer.parseInt(p.getValue()));}
+            if (p.getName().equalsIgnoreCase( "sw3" )) {swatchValue.set( 2, Integer.parseInt(p.getValue()));}
+            if (p.getName().equalsIgnoreCase( "sw4" )) {swatchValue.set( 3, Integer.parseInt(p.getValue()));}
+            if (p.getName().equalsIgnoreCase( "sw5" )) {swatchValue.set( 4, Integer.parseInt(p.getValue()));}
+            if (p.getName().equalsIgnoreCase( "sw6" )) {swatchValue.set( 5, Integer.parseInt(p.getValue()));}
+        }
+
+    }
+
 
     private void asyncinitiation() {
         loadingfile = true;
@@ -896,7 +933,7 @@ String texta="";
 
                 autosave += delta;
 
-                if (autosave > 60f) {
+                if (autosave > 60f * autosaveInterval) {
                     autosave = 0;
                     if (sAutoSave) {
                         saveMap(curdir + "/" + curfile);
@@ -946,14 +983,14 @@ String texta="";
 
 
                 musicplaying(delta);
-
+                checkConnectionStatus();
 
 
                 if (nofling > 0) nofling -= delta;
                 switch (kartu) {
                     case "game":
                         //crt.setEnabled(true);
-                        vignette.setEnabled(false);
+                        //vignette.setEnabled(true);
                         //curvature.setEnabled(true);
                         //bloom.setEnabled(true);
 
@@ -1285,9 +1322,38 @@ String texta="";
                 if (mapstartSelect == mapendSelect) {
                     roll = false;
                 }
-
-
             }
+
+            float pex,pey;
+            pex = (float) Gdx.input.getX() / nssx;
+            pey = (float) Gdx.input.getY() / nssy;
+
+
+            Gdx.app.log("pexpey", ""+ Gdx.input.getX() + " | "+ nssx  + " | "+ Gdx.input.getY() + " | "+  nssy);
+            if (pex > 0.90f) cam.translate( 5,0 );
+            if (pex < 0.10f) cam.translate( -5,0 );
+            if (pey > 0.90f) cam.translate( 0,-5 );
+            if (pey < 0.10f) cam.translate( 0,5 );
+            int onset=0;
+            if (orientation.equalsIgnoreCase("isometric")){
+                onset=Tsw*Tw/2;
+            }
+            if (!orientation.equalsIgnoreCase("isometric")){
+                if (cam.position.x < 0-onset) cam.position.x = 0-onset;
+                if (cam.position.x > Tsw * Tw -onset) cam.position.x = Tsw * Tw -onset;
+                if (cam.position.y < -Tsh * Th) cam.position.y = -Tsh * Th;
+                if (cam.position.y > 0) cam.position.y = 0;
+            }
+
+            cam.update();
+                        // cam.translate( -x, y );
+
+                        //if (p1>500) cam.position.x-=10;
+                        //    if (cam.position.x > Tsw * Tw - onset) cam.position.x = Tsw * Tw - onset;
+                        //   if (cam.position.y < -Tsh * Th) cam.position.y = -Tsh * Th;
+                        //   if (cam.position.y > 0) cam.position.y = 0;
+
+
         }
 
         if (kartu=="game")
@@ -1655,6 +1721,12 @@ String texta="";
                     case "rndb":
                     case "repa":
                     case "repb":
+                    case "sw1":
+                    case "sw2":
+                    case "sw3":
+                    case "sw4":
+                    case "sw5":
+                    case "sw6":
                         seltset = this.seltset;
                         break;
                     default:
@@ -1972,6 +2044,13 @@ String texta="";
                     case "rndb":
                     case "repa":
                     case "repb":
+                    case "sw1":
+                    case "sw2":
+                    case "sw3":
+                    case "sw4":
+                    case "sw5":
+                    case "sw6":
+
                         str1draw(ui, "<<", gui.tilesetslefticon);
                         str1draw(ui, ">>", gui.tilesetrighticon);
                         str1draw(ui, tilesets.get(seltset).getName(), gui.tilesetsmid);
@@ -2085,7 +2164,7 @@ String texta="";
             }
 
             Gdx.gl20.glLineWidth(1);//average
-            sr.setColor(0, 0, 0, .5f);
+            sr.setColor(0, 0, 0, gridOpacity / 10f);
 
             int offsetx = 0, offsety = 0;
             if (orientation.equalsIgnoreCase("isometric")) {
@@ -3042,6 +3121,8 @@ String texta="";
         tz3 = uicam.position.z;
 
         //cam = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        nssx=width;
+        nssy=height;
         if (width > height) {
             stage = hstage;
             //stage.addActor(hstage.getRoot());
@@ -3071,7 +3152,8 @@ String texta="";
         }
         stage.getViewport().setScreenSize(width, height);
         if (kartu == "stage") {
-            gotoStage(lastStage);
+            //gotoStage(lastStage);
+            backToMap();
         }else if (kartu == "game") {
         } else {
             if (dialog != null) {
@@ -3079,9 +3161,11 @@ String texta="";
 
             }
             if (startup != false) {
-                gotoStage(tMenu);
+               // setMenuMap();
+               // gotoStage(tMenu);
+                backToMap();
             }
-            startup = true;
+           // startup = true;
 
         }
 
@@ -3464,7 +3548,7 @@ String texta="";
                 uisrect(gui.mode, mouse, vis("addlayer"));//tile/obj switch
                 uisrect(gui.layer, mouse, vis("layerlist"));//layer switch
                 uisrect(gui.viewmode, mouse, vis("viewmode"));//viewmode switch
-                uisrect(gui.center, mouse, vis("center"));//map props. button
+                //uisrect(gui.center, mouse, vis("center"));//map props. button
                 uisrect(gui.menu, mouse, vis("menu"));//main menu button
                 uisrect(gui.map, mouse, vis("map"));//map props. button
                 uisrect(gui.save, mouse, vis("quicksave"));//main menu button
@@ -3492,6 +3576,17 @@ String texta="";
                 uisrect(gui.rotation, mouse, vis("rotation"));//rotation switch
                 uisrect(gui.undo, mouse, vis("undo"));//undo
                 uisrect(gui.redo, mouse, vis("redo"));//redo
+                if (swatches) {
+                    //uisrect( gui.swatches, mouse, vis( "swatches" ) );//swatches
+                    uisrect( gui.sw1, mouse, vis( "swatches1" ) );//swatches
+                    uisrect( gui.sw2, mouse, vis( "swatches2" ) );//swatches
+                    uisrect( gui.sw3, mouse, vis( "swatches3" ) );//swatches
+                    uisrect( gui.sw4, mouse, vis( "swatches4" ) );//swatches
+                    uisrect( gui.sw5, mouse, vis( "swatches5" ) );//swatches
+                    uisrect( gui.sw6, mouse, vis( "swatches6" ) );//swatches
+
+                }
+
 
                 uisrect(gui.picker, mouse, vis("tilepick"));//select tile
                 if (autotiles.size() > 0)
@@ -3620,6 +3715,49 @@ String texta="";
                 uidraw(tilesets.get(initset).getTexture(), gui.pickerbg, 1, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha);
             }
 
+            if (tilesets.size() > 0 && mode == "tile" && swatches) {
+
+                for (int ii=0;ii<6;ii++) {
+                    long num = swatchValue.get(ii);// ini intinyakah?
+                    if (num==0) continue;
+                    int initset = 0;
+                    for (int o = 0; o < tilesets.size(); o++) {
+                        if (num >= tilesets.get( o ).getFirstgid() && num < tilesets.get( o ).getFirstgid() + tilesets.get( o ).getTilecount()) {
+                            initset = o;
+                            break;
+                        }
+                    }
+                    sprX = (int) (num - tilesets.get( initset ).getFirstgid()) % (tilesets.get( initset ).getWidth());
+                    sprY = (int) (num - tilesets.get( initset ).getFirstgid()) / (tilesets.get( initset ).getWidth());
+                    margin = tilesets.get( initset ).getMargin();
+                    spacing = tilesets.get( initset ).getSpacing();
+                    Tswa = tilesets.get( initset ).getTilewidth();
+                    Tsha = tilesets.get( initset ).getTileheight();
+                    //TextureRegion region= new TextureRegion(tilesets.get(initset).getTexture(), );
+                    int mgn=1;
+                    if (landscape) mgn=0;
+                    switch (ii+1){
+                        case 1:
+                            uidraw( tilesets.get( initset ).getTexture(), gui.sw1, mgn, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha );
+                            break;
+                        case 2:
+                            uidraw( tilesets.get( initset ).getTexture(), gui.sw2, mgn, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha );
+                            break;
+                        case 3:
+                            uidraw( tilesets.get( initset ).getTexture(), gui.sw3, mgn, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha );
+                            break;
+                        case 4:
+                            uidraw( tilesets.get( initset ).getTexture(), gui.sw4, mgn, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha );
+                            break;
+                        case 5:
+                            uidraw( tilesets.get( initset ).getTexture(), gui.sw5, mgn, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha );
+                            break;
+                        case 6:
+                            uidraw( tilesets.get( initset ).getTexture(), gui.sw6, mgn, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha );
+                            break;
+                    }
+                }
+            }
 
             //////////
 
@@ -3673,7 +3811,7 @@ String texta="";
                     } else {
                         uidrawbutton(txsave, z.save, gui.save, 2);
                     }
-                    uidrawbutton(txcenter, z.recenter, gui.center, 2);
+                    //uidrawbutton(txcenter, z.recenter, gui.center, 2);
 
                     for (property p : properties)
                     {
@@ -3730,6 +3868,21 @@ String texta="";
 
                     str1draw(ui, rotationName, gui.rotation);
                     uidrawbutton(txtile, z.tile, gui.picker, 0);
+
+
+                    /*
+                    if (swatches) {
+                        uidrawbutton( txtile, "", gui.sw1, 0 );
+                        uidrawbutton( txtile, "", gui.sw2, 0 );
+                        uidrawbutton( txtile, "", gui.sw3, 0 );
+                        uidrawbutton( txtile, "", gui.sw4, 0 );
+                        uidrawbutton( txtile, "", gui.sw5, 0 );
+                        uidrawbutton( txtile, "", gui.sw6, 0 );
+                    }
+
+                     */
+
+
                     if (autotiles.size() > 0) {
                         uidrawbutton(txautopick, z.autotile, gui.autopicker, 2);
                         uidrawbutton(txauto, z.refresh, gui.autotile, 2);
@@ -3864,6 +4017,8 @@ String texta="";
         String exceptionAsString = sw.toString();
         System.out.println(exceptionAsString);
         file.writeString(exceptionAsString, false);
+
+        saveMap(curdir + "/" + curfile + "_re.tmx");
         prefs.putString("lof", "NotTiled/" + "sample/island.tmx");
         prefs.putString("lastpath", "NotTiled/");
         prefs.flush();
@@ -4008,17 +4163,20 @@ String texta="";
         }
         parameter.size = fontsize;
 
+
         parameter.shadowColor = new Color(0f, 0f, 0f, .9f);
         parameter.shadowOffsetY = 4;
+        FreeTypeFontGenerator generator=null;
 
         String filenam = "font.ttf";
         if (language.equalsIgnoreCase("Chinese")) {
-            filenam = "chinese.ttf";
+            filenam = "noto.otf";
         }
         if (language.equalsIgnoreCase("Japanese")) {
             filenam = "japanese.otf";
         }
-        FreeTypeFontGenerator generator=null;
+
+
         if (sCustomFont.equalsIgnoreCase("")){
         generator = new FreeTypeFontGenerator(Gdx.files.internal(filenam));
         }else
@@ -4029,6 +4187,7 @@ String texta="";
                 generator = new FreeTypeFontGenerator(Gdx.files.internal(filenam));
             }
         }
+        generator.setMaxTextureSize( 99999 );
         str1 = generator.generateFont(parameter);
         generator.dispose();
 
@@ -4242,6 +4401,7 @@ String texta="";
 
         //loadautotiles();
         cacheTiles();
+        resetSwatches();
         //uicam.zoom=0.5f;
         //uicam.update();
         firstload = loadtime;
@@ -4259,6 +4419,7 @@ String texta="";
             return;
         }
         loadtmxnewplus(faths);
+        resetSwatches();
 
 
     }
@@ -4823,6 +4984,15 @@ String texta="";
 
     }
 
+    public void loadListener(){
+        listBack = new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                backToMap();
+            }
+        };
+    }
+
     public void loadMenuMap() {
         bLicense = new TextButton(z.license, skin);
         bNew = new TextButton(z.newfile, skin);
@@ -4833,16 +5003,16 @@ String texta="";
         bTutorBack = new TextButton(z.back, skin);
         bTutorOK = new TextButton(z.ok, skin);
 
-        TextButton bExporter = new TextButton(z.export, skin);
-        TextButton bDiscord = new TextButton(z.discordserver, skin);
-        TextButton bWhatsapp = new TextButton(z.whatsappgroup, skin);
-        TextButton bPatreon = new TextButton(z.supportnottiled, skin);
-        TextButton bPatreon2 = new TextButton(z.supportnottiled, skin);
-        TextButton credito = new TextButton(z.credits, skin);
-        TextButton bBackground = new TextButton(z.background, skin);
-        TextButton bCollaboration = new TextButton(z.collaboration, skin);
+         bExporter = new TextButton(z.export, skin);
+         bDiscord = new TextButton(z.discordserver, skin);
+         bWhatsapp = new TextButton(z.whatsappgroup, skin);
+        bPatreon = new TextButton(z.supportnottiled, skin);
+         bPatreon2 = new TextButton(z.supportnottiled, skin);
+         credito = new TextButton(z.credits, skin);
+         bBackground = new TextButton(z.background, skin);
+         bCollaboration = new TextButton(z.collaboration, skin);
         bReload = new TextButton(z.reloadsamples, skin);
-        TextButton bCopyto = new TextButton(z.copytorustedwarfare, skin);
+         bCopyto = new TextButton(z.copytorustedwarfare, skin);
         bRusted = new TextButton("Rusted Warfare", skin);
         bWardate = new TextButton("Rusted WarDate", skin);
         bManual = new TextButton(z.manualbook, skin);
@@ -4887,15 +5057,10 @@ String texta="";
         bTileMgmt = new TextButton(z.layer, skin);
         bTsetMgmt = new TextButton(z.tileset, skin);
         bAutoMgmt = new TextButton(z.autotile, skin);
-        TextButton bTools = new TextButton(z.tools, skin);
+         bTools = new TextButton(z.tools, skin);
 
 
-        listBack = new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                backToMap();
-            }
-        };
+
         ///////
 		/*
 		TextButton bMains = new TextButton("Menu",skin);
@@ -4947,19 +5112,20 @@ String texta="";
         bCopyto.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                FileHandle fl = Gdx.files.external("/RustedWarfare");
+
+                FileHandle fl = Gdx.files.external(rwpath);
                 if (!fl.exists()) fl.mkdirs();
-                FileHandle fla = Gdx.files.external("/RustedWarfare/maps");
+                FileHandle fla = Gdx.files.external(rwpath+ "/maps");
                 if (!fla.exists()) {
                     fla.mkdirs();
                 }
                 saveMap(curdir + "/" + curfile);
                 FileHandle from = Gdx.files.external(curdir + "/" + curfile);
-                from.copyTo(Gdx.files.external("/RustedWarfare/maps"));
+                from.copyTo(Gdx.files.external(rwpath+ "/maps"));
 
                 FileHandle from2 = Gdx.files.external(curdir + "/" + curfile.substring(0, curfile.length() - 4) + "_map.png");
                 if (from2.exists())
-                    from2.copyTo(Gdx.files.external("/RustedWarfare/maps"));
+                    from2.copyTo(Gdx.files.external(rwpath+ "/maps"));
 
                 msgbox(z.mapsenttorustedwatfare);
                 cue("copytorw");
@@ -4971,7 +5137,7 @@ String texta="";
         bBack.addListener(listBack);
         bBack2 = new TextButton(z.back, skin);
         bBack2.addListener(listBack);
-        TextButton bBack3 = new TextButton(z.back, skin);
+         bBack3 = new TextButton(z.back, skin);
         bBack3.addListener(listBack);
         bExit.addListener(new ChangeListener() {
             @Override
@@ -4983,6 +5149,7 @@ String texta="";
         bLinks.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                setLinksMap();
                 gotoStage(tLinks);
                 cue("links");
             }
@@ -5000,6 +5167,26 @@ String texta="";
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 gotoStage(tTutorial);
+            }
+        });
+
+        bNew.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                lastpath = prefs.getString("lastpath", "NotTiled");
+                if (lastpath.startsWith(Gdx.files.getExternalStoragePath()))
+                {
+                    lastpath = lastpath.substring(Gdx.files.getExternalStoragePath().length());
+
+                }
+
+                fNCurdir.setText(lastpath);
+                fNTsw.setText(prefs.getString("Tsw", "20"));
+                fNTsh.setText(prefs.getString("Tsh", "20"));
+                fNTw.setText(prefs.getString("Tw", "20"));
+                fNTh.setText(prefs.getString("Th", "20"));
+                gotoStage(tNewFile);
+                cue("new");
             }
         });
 
@@ -5108,7 +5295,7 @@ String texta="";
             }
         });
 
-        TextButton bManualCN = new TextButton(z.checkupdate, skin);
+         bManualCN = new TextButton(z.checkupdate, skin);
         bManualCN.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -5203,52 +5390,144 @@ String texta="";
             }
 
         };
-        tMap = new Table();
-        tMap.setFillParent(true);
-        tMap.defaults().width(btnx).height(btny + 3).padBottom(2);
-        if (!face.ispro()) tMap.add(bPatreon2).row();
-        tMap.add(bFeedback).row();
-        tMap.add(bCollaboration).row();
-        tMap.add(bProperties).row();
-        tMap.add(bBackground).row();
-        tMap.add(bTools).row();
-        tMap.add(bAutoMgmt).row();
-        tMap.add(bTileMgmt).row();
-        tMap.add(bTsetMgmt).row();
-        tMap.add(bBack2).row();
 
-        tLinks = new Table();
-        tLinks.setFillParent(true);
-        tLinks.defaults().width(btnx).height(btny + 2).padBottom(2);
-        tLinks.add(bLicense).row();
-        tLinks.add(bManual).row();
-        tLinks.add(bVideos).row();
-        tLinks.add(bDiscord).row();
-        tLinks.add(bWhatsapp).row();
-        tLinks.add(bReload).row();
-        tLinks.add(bCopyto).row();
-        tLinks.add(bBack3).row();
-        tLinks.add(new Label(z.thirdpartyapps, skin)).padTop(10).row();
-        tLinks.add(bRusted).row();
-        tLinks.add(bWardate).row();
-        tLinks.add(bManualCN).row();
 
-        tMenu = new Table();
-        tMenu.setFillParent(true);
-        tMenu.defaults().width(btnx).height(btny + 2);
-        if (!face.ispro()) tMenu.add(bPatreon).row();
-        tMenu.add(bNew).row();
-        tMenu.add(bOpen).row();
-        tMenu.add(bRecent).row();
-        tMenu.add(bSave).row();
-        tMenu.add(bSaveAs).row();
-        tMenu.add(bExporter).row();
-        tMenu.add(bTutorial).row();
-        tMenu.add(bPreference).row();
-        tMenu.add(bLinks).row();
-        tMenu.add(credito).row();
-        tMenu.add(bExit).row();
-        tMenu.add(bBack);
+
+
+
+        setMenuMap();
+        setMapMap();
+        setLinksMap();
+    }
+
+    private void setLinksMap(){
+        if (landscape) {
+            tLinks = new Table();
+            tLinks.setFillParent( true );
+            tLinks.defaults().width( btnx ).height( btny + 2 ).padBottom( 2 );
+            Table tLinks2 = new Table();
+            tLinks2.defaults().width( btnx ).height( btny *2 ).padBottom( 2 );
+            Table tLinks1 = new Table();
+            tLinks1.defaults().width( btnx ).height( btny *2).padBottom( 2 );
+            tLinks1.add( bLicense ).row();
+            tLinks1.add( bManual ).row();
+            tLinks1.add( bVideos ).row();
+            tLinks1.add( bDiscord ).row();
+            tLinks1.add( bWhatsapp ).row();
+            tLinks1.add( bReload ).row();
+            tLinks2.add( bCopyto ).row();
+
+            tLinks2.add( new Label( z.thirdpartyapps, skin ) ).padTop( 10 ).row();
+            tLinks2.add( bRusted ).row();
+            tLinks2.add( bWardate ).row();
+            tLinks2.add( bManualCN ).row();
+            tLinks2.add( bBack3 );
+            tLinks.add( tLinks1 );
+            tLinks.add( tLinks2 );
+        }else{
+            tLinks = new Table();
+            tLinks.setFillParent( true );
+            tLinks.defaults().width( btnx ).height( btny + 2 ).padBottom( 2 );
+            tLinks.add( bLicense ).row();
+            tLinks.add( bManual ).row();
+            tLinks.add( bVideos ).row();
+            tLinks.add( bDiscord ).row();
+            tLinks.add( bWhatsapp ).row();
+            tLinks.add( bReload ).row();
+            tLinks.add( bCopyto ).row();
+            tLinks.add( bBack3 ).row();
+            tLinks.add( new Label( z.thirdpartyapps, skin ) ).padTop( 10 ).row();
+            tLinks.add( bRusted ).row();
+            tLinks.add( bWardate ).row();
+            tLinks.add( bManualCN ).row();
+        }
+    }
+
+
+    private void setMapMap(){
+        if (landscape) {
+            tMap = new Table();
+             tMap1 = new Table();
+             tMap2 = new Table();
+            tMap1.defaults().width(btnx).height(btny *2);
+            tMap2.defaults().width(btnx).height(btny *2);
+            tMap.setFillParent( true );
+            tMap.defaults().width( btnx ).height( btny + 3 ).padBottom( 2 );
+            if (!face.ispro()) tMap1.add( bPatreon2 ).row();
+            tMap1.add( bFeedback ).row();
+            tMap1.add( bCollaboration ).row();
+            tMap1.add( bProperties ).row();
+            tMap1.add( bBackground ).row();
+            tMap2.add( bTools ).row();
+            tMap2.add( bAutoMgmt ).row();
+            tMap2.add( bTileMgmt ).row();
+            tMap2.add( bTsetMgmt ).row();
+            tMap2.add( bBack2 ).row();
+            tMap.add( tMap1 );
+            tMap.add( tMap2 );
+        }  else {
+            tMap = new Table();
+            tMap.setFillParent( true );
+            tMap.defaults().width( btnx ).height( btny + 3 ).padBottom( 2 );
+            if (!face.ispro()) tMap.add( bPatreon2 ).row();
+            tMap.add( bFeedback ).row();
+            tMap.add( bCollaboration ).row();
+            tMap.add( bProperties ).row();
+            tMap.add( bBackground ).row();
+            tMap.add( bTools ).row();
+            tMap.add( bAutoMgmt ).row();
+            tMap.add( bTileMgmt ).row();
+            tMap.add( bTsetMgmt ).row();
+            tMap.add( bBack2 ).row();
+        }
+
+    }
+
+    private void setMenuMap(){
+        if (landscape){
+            tMenu = new Table();
+            tMenu1 = new Table();
+            tMenu2 = new Table();
+            tMenu.setFillParent(true);
+            tMenu.defaults().width(btnx).height(btny + 2);
+            tMenu1.defaults().width(btnx).height(btny *2);
+            tMenu2.defaults().width(btnx).height(btny *2);
+
+            if (!face.ispro()) tMenu1.add(bPatreon).row();
+            tMenu1.add(bNew).row();
+            tMenu1.add(bOpen).row();
+            tMenu1.add(bRecent).row();
+            tMenu1.add(bSave).row();
+            tMenu1.add(bSaveAs).row();
+            tMenu1.add(bExporter).row();
+            tMenu2.add(bTutorial).row();
+            tMenu2.add(bPreference).row();
+            tMenu2.add(bLinks).row();
+            tMenu2.add(credito).row();
+            tMenu2.add(bExit).row();
+            tMenu2.add(bBack);
+            tMenu.add( tMenu1 );
+            tMenu.add( tMenu2 );
+        }else {
+            tMenu = new Table();
+            tMenu.setFillParent(true);
+            tMenu.defaults().width(btnx).height(btny + 2);
+
+            if (!face.ispro()) tMenu.add(bPatreon).row();
+            tMenu.add(bNew).row();
+            tMenu.add(bOpen).row();
+            tMenu.add(bRecent).row();
+            tMenu.add(bSave).row();
+            tMenu.add(bSaveAs).row();
+            tMenu.add(bExporter).row();
+            tMenu.add(bTutorial).row();
+            tMenu.add(bPreference).row();
+            tMenu.add(bLinks).row();
+            tMenu.add(credito).row();
+            tMenu.add(bExit).row();
+            tMenu.add(bBack);
+
+        }
     }
 
     private void msgbox(String msg) {
@@ -6246,7 +6525,7 @@ String texta="";
 
     private void rundomize(float firstgeneration, int generationcount, int birthlimit, int deathlimit, long livestr, int livetset, long deadstr, int deadtset) {
         float chanceToStartAlive = firstgeneration;
-
+        snapWholeMapPhase1(selLayer);
         for (int x = 0; x < Tw * Th; x++) {
 
             if (Math.random() < chanceToStartAlive) {
@@ -6261,6 +6540,7 @@ String texta="";
         for (int i = 0; i < generationcount; i++) {
             newgeneration(birthlimit, deathlimit, livestr, livetset, deadstr, deadtset);
         }
+        snapWholeMapPhase2(selLayer);
 
     }
 
@@ -6978,6 +7258,11 @@ String texta="";
     }
 
     public void loadPreferences() {
+        swatches = prefs.getBoolean("swatches", true);
+        lastpath = prefs.getString("lastpath", "NotTiled");
+        rwpath = prefs.getString("rwpath", "/RustedWarfare");
+        autosaveInterval = prefs.getInteger("interval", 1);
+        gridOpacity = prefs.getInteger("gridopacity", 5);
         lastpath = prefs.getString("lastpath", "NotTiled");
         isSampleReloaded = prefs.getBoolean("reloaded", false);
         if (lastpath.startsWith(Gdx.files.getExternalStoragePath()))
@@ -6987,6 +7272,9 @@ String texta="";
         }
         //language= prefs.getString("language", "english");
         sShowGrid = prefs.getBoolean("grid", true);
+
+
+
         sEnableBlending = prefs.getBoolean("blending", true);
         sBgcolor = prefs.getString("background", "888888");
         bgr = (float) Integer.parseInt(sBgcolor.substring(0, 2), 16) / 256;
@@ -7044,10 +7332,13 @@ String texta="";
                 cbAutoSave.setChecked(sAutoSave);
                 cbEnableBlending.setChecked(sEnableBlending);
                 sdScrollSpeed.setValue(scrollspeed);
+                sdGridOpacity.setValue(gridOpacity);
+                fAutoSaveInterval.setText(Integer.toString(autosaveInterval));
                 cbShowGid.setChecked(sShowGID);
                 fBgcolor.setText(sBgcolor);
                 fFontsize.setText(Integer.toString(fontsize));
                 tfCustomFont.setText(sCustomFont);
+                frwpath.setText(rwpath);
                 sbLanguage.setSelected(language);
                 cbResize.setChecked(sResizeTiles);
                 oldlang = language;
@@ -7068,6 +7359,8 @@ String texta="";
         cbShowFPS = new CheckBox(z.showfps, skin);
         cbEnableBlending = new CheckBox(z.enableblending, skin);
         sdScrollSpeed = new Slider(1, 5, 1, false, skin);
+        sdGridOpacity = new Slider(1, 10, 1, false, skin);
+
         cbShowGid = new CheckBox(z.showgidinpicker, skin);
         cbAutoSave = new CheckBox(z.autosaving, skin);
         cbResize = new CheckBox(z.resizetiles, skin);
@@ -7081,6 +7374,13 @@ String texta="";
         fBgcolor.setTextFieldFilter(tffcolor);
         fFontsize = new TextField(Integer.toString(fontsize), skin);
         fFontsize.setTextFieldFilter(tffint);
+
+        frwpath = new TextField(rwpath, skin);
+
+
+        fAutoSaveInterval = new TextField(Integer.toString(autosaveInterval), skin);
+        fAutoSaveInterval.setTextFieldFilter(tffint);
+
         fGridX = new TextField(Integer.toString(sGridX), skin);
         fGridX.setTextFieldFilter(tffint);
         fGridY = new TextField(Integer.toString(sGridY), skin);
@@ -7122,6 +7422,13 @@ String texta="";
                 prefs.putBoolean("gidmap", sShowGIDmap).flush();
                 fontsize = Integer.parseInt(fFontsize.getText());
                 prefs.putInteger("fontsize", fontsize).flush();
+
+                autosaveInterval = Integer.parseInt(fAutoSaveInterval.getText());
+                prefs.putInteger("interval", autosaveInterval).flush();
+
+                rwpath = frwpath.getText();
+                prefs.putString("rwpath", rwpath).flush();
+
                 sResizeTiles = cbResize.isChecked();
                 prefs.putBoolean("resize", sResizeTiles).flush();
 
@@ -7149,6 +7456,9 @@ String texta="";
                 scrollspeed = (int) sdScrollSpeed.getValue();
                 prefs.putInteger("ss", scrollspeed).flush();
 
+                gridOpacity = (int) sdGridOpacity.getValue();
+                prefs.putInteger("gridopacity", gridOpacity).flush();
+
                 sShowCustomGrid = cbShowCustomGrid.isChecked();
                 prefs.putBoolean("customgrid", sShowCustomGrid).flush();
                 sGridX = Integer.parseInt(fGridX.getText());
@@ -7173,10 +7483,11 @@ String texta="";
 
         tPreference = new Table();
         tPreference.setFillParent(true);
-
+        //tPreference.debug();
         Table tPreference2 = new Table();
-        tPreference2.setFillParent(true);
-        tPreference2.defaults().width(btnx).height(btny * 4 / 5);
+        //tPreference2.debug();
+        //tPreference2.setFillParent(true);
+        tPreference2.defaults().height(btny * 4 / 5);
 
         ScrollPane sp123 = new ScrollPane(tPreference2);
         tPreference.add(sp123);
@@ -7195,19 +7506,24 @@ String texta="";
         tPreference2.add(fBgcolor).width(btnx / 2).padBottom(2).row();
         tPreference2.add(new Label("Custom Font", skin)).width(btnx / 2);
         tPreference2.add(tfCustomFont).width(btnx / 2).row();
-        tPreference2.add(tbcustomfont).colspan(2).row();
+        tPreference2.add(tbcustomfont).colspan(2).width(btnx).row();
         tPreference2.add(new Label(z.fontsize, skin)).width(btnx / 2);
         tPreference2.add(fFontsize).width(btnx / 2).padBottom(2).row();
-        tPreference2.add(cbAutoSave).align(Align.left).colspan(2).width(btnx).row();
-        tPreference2.add(cbMinimap).align(Align.left).colspan(2).width(btnx).row();
-        tPreference2.add(cbCustomUI).align(Align.left).colspan(2).width(btnx).row();
-        tPreference2.add(cbEnableBlending).align(Align.left).colspan(2).width(btnx).row();
-        tPreference2.add(cbShowGrid).width(btnx).left().colspan(2).row();
-        tPreference2.add(cbResize).align(Align.left).left().colspan(2).width(btnx).row();
+        tPreference2.add(cbAutoSave).colspan(2).left().row();
+        tPreference2.add(new Label(z.interval, skin)).width(btnx/2);
+        tPreference2.add(fAutoSaveInterval).width(btnx/2).row();
+        tPreference2.add(cbMinimap).colspan(2).left().row();
+        tPreference2.add(cbCustomUI).colspan(2).left().row();
+        tPreference2.add(cbEnableBlending).colspan(2).left().row();
+        tPreference2.add(cbShowGrid).colspan(2).left().row();
+        tPreference2.add(new Label(z.gridopacity, skin)).colspan(2).width(btnx).row();
+        tPreference2.add(sdGridOpacity).colspan(2).width(btnx).row();
 
-        tPreference2.add(cbShowFPS).colspan(2).align(Align.left).width(btnx).left().row();
-        tPreference2.add(cbShowGid).align(Align.left).colspan(2).left().width(btnx).row();
-        tPreference2.add(cbShowGidmap).align(Align.left).colspan(2).left().width(btnx).row();
+        tPreference2.add(cbResize).colspan(2).left().row();
+
+        tPreference2.add(cbShowFPS).colspan(2).left().row();
+        tPreference2.add(cbShowGid).colspan(2).left().row();
+        tPreference2.add(cbShowGidmap).colspan(2).left().row();
         tPreference2.add(new Label(z.scrollspeed, skin)).align(Align.left).width(btnx).colspan(2).left().row();
 
         tPreference2.add(sdScrollSpeed).align(Align.left).width(btnx).colspan(2).left().row();
@@ -7218,6 +7534,9 @@ String texta="";
 
         tPreference2.add(new Label(z.gridy, skin)).padBottom(10).width(btnx / 2);
         tPreference2.add(fGridY).width(btnx / 2).padBottom(10).row();
+
+        tPreference2.add(new Label(z.rwpath, skin)).colspan(2).width(btnx).row();
+        tPreference2.add(frwpath).colspan(2).width(btnx).row();
 
         tPreference2.add(bSavePref).width(btnx).padBottom(5).height(btny).colspan(2).row();
         tPreference2.add(bBack3).width(btnx).padBottom(5).height(btny).colspan(2);
@@ -7250,181 +7569,198 @@ String texta="";
     }
 
     public void generateTutorials(){
-        tutorial a=new tutorial();
+        tutorial a;
 
-        //                if (!cue("usetemplate") && lockUI) return;
         a=new tutorial();
-        a.setName("01 Read first please!!");
-        a.addStep("start", "These tutorials are intended for new NotTiled users.");
-        a.addStep("next", "If you are an existing user, you will need to [Reload samples] first, otherwise these tutorial might not work as intended and cause you unnecessary confusion.");
-        a.addStep("next", "To reload samples, goto Menu > Links > Reload Samples.");
-        a.addStep("next", "Thank you.");
+        a.setName(z.t100, "01 Read first please!!");
+        a.addStep(z.t101,"start",  "These tutorials are intended for new NotTiled users.");
+        a.addStep(z.t102, "next", "If you are an existing user, you will need to [Reload samples] first, otherwise these tutorial might not work as intended and cause you unnecessary confusion.");
+        a.addStep(z.t103,"next","To reload samples, goto Menu > Links > Reload Samples.");
+        a.addStep(z.t104,"next", "Thank you.");
         a.addStep("end", "");
         tutor.getT().add(a);
 
         a=new tutorial();
-        a.setName("02 Creating empty files & adding tilesets");
-        a.addStep("start", "Welcome to NotTiled, I will be your guide. Now, open the menu at the bottom left corner.");
+        a.setName(z.t200,"02 Creating empty files & adding tilesets");
+        a.addStep(z.t201,"start", "Welcome to NotTiled, I will be your guide. Now, open the menu at the bottom left corner.");
         a.addStep("lockUI","");
-        a.addStep("menu", "Click on New File");
-        a.addStep("new", "As you can see, you can set quite a lot of things here.");
-        a.addStep("next", "The top one is the filename, make sure to end your file with .tmx");
-        a.addStep("next", "Then, you can select the folder where you want to save the file");
-        a.addStep("next", "After that, tile width and height. They are the dimension of your tile in the map. Let's use 16x16.");
+        a.addStep(z.t202,"menu", "Click on New File");
+        a.addStep(z.t203,"new", "As you can see, you can set quite a lot of things here.");
+        a.addStep(z.t204,"next", "The top one is the filename, make sure to end your file with .tmx");
+        a.addStep(z.t205,"next", "Then, you can select the folder where you want to save the file");
+        a.addStep(z.t206,"next", "After that, tile width and height. They are the dimension of your tile in the map. Let's use 16x16.");
         a.addStep("settilesize", "16");
-        a.addStep("next", "Map width and height are the total number of tile on each axis. We will use 30x30.");
+        a.addStep(z.t207,"next", "Map width and height are the total number of tile on each axis. We will use 30x30.");
         a.addStep("setmapsize", "30");
-        a.addStep("next", "The rest are for advanced users, just ignore it for now.");
-        a.addStep("next", "Okay, click on [OK]");
-
-        a.addStep("usetemplate", "To create an empty file, click [Create empty file]");
-        a.addStep("newmap", "Great! now you can see an empty map. Let's put a tileset. ");
-        a.addStep("next", "A tileset is just a fancy word for collection of images in one file.");
-        a.addStep("next", "Click the tile picker in the bottom center.");
-        a.addStep("tilepick", "Click [add new tileset]");
-        a.addStep("addtileset", "Let's use the four-season-tileset.png. If you cannot find it, it should be in /NotTiled/Sample/ folder.");
-        a.addStep("import", "Just click ok...");
-        a.addStep("tilesetadded", "Great, now click on any tile you want to use.");
-        a.addStep("tilepickclick", "Click on the map.");
-        a.addStep("tileclick", "Fantastic! let's try another one!");
-        a.addStep("tilepick", "Pick whichever you like.");
-        a.addStep("tilepickclick", "Put it on the map...");
-        a.addStep("tileclick", "Very easy right? NotTiled have an autosave feature, but you can also save manually. Click on the quick save button.");
-        a.addStep("quicksave", "Well done, you got the basic. See you on another tutorial.");
+        a.addStep(z.t208,"next", "The rest are for advanced users, just ignore it for now.");
+        a.addStep(z.t209,"next", "Okay, click on [OK]");
+        a.addStep(z.t210,"usetemplate", "To create an empty file, click [Create empty file]");
+        a.addStep(z.t211,"newmap", "Great! now you can see an empty map. Let's put a tileset. ");
+        a.addStep(z.t212,"next", "A tileset is just a fancy word for collection of images in one file.");
+        a.addStep(z.t213,"next", "Click the tile picker in the bottom center.");
+        a.addStep(z.t214,"tilepick", "Click [add new tileset]");
+        a.addStep(z.t215,"addtileset", "Let's use the four-season-tileset.png. If you cannot find it, it should be in /NotTiled/Sample/ folder.");
+        a.addStep(z.t216,"import", "Just click ok...");
+        a.addStep(z.t217,"tilesetadded", "Great, now click on any tile you want to use.");
+        a.addStep(z.t218,"tilepickclick", "Click on the map.");
+        a.addStep(z.t219,"tileclick", "Fantastic! let's try another one!");
+        a.addStep(z.t220,"tilepick", "Pick whichever you like.");
+        a.addStep(z.t221,"tilepickclick", "Put it on the map...");
+        a.addStep(z.t222,"tileclick", "Very easy right? NotTiled have an autosave feature, but you can also save manually. Click on the quick save button.");
+        a.addStep(z.t223,"quicksave", "Well done, you got the basic. See you on another tutorial.");
         a.addStep("end", "");
         tutor.getT().add(a);
 
 
-
-
         a=new tutorial();
-        a.setName("03 Basic Rusted Warfare mapping");
-        a.addStep("start", "Welcome to basic RW mapping tutorial. Let's go straight into action, shall we? open the menu.");
+        a.setName(z.t300, "03 Basic Rusted Warfare mapping");
+        a.addStep(z.t301, "start", "Welcome to basic RW mapping tutorial. Let's go straight into action, shall we? open the menu.");
         a.addStep("lockUI","");
-        a.addStep("menu","click on the new file");
-        a.addStep("new", "Rusted Warfare uses 20x20 tile. So, make sure the tile width and tile height are both 20. We will set map width and map height to 50 and 50. When you are done, click [OK] button");
+        a.addStep(z.t302, "menu","click on the new file");
+        a.addStep(z.t303, "new", "Rusted Warfare uses 20x20 tile. So, make sure the tile width and tile height are both 20. We will set map width and map height to 50 and 50. When you are done, click [OK] button");
         a.addStep("settilesize", "20");
-        a.addStep("usetemplate", "Choose [Rusted Warfare Tutorial] and press OK.");
-        a.addStep("usetemplateok", "Well done! just click Apply.");
-        a.addStep("applytemplate", "Okay!! good job so far!");
-        a.addStep("next", "Rusted Warfare map is very simple. It consists of 3 layers. Ground, Items, and Units.");
-        a.addStep("next", "Ground is where you put the landscape, the battle field, or whatever you call it.");
-        a.addStep("next", "Items layer is where you put resource pools among other things. ");
-        a.addStep("next", "Units layer is for units (duh), put Command center or any units here.");
-        a.addStep("next", "Putting wrong things on the wrong place will make your map unplayable, remember that.");
-        a.addStep("next", "Now, click on the layer selection button on the bottom right corner.");
-        a.addStep("layerpick", "See the eye icons? for now, let's hide eveything except the ground layer. When you are done, click on the ground layer.");
-        a.addStep("layerselected", "Okay, I will give you a guidance. follow the drawings.");
+        a.addStep(z.t304, "usetemplate", "Choose [Rusted Warfare Tutorial] and press OK.");
+        a.addStep(z.t305, "usetemplateok", "Well done! just click Apply.");
+        a.addStep(z.t306, "applytemplate", "Okay!! good job so far!");
+        a.addStep(z.t307, "next", "Rusted Warfare map is very simple. It consists of 3 layers. Ground, Items, and Units.");
+        a.addStep(z.t308, "next", "Ground is where you put the landscape, the battle field, or whatever you call it.");
+        a.addStep(z.t309, "next", "Items layer is where you put resource pools among other things. ");
+        a.addStep(z.t310, "next", "Units layer is for units (duh), put Command center or any units here.");
+        a.addStep(z.t311, "next", "Putting wrong things on the wrong place will make your map unplayable, remember that.");
+        a.addStep(z.t312, "next", "Now, click on the layer selection button on the bottom right corner.");
+        a.addStep(z.t313, "layerpick", "See the eye icons? for now, let's hide eveything except the ground layer. When you are done, click on the ground layer.");
+        a.addStep(z.t314, "layerselected", "Okay, I will give you a guidance. follow the drawings.");
         a.addStep("changebg","NotTiled/sample/template/Rusted Warfare Tutorial/export1.png");
-        a.addStep("next", "To do so, you will need to pick a tile. Click on the tile selection button in the bottom center.");
-        a.addStep("tilepick", "now, switch to the [Stone Lava - Ridge] Tileset by pressing the >> icon twice. After that, click on the rock tile (bottom left one)");
-        a.addStep("tilepickclick", "now just follow the guide, please draw as identical as possible.");
-        a.addStep("next", "To make things easier, tap and hold to create a rectangle. When you are finished, click on the redo button. ");
+        a.addStep(z.t315, "next", "To do so, you will need to pick a tile. Click on the tile selection button in the bottom center.");
+        a.addStep(z.t316, "tilepick", "now, switch to the [Stone Lava - Ridge] Tileset by pressing the >> icon twice. After that, click on the rock tile (bottom left one)");
+        a.addStep(z.t317, "tilepickclick", "now just follow the guide, please draw as identical as possible.");
+        a.addStep(z.t318, "next", "To make things easier, tap and hold to create a rectangle. When you are finished, click on the redo button. ");
         a.addStep("unlockUI","");
-        a.addStep("redo", "Okay, our map looks ugly, right? It's okay. We will fix it. I'll extend the guide. Just follow it. Press redo again when you are done.");
-        a.addStep("changebg","NotTiled/sample/template/Rusted Warfare Tutorial/export2.png");
-        a.addStep("redo", "Well done, now let's connect them all. Follow the new guide. Press redo again when you are done.");
-        a.addStep("changebg","NotTiled/sample/template/Rusted Warfare Tutorial/export3.png");
-        a.addStep("redo", "Well done, now fill the rest with lava. Select your lava first.");
-        a.addStep("tilepick", "It is the one in the middle.");
-        a.addStep("tilepickclick", "Now click on the fill tool.");
-        a.addStep("tool3", "Well done, fill it on the map. Click redo when finished.");
-        a.addStep("redo", "Fantastic! we are finished with the Ground layer, now let's go back to layer selection (bottom right).");
-        a.addStep("layerpick", "Please hide the ground layer, and show Items layer (so you could see new guidance). When you are done, click the Items layer.");
-        a.addStep("layerselected", "Okay follow the new guide.");
+        a.addStep(z.t319, "redo", "Okay, our map looks ugly, right? It's okay. We will fix it. I'll extend the guide. Just follow it. Press redo again when you are done.");
+        a.addStep( "changebg","NotTiled/sample/template/Rusted Warfare Tutorial/export2.png");
+        a.addStep(z.t320, "redo", "Well done, now let's connect them all. Follow the new guide. Press redo again when you are done.");
+        a.addStep( "changebg","NotTiled/sample/template/Rusted Warfare Tutorial/export3.png");
+        a.addStep(z.t321, "redo", "Well done, now fill the rest with lava. Select your lava first.");
+        a.addStep(z.t322, "tilepick", "It is the one in the middle.");
+        a.addStep(z.t323, "tilepickclick", "Now click on the fill tool.");
+        a.addStep(z.t324, "tool3", "Well done, fill it on the map. Click redo when finished.");
+        a.addStep(z.t325, "redo", "Fantastic! we are finished with the Ground layer, now let's go back to layer selection (bottom right).");
+        a.addStep(z.t326, "layerpick", "Please hide the ground layer, and show Items layer (so you could see new guidance). When you are done, click the Items layer.");
+        a.addStep(z.t327, "layerselected", "Okay follow the new guide.");
         a.addStep("changebg","NotTiled/sample/template/Rusted Warfare Tutorial/export5.png");
-        a.addStep("tilepick", "Switch to the [misc] tileset, and tap and hold the top left part of the resource pool to enable the stamp mode, and then drag it to make a 3x3 selection");
-        a.addStep("stamp", "Nicely done. follow the drawings, and hit redo button to continue.");
-        a.addStep("redo", "Well done, now lets continue with the final layer. The Units layer. let's go back to layer selection");
-        a.addStep("layerpick", "Please hide the items layer, and show Units layer (for the guidance). When you are done, click the Units layer.");
-        a.addStep("layerselected", "Okay, you know what to do. Follow the guide.");
+        a.addStep(z.t328, "tilepick", "Switch to the [misc] tileset, and tap and hold the top left part of the resource pool to enable the stamp mode, and then drag it to make a 3x3 selection");
+        a.addStep(z.t329, "stamp", "Nicely done. follow the drawings, and hit redo button to continue.");
+        a.addStep(z.t330, "redo", "Well done, now lets continue with the final layer. The Units layer. let's go back to layer selection");
+        a.addStep(z.t331, "layerpick", "Please hide the items layer, and show Units layer (for the guidance). When you are done, click the Units layer.");
+        a.addStep(z.t332, "layerselected", "Okay, you know what to do. Follow the guide.");
         a.addStep("changebg","NotTiled/sample/template/Rusted Warfare Tutorial/export6.png");
-        a.addStep("tilepick", "Switch to the [units] tileset, and find the correct units.");
-        a.addStep("tileclick", "That's it. follow the drawings, and as usual, hit redo button to continue.");
-        a.addStep("redo", "Super! now you can go back to the layer selection and show all of the layers to see your masterpiece. Click redo when you are done.");
-        a.addStep("redo", "Okay, let's take a screenshot so that you map will have a thumbnail on Rusted Warfare. Just zoom out until you see the button.");
-        a.addStep("screenshot", "Nice! Just one more step! Copy the file to the Rusted Warfare folder. You can do it manually, but it is easier just to send it from NotTiled. Zoom back in to show the controls and Click the menu.");
-        a.addStep("menu","click on Links");
-        a.addStep("links","click Copy to Rusted Warfare");
-        a.addStep("copytorw","Nicely done! now go to Rusted Warfare and enjoy your new map! I hope this tutorial helps you to understand the basic of RW mappping. Thank you and see you on another tutorial.");
+        a.addStep(z.t333, "tilepick", "Switch to the [units] tileset, and find the correct units.");
+        a.addStep(z.t334, "tileclick", "That's it. follow the drawings, and as usual, hit redo button to continue.");
+        a.addStep(z.t335, "redo", "Super! now you can go back to the layer selection and show all of the layers to see your masterpiece. Click redo when you are done.");
+        a.addStep(z.t336, "redo", "Okay, let's take a screenshot so that you map will have a thumbnail on Rusted Warfare. Just zoom out until you see the button.");
+        a.addStep(z.t337, "screenshot", "Nice! Just one more step! Copy the file to the Rusted Warfare folder. You can do it manually, but it is easier just to send it from NotTiled. Zoom back in to show the controls and Click the menu.");
+        a.addStep(z.t338, "menu","click on Links");
+        a.addStep(z.t339, "links","click Copy to Rusted Warfare");
+        a.addStep(z.t340, "copytorw","Nicely done! now go to Rusted Warfare and enjoy your new map! I hope this tutorial helps you to understand the basic of RW mappping. Thank you and see you on another tutorial.");
         a.addStep("end","");
         tutor.getT().add(a);
 
         a=new tutorial();
-        a.setName("04 RW Mapping using Autotiles");
-        a.addStep("start", "Welcome back! Make sure you have taken the basic RW mapping tutorial first, otherwise just cancel this tutorial. Okay, now, open the menu.");
+        a.setName(z.t400, "04 RW Mapping using Autotiles");
+        a.addStep(z.t401, "start", "Welcome back! Make sure you have taken the basic RW mapping tutorial first, otherwise just cancel this tutorial. Okay, now, open the menu.");
         a.addStep("lockUI","");
-        a.addStep("menu","click on the new file");
-        a.addStep("new", "Let's use the same tile size (20x20) and map size from before (50x50). When you are done, click [OK] button");
-        a.addStep("usetemplate", "Now choose [Rusted Warfare] and press OK.");
-        a.addStep("usetemplateok", "Well done, you can see that there are quite a lot of tilesets. Let it stays that way, scroll to the bottom and click Apply.");
-        a.addStep("applytemplate", "Okay!! another empty map :)");
+        a.addStep(z.t402, "menu","click on the new file");
+        a.addStep(z.t403, "new", "Let's use the same tile size (20x20) and map size from before (50x50). When you are done, click [OK] button");
+        a.addStep(z.t404, "usetemplate", "Now choose [Rusted Warfare] and press OK.");
+        a.addStep(z.t405, "usetemplateok", "Well done, you can see that there are quite a lot of tilesets. Let it stays that way, scroll to the bottom and click Apply.");
+        a.addStep(z.t406, "applytemplate", "Okay!! another empty map :)");
         a.addStep("unlockUI","");
-        a.addStep("next", "You may notice that there are 2 additional button at the bottom");
-        a.addStep("next", "The right one is the Autotile selection button, it is just like the tile selection, but for autotiles.");
-        a.addStep("next", "The left one is the Refresh button, to apply autotiles to the map.");
-        a.addStep("next", "Enough theories! let's start by clicking at our layer selection button (bottom right corner).");
-        a.addStep("layerpick", "There are more layers right? The Set layer is where we put our autotiles, while the trigger layer... just ignore it for now :)");
-        a.addStep("next", "As usual, I'd like you to hide all layers (for guidance), except the [Set] layer. We are going to use that. When you are done, select the Set layer.");
-        a.addStep("layerselected", "Okay, here comes the guidance. Please follow it. Make sure you are on the [Set] layer.");
+        a.addStep(z.t407, "next", "You may notice that there are 2 additional button at the bottom");
+        a.addStep(z.t408, "next", "The right one is the Autotile selection button, it is just like the tile selection, but for autotiles.");
+        a.addStep(z.t409, "next", "The left one is the Refresh button, to apply autotiles to the map.");
+        a.addStep(z.t410, "next", "Enough theories! let's start by clicking at our layer selection button (bottom right corner).");
+        a.addStep(z.t411, "layerpick", "There are more layers right? The Set layer is where we put our autotiles, while the trigger layer... just ignore it for now :)");
+        a.addStep(z.t412, "next", "As usual, I'd like you to hide all layers (for guidance), except the [Set] layer. We are going to use that. When you are done, select the Set layer.");
+        a.addStep(z.t413, "layerselected", "Okay, here comes the guidance. Please follow it. Make sure you are on the [Set] layer.");
         a.addStep("changebg","NotTiled/sample/template/Rusted Warfare/export1a.png");
-        a.addStep("next", "But first, you will need to pick an autotile. Click on the autotile selection button in the bottom.");
-        a.addStep("autopick", "Let's use the [Grass] autotile. Click on it, and follow the guide. Press redo when you are done.");
-        a.addStep("redo", "Okay, now fill the rest with [Shallow water]. Make sure to use [Shallow Water], not [water] (they do not mix).");
-        a.addStep("redo", "Now, longpress (press and hold) the refresh button.");
-        a.addStep("refresh", "Nothing happened? nope. Show your ground layer (and hide the Set layer, duh) and you will see the result.");
-        a.addStep("redo", "Cool isn't it? Much easier than before! The power of autotiles! :P");
-        a.addStep("next", "The next steps are the same (Items layer & Units), so I would not repeat it again.");
-        a.addStep("next", "Take note that autotiles are not perfect. It cannot do anything about tiles that have no adjacent tiles.");
-        a.addStep("next", "and not every autotiles can mix with other autotiles. For example, Water can only mix with Shallow Water and Deep Water.");
-        a.addStep("next", "That's it, you can finish the map if you want :) See you on the next tutorial!");
+        a.addStep(z.t414, "next", "But first, you will need to pick an autotile. Click on the autotile selection button in the bottom.");
+        a.addStep(z.t415, "autopick", "Let's use the [Grass] autotile. Click on it, and follow the guide. Press redo when you are done.");
+        a.addStep(z.t416, "redo", "Okay, now fill the rest with [Shallow water]. Make sure to use [Shallow Water], not [water] (they do not mix).");
+        a.addStep(z.t417, "redo", "Now, longpress (press and hold) the refresh button.");
+        a.addStep(z.t418, "refresh", "Nothing happened? nope. Show your ground layer (and hide the Set layer, duh) and you will see the result.");
+        a.addStep(z.t419, "redo", "Cool isn't it? Much easier than before! The power of autotiles! :P");
+        a.addStep(z.t420, "next", "The next steps are the same (Items layer & Units), so I would not repeat it again.");
+        a.addStep(z.t421, "next", "Take note that autotiles are not perfect. It cannot do anything about tiles that have no adjacent tiles.");
+        a.addStep(z.t422, "next", "and not every autotiles can mix with other autotiles. For example, Water can only mix with Shallow Water and Deep Water.");
+        a.addStep(z.t423, "next", "That's it, you can finish the map if you want :) See you on the next tutorial!");
         a.addStep("end","");
         tutor.getT().add(a);
 
         a=new tutorial();
-        a.setName("05 Using NotTiled as a Pixel Editor");
-        a.addStep("start", "Welcome back! This tutorial is a bit different, we will use NotTiled as a Pixel Editor.");
+        a.setName(z.t500, "05 Using NotTiled as a Pixel Editor");
+        a.addStep(z.t501, "start", "Welcome back! This tutorial is a bit different, we will use NotTiled as a Pixel Editor.");
         a.addStep("lockUI","");
-        a.addStep("menu","Click on the new file");
-        a.addStep("new", "Pixel editors use 1x1 tile, I'll set it for you. I recommend map size of 16x16 for this tutorial. When you are done, click [OK] button");
+        a.addStep(z.t502, "menu","Click on the new file");
+        a.addStep(z.t503, "new", "Pixel editors use 1x1 tile, I'll set it for you. I recommend map size of 16x16 for this tutorial. When you are done, click [OK] button");
         a.addStep("settilesize", "1");
-        a.addStep("usetemplate", "Now choose [Pixel Editor] and press OK.");
-        a.addStep("usetemplateok", "Click Apply.");
-        a.addStep("applytemplate", "Okay!! very easy.");
+        a.addStep(z.t504, "usetemplate", "Now choose [Pixel Editor] and press OK.");
+        a.addStep(z.t505, "usetemplateok", "Click Apply.");
+        a.addStep(z.t506, "applytemplate", "Okay!! very easy.");
         a.addStep("unlockUI","");
-        a.addStep("next", "To draw something, pick a color from the picker (bottom center).");
-        a.addStep("tilepick", "Pick any color you like.");
-        a.addStep("tilepickclick", "Put it on the map.");
-        a.addStep("tileclick", "Fantastic! to create your PNG, goto menu.");
-        a.addStep("menu", "Click Export");
-        a.addStep("export", "Put the filename (without extension), and click on Export to PNG");
-        a.addStep("exporttopng", "Well done.");
-        a.addStep("next", "You can also create an animation sheet by drawing on multiple Layers, and Export it as a Tileset.");
-        a.addStep("next", "You can make the layers animate by longpressing the Redo button");
-        a.addStep("next", "Oh, and to edit existing PNG, just import it as a tileset, and then stamp it on your layer.");
-        a.addStep("next", "Thank you, see you on another tutorial.");
-        tutor.getT().add(a);
-
-        a=new tutorial();
-        a.setName("06 Using NotTiled as a Game Editor");
-        a.addStep("start", "Welcome back! I made this NotTiled platformer so that we could make a game in NotTiled. This is still new, so it is not that good... Nevertheless, just give it a try. Open the menu");
-        a.addStep("lockUI","");
-        a.addStep("menu","Click on the new file");
-        a.addStep("new", "Make sure to put your file in \"NotTiled/sample/\" folder, otherwise the game will crash. It uses 16x16 tile, I'll set it for you. The map size is up to you. When you are done, click [OK] button");
-        a.addStep("settilesize", "16");
-        a.addStep("usetemplate", "Now choose [NotTiled platformer] and press OK.");
-        a.addStep("usetemplateok", "Click Apply.");
-        a.addStep("applytemplate", "Okay!! very easy.");
-        a.addStep("unlockUI","");
-        a.addStep("next", "To draw something, pick an item from the picker (bottom center).");
-        a.addStep("tilepick", "Pick any item you like.");
-        a.addStep("next", "At the minimum, you will need the man as the player, and the girl as the finish line. (Cliche, I know. You can change it anyway)");
-        a.addStep("next", "For other things, just try it yourself, okay? :)");
-        a.addStep("tilepickclick", "Put it on the map.");
-        a.addStep("tileclick", "Fantastico! to play the game, click the Play button on the left.");
+        a.addStep(z.t507, "next", "To draw something, pick a color from the picker (bottom center).");
+        a.addStep(z.t508, "tilepick", "Pick any color you like.");
+        a.addStep(z.t509, "tilepickclick", "Put it on the map.");
+        a.addStep(z.t510, "tileclick", "Fantastic! to create your PNG, goto menu.");
+        a.addStep(z.t511, "menu", "Click Export");
+        a.addStep(z.t512, "export", "Put the filename (without extension), and click on Export to PNG");
+        a.addStep(z.t513, "exporttopng", "Well done.");
+        a.addStep(z.t514, "next", "You can also create an animation sheet by drawing on multiple Layers, and Export it as a Tileset.");
+        a.addStep(z.t515, "next", "You can make the layers animate by longpressing the Redo button");
+        a.addStep(z.t516, "next", "Oh, and to edit existing PNG, just import it as a tileset, and then stamp it on your layer.");
+        a.addStep(z.t517, "next", "Thank you, see you on another tutorial.");
         a.addStep("end","");
         tutor.getT().add(a);
 
+        a=new tutorial();
+        a.setName(z.t600, "06 Using NotTiled as a Game Editor");
+        a.addStep(z.t601, "start", "Welcome back! I made this NotTiled platformer so that we could make a game in NotTiled. This is still new, so it is not that good... Nevertheless, just give it a try. Open the menu");
+        a.addStep("lockUI","");
+        a.addStep(z.t602, "menu","Click on the new file");
+        a.addStep(z.t603, "new", "Make sure to put your file in \"NotTiled/sample/\" folder, otherwise the game will crash. It uses 16x16 tile, I'll set it for you. The map size is up to you. When you are done, click [OK] button");
+        a.addStep("settilesize", "16");
+        a.addStep(z.t604, "usetemplate", "Now choose [NotTiled platformer] and press OK.");
+        a.addStep(z.t605, "usetemplateok", "Click Apply.");
+        a.addStep(z.t606, "applytemplate", "Okay!! very easy.");
+        a.addStep("unlockUI","");
+        a.addStep(z.t607, "next", "To draw something, pick an item from the picker (bottom center).");
+        a.addStep(z.t608, "tilepick", "Pick any item you like.");
+        a.addStep(z.t609, "next", "At the minimum, you will need the man as the player, and the girl as the finish line. (Cliche, I know. You can change it anyway)");
+        a.addStep(z.t610, "next", "For other things, just try it yourself, okay? :)");
+        a.addStep(z.t611, "tilepickclick", "Put it on the map.");
+        a.addStep(z.t612, "tileclick", "Fantastico! to play the game, click the Play button on the left.");
+        a.addStep("end","");
+        tutor.getT().add(a);
+
+    }
+
+    java.util.List<layerhistory> elha = new ArrayList<layerhistory>();
+
+    public void snapWholeMapPhase1(int zeLayer){
+        elha.clear();
+        boolean follower = false;
+        for (int i=0;i<Tw*Th;i++){
+            layerhistory lh = new layerhistory(follower,layers.get(zeLayer).getStr().get(i),0,i,zeLayer,layers.get(zeLayer).getTset().get(i),0);
+            elha.add(lh);
+            follower=true;
+        }
+    }
+
+    public void snapWholeMapPhase2(int zeLayer){
+        for (int i=0;i<Tw*Th;i++){
+            elha.get(i).setTo(layers.get(zeLayer).getStr().get(i));
+            elha.get(i).setNewtset(layers.get(zeLayer).getTset().get(i));
+            undolayer.add(elha.get(i));
+        }
     }
 
     public void loadLayerManagement() {
@@ -9079,25 +9415,7 @@ String texta="";
             }
         });
 
-        bNew.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                lastpath = prefs.getString("lastpath", "NotTiled");
-                if (lastpath.startsWith(Gdx.files.getExternalStoragePath()))
-                {
-                    lastpath = lastpath.substring(Gdx.files.getExternalStoragePath().length());
 
-                }
-
-                fNCurdir.setText(lastpath);
-                fNTsw.setText(prefs.getString("Tsw", "20"));
-                fNTsh.setText(prefs.getString("Tsh", "20"));
-                fNTw.setText(prefs.getString("Tw", "20"));
-                fNTh.setText(prefs.getString("Th", "20"));
-                gotoStage(tNewFile);
-                cue("new");
-            }
-        });
 
         fNFilename = new TextField("Map01.tmx", skin);
 
@@ -11612,11 +11930,13 @@ String texta="";
         }
         CacheAllTset();
         cacheTiles();
+        resetSwatches();
 
 
-        if (layers.size()>0) selLayer = layers.size()-1;
+        selLayer=0;
+        //if (layers.size()>0) selLayer = layers.size()-1;
 
-        //for rusted warfare, because some people are just ...
+        /*
         if (layers.size()>4)
         {
             if (layers.get(3).getName().equalsIgnoreCase("set"))
@@ -11624,7 +11944,7 @@ String texta="";
                 selLayer=3;
             }
         }
-
+        */
 
         loadautotiles();
         uicam.zoom = 0.5f;
@@ -12072,7 +12392,6 @@ String texta="";
         } else if (kartu == "tile" || kartu == "pickanim") {
             initialZoom = tilecam.zoom;
         }
-
         return false;
     }
 
@@ -12227,6 +12546,14 @@ String texta="";
                     case "repa": case "repb":
                         gotoStage(treplacetiles);
                         return true;
+                    case "sw1":
+                    case "sw2":
+                    case "sw3":
+                    case "sw4":
+                    case "sw5":
+                    case "sw6":
+                        backToMap();
+                        return true;
                 }
             }
             else if (kartu == "tile") {
@@ -12365,7 +12692,7 @@ String texta="";
 
                         newanim.setTileID(num - ts.getFirstgid());
 
-                        tiles = tilesets.get(selTsetID).getTiles();
+                        tiles = tilesets.get(seltset).getTiles();
                         ada = false;
                         for (int o = 0; o < tiles.size(); o++) {
                             if (tiles.get(o).getTileID() == num - ts.getFirstgid()) {
@@ -12379,14 +12706,17 @@ String texta="";
                             selTileID = tiles.size() - 1;
                         }
 
-                        ////
-                        if (tilesets.get(seltset).getTiles().get(selTileID).getProperties()!=null)
-                        refreshProperties(tilesets.get(seltset).getTiles().get(selTileID).getProperties());
 
-                        lPropID.setText(z.properties + ": " + tilesets.get(seltset).getTiles().get(selTileID).getTileID());
-                        sender = "tilesettings";
-                        gotoStage(tPropsMgmt);
-                        return true;
+                        ////
+                       // if (tilesets.get(seltset).getTiles().get(selTileID).getProperties()!=null) {
+                            refreshProperties( tilesets.get( seltset ).getTiles().get( selTileID ).getProperties() );
+
+                            lPropID.setText( z.properties + ": " + tilesets.get( seltset ).getTiles().get( selTileID ).getTileID() );
+                            sender = "tilesettings";
+                            gotoStage( tPropsMgmt );
+                            return true;
+                      // }
+
                     }
 
                 }
@@ -12507,6 +12837,12 @@ String texta="";
                         case "rndb":
                         case "repa":
                         case "repb":
+                        case "sw1":
+                        case "sw2":
+                        case "sw3":
+                        case "sw4":
+                        case "sw5":
+                        case "sw6":
                             if (tapped(touch2, gui.tilesetsright)) {
                                 seltset += 1;
                                 if (seltset >= tilesets.size()) {
@@ -12543,6 +12879,22 @@ String texta="";
         return false;
     }
 
+
+    public void addSW(int num, String sws){
+        boolean ada = false;
+        for (property p: properties){
+            if (p.getName().equalsIgnoreCase( sws )){
+                p.setValue( Integer.toString(num));
+                ada = true;
+            }
+        }
+
+        if (!ada) {
+            property p = new property(sws,Integer.toString(num));
+            properties.add( p );
+        }
+    }
+
     private boolean tapPick(float p1, float p2) {
         if (loadingfile) return true;
         int seltset = 0;
@@ -12550,7 +12902,7 @@ String texta="";
         if (tilesets.size() == 0) return true;
         Vector3 touch = new Vector3();
         tilecam.unproject(touch.set(p1, p2, 0));
-        if (kartu == "tile" || tilePicker == "newimgobj" || tilePicker == "props" || tilePicker == "rnda" || tilePicker == "rndb" || tilePicker == "repa" || tilePicker == "repb") {
+        if (kartu == "tile" || tilePicker == "newimgobj" || tilePicker == "props" || tilePicker == "rnda" || tilePicker == "rndb" || tilePicker == "repa" || tilePicker == "repb" || tilePicker == "sw1" || tilePicker == "sw2" || tilePicker == "sw3" || tilePicker == "sw4" || tilePicker == "sw5" || tilePicker == "sw6") {
             seltset = this.seltset;
         } else {
             seltset = this.selTsetID;
@@ -12607,6 +12959,53 @@ String texta="";
                     case "repb":
                         gotoStage(treplacetiles);
                         fnextstr.setText(Integer.toString(num));
+                        break;
+                    case "sw1":
+                        backToMap();
+                        swatchValue.set( 0,num );
+                        curspr = num;
+                        setTsetFromCurspr();
+                        addSW( num,"sw1" );
+
+                        break;
+                    case "sw2":
+                        backToMap();
+                        swatchValue.set( 1,num );
+                        curspr = num;
+                        setTsetFromCurspr();
+                        addSW( num,"sw2" );
+                        break;
+                    case "sw3":
+                        backToMap();
+                        swatchValue.set( 2,num );
+                        curspr = num;
+                        setTsetFromCurspr();
+                        addSW( num,"sw3" );
+
+                        break;
+                    case "sw4":
+                        backToMap();
+                        swatchValue.set( 3,num );
+                        curspr = num;
+                        setTsetFromCurspr();
+                        addSW( num,"sw4" );
+
+                        break;
+                    case "sw5":
+                        backToMap();
+                        swatchValue.set( 4,num );
+                        curspr = num;
+                        setTsetFromCurspr();
+                        addSW( num,"sw5" );
+
+                        break;
+                    case "sw6":
+                        backToMap();
+                        swatchValue.set( 5,num );
+                        curspr = num;
+                        setTsetFromCurspr();
+                        addSW( num,"sw6" );
+
                         break;
                     case "addanim":
 						/*
@@ -13747,6 +14146,7 @@ String texta="";
                         tfMessage.setText("");
                         break;
                     case DISCONNECTED:
+                        msgbox("Disconnected!");
                         break;
                 }
             }
@@ -13839,8 +14239,16 @@ String texta="";
         }
     }
 
+    private void checkConnectionStatus(){
+        if (!client.isConnected() && constate != ConnectionState.DISCONNECTED){
+            msgbox("Disconnected!");
+            constate = ConnectionState.DISCONNECTED;
+        }
+    }
     private void runServer(){
         try {
+            server.close();
+            server.stop();
 
             server.start();
             server.bind(54555, 54777);
@@ -13864,10 +14272,10 @@ String texta="";
                 }
             });
             lcollabstatus.setText(z.status+": "+z.listeningon+" "+getLocalIpAddress());
-            localIP = getLocalIpAddress();
-            tfRemoteIP.setText(getLocalIpAddress());
-            Gdx.app.log("HOST","Host ready!");
-            runClient(localIP);
+            //localIP = getLocalIpAddress();
+            //tfRemoteIP.setText(getLocalIpAddress());
+            //Gdx.app.log("HOST","Host ready!");
+            runClient("localhost");
 
 
         }catch(Exception e){}
@@ -13875,7 +14283,7 @@ String texta="";
 
     private void runClient(String aipi){
         try {
-
+            client.stop();
             client.start();
             client.connect(5000, aipi, 54555, 54777);
             if (mygame !=null){
@@ -13944,7 +14352,16 @@ String texta="";
         public float posy;
     }
 
+    private void setTsetFromCurspr(){
+        for (int ii=0; ii<tilesets.size();ii++){
+            tileset ts = tilesets.get(ii);
+            if (curspr >= ts.getFirstgid() && curspr < ts.getFirstgid()+ts.getTilecount()){
+                seltset= ii;
+                break;
+            }
+        }
 
+    }
     private boolean tapWorldMenu(Vector3 touch2) {
         if (cammode == "View only") {
             if (tapped(touch2, gui.center)) {
@@ -13952,6 +14369,8 @@ String texta="";
                 cammode = "";
                 return true;
             }
+
+
 
             if (tapped(touch2, gui.screenshot)) {
                 takingss = true;
@@ -13986,6 +14405,64 @@ String texta="";
                 mode = "image";
             }
             return true;
+        }
+        if (swatches) {
+            if (tapped( touch2, gui.sw1 )) {
+                if (swatchValue.get( 0 ) == 0) {
+                    pickTile( "sw1" );
+                } else {
+                    curspr = swatchValue.get( 0 );
+                    setTsetFromCurspr();
+                }
+
+                return true;
+            }
+
+            if (tapped( touch2, gui.sw2 )) {
+                if (swatchValue.get( 1 ) == 0) {
+                    pickTile( "sw2" );
+                } else {
+                    curspr = swatchValue.get( 1 );
+                    setTsetFromCurspr();
+                }
+                return true;
+            }
+            if (tapped( touch2, gui.sw3 )) {
+                if (swatchValue.get( 2 ) == 0) {
+                    pickTile( "sw3" );
+                } else {
+                    curspr = swatchValue.get( 2 );
+                    setTsetFromCurspr();
+                }
+                return true;
+            }
+            if (tapped( touch2, gui.sw4 )) {
+                if (swatchValue.get( 3 ) == 0) {
+                    pickTile( "sw4" );
+                } else {
+                    curspr = swatchValue.get( 3 );
+                    setTsetFromCurspr();
+                }
+                return true;
+            }
+            if (tapped( touch2, gui.sw5 )) {
+                if (swatchValue.get( 4 ) == 0) {
+                    pickTile( "sw5" );
+                } else {
+                    curspr = swatchValue.get( 4 );
+                    setTsetFromCurspr();
+                }
+                return true;
+            }
+            if (tapped( touch2, gui.sw6 )) {
+                if (swatchValue.get( 5 ) == 0) {
+                    pickTile( "sw6" );
+                } else {
+                    curspr = swatchValue.get( 5 );
+                    setTsetFromCurspr();
+                }
+                return true;
+            }
         }
 
         if (tapped(touch2, gui.layerpick)) {
@@ -14041,17 +14518,18 @@ String texta="";
             return true;
         }
 
+        //useless eyesore
         if (tapped(touch2, gui.center)) {
-            resetcam(true);
-            runServer();
-            return true;
+            //resetcam(true);
+            //runServer();
+            //return true;
         }
 
         if (autotiles.size() > 0) {
             //autotile
             if (tapped(touch2, gui.autotile)) {
                 if (mode == "tile") {
-                    msgbox(z.longpress);
+                    cacheTiles();
                     //runAutoTiles();
                     return true;
                 }
@@ -14400,6 +14878,7 @@ String texta="";
 
         if (tapped(touch2, gui.menu)) {
             if (mode == "object" || mode == "tile"|| mode == "image") {
+                setMenuMap();
                 gotoStage(tMenu);
                 cue("menu");
                 return true;
@@ -14420,6 +14899,7 @@ String texta="";
 
         if (tapped(touch2, gui.map)) {
             if (mode == "object" || mode == "tile"|| mode == "image") {
+                setMapMap();
                 gotoStage(tMap);
                 cue("map");
                 return true;
@@ -14576,6 +15056,7 @@ String texta="";
             autoed.add(false);
         }
 
+        snapWholeMapPhase1(0);
 		/* //This code works but slow.
 		java.util.List<layer> prevlayers = new ArrayList<layer>();
 		java.util.List<layer> nextlayers = new ArrayList<layer>();
@@ -14897,6 +15378,7 @@ String texta="";
 
         }//autotile run
 
+
 			/* //This code works but slow
 			for (int j=0;j<autoundolayer;j++)
 			{
@@ -14927,7 +15409,7 @@ String texta="";
 			}
 		}
 		*/
-
+        snapWholeMapPhase2(0);
     }
 
     public void fillthisold(int num, long oi, long from, int direction) {
@@ -15110,6 +15592,20 @@ String texta="";
                 inFormat.isBigEndian());
     }
 */
+
+
+    public void removeSW(int num, String sws){
+        property todel=null;
+        for(property p : properties){
+            if (p.getName().equalsIgnoreCase( sws )){
+               todel=p;
+            }
+        }
+        properties.remove( todel );
+    }
+
+
+
     @Override
     public boolean longPress(float p1, float p2) {
         if (loadingfile) return true;
@@ -15135,6 +15631,41 @@ String texta="";
                 }
             }
             if (mode == "object" || mode == "tile" || mode == "image") {
+
+
+                if (swatches) {
+                    if (tapped( touch2, gui.sw1 )) {
+                        removeSW( swatchValue.get( 0 ), "sw1" );
+                        swatchValue.set( 0,0 );
+                        return true;
+                    }
+
+                    if (tapped( touch2, gui.sw2 )) {
+                        removeSW( swatchValue.get( 1 ), "sw2" );
+                        swatchValue.set( 1,0 );
+                        return true;
+                    }
+                    if (tapped( touch2, gui.sw3 )) {
+                        removeSW( swatchValue.get( 2 ), "sw3" );
+                        swatchValue.set( 2,0 );
+                        return true;
+                    }
+                    if (tapped( touch2, gui.sw4 )) {
+                        removeSW( swatchValue.get( 3 ), "sw4" );
+                        swatchValue.set( 3,0 );
+                        return true;
+                    }
+                    if (tapped( touch2, gui.sw5 )) {
+                        removeSW( swatchValue.get( 4 ), "sw5" );
+                        swatchValue.set( 4,0 );
+                        return true;
+                    }
+                    if (tapped( touch2, gui.sw6 )) {
+                        removeSW( swatchValue.get( 5 ), "sw6" );
+                        swatchValue.set( 5,0 );
+                        return true;
+                    }
+                }
 
                 if (tapped(touch2, gui.save)) {
                     sAutoSave = !sAutoSave;
@@ -15264,7 +15795,9 @@ String texta="";
 
 
                 if (tapped(touch2, gui.picker)) {
-                    FileDialog(z.selectfile, "quickaddtset", "file", new String[]{".tsx", ".png", ".jpg", ".jpeg", ".bmp", ".gif"}, nullTable);
+                    //FileDialog(z.selectfile, "quickaddtset", "file", new String[]{".tsx", ".png", ".jpg", ".jpeg", ".bmp", ".gif"}, nullTable);
+                    swatches = !swatches;
+                    prefs.putBoolean("swatches", swatches).flush();
                     return true;
                 }
                 if (tilesets.size() == 0) return true;
