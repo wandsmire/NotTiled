@@ -23,6 +23,7 @@ import com.bitfire.postprocessing.filters.*;
 import com.bitfire.utils.*;
 
 import java.io.*;
+import java.lang.StringBuilder;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -44,6 +45,8 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import com.mirwanda.nottiled.game.player;
+
+import static java.lang.Thread.sleep;
 
 
 public class MyGdxGame extends ApplicationAdapter implements GestureListener {
@@ -211,7 +214,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     Table tMap1, tMap2;
     TextButton bTileMgmt, bTileSettingsMgmt, bPreference, bProperties, bTsetMgmt, bBack2, bAutoMgmt, bFeedback;
     Table tRecent;
-    Table tCollab;
+    Table tCollab, tCollab1, tCollab2;
     Label lcollabstatus;
     TextButton bRecent, bRecentOpen, bRecentBack;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> lrecentlist;
@@ -984,7 +987,6 @@ String texta="";
 
                 musicplaying(delta);
                 checkConnectionStatus();
-
 
                 if (nofling > 0) nofling -= delta;
                 switch (kartu) {
@@ -3152,8 +3154,8 @@ String texta="";
         }
         stage.getViewport().setScreenSize(width, height);
         if (kartu == "stage") {
-            //gotoStage(lastStage);
-            backToMap();
+            gotoStage(lastStage);
+            //backToMap();
         }else if (kartu == "game") {
         } else {
             if (dialog != null) {
@@ -3161,11 +3163,10 @@ String texta="";
 
             }
             if (startup != false) {
-               // setMenuMap();
-               // gotoStage(tMenu);
-                backToMap();
+                setMenuMap();
+                gotoStage(tMenu);
             }
-           // startup = true;
+            startup = true;
 
         }
 
@@ -10580,7 +10581,7 @@ String texta="";
             t.setTilewidth(Tswa);
             t.setTileheight(Tsha);
             t.setTrans("");
-            t.setTexture(new Texture(Gdx.files.external(curdir + "/" + t.getSource())));
+            t.setTexture(new Texture(Gdx.files.external(curdir+ "/"+t.getSource())));
             t.setPixmap(pixmapfromtexture(t.getTexture(), t.getTrans()));
 
             t.setFirstgid(requestGid());
@@ -10597,6 +10598,7 @@ String texta="";
             recenterpick();
         } catch (Exception e) {
             errors += "\nError: " + f.name();
+            ErrorBung( e, "eRRROBUNG.txt" );
         }
     }
 
@@ -11951,6 +11953,42 @@ String texta="";
         uicam.update();
         loadingfile = false;
         firstload = loadtime;
+
+        if (isCreateRoom) {
+            FileHandle ff = Gdx.files.external( curdir + "/" + curfile );
+
+            String dat = ff.readString();
+
+
+
+            ///////
+            command cc = new command();
+            cc.command = "startDataAll";
+            cc.from = myID;
+            cc.room = activeRoom;
+            client.sendTCP( cc );
+
+            int len = dat.length();
+            for (int i=0;i<len;i+=BufferSize){
+                String part = dat.substring(i, Math.min(len, i + BufferSize));
+                cc = new command();
+                cc.command = "dataAll";
+                cc.from = myID;
+                cc.room = activeRoom;
+                cc.data = part;
+
+                slowdown();
+                client.sendTCP( cc );
+            }
+            ///////
+
+            cc = new command();
+            cc.command = "allReadThis";
+            cc.room=activeRoom;
+            cc.from = myID;
+            client.sendTCP( cc );
+            logNet( "[C] Opening new map..." );
+        }
     }
 
     public void resetMinimap() {
@@ -14096,58 +14134,490 @@ String texta="";
     }
 
     Server server;
+    TextButton tbHost;
+    TextButton tbJoin;
+    TextButton tbCreateRoom;
+    TextButton tbJoinRoom;
+    TextButton clearLog, pushUpdateBtn;
+
+    TextArea netLog;
+    TextField roomName;
+    TextField uniqueID;
     Client client;
     Kryo serverkryo;
     Kryo clientkryo;
     TextField tfRemoteIP;
+    TextField tfPort;
     String localIP;
-    enum ConnectionState{SERVER,CLIENT,DISCONNECTED}
-    ConnectionState constate = ConnectionState.DISCONNECTED;
+    boolean isServer = false;
+    boolean isClient = false;
+    boolean isCreateRoom = false;
+    boolean isJoinRoom = false;
+    String activeRoom = "";
+    String myID="";
+    public java.util.List<actvClients> activeClients = new ArrayList<actvClients>();
+
+    com.badlogic.gdx.Input.TextInputListener til;
+
+
+    public void pushUpdate(){
+        if (isCreateRoom || isJoinRoom) {
+            saveMap( curdir + "/" + curfile );
+            FileHandle ff = Gdx.files.external( curdir + "/" + curfile );
+            String dat = ff.readString();
+
+            ///////
+            command cc = new command();
+            cc.command = "startDataAll";
+            cc.from = myID;
+            cc.room = activeRoom;
+            client.sendTCP( cc );
+
+            int len = dat.length();
+            for (int i=0;i<len;i+=BufferSize){
+                String part = dat.substring(i, Math.min(len, i + BufferSize));
+                cc = new command();
+                cc.command = "dataAll";
+                cc.from = myID;
+                cc.room = activeRoom;
+                cc.data = part;
+                slowdown();
+                client.sendTCP( cc );
+
+            }
+            ///////
+
+
+            cc = new command();
+            cc.command = "allReadThis";
+            cc.room=activeRoom;
+            cc.from = myID;
+            client.sendTCP( cc );
+            logNet( "[C] Pushing map update..." );
+        }
+    }
+
+    String serverMapData="";
+    String clientMapData="";
+    final int BufferSize = 512;
+    final int WaitTime = 20;
 
     private void loadKryonet(){
-        server = new Server();
+        server = new Server(9999999,9999999);
         serverkryo = server.getKryo();
         serverkryo.register(TextChat.class);
         serverkryo.register(layerhistory.class);
         serverkryo.register(PlayerState.class);
+        serverkryo.register(command.class);
 
         client = new Client();
         clientkryo = client.getKryo();
         clientkryo.register(TextChat.class);
         clientkryo.register(layerhistory.class);
         clientkryo.register(PlayerState.class);
+        clientkryo.register(command.class);
+
+        server.addListener(new Listener() {
+            public void received (Connection connection, Object object) {
+                if (object instanceof TextChat) {
+                    TextChat request = (TextChat)object;
+                    broadcast(request.text);
+                    lcollabstatus.setText(request.text);
+
+
+                } else if (object instanceof command) {
+                    command cmd = (command) object;
+                    switch (cmd.command){
+                        case "registerID":
+                            actvClients acv = new actvClients();
+                            acv.id = cmd.data;
+                            acv.room="";
+                            activeClients.add(acv);
+                            logNet("[S] Registration requested by: " + acv.id);
+                            activeClients.add( acv );
+                            command cc = new command();
+                            cc.from=acv.id;
+                            cc.command = "registered";
+                            connection.sendTCP(cc);
+
+                            break;
+                        case "createRoom":
+                            boolean roomok=true;
+                            for (actvClients av : activeClients){
+                                if (av.creator && av.room.equalsIgnoreCase( cmd.room )){
+                                    roomok=false;
+                                }
+                            }
+
+                            if (roomok){
+
+
+                                for (actvClients av : activeClients){
+                                    if (av.id.equalsIgnoreCase( cmd.from )){
+                                        av.room = cmd.room;
+                                        av.creator = true;
+                                    }
+                                }
+                                cc = new command();
+                                cc.command = "roomCreateOK";
+                                connection.sendTCP(cc);
+                                logNet("[S] Created room: " + cmd.room);
+                                }
+                            else
+                            {
+                                cc = new command();
+                                cc.command = "roomCreateFailed";
+                                connection.sendTCP(cc);
+                                logNet("[S] Room not created: " + cmd.room);
+                            }
+                            break;
+                        case "destroyRoom":
+                            for (actvClients av : activeClients){
+                                if (av.room.equalsIgnoreCase( cmd.room )){
+                                    av.room = "";
+                                    av.creator = false;
+                                }
+                            }
+                            cc = new command();
+                            cc.command = "roomDestroyed";
+                            cc.room = cmd.room;
+                            server.sendToAllTCP( cc );
+                            logNet("[S] Broadcasted room destruction: " + cmd.room);
+                            break;
+
+
+                        case "joinRequest":
+                            //check if the room is available
+                            boolean isavail = false;
+                            for (actvClients av : activeClients){
+                                if (av.room.equalsIgnoreCase( cmd.room ) && av.creator){
+                                    isavail=true;
+                                }
+                            }
+
+                            if (isavail){
+                                //room is available
+                                for (actvClients av : activeClients){
+                                    if (av.id.equalsIgnoreCase( cmd.from )){
+                                        av.room = cmd.room;
+                                    }
+                                }
+
+                                cc = new command();
+                                cc.command = "joinRequestAccepted";
+                                cc.room = cmd.room;
+                                connection.sendTCP(cc);
+                                logNet("[S] Join Request accepted for: " + cmd.from + " @ room:" + cmd.room);
+
+                                logNet("[SB] broadcasting join information");
+                                cc = new command();
+                                cc.command = "joinInformation";
+                                cc.room = cmd.room;
+                                cc.data = cmd.from;
+                                server.sendToAllTCP( cc );
+                            } else{
+                                //room is not available
+                                cc = new command();
+                                cc.command = "joinRequestRejected";
+                                cc.room = cmd.room;
+                                connection.sendTCP(cc);
+                                logNet("[S] Join Request rejected for: " + cmd.from + " @ room:" + cmd.room);
+
+                            }
+
+
+
+                            break;
+                        case "leaveRequest":
+                            for (actvClients av : activeClients){
+                                if (av.id.equalsIgnoreCase( cmd.from )){
+                                    av.room = "";
+                                }
+                            }
+                            logNet("[S] left room for: " +cmd.from +" @ "+ cmd.room);
+                            cc = new command();
+                            cc.command = "leaveRequestAccepted";
+                            cc.room = cmd.room;
+                            connection.sendTCP( cc );
+
+                            logNet("[SB] broadcasting leave information");
+                            cc = new command();
+                            cc.command = "leaveInformation";
+                            cc.room = cmd.room;
+                            cc.data = cmd.from;
+                            server.sendToAllTCP( cc );
+
+                            break;
+                        case "startdata":
+                        case "data":
+                        case "startDataAll":
+                        case "dataAll":
+                            server.sendToAllTCP( cmd );
+
+                            break;
+                        case "readThisBoy":
+                            cc = new command();
+                            cc.command = "mapInformation";
+                            cc.from = cmd.from;
+                            cc.room = cmd.room;
+                            server.sendToAllTCP( cc );
+                            logNet("[SB] broadcasting map information");
+
+
+                            break;
+                        case "allReadThis":
+                            cc = new command();
+                            cc.command = "mapInformationAll";
+                            cc.from = cmd.from;
+                            cc.room = cmd.room;
+                            server.sendToAllTCP( cc );
+                            logNet("[SB] broadcasting open map information");
+
+
+                            break;
+                        case "draw":
+                            //try {
+                                server.sendToAllTCP( cmd );
+                            //}catch(Exception e){
+                            //    ErrorBung( e,"MOMON.TXT" );
+                            //}
+                            break;
+                        case "disconnect":
+                            logNet("[S] Disconnect Request...");
+                            int flag=-1;
+                            for (int i=0;i<activeClients.size();i++){
+                                if (activeClients.get( i ).id.equalsIgnoreCase( cmd.from )){
+
+                                    flag=i;
+                                }
+
+                            }
+                            if (flag!=-1){
+                                activeClients.remove( flag );
+                                logNet("[S] Client erased.");
+                            }
+
+                    }
+                } else if (object instanceof layerhistory) {
+                    layerhistory response = (layerhistory)object;
+                    Gdx.app.log("hi","received from client");
+                    pushdata(response);
+                }
+            }
+        });
+
+        client.addListener(new Listener() {
+            public void received (Connection connection, Object object) {
+
+                if (object instanceof command) {
+                    command cmd = (command) object;
+                    switch (cmd.command) {
+                        case "registered":
+                            logNet( "[C] Registered as: " + cmd.from);
+                            break;
+                        case "roomCreateFailed":
+                            logNet( "[C] Room already exist!");
+                            break;
+                        case "roomCreateOK":
+                            isCreateRoom = true;
+                            activeRoom = roomName.getText();
+                            tbCreateRoom.setText("Destroy Room");
+                            logNet("[C] Room created: " + roomName.getText());
+                            break;
+                        case "roomDestroyed":
+                            if (cmd.room.equalsIgnoreCase( activeRoom )){
+                                isCreateRoom = false;
+                                isJoinRoom = false;
+                                activeRoom = "";
+                                tbCreateRoom.setText("Create Room");
+                                tbJoinRoom.setText("Join Room");
+                                logNet("[C] Room destroyed: " + roomName.getText());
+                            }
+                            break;
+                        case "joinRequestAccepted":
+                            logNet( "[C] Joined room :"+cmd.room);
+                            logNet( "[C] Loading map data...");
+                            isJoinRoom = true;
+                            activeRoom = cmd.room;
+                            tbJoinRoom.setText( "Leave Room" );
+                            break;
+                        case "joinRequestRejected":
+                            logNet( "[C] Failed to join room :"+cmd.room);
+                            break;
+                        case "leaveRequestAccepted":
+                            logNet( "[C] Left room :"+cmd.room);
+                            isJoinRoom = false;
+                            activeRoom = "";
+                            tbJoinRoom.setText( "Join Room" );
+
+                            break;
+                        case "leaveInformation":
+                            if (cmd.room.equalsIgnoreCase(activeRoom)) {
+                                logNet( "[CI] "+cmd.data+" left the room.");
+                            }
+                            break;
+                        case "startData":
+                            if (cmd.from.equalsIgnoreCase( myID )) {
+                                clientMapData = "";
+                            }
+                            break;
+                        case "data":
+                            if (cmd.from.equalsIgnoreCase( myID )) {
+                                clientMapData += cmd.data;
+                            }
+                            break;
+                        case "startDataAll":
+                            if (!cmd.from.equalsIgnoreCase( myID ) && cmd.room.equalsIgnoreCase(activeRoom)) {
+                                clientMapData = "";
+                            }
+                            break;
+                        case "dataAll":
+                            if (!cmd.from.equalsIgnoreCase( myID ) && cmd.room.equalsIgnoreCase(activeRoom)) {
+                                clientMapData += cmd.data;
+                            }
+                            break;
+                        case "joinInformation":
+                            if (cmd.room.equalsIgnoreCase(activeRoom) && !cmd.data.equalsIgnoreCase( myID )) {
+                                logNet( "[CI] "+cmd.data+" entered the room.");
+                                if (isCreateRoom){
+                                    //send the map
+                                    saveMap(curdir + "/" + curfile);
+                                    //read map as text
+                                    FileHandle ff = Gdx.files.external( curdir +"/"+ curfile );
+                                    logNet( "[C] Sending map data...");
+
+                                    String dat = ff.readString();
+                                    ///////
+                                    command cc = new command();
+                                    cc.command = "startData";
+                                    cc.from = cmd.data;
+                                    cc.room = cmd.room;
+                                    connection.sendTCP( cc );
+
+                                    int len = dat.length();
+                                    for (int i=0;i<len;i+=BufferSize){
+                                        String part = dat.substring(i, Math.min(len, i + BufferSize));
+                                        cc = new command();
+                                        cc.command = "data";
+                                        cc.room = cmd.room;
+                                        cc.from = cmd.data;
+                                        cc.data = part;
+                                        slowdown();
+                                        connection.sendTCP( cc );
+                                    }
+                                    ///////
+                                    cc = new command();
+                                    cc.command = "readThisBoy";
+                                    cc.from = cmd.data;
+                                    connection.sendTCP( cc );
+
+
+
+
+
+                                }else
+                                {
+                                    //pause until that guy finished opening;
+                                }
+                            }
+                            break;
+                        case "mapInformation":
+                            if (cmd.from.equalsIgnoreCase( myID )) {
+                                logNet( "[CI] map data received!");
+                                FileHandle fh = Gdx.files.external( "/NotTiled/tempNetworkMap.tmx" );
+                                fh.writeString( clientMapData,false);
+                                clientMapData="";
+                                backToMap();
+                                loadtmx( "/NotTiled/tempNetworkMap.tmx"  );
+                            }
+                            break;
+                        case "mapInformationAll":
+                            if (!cmd.from.equalsIgnoreCase( myID ) && cmd.room.equalsIgnoreCase(activeRoom)) {
+                                logNet( "[CI] map data received!");
+                                FileHandle fh = Gdx.files.external( curdir + "/" + curfile);
+
+                                fh.writeString( clientMapData,false);
+                                clientMapData="";
+                                backToMap();
+                                loadtmx( curdir + "/" + curfile );
+                            }
+                            break;
+                        case "draw":
+                            if (cmd.room.equalsIgnoreCase(activeRoom) && !cmd.from.equalsIgnoreCase( myID )) {
+                                layerhistory h = (layerhistory) cmd.lh;
+                                if (h.undo) {
+
+                                    long frm = h.from;
+                                    long toe = h.to;
+                                    int frmts = h.oldtset;
+                                    int toets = h.newtset;
+                                    h.from = toe;
+                                    h.to = frm;
+                                    h.oldtset = toets;
+                                    h.newtset = frmts;
+                                    h.undo = false;
+
+                                }
+                                undolayer.add(h);
+                                redolayer.clear();
+                                layers.get(h.getLayer()).getStr().set(h.getLocation(), h.getTo());
+                                layers.get(h.getLayer()).getTset().set(h.getLocation(), h.getNewtset());;
+                            }
+                            break;
+                    }
+                }
+
+            }
+
+        });
 
         tCollab = new Table();
         tCollab.setFillParent(true);
         tCollab.defaults().width(btnx).height(btny).padBottom(2);
 
+        tCollab1 = new Table();
+        tCollab1.defaults().width(btnx).height(btny).padBottom(2);
+
+        tCollab2 = new Table();
+        tCollab2.defaults().width(btnx).height(btny).padBottom(2);
+
         Label lTitle = new Label(z.collaboration,skin);
-        TextButton tbHost = new TextButton(z.host,skin);
+        tbHost = new TextButton("Run Server",skin);
         Label lRemote = new Label(z.remoteip,skin);
-        tfRemoteIP = new TextField("192.168.0.1",skin);
-        TextButton tbJoin = new TextButton(z.join,skin);
+        tfRemoteIP = new TextField("127.0.0.1",skin);
+        tfPort = new TextField("11112",skin);
+        tbJoin = new TextButton(z.join,skin);
+        roomName = new TextField("room1", skin);
+        uniqueID = new TextField("Steve", skin);
+        tbCreateRoom = new TextButton("Create Room",skin);
+        tbJoinRoom = new TextButton("Join Room",skin);
+        clearLog = new TextButton("Clear Log",skin);
+        pushUpdateBtn = new TextButton("Push Update",skin);
+        tbJoin = new TextButton(z.join,skin);
+        netLog = new TextArea("",skin);
         TextButton tbBack = new TextButton(z.back,skin);
         lcollabstatus = new Label(z.status+": "+z.readytoconnect,skin);
         final TextField tfMessage = new TextField("",skin);
         TextButton tbSendMsg = new TextButton("Send Message",skin);
 
+        pushUpdateBtn.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                pushUpdate();
+            }
+        });
 
         tbSendMsg.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                switch (constate)
-                {
-                    case SERVER:
-                        broadcast(tfMessage.getText());
-                        tfMessage.setText("");
-                        break;
-                    case CLIENT:
-                        talktoserver(tfMessage.getText());
-                        tfMessage.setText("");
-                        break;
-                    case DISCONNECTED:
-                        msgbox("Disconnected!");
-                        break;
+
+                if (isServer){
+                    broadcast( tfMessage.getText() );
+                    tfMessage.setText( "" );
+                }
+                if (isClient){
+                    talktoserver(tfMessage.getText());
+                    tfMessage.setText("");
                 }
             }
         });
@@ -14160,30 +14630,117 @@ String texta="";
             }
         });
 
+        til = new com.badlogic.gdx.Input.TextInputListener() {
+
+            @Override
+            public void input(String input) {
+                if (input == "") {
+                    return;
+                }
+
+                runServer(Integer.parseInt(input));
+            }
+
+            @Override
+            public void canceled() {
+            }
+
+        };
+
+
         tbHost.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                runServer();
+                if (!isServer) {
+                    runServer( Integer.parseInt( tfPort.getText() ) );
+                }else
+                {
+                    stopServer();
+                }
             }
         });
 
         tbJoin.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                runClient(tfRemoteIP.getText());
+
+                if (!isClient) {
+                    runClient(tfRemoteIP.getText(), Integer.parseInt(tfPort.getText()));
+                }else
+                {
+                    stopClient();
+                }
             }
         });
 
-        tCollab.add(lTitle).colspan(2).row();
-        tCollab.add(tbHost).colspan(2).row();
-        tCollab.add(lRemote).width(btnx/2);
-        tCollab.add(tfRemoteIP).width(btnx/2).row();
-        tCollab.add(tbJoin).colspan(2).row();
-        tCollab.add(tbBack).colspan(2).row();
-        tCollab.add(lcollabstatus).colspan(2).row();
-        tCollab.add(tfMessage).colspan(2).row();
-        tCollab.add(tbSendMsg).colspan(2).row();
+        tbCreateRoom.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
 
+                if (!isCreateRoom) {
+                    createRoom();
+                }else
+                {
+                    destroyRoom();
+                }
+            }
+        });
+
+        tbJoinRoom.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+
+                if (!isJoinRoom) {
+                    joinRoom();
+                }else
+                {
+                    leaveRoom();
+                }
+            }
+        });
+
+        clearLog.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+
+                netLog.setText("");
+            }
+        });
+
+        tCollab1.add(lTitle).colspan(2).row();
+        tCollab1.add(new Label("Port",skin)).width(btnx/2);
+        tCollab1.add(tfPort).width(btnx/2).row();
+        tCollab1.add(tbHost).colspan(2).row();
+        tCollab1.add(lRemote).width(btnx/2);
+        tCollab1.add(tfRemoteIP).width(btnx/2).row();
+        tCollab1.add(new Label("Unique ID",skin)).width(btnx/2);
+        tCollab1.add(uniqueID).width(btnx/2).row();
+        tCollab1.add(tbJoin).colspan(2).row();
+
+        tCollab1.add(new Label("Room:",skin)).width(btnx/2);
+        tCollab1.add(roomName).width(btnx/2).row();
+        tCollab1.add(tbCreateRoom).colspan(2).row();
+        tCollab1.add(tbJoinRoom).colspan(2).row();
+        //tCollab1.add(clearLog).colspan(2).row();
+        tCollab1.add(pushUpdateBtn).colspan(2).row();
+
+        tCollab1.add(tbBack).colspan(2).row();
+        tCollab1.add(lcollabstatus).colspan(2).row();
+
+        tCollab2.add(new Label("Net Log",skin)).colspan(2).row();
+        tCollab2.add(netLog).height(btny*5).colspan(2).row();
+        tCollab.add( tCollab1 );
+        //tCollab.add( tCollab2 );
+    }
+
+
+    public void logNet(String s){
+        try {
+           // netLog.setText(netLog.getText()+ s +"\n");
+           // netLog.setCursorPosition( netLog.getText().length() );
+            lcollabstatus.setText( s );
+            status(s,5);
+        }catch(Exception e){}
     }
 
     public static String getLocalIpAddress() {
@@ -14209,6 +14766,7 @@ String texta="";
             TextChat sr = new TextChat();
             sr.text=text;
             server.sendToAllTCP(sr);
+
         }catch(Exception e){}
     }
 
@@ -14220,11 +14778,24 @@ String texta="";
         }catch(Exception e){}
     }
 
-    private void uploaddata(packet lh){
+    private void slowdown(){
+        while(client.getTcpWriteBufferSize()>1024){
+            try {
+                sleep( 20 ); //20
+            }catch(Exception e){}
+        }
+    }
+
+    private void uploaddata(layerhistory lh){
         try {
-            if (constate ==ConnectionState.CLIENT) {
-                lh.sender = localIP;
-                client.sendTCP(lh);
+            if (isClient && (isCreateRoom || isJoinRoom)) {
+                command cc = new command();
+                cc.command = "draw";
+                cc.from = myID;
+                cc.room = activeRoom;
+                cc.lh = lh;
+                slowdown();
+                client.sendTCP(cc);
             }
         }catch(Exception e){
             e.printStackTrace();
@@ -14239,106 +14810,203 @@ String texta="";
         }
     }
 
-    private void checkConnectionStatus(){
-        if (!client.isConnected() && constate != ConnectionState.DISCONNECTED){
-            msgbox("Disconnected!");
-            constate = ConnectionState.DISCONNECTED;
-        }
-    }
-    private void runServer(){
+    private void stopServer() {
         try {
-            server.close();
             server.stop();
+            isServer = false;
+            tbHost.setText(z.host);
+            activeClients.clear();
+            logNet("Server stopped");
+         }catch(Exception e){}
+    }
 
-            server.start();
-            server.bind(54555, 54777);
-            if (mygame !=null){
-                mygame.server = server;
-            }
-            constate = ConnectionState.SERVER;
-            server.addListener(new Listener() {
-                public void received (Connection connection, Object object) {
-                    if (object instanceof TextChat) {
-                        TextChat request = (TextChat)object;
-                        broadcast(request.text);
-                        lcollabstatus.setText(request.text);
-
-                    }
-                    else if (object instanceof layerhistory) {
-                        layerhistory response = (layerhistory)object;
-                        Gdx.app.log("hi","received from client");
-                        pushdata(response);
-                    }
+        private void stopClient() {
+            try {
+                if (isCreateRoom) {
+                    destroyRoom();
                 }
-            });
-            lcollabstatus.setText(z.status+": "+z.listeningon+" "+getLocalIpAddress());
-            //localIP = getLocalIpAddress();
-            //tfRemoteIP.setText(getLocalIpAddress());
-            //Gdx.app.log("HOST","Host ready!");
-            runClient("localhost");
+                if (isJoinRoom) {
+                    leaveRoom();
+                }
+
+                command cc = new command();
+                cc.command="disconnect";
+                cc.from=myID;
+                client.sendTCP( cc );
+                client.close();
+                client.stop();
+
+                isClient = false;
+                isCreateRoom = false;
+                isJoinRoom = false;
+                activeRoom = "";
+                tbCreateRoom.setText("Create Room");
+                tbJoinRoom.setText("Join Room");
+                tbJoin.setText( z.join );
+                logNet("Client disconnected" );
+
+
+
+            } catch (Exception e) {
+            }
+        }
+
+
+    private void destroyRoom() {
+        try {
+            //server.stop();
+            command c = new command();
+            c.from = myID;
+            c.room = roomName.getText();
+            c.command = "destroyRoom";
+            c.data = "";
+            client.sendTCP(c);
+
 
 
         }catch(Exception e){}
     }
 
-    private void runClient(String aipi){
+    private void leaveRoom() {
         try {
-            client.stop();
+            //client.stop();
+
+            logNet("Requesting to leave " + activeRoom);
+
+            command c = new command();
+            c.from = myID;
+            c.room = activeRoom;
+            c.command = "leaveRequest";
+            c.data = "";
+            client.sendTCP(c);
+
+        } catch (Exception e) {
+        }
+    }
+
+    private void createRoom() {
+        try {
+            //server.stop();
+            if (!isClient){
+                logNet("Not connected to server0" );
+                return;
+            }
+            if (isJoinRoom){
+                logNet("Cannot create, leave room first.");
+                return;
+            }
+            if (roomName.getText().equalsIgnoreCase( "" )){
+                logNet("Please enter room name.");
+                return;
+            }
+            command c = new command();
+            c.from = myID;
+            c.room = roomName.getText();
+            c.command = "createRoom";
+            c.data = "";
+            client.sendTCP(c);
+
+        }catch(Exception e){}
+    }
+
+    private void joinRoom() {
+        try {
+            //client.stop();
+
+            if (!isClient){
+                logNet("Not connected to server");
+                return;
+            }
+
+            if (isCreateRoom){
+                logNet("Cannot join, destroy room first.");
+                return;
+            }
+
+            if (roomName.getText().equalsIgnoreCase( "" )){
+                logNet("Please enter room name.");
+                return;
+            }
+
+            logNet("Requesting to join: " + roomName.getText());
+            command c = new command();
+            c.from = myID;
+            c.command = "joinRequest";
+            c.room = roomName.getText();
+            client.sendTCP(c);
+
+        } catch (Exception e) {
+        }
+    }
+
+    private void registerID(){
+        command c = new command();
+        c.command = "registerID";
+        c.data = uniqueID.getText() + "_" + Integer.toString((int) (Math.random() * 10000000)) ;
+        myID=c.data;
+        client.sendTCP(c);
+    }
+
+    private void checkConnectionStatus() {
+        try {
+            if (isClient){
+                if (!client.isConnected()) stopClient();
+            }
+        } catch (Exception e) {
+        }
+    }
+
+    private void runServer(int port){
+        try {
+            if (port <=0){
+                logNet("Please enter port number.");
+                return;
+            }
+            server.start();
+            server.bind(port, 54777);
+            if (mygame !=null){
+                mygame.server = server;
+            }
+
+
+            logNet("Server started on port :"+Integer.toString( port ));
+            logNet(z.listeningon+" "+getLocalIpAddress());
+            isServer = true;
+            tbHost.setText("Stop Server");
+            localIP = getLocalIpAddress();
+            tfRemoteIP.setText(getLocalIpAddress());
+
+
+        }catch(Exception e){}
+    }
+
+    private void runClient(String aipi, int portNum){
+        try {
+            if (portNum <=0){
+                logNet("Please enter port number.");
+                return;
+            }
+
             client.start();
-            client.connect(5000, aipi, 54555, 54777);
+            client.connect(5000, aipi, portNum , 54777);
             if (mygame !=null){
                 mygame.client = client;
             }
 
 
-            client.addListener(new Listener() {
-                public void received (Connection connection, Object object) {
-                    if (object instanceof packet) {
-                        packet pkt = (packet) object;
-                        if (!pkt.sender.equalsIgnoreCase(localIP)) {
-                            if (object instanceof TextChat) {
-                                TextChat response = (TextChat) object;
-                                lcollabstatus.setText(response.text);
-                                status(response.text, 3);
-                            } else if (object instanceof layerhistory) {
-                                Gdx.app.log("hi", "received from server...");
-                                layerhistory h = (layerhistory) object;
-                                if (h.undo) {
 
-                                    long frm = h.from;
-                                    long toe = h.to;
-                                    int frmts = h.oldtset;
-                                    int toets = h.newtset;
-                                    h.from = toe;
-                                    h.to = frm;
-                                    h.oldtset = toets;
-                                    h.newtset = frmts;
-                                    h.undo = false;
-
-                                }
-                                undolayer.add(h);
-                                redolayer.clear();
-                                layers.get(h.getLayer()).getStr().set(h.getLocation(), h.getTo());
-                                layers.get(h.getLayer()).getTset().set(h.getLocation(), h.getNewtset());
-                                Gdx.app.log("hi", "message accepted :)");
-                            }  //object instance of
-
-                        } else {
-                            Gdx.app.log("hi", "message rejected, from me!");
-                        } //packet
-                    } //packet
-                }
-
-            });
             lcollabstatus.setText(z.status+": "+z.connectedto + " "+aipi);
-            Gdx.app.log("CLIENT","Client ready!");
-            constate = ConnectionState.CLIENT;
+            logNet("Client connected to :"+aipi+":"+Integer.toString(portNum));
+            tbJoin.setText( "Disconnect Client" );
+            isClient=true;
             localIP = getLocalIpAddress();
+            registerID();
 
 
         }catch(Exception e){
-            lcollabstatus.setText(z.status+": "+z.failedtoconnect);
-            constate = ConnectionState.DISCONNECTED;
+            logNet(z.failedtoconnect);
+            tbJoin.setText( z.join );
+            isClient=false;
 
         }
     }
@@ -14347,9 +15015,24 @@ String texta="";
         public String text;
     }
 
+    public static class command extends packet{
+        public String from="";
+        public String room="";
+        public String command="";
+        public String data="";
+        public layerhistory lh=null;
+
+    }
+
     public static class PlayerState extends packet{
         public float posx;
         public float posy;
+    }
+
+    public static class actvClients extends packet{
+        public String id;
+        public String room;
+        public boolean creator;
     }
 
     private void setTsetFromCurspr(){
