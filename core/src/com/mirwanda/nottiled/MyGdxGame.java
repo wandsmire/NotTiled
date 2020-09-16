@@ -23,7 +23,6 @@ import com.bitfire.postprocessing.filters.*;
 import com.bitfire.utils.*;
 
 import java.io.*;
-import java.lang.StringBuilder;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -44,7 +43,7 @@ import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
-import com.mirwanda.nottiled.game.player;
+import com.mirwanda.nottiled.platformer.player;
 
 import static java.lang.Thread.sleep;
 
@@ -213,6 +212,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     Table tMap, tLayerMgmt, tTileMgmt, tObjMgmt, tFrameMgmt, tPropsMgmt, tPreference, tProperties, tTsetMgmt, tAutoMgmt, tAutoform;
     Table tMap1, tMap2;
     TextButton bTileMgmt, bTileSettingsMgmt, bPreference, bProperties, bTsetMgmt, bBack2, bAutoMgmt, bFeedback;
+    TextButton bUIEditor;
     Table tRecent;
     Table tCollab, tCollab1, tCollab2;
     Label lcollabstatus;
@@ -1156,6 +1156,56 @@ String texta="";
                         drawstage(delta);
 
                         break;
+                    case "editor":
+                        switch (mode){
+                            case "tile": case "object":
+                                bloom.setEnabled(false);
+                                vignette.setEnabled(false);
+                                Gdx.gl.glEnable(GL20.GL_BLEND);
+                                Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+
+                                postProcessor.capture();
+                                Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+                                batch.totalRenderCalls = 0;
+
+
+
+                                if (layers.size() > 0 && mode !="newpoly") {
+                                    if (selLayer >= layers.size()) selLayer = 0;
+                                    if (layers.get(selLayer).getType() == layer.Type.TILE) {
+                                        mode = "tile";
+                                    } else if (layers.get(selLayer).getType() == layer.Type.OBJECT) {
+                                        mode = "object";
+                                    } else if (layers.get(selLayer).getType() == layer.Type.IMAGE) {
+                                        mode = "image";
+                                    }
+                                }
+
+
+                                resetMinimap();
+
+                                drawTiles();
+                                drawGrid();
+                                drawObjects();
+                                drawObjectsInfo();
+                                postProcessor.render();
+                                drawWorldUI();
+
+                                drawstage(delta);
+                                break;
+                            case "pick":
+                                Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+                                drawpicker();
+                                drawstage(delta);
+
+                                break;
+
+                        }
+
+
+                        break;
 
                     //case "stage":
 
@@ -1319,6 +1369,10 @@ String texta="";
 
     }
     void keyinput(float delta) {
+        if (!Gdx.input.isTouched() && iseditGUI) {
+            iseditGUI=false;
+        }
+
         if (roll) {
             if (!Gdx.input.isTouched()) {
                 if (mapstartSelect == mapendSelect) {
@@ -1407,7 +1461,7 @@ String texta="";
                     if (mygame.victory || mygame.starting) return;
                     //no press when dead, no press when desktop
                     if (Gdx.app.getType() == Application.ApplicationType.Desktop) return ;
-                    if (mygame.player.state== com.mirwanda.nottiled.game.player.playerState.DEAD) return;
+                    if (mygame.player.state== com.mirwanda.nottiled.platformer.player.playerState.DEAD) return;
                     if (tapped(touch2, gui.up)) mygame.pressup();
                     if (tapped(touch2, gui.down)) mygame.pressdown();
 
@@ -3545,6 +3599,13 @@ String texta="";
                 uisrect(gui.canceltutorial, mouse, vis("cancel"));//tile/obj switch
             }
 
+            if (kartu=="editor"){
+                uisrect(gui.editorcancel, mouse, vis("editorcancel"));//tile/obj switch
+                uisrect(gui.editormode, mouse, vis("editormode"));//layer switch
+                uisrect(gui.editorsave, mouse, vis("editorsave"));//viewmode switch
+                uisrect(gui.info, mouse, vis("infoinfo"));
+            }
+
             if (mode == "tile" || mode == "object"|| mode == "image") {
                 uisrect(gui.mode, mouse, vis("addlayer"));//tile/obj switch
                 uisrect(gui.layer, mouse, vis("layerlist"));//layer switch
@@ -3777,6 +3838,11 @@ String texta="";
             }
             //z.canceltutorial="Cancel Tutorial";
             if (tutoring) str1draw(ui, z.canceltutorial, gui.canceltutorial);
+            if (kartu=="editor"){
+                uidrawbutton(txsave, z.save, gui.editorsave, 1);
+                uidrawbutton(txundo, z.cancel, gui.editorcancel, 1);
+                uidrawbutton(txmap, z.edit, gui.editormode, 1);
+            }
 
             if (cammode != "View only") {
 
@@ -5058,6 +5124,7 @@ String texta="";
         bTileMgmt = new TextButton(z.layer, skin);
         bTsetMgmt = new TextButton(z.tileset, skin);
         bAutoMgmt = new TextButton(z.autotile, skin);
+        bUIEditor = new TextButton(z.uieditor, skin);
          bTools = new TextButton(z.tools, skin);
 
 
@@ -5296,6 +5363,15 @@ String texta="";
             }
         });
 
+        bUIEditor.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+
+                backToMap();
+                kartu = "editor";
+            }
+        });
+
          bManualCN = new TextButton(z.checkupdate, skin);
         bManualCN.addListener(new ChangeListener() {
             @Override
@@ -5456,9 +5532,11 @@ String texta="";
             tMap.defaults().width( btnx ).height( btny + 3 ).padBottom( 2 );
             if (!face.ispro()) tMap1.add( bPatreon2 ).row();
             tMap1.add( bFeedback ).row();
+            tMap1.add( bUIEditor ).row();
             tMap1.add( bCollaboration ).row();
             tMap1.add( bProperties ).row();
             tMap1.add( bBackground ).row();
+
             tMap2.add( bTools ).row();
             tMap2.add( bAutoMgmt ).row();
             tMap2.add( bTileMgmt ).row();
@@ -5472,6 +5550,7 @@ String texta="";
             tMap.defaults().width( btnx ).height( btny + 3 ).padBottom( 2 );
             if (!face.ispro()) tMap.add( bPatreon2 ).row();
             tMap.add( bFeedback ).row();
+            tMap.add( bUIEditor ).row();
             tMap.add( bCollaboration ).row();
             tMap.add( bProperties ).row();
             tMap.add( bBackground ).row();
@@ -5561,6 +5640,7 @@ String texta="";
         TextButton hmirror = new TextButton(z.mirrorhorizontally, skin);
         TextButton vmirror = new TextButton(z.mirrorvertically, skin);
         TextButton hvmirror = new TextButton(z.mirrorboth, skin);
+        TextButton hvmirrorrev = new TextButton(z.mirrorreverse, skin);
         TextButton randomize = new TextButton(z.randommap, skin);
         TextButton replacetiles = new TextButton(z.replacetiles, skin);
         TextButton toback = new TextButton(z.back, skin);
@@ -5572,6 +5652,7 @@ String texta="";
         ttools.add(hmirror).row();
         ttools.add(vmirror).row();
         ttools.add(hvmirror).row();
+        ttools.add(hvmirrorrev).row();
         ttools.add(randomize).row();
         ttools.add(replacetiles).row();
         ttools.add(toback).row();
@@ -5596,6 +5677,13 @@ String texta="";
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 runhvmirror();
+            }
+        });
+
+        hvmirrorrev.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                runhvmirrorrev();
             }
         });
 
@@ -6623,6 +6711,7 @@ String texta="";
 
             if (y < Th / 2 && y != Th / 2) {
                 int location = i + ((Th / 2 - y) * 2 - 1) * Tw;
+
                 long from = layers.get(selLayer).getStr().get(location);
                 long to = layers.get(selLayer).getStr().get(i);
                 int oldtset = layers.get(selLayer).getTset().get(location);
@@ -6642,6 +6731,36 @@ String texta="";
     private void runhvmirror() {
         runhmirror();
         runvmirror();
+        backToMap();
+    }
+
+
+    private void runhvmirrorrev() {
+        redolayer.clear();
+        for (int i = 0; i < Tw * Th; i++) {
+            boolean follower = true;
+            if (i == 0) follower = false;
+            int x = i % Tw;
+            int y = i / Tw;
+
+            if (y < Th / 2 && y != Th / 2) {
+                int location = i + ((Th / 2 - y) * 2 - 1) * Tw;
+                location = location + (Tw / 2 - x) * 2 - 1;
+                long from = layers.get(selLayer).getStr().get(location);
+                long to = layers.get(selLayer).getStr().get(i);
+                int oldtset = layers.get(selLayer).getTset().get(location);
+                int newtset = layers.get(selLayer).getTset().get(i);
+                int layer = selLayer;
+
+                layerhistory lh = new layerhistory(follower, from, to, location, layer, oldtset, newtset);
+                undolayer.add(lh);
+
+                layers.get(selLayer).getStr().set(location, to);
+                layers.get(selLayer).getTset().set(location, newtset);
+            }
+        }
+
+
         backToMap();
     }
 
@@ -8583,6 +8702,7 @@ String texta="";
                         @Override
                         public void changed(ChangeEvent event, Actor actor) {
                             curspr = Integer.parseInt(actor.getName());
+                            addRecentTile( curspr );
                             for (int i = 0; i < tilesets.size(); i++) {
                                 if (curspr >= tilesets.get(i).getFirstgid() && curspr < tilesets.get(i).getFirstgid() + tilesets.get(i).getTilecount()) {
                                     seltset = i;
@@ -8606,6 +8726,45 @@ String texta="";
         tbl.add(tat).row();
         gotoStage(tblmain);
     }
+
+    private void addRecentTile(int num){
+
+        for (int x=0;x<6;x++){
+            if (swatchValue.get(x)==num) return;
+        }
+
+        if (swatchValue.get( 0 ) ==0){
+            swatchValue.set( 0,num );
+            addSW( num,"sw1" );
+            return;
+        }
+        if (swatchValue.get( 1 ) ==0){
+            swatchValue.set( 1,num );
+            addSW( num,"sw2" );
+            return;
+        }
+        if (swatchValue.get( 2 ) ==0){
+            swatchValue.set( 2,num );
+            addSW( num,"sw3" );
+            return;
+        }
+        if (swatchValue.get( 3 ) ==0){
+            swatchValue.set( 3,num );
+            addSW( num,"sw4" );
+            return;
+        }
+        if (swatchValue.get( 4 ) ==0){
+            swatchValue.set( 4,num );
+            addSW( num,"sw5" );
+            return;
+        }
+        if (swatchValue.get( 5 ) ==0){
+            swatchValue.set( 5,num );
+            addSW( num,"sw6" );
+            return;
+        }
+    }
+
 
     private void loadList(String wla) {
         this.wl = wla;
@@ -10524,6 +10683,7 @@ String texta="";
             }
             t.setName(nn);
 
+
             String[] tc = curdir.split("/");
             String[] ts = f.path().split("/");
 
@@ -10570,6 +10730,7 @@ String texta="";
 
             t.setSource(cocos);
 
+
             int Tswa = Integer.parseInt(fImportWidth.getText());
             int Tsha = Integer.parseInt(fImportHeight.getText());
             t.setOriginalwidth(s.getWidth());
@@ -10581,7 +10742,7 @@ String texta="";
             t.setTilewidth(Tswa);
             t.setTileheight(Tsha);
             t.setTrans("");
-            t.setTexture(new Texture(Gdx.files.external(curdir+ "/"+t.getSource())));
+            t.setTexture(new Texture(f));
             t.setPixmap(pixmapfromtexture(t.getTexture(), t.getTrans()));
 
             t.setFirstgid(requestGid());
@@ -12422,6 +12583,12 @@ String texta="";
         {
             return true;
         }
+        if (kartu.equalsIgnoreCase(  "editor" )){
+            Vector3 touch2 = new Vector3();
+            uicam.unproject(touch2.set(p1, p2, 0));
+
+            if (tapEditorMenu(touch2)) return true;
+        }
 
         velx = 0;
         vely = 0;
@@ -12447,7 +12614,9 @@ String texta="";
         if (!drag) {
 
             switch (kartu) {
-
+                case "editor":
+                    if (tapEditorActions(touch2)) return true;
+                    break;
                 case "world":
 
                     if (!roll) if (tapWorldMenu(touch2)) return true;
@@ -12958,6 +13127,7 @@ String texta="";
             if (kartu == "tile") {
                 if (!issettingtile) {
                     curspr = num;
+                    addRecentTile( curspr );
                     kartu = "world";
                     if (activetool == 1) activetool = 0;
                     cue("tilepickclick");
@@ -14429,8 +14599,8 @@ String texta="";
                                 isCreateRoom = false;
                                 isJoinRoom = false;
                                 activeRoom = "";
-                                tbCreateRoom.setText("Create Room");
-                                tbJoinRoom.setText("Join Room");
+                                tbCreateRoom.setText(z.createroom);
+                                tbJoinRoom.setText(z.joinroom);
                                 logNet("[C] Room destroyed: " + roomName.getText());
                             }
                             break;
@@ -14439,7 +14609,7 @@ String texta="";
                             logNet( "[C] Loading map data...");
                             isJoinRoom = true;
                             activeRoom = cmd.room;
-                            tbJoinRoom.setText( "Leave Room" );
+                            tbJoinRoom.setText( z.leaveroom );
                             break;
                         case "joinRequestRejected":
                             logNet( "[C] Failed to join room :"+cmd.room);
@@ -14448,7 +14618,7 @@ String texta="";
                             logNet( "[C] Left room :"+cmd.room);
                             isJoinRoom = false;
                             activeRoom = "";
-                            tbJoinRoom.setText( "Join Room" );
+                            tbJoinRoom.setText( z.joinroom);
 
                             break;
                         case "leaveInformation":
@@ -14582,23 +14752,23 @@ String texta="";
         tCollab2.defaults().width(btnx).height(btny).padBottom(2);
 
         Label lTitle = new Label(z.collaboration,skin);
-        tbHost = new TextButton("Run Server",skin);
+        tbHost = new TextButton(z.runserver,skin);
         Label lRemote = new Label(z.remoteip,skin);
         tfRemoteIP = new TextField("127.0.0.1",skin);
         tfPort = new TextField("11112",skin);
         tbJoin = new TextButton(z.join,skin);
         roomName = new TextField("room1", skin);
         uniqueID = new TextField("Steve", skin);
-        tbCreateRoom = new TextButton("Create Room",skin);
-        tbJoinRoom = new TextButton("Join Room",skin);
-        clearLog = new TextButton("Clear Log",skin);
-        pushUpdateBtn = new TextButton("Push Update",skin);
+        tbCreateRoom = new TextButton(z.createroom,skin);
+        tbJoinRoom = new TextButton(z.joinroom,skin);
+        clearLog = new TextButton(z.clearlog,skin);
+        pushUpdateBtn = new TextButton(z.pushupdate,skin);
         tbJoin = new TextButton(z.join,skin);
         netLog = new TextArea("",skin);
         TextButton tbBack = new TextButton(z.back,skin);
         lcollabstatus = new Label(z.status+": "+z.readytoconnect,skin);
         final TextField tfMessage = new TextField("",skin);
-        TextButton tbSendMsg = new TextButton("Send Message",skin);
+        TextButton tbSendMsg = new TextButton(z.sendmessage,skin);
 
         pushUpdateBtn.addListener(new ChangeListener() {
             @Override
@@ -14708,16 +14878,16 @@ String texta="";
         });
 
         tCollab1.add(lTitle).colspan(2).row();
-        tCollab1.add(new Label("Port",skin)).width(btnx/2);
+        tCollab1.add(new Label(z.port,skin)).width(btnx/2);
         tCollab1.add(tfPort).width(btnx/2).row();
         tCollab1.add(tbHost).colspan(2).row();
         tCollab1.add(lRemote).width(btnx/2);
         tCollab1.add(tfRemoteIP).width(btnx/2).row();
-        tCollab1.add(new Label("Unique ID",skin)).width(btnx/2);
+        tCollab1.add(new Label(z.uniqueid,skin)).width(btnx/2);
         tCollab1.add(uniqueID).width(btnx/2).row();
         tCollab1.add(tbJoin).colspan(2).row();
 
-        tCollab1.add(new Label("Room:",skin)).width(btnx/2);
+        tCollab1.add(new Label(z.room,skin)).width(btnx/2);
         tCollab1.add(roomName).width(btnx/2).row();
         tCollab1.add(tbCreateRoom).colspan(2).row();
         tCollab1.add(tbJoinRoom).colspan(2).row();
@@ -14727,7 +14897,7 @@ String texta="";
         tCollab1.add(tbBack).colspan(2).row();
         tCollab1.add(lcollabstatus).colspan(2).row();
 
-        tCollab2.add(new Label("Net Log",skin)).colspan(2).row();
+        tCollab2.add(new Label(z.netlog,skin)).colspan(2).row();
         tCollab2.add(netLog).height(btny*5).colspan(2).row();
         tCollab.add( tCollab1 );
         //tCollab.add( tCollab2 );
@@ -14840,8 +15010,8 @@ String texta="";
                 isCreateRoom = false;
                 isJoinRoom = false;
                 activeRoom = "";
-                tbCreateRoom.setText("Create Room");
-                tbJoinRoom.setText("Join Room");
+                tbCreateRoom.setText(z.createroom);
+                tbJoinRoom.setText(z.joinroom);
                 tbJoin.setText( z.join );
                 logNet("Client disconnected" );
 
@@ -14972,7 +15142,7 @@ String texta="";
             logNet("Server started on port :"+Integer.toString( port ));
             logNet(z.listeningon+" "+getLocalIpAddress());
             isServer = true;
-            tbHost.setText("Stop Server");
+            tbHost.setText(z.stopserver);
             localIP = getLocalIpAddress();
             tfRemoteIP.setText(getLocalIpAddress());
 
@@ -14997,7 +15167,7 @@ String texta="";
 
             lcollabstatus.setText(z.status+": "+z.connectedto + " "+aipi);
             logNet("Client connected to :"+aipi+":"+Integer.toString(portNum));
-            tbJoin.setText( "Disconnect Client" );
+            tbJoin.setText( z.disconnectclient);
             isClient=true;
             localIP = getLocalIpAddress();
             registerID();
@@ -15045,6 +15215,7 @@ String texta="";
         }
 
     }
+
     private boolean tapWorldMenu(Vector3 touch2) {
         if (cammode == "View only") {
             if (tapped(touch2, gui.center)) {
@@ -15592,6 +15763,314 @@ String texta="";
         return false;
     }
 
+    gui selectedGUI;
+    boolean iseditGUI;
+
+    private void editGUI(gui g){
+        selectedGUI= g;
+        iseditGUI=true;
+    }
+
+    private boolean tapEditorActions(Vector3 touch2) {
+        if (tapped(touch2, gui.editorcancel)) {
+            if (sCustomUI){
+                loadInterface("custominterface.json");
+            }else{
+                guis gsu = new guis();
+                gui = gsu;
+            }
+
+            backToMap();
+            return true;
+        }
+        if (tapped(touch2, gui.editorsave)) {
+            sCustomUI = true;
+            prefs.putBoolean("customui", sCustomUI).flush();
+            guis at = new guis();
+            at=gui;
+            Json json = new Json();
+            writeThisAbs("NotTiled/sample/"+"custominterface.json", json.prettyPrint(at));
+            msgbox(z.saved);
+
+            backToMap();
+            return true;
+        }
+        if (tapped(touch2, gui.editormode)) {
+            
+            return true;
+        }
+
+        return false;
+    }
+
+    private boolean tapEditorMenu(Vector3 touch2) {
+        if (cammode == "View only") {
+            if (tapped(touch2, gui.center)) {
+                resetcam(true);
+                cammode = "";
+                return true;
+            }
+
+
+
+            if (tapped(touch2, gui.screenshot)) {
+                takingss = true;
+                //Gdx.input.vibrate(100);
+
+                com.badlogic.gdx.utils.Timer.schedule(new com.badlogic.gdx.utils.Timer.Task() {
+                    @Override
+                    public void run() {
+                        //Gdx.input.vibrate(200);
+                        screenshot();
+                        cue("screenshot");
+                        takingss = false;
+                    }
+                }, 1f);
+
+            }
+            return true;
+        }
+
+
+        //layer selection (top mid)
+        if (tapped(touch2, gui.layer)) {
+            editGUI( gui.layer );
+            return true;
+        }
+
+        if (swatches) {
+            if (tapped( touch2, gui.sw1 )) {
+                editGUI( gui.sw1 );
+                return true;
+            }
+
+            if (tapped( touch2, gui.sw2 )) {
+                editGUI( gui.sw2 );
+                return true;
+            }
+            if (tapped( touch2, gui.sw3 )) {
+                editGUI( gui.sw3 );
+                return true;
+
+            }
+            if (tapped( touch2, gui.sw4 )) {
+                editGUI( gui.sw4 );
+                return true;
+
+            }
+            if (tapped( touch2, gui.sw5 )) {
+                editGUI( gui.sw5 );
+                return true;
+
+            }
+            if (tapped( touch2, gui.sw6 )) {
+                editGUI( gui.sw6 );
+                return true;
+
+            }
+        }
+
+        if (tapped(touch2, gui.layerpick)) {
+            editGUI( gui.layerpick );
+            return true;
+
+        }
+
+
+        if (tapped(touch2, gui.minimap) && sMinimap) {
+            editGUI( gui.minimap );
+            return true;
+        }
+
+        //tile/object selector (top left)
+        if (tapped(touch2, gui.mode)) {
+            editGUI( gui.mode );
+            return true;
+
+        }
+
+
+        if (autotiles.size() > 0) {
+            //autotile
+            if (tapped(touch2, gui.autotile)) {
+                if (mode == "tile") {
+                    editGUI( gui.autotile );
+                    return true;
+
+                }
+            }
+
+            //select auto tile
+            if (tapped(touch2, gui.autopicker)) {
+                if (mode == "tile") {
+                    editGUI( gui.autopicker );
+                    return true;
+                }
+            }
+        }
+        if (mode == "tile") {
+            if (tapped(touch2, gui.tool1)) {
+                editGUI( gui.tool1 );
+                return true;
+
+            }
+            if (tapped(touch2, gui.tool2)) {
+                editGUI( gui.tool2 );
+                return true;
+
+            }
+            if (tapped(touch2, gui.tool3)) {
+                editGUI( gui.tool3 );
+                return true;
+
+            }
+            if (tapped(touch2, gui.tool4)) {
+                editGUI( gui.tool4 );
+                return true;
+
+            }
+            if (tapped(touch2, gui.tool5)) {
+                editGUI( gui.tool5 );
+                return true;
+
+            }
+        }
+
+        //tool selector (btm right)
+        if (tapped(touch2, gui.lock)) {
+
+            if (mode == "object") {
+                editGUI( gui.lock );
+                return true;
+
+            }
+        }
+
+        if (tapped(touch2, gui.tool)) {
+
+            if (mode == "newpoly") {
+                editGUI( gui.tool );
+                return true;
+
+            }
+
+        }
+
+
+        //undo
+        if (tapped(touch2, gui.undo)) {
+
+
+            if (mode == "tile") {
+                editGUI( gui.undo );
+                return true;
+            }
+            if (mode == "newpoly") {
+                editGUI( gui.undo );
+                return true;
+            }
+
+        }
+
+        //redo
+        if (tapped(touch2, gui.redo)) {
+
+            if (mode == "tile") {
+                editGUI( gui.redo );
+                return true;
+            }
+
+        }
+
+        //view mode selector (top roght)
+        if (tapped(touch2, gui.viewmode)) {
+            editGUI( gui.viewmode );
+            return true;
+        }
+
+        //select tile button
+        if (tapped(touch2, gui.picker)) {
+            if (mode == "tile") {
+                editGUI( gui.picker );
+                return true;
+            }
+
+
+        }
+
+        if (tapped(touch2, gui.objectpicker)) {
+            if (mode == "image") {
+                editGUI( gui.objectpicker );
+                return true;
+            }
+        }
+        //object tool selector
+        if (tapped(touch2, gui.objectpickerleft)) {
+            if (mode == "object") {
+                editGUI( gui.objectpickerleft );
+                return true;
+            }
+        }
+
+        if (tapped(touch2, gui.objectpickerright)) {
+            if (mode == "object") {
+                editGUI( gui.objectpickerright );
+                return true;
+            }
+        }
+        //rotation
+        if (tapped(touch2, gui.rotation)) {
+            if (mode == "tile") {
+
+                editGUI( gui.rotation );
+                return true;
+            }
+
+        }
+
+        if (tapped(touch2, gui.menu)) {
+            if (mode == "object" || mode == "tile"|| mode == "image") {
+                editGUI( gui.menu );
+                return true;
+
+            }
+
+        }
+
+        if (tapped(touch2, gui.save)) {
+            if (mode == "object" || mode == "tile"|| mode == "image") {
+                editGUI( gui.save );
+                return true;
+
+            }
+        }
+
+        if (tapped(touch2, gui.map)) {
+            if (mode == "object" || mode == "tile"|| mode == "image") {
+                editGUI( gui.map );
+                return true;
+            }
+
+        }
+
+        if (tapped(touch2, gui.fps)) {
+            if (mode == "object" || mode == "tile"|| mode == "image") {
+                editGUI( gui.fps );
+                return true;
+            }
+
+        }
+
+        if (tapped(touch2, gui.status)) {
+            if (mode == "object" || mode == "tile"|| mode == "image") {
+                editGUI( gui.status );
+                return true;
+            }
+
+        }
+        return false;
+    }
+
     private boolean cue(String p0) {
         if (tutoring) {
             if (tutor.getT().get(activetutor).checkcue(p0) == true) {
@@ -15888,6 +16367,7 @@ String texta="";
 
             }//properties run
 
+            int repNum=1;
             switch (am.getType()) {
                 case "clearobjects":
                     try {
@@ -16056,6 +16536,56 @@ String texta="";
                         }//m
                     }//k
                     break;
+                case "replacement":
+                    for (int k = 0; k < Tw * Th; k++) {
+
+                        if (layers.get(am.getSourcelayer()).getStr().get(k) != am.getSource())
+                            continue;
+                        try {
+                            switch (am.objectfill) {
+                                case "single":
+                                    obj tt = new obj();
+                                    tt.setName(am.getObjectname());
+                                    tt.setX(Tsw * (k % Tw));
+                                    tt.setY(Tsh * (k / Tw));
+                                    tt.setW(Tsw);
+                                    tt.setH(Tsh);
+                                    layers.get(am.getObjectgroup()).getObjects().add(tt);
+                                    break;
+                            }
+                        } catch (Exception e) {
+                            ErrorBung(e, "autobug3.txt");
+
+                        }
+
+                            int tgt = k;
+                            layers.get(am.getDestlayer()).getStr().set(tgt, (long) am.getCell(repNum));
+                            repNum+=1;
+
+                        try {
+                                switch (am.objectfill) {
+                                    case "all":
+                                        obj tt = new obj();
+                                        tt.setName(am.getObjectname());
+                                        tt.setX(Tsw * (tgt % Tw));
+                                        tt.setY(Tsh * (tgt / Tw));
+                                        tt.setW(Tsw);
+                                        tt.setH(Tsh);
+                                        layers.get(am.getObjectgroup()).getObjects().add(tt);
+                                        break;
+                                }
+                            } catch (Exception e) {
+                                ErrorBung(e, "autobug4.txt");
+                            }
+                            for (int l = 0; l < tilesets.size(); l++) {
+                                if (am.getCell(repNum) >= tilesets.get(l).getFirstgid() && am.getCell(repNum) < tilesets.get(l).getFirstgid() + tilesets.get(l).getTilecount()) {
+                                    layers.get(am.getDestlayer()).getTset().set(tgt, l);
+                                    break;
+                                }//if
+                            }//l
+                    }//k
+                    break;
+
             }//switch
 
 
@@ -16866,7 +17396,7 @@ String texta="";
         }
     }
 
-    private com.mirwanda.nottiled.game.game mygame;
+    private com.mirwanda.nottiled.platformer.game mygame;
 
 
     private void playgame(final String filex){
@@ -16875,7 +17405,7 @@ String texta="";
         final String curlevel = prefs.getString(filex, filex);
         if (filex.equalsIgnoreCase(curlevel)){
             kartu="game";
-            mygame = new com.mirwanda.nottiled.game.game();
+            mygame = new com.mirwanda.nottiled.platformer.game();
             if (mygame.initialise(curdir, filex)){
                 msgbox("Error, make sure to put your game on the Sample folder.");
             }
@@ -16899,7 +17429,7 @@ String texta="";
                     kartu="game";
                     prefs.putString(curfile, levelnya).flush();
                     Gdx.input.setInputProcessor(gd);
-                    mygame = new com.mirwanda.nottiled.game.game();
+                    mygame = new com.mirwanda.nottiled.platformer.game();
                     if (mygame.initialise(curdir, levelnya)){
                         msgbox("Error, make sure to put your game on the Sample folder.");
                     }
@@ -16992,6 +17522,32 @@ String texta="";
     public boolean pan(float p1, float p2, float p3, float p4) {
         if (loadingfile) return true;
         if (kartu.equalsIgnoreCase("game")){return true;}
+        if (kartu.equalsIgnoreCase( "editor" ) && iseditGUI){
+
+
+
+            Vector3 touch2 = new Vector3();
+            uicam.unproject(touch2.set(p1, p2, 0));
+
+            if (landscape){
+                float width=selectedGUI.getWl()-selectedGUI.getXl();
+                float height=selectedGUI.getHl()-selectedGUI.getYl();
+                selectedGUI.setXl( (int) touch2.x *100 / ssy - width/2);
+                selectedGUI.setWl( (int)  touch2.x *100 / ssy +width/2 );
+                selectedGUI.setYl( (int)  touch2.y *100 / ssx -height/2);
+                selectedGUI.setHl( (int)  touch2.y *100 / ssx +height/2 );
+            }else{
+                float width=selectedGUI.getW()-selectedGUI.getX();
+                float height=selectedGUI.getH()-selectedGUI.getY();
+                selectedGUI.setX( touch2.x  *100 / ssx-width/2);
+                selectedGUI.setW( touch2.x *100 / ssx +width/2 );
+                selectedGUI.setY( touch2.y  *100 / ssy -height/2);
+                selectedGUI.setH( touch2.y *100 / ssy +height/2 );
+            }
+           // Gdx.app.log( "HEHE",p1+"/"+ ssx+" : "+ p2+"/"+ssy);
+
+            return true;
+        }
         //status(p1+"/"+p2+"/"+p3+"/"+p4,5);
 
         //this is for tile pickers

@@ -1,8 +1,5 @@
-package com.mirwanda.nottiled.game;
+package com.mirwanda.nottiled.platformer;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.g2d.ParticleEffect;
-import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.physics.box2d.Contact;
@@ -11,13 +8,13 @@ import com.badlogic.gdx.physics.box2d.ContactListener;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.Manifold;
 
-import static com.mirwanda.nottiled.game.gameobject.objecttype.BOX;
-import static com.mirwanda.nottiled.game.gameobject.objecttype.MONSTER;
-import static com.mirwanda.nottiled.game.gameobject.objecttype.PLATFORMH;
-import static com.mirwanda.nottiled.game.gameobject.objecttype.PLATFORMV;
-import static com.mirwanda.nottiled.game.gameobject.objecttype.PLAYER;
-import static com.mirwanda.nottiled.game.gameobject.objecttype.PLAYERBOTTOM;
-import static com.mirwanda.nottiled.game.gameobject.objecttype.WALLCENTER;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BOX;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.MONSTER;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLATFORMH;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLATFORMV;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYER;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYERBOTTOM;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.WALLCENTER;
 
 public class WorldContactListener implements ContactListener {
 
@@ -593,7 +590,7 @@ public class WorldContactListener implements ContactListener {
             mygame.dead+=1;
             mygame.pe.reset(false);
             mygame.pe.start();
-            mygame.player.state= com.mirwanda.nottiled.game.player.playerState.DEAD;
+            mygame.player.state= com.mirwanda.nottiled.platformer.player.playerState.DEAD;
             ///////////////////
 
 

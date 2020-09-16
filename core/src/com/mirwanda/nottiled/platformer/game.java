@@ -1,4 +1,4 @@
-package com.mirwanda.nottiled.game;
+package com.mirwanda.nottiled.platformer;
 
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
@@ -6,7 +6,6 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.loaders.resolvers.ExternalFileHandleResolver;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
@@ -29,15 +28,14 @@ import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
 import com.badlogic.gdx.physics.box2d.World;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Server;
-import com.mirwanda.nottiled.gui;
 
 import java.util.ArrayList;
 
-import static com.mirwanda.nottiled.game.gameobject.objecttype.CHECKPOINT;
-import static com.mirwanda.nottiled.game.gameobject.objecttype.COIN;
-import static com.mirwanda.nottiled.game.gameobject.objecttype.GEAR;
-import static com.mirwanda.nottiled.game.gameobject.objecttype.MONSTER;
-import static com.mirwanda.nottiled.game.gameobject.objecttype.SPIKE;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.CHECKPOINT;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.COIN;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.GEAR;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.MONSTER;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.SPIKE;
 
 public class game {
     public Server server;
@@ -54,7 +52,7 @@ public class game {
 
 
     public Vector2 checkpoint = new Vector2();
-    public com.mirwanda.nottiled.game.player player;
+    public com.mirwanda.nottiled.platformer.player player;
     public java.util.List<gameobject> objects = new ArrayList<gameobject>();;
     public java.util.List<wall> walls  = new ArrayList<wall>();;
 
@@ -580,11 +578,11 @@ public class game {
             stompinterval-=delta;
             if (stompinterval<0)stompinterval=0;
 
-        if (player.b2body.getPosition().y<=-32/100f && player.state != com.mirwanda.nottiled.game.player.playerState.DEAD)
+        if (player.b2body.getPosition().y<=-32/100f && player.state != com.mirwanda.nottiled.platformer.player.playerState.DEAD)
         {
             playSfx(sfxplayer);
             dead+=1;
-            player.state = com.mirwanda.nottiled.game.player.playerState.DEAD;
+            player.state = com.mirwanda.nottiled.platformer.player.playerState.DEAD;
 
         }
 
@@ -678,7 +676,7 @@ public class game {
 
 
         player.update(delta);
-        if (player.state != com.mirwanda.nottiled.game.player.playerState.DEAD){
+        if (player.state != com.mirwanda.nottiled.platformer.player.playerState.DEAD){
             player.draw(batch);
         }else
         {
@@ -750,7 +748,7 @@ public class game {
         player.b2body.setLinearVelocity(0,0);
         player.b2body.setActive(true);
         player.b2body.setTransform(checkpoint.x,checkpoint.y,0);
-        player.state = com.mirwanda.nottiled.game.player.playerState.ALIVE;
+        player.state = com.mirwanda.nottiled.platformer.player.playerState.ALIVE;
     }
 
     public void keyinput(){
@@ -763,7 +761,7 @@ public class game {
 
             if (victory||starting) return;
 
-            if (player.state == com.mirwanda.nottiled.game.player.playerState.DEAD) return;
+            if (player.state == com.mirwanda.nottiled.platformer.player.playerState.DEAD) return;
 
             if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
                 pressright();

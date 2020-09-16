@@ -344,4 +344,19 @@ public class language
 	String t612;
 	String charas;
 	String port;
+	String uieditor;
+	String mirrorreverse;
+	String runserver;
+	String createroom;
+	String joinroom;
+	String clearlog;
+	String pushupdate;
+	String sendmessage;
+	String uniqueid;
+	String room;
+	String netlog;
+	String stopserver;
+	String disconnectclient;
+	String leaveroom;
+
 }

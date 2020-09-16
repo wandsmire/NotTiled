@@ -1,4 +1,4 @@
-package com.mirwanda.nottiled.game;
+package com.mirwanda.nottiled.platformer;
 
 
 import com.badlogic.gdx.maps.MapProperties;

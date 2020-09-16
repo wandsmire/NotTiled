@@ -50,6 +50,9 @@ public class guis
 	gui tileproperties = new gui();
 	gui tilesettings = new gui();
 	gui tilewrite = new gui();
+	gui editormode = new gui();
+	gui editorsave = new gui();
+	gui editorcancel = new gui();
 
 	gui up=new gui();
 	gui down=new gui();
@@ -139,6 +142,10 @@ public class guis
 		sw5.setp(42,58,19,28);
 		sw6.setp(58,75,19,28);
 
+		editormode.setp(40,60,50,60);
+		editorsave.setp(40,60,40,50);
+		editorcancel.setp(40,60,30,40);
+
 		menu.setl(0,10,0,15);
 		map.setl(0,10,15,25);
 		save.setl(0,10,25,35);
@@ -211,6 +218,10 @@ public class guis
 		sw4.setl(10,18,14,28);
 		sw5.setl(18,26,14,28);
 		sw6.setl(26,34,14,28);
+
+		editormode.setl(45,55,50,60);
+		editorsave.setl(45,55,40,50);
+		editorcancel.setl(45,55,30,40);
 
 
 

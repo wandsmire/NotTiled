@@ -20,8 +20,13 @@ public class StringBuilderPlus extends com.badlogic.gdx.utils.StringBuilder
 			for(int i=0;i<pr.size();i++)
 			{
 				property p=pr.get(i);
-				w("[\""+p.getName()+"\"] = \""+p.getValue().replace("\n","\\n")+"\"");
-				if (i!=pr.size()-1) 
+				if (p.getType()=="boolean"){
+					w("[\""+p.getName()+"\"] = "+p.getValue().replace("\n","\\n")+"");
+
+			}else{
+					w("[\""+p.getName()+"\"] = \""+p.getValue().replace("\n","\\n")+"\"");
+			}
+				if (i!=pr.size()-1)
 				{
 					append(",\n");
 				}else
