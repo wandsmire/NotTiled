@@ -1158,7 +1158,7 @@ String texta="";
                         break;
                     case "editor":
                         switch (mode){
-                            case "tile": case "object":
+                            case "tile": case "object": case "image":
                                 bloom.setEnabled(false);
                                 vignette.setEnabled(false);
                                 Gdx.gl.glEnable(GL20.GL_BLEND);
@@ -1171,16 +1171,7 @@ String texta="";
 
 
 
-                                if (layers.size() > 0 && mode !="newpoly") {
-                                    if (selLayer >= layers.size()) selLayer = 0;
-                                    if (layers.get(selLayer).getType() == layer.Type.TILE) {
-                                        mode = "tile";
-                                    } else if (layers.get(selLayer).getType() == layer.Type.OBJECT) {
-                                        mode = "object";
-                                    } else if (layers.get(selLayer).getType() == layer.Type.IMAGE) {
-                                        mode = "image";
-                                    }
-                                }
+
 
 
                                 resetMinimap();
@@ -1765,7 +1756,7 @@ String texta="";
             batch.begin();
             tileset ts = null;
             //tile, pick, pickanim
-            if (kartu == "tile") {
+            if (kartu == "tile" || kartu=="editor") {
                 seltset = this.seltset;
             } else {
                 switch (tilePicker) {
@@ -2005,20 +1996,68 @@ String texta="";
             }
 
         }
-        uisrect(gui.tilesets, mouse, null);
+/////
+        if (kartu == "tile" || kartu=="editor") {
+            uisrect(gui.tilesetsmid, mouse, null);
+            uisrect(gui.tilesetsleft, mouse, null);
+            uisrect(gui.tilesetsright, mouse, null);
 
-        if (tilesets.size() != 0 && kartu == "tile") {
-            uisrect(gui.tool1, mouse, null);
-            uisrect(gui.tool2, mouse, null);
-            uisrect(gui.tool3, mouse, null);
-            uisrect(gui.tool5, mouse, null);
+        }else{
+
+
+            switch (tilePicker) {
+            case "props":
+            case "rnda":
+            case "rndb":
+            case "repa":
+            case "repb":
+            case "sw1":
+            case "sw2":
+            case "sw3":
+            case "sw4":
+            case "sw5":
+            case "sw6":
+            case "newimgobj":
+
+                uisrect(gui.tilesetsmid, mouse, null);
+                uisrect(gui.tilesetsleft, mouse, null);
+                uisrect(gui.tilesetsright, mouse, null);
+
+                break;
+
+            default:
+                uisrect(gui.tilesetsmid, mouse, null);
+
+                break;
+             }
+        }
+
+        ////
+
+
+        if (kartu=="editor"){
+            uisrect(gui.editormode, mouse, null);
+            uisrect(gui.editorcancel, mouse, null);
+            uisrect(gui.editorsave, mouse, null);
+            uisrect(gui.editorleft, mouse, vis("editorleft"));//tile/obj switch
+            uisrect(gui.editorright, mouse, vis("editorright"));//layer switch
+            uisrect(gui.editorup, mouse, vis("editorup"));//viewmode switch
+            uisrect(gui.editordown, mouse, vis("editordown"));//tile/obj switch
+
+
+        }
+        if (tilesets.size() != 0 && (kartu == "tile" || kartu=="editor")) {
+            uisrect(gui.pickertool1, mouse, null);
+            uisrect(gui.pickertool2, mouse, null);
+            uisrect(gui.pickertool3, mouse, null);
+            uisrect(gui.pickertool5, mouse, null);
             uisrect(gui.pickerback, mouse, null);//tool switch
 
 
-            if (issettingtile) {
+            if (issettingtile || kartu=="editor") {
                 uisrect(gui.tilewrite, mouse, null);
                 uisrect(gui.tilesettings, mouse, new Color(1f, 1f, 0f, .4f));
-                if (somethingisselected()) {
+                if (somethingisselected() || kartu=="editor") {
                     uisrect(gui.tileproperties, mouse, null);
                     uisrect(gui.tileremove, mouse, null);
                     uisrect(gui.tileadd, mouse, null);//tool switch
@@ -2047,30 +2086,45 @@ String texta="";
 
         if (tilesets.size() == 0) {
             //str1draw(ui, "Tileset is empty.",0,100,50);
-            str1draw(ui, z.addnew + " " + z.tileset, gui.tilesets);
+            str1draw(ui, z.addnew + " " + z.tileset, gui.tilesetsmid);
         } else {
 
-            if (kartu == "tile") {
+            if (kartu == "tile" || kartu=="editor") {
+
 
                 if (landscape) {
                     str1.getData().setScale(.7f);
                 } else {
                     str1.getData().setScale(1f);
                 }
-                uidrawbutton(txundo, z.back, gui.pickerback,3);
-                str1draw(ui, "<<", gui.tilesetslefticon);
-                str1draw(ui, ">>", gui.tilesetrighticon);
-                str1draw(ui, tilesets.get(seltset).getName(), gui.tilesetsmid);
 
-                uidrawbutton(txadd, z.tileset, gui.tool1, 2);
-                uidrawbutton(txinfo, z.properties, gui.tool2, 2);
-                uidrawbutton(txtiles, z.tiles, gui.tool3, 2);
-                uidrawbutton(txdelete, z.remove, gui.tool5, 2);
+                if (kartu=="editor"){
+                    uidrawbutton(txmap, z.edit, gui.editormode,1);
+                    uidrawbutton(txundo, z.cancel, gui.editorcancel,1);
+                    uidrawbutton(txsave, z.save, gui.editorsave,1);
+                    uidrawbutton(txLeft, "-", gui.editorleft, 1);
+                    uidrawbutton(txRight, "+", gui.editorright, 1);
+                    uidrawbutton(txDown, "+", gui.editorup, 1);
+                    uidrawbutton(txUp, "-", gui.editordown, 1);
+
+
+                }
+                uidrawbutton(txundo, z.back, gui.pickerback,3);
+                //modeltekwan
+
+                uidrawbutton(txLeft, "", gui.tilesetsleft,1);
+                str1draw(ui, tilesets.get(seltset).getName(), gui.tilesetsmid);
+                uidrawbutton(txRight, "", gui.tilesetsright,1);
+
+                uidrawbutton(txadd, z.tileset, gui.pickertool1, 2);
+                uidrawbutton(txinfo, z.properties, gui.pickertool2, 2);
+                uidrawbutton(txtiles, z.tiles, gui.pickertool3, 2);
+                uidrawbutton(txdelete, z.remove, gui.pickertool5, 2);
 
                 uidrawbutton(txpencil, z.tilepicker, gui.tilewrite, 2);
                 uidrawbutton(txtiles, z.edit, gui.tilesettings, 2);
-                if (issettingtile) {
-                    if (somethingisselected()) {
+                if (issettingtile || kartu=="editor") {
+                    if (somethingisselected() || kartu=="editor") {
                         uidrawbutton(txinfo, z.info, gui.tileproperties, 2);
                         uidrawbutton(txeraser, z.remove, gui.tileremove, 2);
                         uidrawbutton(txadd, z.addnew, gui.tileadd, 2);
@@ -2107,31 +2161,33 @@ String texta="";
                     case "sw5":
                     case "sw6":
 
-                        str1draw(ui, "<<", gui.tilesetslefticon);
-                        str1draw(ui, ">>", gui.tilesetrighticon);
+                        uidrawbutton(txundo, "", gui.tilesetsleft,1);
                         str1draw(ui, tilesets.get(seltset).getName(), gui.tilesetsmid);
+                        uidrawbutton(txredo, "", gui.tilesetsright,1);
+
 
                         break;
                     case "newimgobj":
-                        str1draw(ui, "<<", gui.tilesetslefticon);
-                        str1draw(ui, ">>", gui.tilesetrighticon);
+                        uidrawbutton(txundo, "", gui.tilesetsleft,1);
                         str1draw(ui, tilesets.get(seltset).getName(), gui.tilesetsmid);
+                        uidrawbutton(txredo, "", gui.tilesetsright,1);
+
 
                         break;
                     case "terraineditor":
                         if (tilesets.get(seltset).getTerrains().size() > 0)
-                            str1draw(ui, "Terrain: " + tilesets.get(seltset).getTerrains().get(tilesets.get(seltset).getSelTerrain()).getName(), gui.tilesets);
+                            str1draw(ui, "Terrain: " + tilesets.get(seltset).getTerrains().get(tilesets.get(seltset).getSelTerrain()).getName(), gui.tilesetsmid);
                         uidrawbutton(txadd, z.addnew, gui.newterrain,3);
 
                         break;
                     case "massprops":
-                        str1draw(ui, z.tileset + ": " + tilesets.get(selTsetID).getName(), gui.tilesets);
+                        str1draw(ui, z.tileset + ": " + tilesets.get(selTsetID).getName(), gui.tilesetsmid);
                         //str1draw(ui, z.ok, gui.newterrain);
                         uidrawbutton(txsave, z.ok, gui.newterrain,3);
                         break;
 
                     default:
-                        str1draw(ui, z.tileset + ": " + tilesets.get(selTsetID).getName(), gui.tilesets);
+                        str1draw(ui, z.tileset + ": " + tilesets.get(selTsetID).getName(), gui.tilesetsmid);
 
                         break;
                 }
@@ -3433,22 +3489,25 @@ String texta="";
     }
 
     public void uidrawbutton(Texture tx, String strin, gui gui, float margin) {
+        //margin=1;
         float x = 0, y = 0, w = 0, h = 0;
         if (landscape) {
-            x = gui.getXl() + margin + 1;
+            x = gui.getXl();// + margin + 1;
             y = gui.getYl() + margin +1;
-            w = gui.getWl() - margin - 1;
+            w = gui.getWl();// - margin - 1;
             h = gui.getHl() - margin +1;
         } else {
-            x = gui.getX() + margin + 1;
+            x = gui.getX();// + margin + 1;
             y = gui.getY() + margin +1;
-            w = gui.getW() - margin - 1;
+            w = gui.getW();// - margin - 1;
             h = gui.getH() - margin +1;
         }
         if (!landscape) {
-            ui.draw(tx, x / 100 * ssx, y / 100 * ssy, (w - x) / 100 * ssx, (h - y) / 100 * ssy);
+            ui.draw(tx, (x / 100 * ssx)+((w - x) / 100 * ssx/2)-((h - y) / 100 * ssy/2), y / 100 * ssy, (h - y) / 100 * ssy, (h - y) / 100 * ssy);
+           // ui.draw(tx, x / 100 * ssx, y / 100 * ssy, (w - x) / 100 * ssx, (h - y) / 100 * ssy);
         } else {
-            ui.draw(tx, x / 100 * ssy, y / 100 * ssx, (w - x) / 100 * ssy, (h - y) / 100 * ssx);
+            ui.draw(tx, (x / 100 * ssy)+((w - x) / 100 * ssy/2)-((h - y) / 100 * ssx/2), y / 100 * ssx, (h - y) / 100 * ssx, (h - y) / 100 * ssx);
+//            ui.draw(tx, x / 100 * ssy, y / 100 * ssx, (w - x) / 100 * ssy, (h - y) / 100 * ssx);
         }
 
 ///////////LABEL///////////////////////////////////
@@ -3603,6 +3662,10 @@ String texta="";
                 uisrect(gui.editorcancel, mouse, vis("editorcancel"));//tile/obj switch
                 uisrect(gui.editormode, mouse, vis("editormode"));//layer switch
                 uisrect(gui.editorsave, mouse, vis("editorsave"));//viewmode switch
+                uisrect(gui.editorleft, mouse, vis("editorleft"));//tile/obj switch
+                uisrect(gui.editorright, mouse, vis("editorright"));//layer switch
+                uisrect(gui.editorup, mouse, vis("editorup"));//viewmode switch
+                uisrect(gui.editordown, mouse, vis("editordown"));//tile/obj switch
                 uisrect(gui.info, mouse, vis("infoinfo"));
             }
 
@@ -3698,12 +3761,14 @@ String texta="";
             }
 
             if (mode == "object") {
-                uisrect(gui.objectpicker, mouse, null);//objtools switch
+                uisrect(gui.objectpickermid, mouse, null);//objtools switch
+                uisrect(gui.objectpickerleft, mouse, null);//objtools switch
+                uisrect(gui.objectpickerright, mouse, null);//objtools switch
                 uisrect(gui.lock, mouse, null);//tool switch
 
             }
             if (mode == "image") {
-                uisrect(gui.objectpicker, mouse, null);//objtools switch
+                uisrect(gui.objectpickermid, mouse, null);//objtools switch
 
             }
             if (mode == "newpoly") {
@@ -3774,7 +3839,7 @@ String texta="";
                 Tswa = tilesets.get(initset).getTilewidth();
                 Tsha = tilesets.get(initset).getTileheight();
                 //TextureRegion region= new TextureRegion(tilesets.get(initset).getTexture(), );
-                uidraw(tilesets.get(initset).getTexture(), gui.pickerbg, 1, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha);
+                uidraw(tilesets.get(initset).getTexture(), gui.picker, 1, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha);
             }
 
             if (tilesets.size() > 0 && mode == "tile" && swatches) {
@@ -3842,6 +3907,10 @@ String texta="";
                 uidrawbutton(txsave, z.save, gui.editorsave, 1);
                 uidrawbutton(txundo, z.cancel, gui.editorcancel, 1);
                 uidrawbutton(txmap, z.edit, gui.editormode, 1);
+                uidrawbutton(txLeft, "-", gui.editorleft, 1);
+                uidrawbutton(txRight, "+", gui.editorright, 1);
+                uidrawbutton(txDown, "+", gui.editorup, 1);
+                uidrawbutton(txUp, "-", gui.editordown, 1);
             }
 
             if (cammode != "View only") {
@@ -3993,9 +4062,10 @@ String texta="";
                 } else if (mode == "object") {
 
 
-                    str1draw(ui, shapeName, gui.objectpicker);
-                    str1draw(ui, "<<", gui.objectpickerlefticon);
-                    str1draw(ui, ">>", gui.objectpickerrighticon);
+                    str1draw(ui, shapeName, gui.objectpickermid);
+                    uidrawbutton(txLeft, "", gui.objectpickerleft, 3);
+                    uidrawbutton(txRight, "", gui.objectpickerright, 3);
+
                     if (magnet == 0) {
                         uidrawbutton(txunlock, z.grid, gui.lock, 3);
                     } else {
@@ -4007,7 +4077,7 @@ String texta="";
                     uidrawbutton(txundo, z.undo, gui.undo, 3);
                     str1draw(ui, z.ok, gui.tool);
                 } else if (mode.equalsIgnoreCase("image")){
-                    str1draw(ui, z.properties, gui.objectpicker);
+                    str1draw(ui, z.properties, gui.objectpickermid);
                 }
 
                 //smaller yellow font for label
@@ -4039,7 +4109,7 @@ String texta="";
                 }
 
                 if (mode == "object") {
-                    str1drawlabel(ui, z.activeobjecttool, gui.objectpicker);
+                    str1drawlabel(ui, z.activeobjecttool, gui.objectpickermid);
 
                 }
 
@@ -5368,6 +5438,7 @@ String texta="";
             public void changed(ChangeEvent event, Actor actor) {
 
                 backToMap();
+                loadInterface("custominterface.json");
                 kartu = "editor";
             }
         });
@@ -9142,10 +9213,12 @@ String texta="";
                 gui = at;
             }else
             {
-                status("Custom interface not found, please reload samples.",5);
+                guis gsu = new guis();
+                gui = gsu;
             }
         } catch (Exception e) {
-            ErrorBung(e,"errorlog.txt");
+            guis gsu = new guis();
+            gui = gsu;
         }
     }
 
@@ -13017,8 +13090,7 @@ String texta="";
 
             }
         }
-
-        if (tapped(touch2, gui.tilesets)) {
+        //pempek
             if (tilesets.size() > 0) {
                 if (kartu.equalsIgnoreCase("tile")) {
 
@@ -13027,14 +13099,21 @@ String texta="";
                         if (seltset >= tilesets.size()) {
                             seltset = 0;
                         }
-                    } else {
+                        recenterpick();
+                        resetMassprops();
+                        return true;
+
+                    } else if (tapped(touch2, gui.tilesetsleft)) {
+
                         seltset -= 1;
                         if (seltset <= -1) {
                             seltset = tilesets.size() - 1;
                         }
+                        recenterpick();
+                        resetMassprops();
+                        return true;
+
                     }
-                    recenterpick();
-                    resetMassprops();
 
                 } else if (kartu.equalsIgnoreCase("pickanim")) {
                     switch (tilePicker) {
@@ -13056,7 +13135,8 @@ String texta="";
                                     seltset = 0;
                                 }
                                 recenterpick();
-                            } else {
+                            } else if (tapped(touch2, gui.tilesetsleft)) {
+
                                 seltset -= 1;
                                 if (seltset <= -1) {
                                     seltset = tilesets.size() - 1;
@@ -13081,9 +13161,7 @@ String texta="";
                 FileDialog(z.selectfile, "quickaddtset", "file", new String[]{".tsx", ".png", ".jpg", ".jpeg", ".bmp", ".gif"}, nullTable);
                 cue("addtileset");
             }
-            return true;
-        }
-        return false;
+            return false;
     }
 
 
@@ -13131,6 +13209,7 @@ String texta="";
                     kartu = "world";
                     if (activetool == 1) activetool = 0;
                     cue("tilepickclick");
+                    return true;
                 }else{
                     curspr = num;
                     int cont=0;
@@ -15594,7 +15673,7 @@ String texta="";
 
         }
 
-        if (tapped(touch2, gui.objectpicker)) {
+        if (tapped(touch2, gui.objectpickermid)) {
             if (mode == "image") {
                 fillImageLayerData();
                 gotoStage(tImageLayer);
@@ -15796,7 +15875,56 @@ String texta="";
             return true;
         }
         if (tapped(touch2, gui.editormode)) {
-            
+            switch(mode){
+                case "tile":
+                    mode="object";
+                    break;
+                case "object":
+                    mode="image";
+                    break;
+                case "image":
+                    mode="pick";
+                    break;
+                case "pick":
+                    mode="tile";
+                    break;
+            }
+
+            return true;
+        }
+
+        if (selectedGUI==null) return true;
+
+        if (tapped(touch2, gui.editorleft)) {
+            if (landscape){
+                selectedGUI.wl -=1;
+            }else{
+                selectedGUI.w -=1;
+            }
+            return true;
+        }
+        if (tapped(touch2, gui.editorright)) {
+            if (landscape){
+                selectedGUI.wl +=1;
+            }else{
+                selectedGUI.w +=1;
+            }
+            return true;
+        }
+        if (tapped(touch2, gui.editorup)) {
+            if (landscape){
+                selectedGUI.yl -=1;
+            }else{
+                selectedGUI.y -=1;
+            }
+            return true;
+        }
+        if (tapped(touch2, gui.editordown)) {
+            if (landscape){
+                selectedGUI.yl +=1;
+            }else{
+                selectedGUI.y +=1;
+            }
             return true;
         }
 
@@ -15831,242 +15959,317 @@ String texta="";
             return true;
         }
 
+        if (mode=="pick"){
+            if (tapped( touch2, gui.tilesetsmid )) {
+                editGUI( gui.tilesetsmid );
+                return true;
+            }
+            if (tapped( touch2, gui.tilesetsleft )) {
+                editGUI( gui.tilesetsleft );
+                return true;
+            }
+            if (tapped( touch2, gui.tilesetsright )) {
+                editGUI( gui.tilesetsright );
+                return true;
+            }
+            if (tapped( touch2, gui.pickerback )) {
+                editGUI( gui.pickerback );
+                return true;
+            }
 
-        //layer selection (top mid)
-        if (tapped(touch2, gui.layer)) {
-            editGUI( gui.layer );
-            return true;
+            if (tapped( touch2, gui.pickertool1 )) {
+                editGUI( gui.pickertool1 );
+                return true;
+            }
+            if (tapped( touch2, gui.pickertool2 )) {
+                editGUI( gui.pickertool2 );
+                return true;
+            }
+            if (tapped( touch2, gui.pickertool3 )) {
+                editGUI( gui.pickertool3 );
+                return true;
+            }
+            if (tapped( touch2, gui.pickertool4 )) {
+                editGUI( gui.pickertool4 );
+                return true;
+            }
+            if (tapped( touch2, gui.pickertool5 )) {
+                editGUI( gui.pickertool5 );
+                return true;
+            }
+            if (tapped( touch2, gui.tilewrite )) {
+                editGUI( gui.tilewrite );
+                return true;
+            }
+            if (tapped( touch2, gui.tilesettings )) {
+                editGUI( gui.tilesettings );
+                return true;
+            }
+            if (tapped( touch2, gui.tilesettings )) {
+                editGUI( gui.tilesettings );
+                return true;
+            }
+            if (tapped( touch2, gui.tileproperties )) {
+                editGUI( gui.tileproperties );
+                return true;
+            }
+            if (tapped( touch2, gui.tileremove )) {
+                editGUI( gui.tileremove );
+                return true;
+            }
+            if (tapped( touch2, gui.tileadd )) {
+                editGUI( gui.tileadd );
+                return true;
+            }
+            if (tapped( touch2, gui.tileoverlay )) {
+                editGUI( gui.tileoverlay );
+                return true;
+            }
         }
 
-        if (swatches) {
-            if (tapped( touch2, gui.sw1 )) {
-                editGUI( gui.sw1 );
+        else {
+            //layer selection (top mid)
+            if (tapped( touch2, gui.layer )) {
+                editGUI( gui.layer );
                 return true;
             }
 
-            if (tapped( touch2, gui.sw2 )) {
-                editGUI( gui.sw2 );
+            if (tapped( touch2, gui.info )) {
+                editGUI( gui.info );
                 return true;
             }
-            if (tapped( touch2, gui.sw3 )) {
-                editGUI( gui.sw3 );
-                return true;
 
-            }
-            if (tapped( touch2, gui.sw4 )) {
-                editGUI( gui.sw4 );
-                return true;
+            if (swatches) {
+                if (tapped( touch2, gui.sw1 )) {
+                    editGUI( gui.sw1 );
+                    return true;
+                }
 
-            }
-            if (tapped( touch2, gui.sw5 )) {
-                editGUI( gui.sw5 );
-                return true;
+                if (tapped( touch2, gui.sw2 )) {
+                    editGUI( gui.sw2 );
+                    return true;
+                }
+                if (tapped( touch2, gui.sw3 )) {
+                    editGUI( gui.sw3 );
+                    return true;
 
-            }
-            if (tapped( touch2, gui.sw6 )) {
-                editGUI( gui.sw6 );
-                return true;
+                }
+                if (tapped( touch2, gui.sw4 )) {
+                    editGUI( gui.sw4 );
+                    return true;
 
-            }
-        }
+                }
+                if (tapped( touch2, gui.sw5 )) {
+                    editGUI( gui.sw5 );
+                    return true;
 
-        if (tapped(touch2, gui.layerpick)) {
-            editGUI( gui.layerpick );
-            return true;
-
-        }
-
-
-        if (tapped(touch2, gui.minimap) && sMinimap) {
-            editGUI( gui.minimap );
-            return true;
-        }
-
-        //tile/object selector (top left)
-        if (tapped(touch2, gui.mode)) {
-            editGUI( gui.mode );
-            return true;
-
-        }
-
-
-        if (autotiles.size() > 0) {
-            //autotile
-            if (tapped(touch2, gui.autotile)) {
-                if (mode == "tile") {
-                    editGUI( gui.autotile );
+                }
+                if (tapped( touch2, gui.sw6 )) {
+                    editGUI( gui.sw6 );
                     return true;
 
                 }
             }
 
-            //select auto tile
-            if (tapped(touch2, gui.autopicker)) {
+            if (tapped( touch2, gui.layerpick )) {
+                editGUI( gui.layerpick );
+                return true;
+
+            }
+
+
+            if (tapped( touch2, gui.minimap ) && sMinimap) {
+                editGUI( gui.minimap );
+                return true;
+            }
+
+            //tile/object selector (top left)
+            if (tapped( touch2, gui.mode )) {
+                editGUI( gui.mode );
+                return true;
+
+            }
+
+
+            if (autotiles.size() > 0) {
+                //autotile
+                if (tapped( touch2, gui.autotile )) {
+                    if (mode == "tile") {
+                        editGUI( gui.autotile );
+                        return true;
+
+                    }
+                }
+
+                //select auto tile
+                if (tapped( touch2, gui.autopicker )) {
+                    if (mode == "tile") {
+                        editGUI( gui.autopicker );
+                        return true;
+                    }
+                }
+            }
+            if (mode == "tile") {
+                if (tapped( touch2, gui.tool1 )) {
+                    editGUI( gui.tool1 );
+                    return true;
+
+                }
+                if (tapped( touch2, gui.tool2 )) {
+                    editGUI( gui.tool2 );
+                    return true;
+
+                }
+                if (tapped( touch2, gui.tool3 )) {
+                    editGUI( gui.tool3 );
+                    return true;
+
+                }
+                if (tapped( touch2, gui.tool4 )) {
+                    editGUI( gui.tool4 );
+                    return true;
+
+                }
+                if (tapped( touch2, gui.tool5 )) {
+                    editGUI( gui.tool5 );
+                    return true;
+
+                }
+            }
+
+            //tool selector (btm right)
+            if (tapped( touch2, gui.lock )) {
+
+                if (mode == "object") {
+                    editGUI( gui.lock );
+                    return true;
+
+                }
+            }
+
+            if (tapped( touch2, gui.tool )) {
+
+                if (mode == "newpoly") {
+                    editGUI( gui.tool );
+                    return true;
+
+                }
+
+            }
+
+
+            //undo
+            if (tapped( touch2, gui.undo )) {
+
+
                 if (mode == "tile") {
-                    editGUI( gui.autopicker );
+                    editGUI( gui.undo );
+                    return true;
+                }
+                if (mode == "newpoly") {
+                    editGUI( gui.undo );
+                    return true;
+                }
+
+            }
+
+            //redo
+            if (tapped( touch2, gui.redo )) {
+
+                if (mode == "tile") {
+                    editGUI( gui.redo );
+                    return true;
+                }
+
+            }
+
+            //view mode selector (top roght)
+            if (tapped( touch2, gui.viewmode )) {
+                editGUI( gui.viewmode );
+                return true;
+            }
+
+            //select tile button
+            if (tapped( touch2, gui.picker )) {
+                if (mode == "tile") {
+                    editGUI( gui.picker );
+                    return true;
+                }
+
+
+            }
+
+            if (tapped( touch2, gui.objectpickermid )) {
+                if (mode == "image" || mode=="object") {
+                    editGUI( gui.objectpickermid );
                     return true;
                 }
             }
-        }
-        if (mode == "tile") {
-            if (tapped(touch2, gui.tool1)) {
-                editGUI( gui.tool1 );
-                return true;
 
+            //object tool selector
+            if (tapped( touch2, gui.objectpickerleft )) {
+                if (mode == "object") {
+                    editGUI( gui.objectpickerleft );
+                    return true;
+                }
             }
-            if (tapped(touch2, gui.tool2)) {
-                editGUI( gui.tool2 );
-                return true;
 
+            if (tapped( touch2, gui.objectpickerright )) {
+                if (mode == "object") {
+                    editGUI( gui.objectpickerright );
+                    return true;
+                }
             }
-            if (tapped(touch2, gui.tool3)) {
-                editGUI( gui.tool3 );
-                return true;
+            //rotation
+            if (tapped( touch2, gui.rotation )) {
+                if (mode == "tile") {
 
-            }
-            if (tapped(touch2, gui.tool4)) {
-                editGUI( gui.tool4 );
-                return true;
-
-            }
-            if (tapped(touch2, gui.tool5)) {
-                editGUI( gui.tool5 );
-                return true;
-
-            }
-        }
-
-        //tool selector (btm right)
-        if (tapped(touch2, gui.lock)) {
-
-            if (mode == "object") {
-                editGUI( gui.lock );
-                return true;
-
-            }
-        }
-
-        if (tapped(touch2, gui.tool)) {
-
-            if (mode == "newpoly") {
-                editGUI( gui.tool );
-                return true;
+                    editGUI( gui.rotation );
+                    return true;
+                }
 
             }
 
-        }
+            if (tapped( touch2, gui.menu )) {
+                if (mode == "object" || mode == "tile" || mode == "image") {
+                    editGUI( gui.menu );
+                    return true;
 
-
-        //undo
-        if (tapped(touch2, gui.undo)) {
-
-
-            if (mode == "tile") {
-                editGUI( gui.undo );
-                return true;
-            }
-            if (mode == "newpoly") {
-                editGUI( gui.undo );
-                return true;
-            }
-
-        }
-
-        //redo
-        if (tapped(touch2, gui.redo)) {
-
-            if (mode == "tile") {
-                editGUI( gui.redo );
-                return true;
-            }
-
-        }
-
-        //view mode selector (top roght)
-        if (tapped(touch2, gui.viewmode)) {
-            editGUI( gui.viewmode );
-            return true;
-        }
-
-        //select tile button
-        if (tapped(touch2, gui.picker)) {
-            if (mode == "tile") {
-                editGUI( gui.picker );
-                return true;
-            }
-
-
-        }
-
-        if (tapped(touch2, gui.objectpicker)) {
-            if (mode == "image") {
-                editGUI( gui.objectpicker );
-                return true;
-            }
-        }
-        //object tool selector
-        if (tapped(touch2, gui.objectpickerleft)) {
-            if (mode == "object") {
-                editGUI( gui.objectpickerleft );
-                return true;
-            }
-        }
-
-        if (tapped(touch2, gui.objectpickerright)) {
-            if (mode == "object") {
-                editGUI( gui.objectpickerright );
-                return true;
-            }
-        }
-        //rotation
-        if (tapped(touch2, gui.rotation)) {
-            if (mode == "tile") {
-
-                editGUI( gui.rotation );
-                return true;
-            }
-
-        }
-
-        if (tapped(touch2, gui.menu)) {
-            if (mode == "object" || mode == "tile"|| mode == "image") {
-                editGUI( gui.menu );
-                return true;
+                }
 
             }
 
-        }
+            if (tapped( touch2, gui.save )) {
+                if (mode == "object" || mode == "tile" || mode == "image") {
+                    editGUI( gui.save );
+                    return true;
 
-        if (tapped(touch2, gui.save)) {
-            if (mode == "object" || mode == "tile"|| mode == "image") {
-                editGUI( gui.save );
-                return true;
-
-            }
-        }
-
-        if (tapped(touch2, gui.map)) {
-            if (mode == "object" || mode == "tile"|| mode == "image") {
-                editGUI( gui.map );
-                return true;
+                }
             }
 
-        }
+            if (tapped( touch2, gui.map )) {
+                if (mode == "object" || mode == "tile" || mode == "image") {
+                    editGUI( gui.map );
+                    return true;
+                }
 
-        if (tapped(touch2, gui.fps)) {
-            if (mode == "object" || mode == "tile"|| mode == "image") {
-                editGUI( gui.fps );
-                return true;
             }
 
-        }
+            if (tapped( touch2, gui.fps )) {
+                if (mode == "object" || mode == "tile" || mode == "image") {
+                    editGUI( gui.fps );
+                    return true;
+                }
 
-        if (tapped(touch2, gui.status)) {
-            if (mode == "object" || mode == "tile"|| mode == "image") {
-                editGUI( gui.status );
-                return true;
             }
 
+            if (tapped( touch2, gui.status )) {
+                if (mode == "object" || mode == "tile" || mode == "image") {
+                    editGUI( gui.status );
+                    return true;
+                }
+
+            }
         }
         return false;
     }
@@ -17113,7 +17316,7 @@ String texta="";
                    // Gdx.input.getTextInput(pNewObjLayerSC, z.addnew, z.object + " " + (layers.size() + 1), "");
                     return true;
                 }
-                if (tapped(touch2, gui.objectpicker)) {
+                if (tapped(touch2, gui.objectpickermid)) {
                     //status("Object picker",1);
                     return true;
                 }
@@ -17123,7 +17326,7 @@ String texta="";
         } else if (kartu == "tile") {
 
             //longpressing in a tile picker
-            if (tapped(touch2, gui.tilesets)) {
+            if (tapped(touch2, gui.tilesetsmid)) {
                 loadList("tset");
                 return true;
             }

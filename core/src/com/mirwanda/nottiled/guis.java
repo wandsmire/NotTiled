@@ -16,6 +16,11 @@ public class guis
 	gui tool3=new gui();
 	gui tool4=new gui();
 	gui tool5=new gui();
+	gui pickertool1=new gui();
+	gui pickertool2=new gui();
+	gui pickertool3=new gui();
+	gui pickertool4=new gui();
+	gui pickertool5=new gui();
 	gui undo=new gui();
 	gui redo=new gui();
 	gui info=new gui();
@@ -25,19 +30,14 @@ public class guis
 	gui mode=new gui();
 	gui layer=new gui();
 	gui viewmode=new gui();
-	gui objectpicker=new gui();
-	gui objectpickerlefticon=new gui();
-	gui objectpickerrighticon=new gui();
+	gui objectpickermid=new gui();
 	gui objectpickerleft=new gui();
 	gui objectpickerright=new gui();
 	gui newterrain=new gui();
 	gui screenshot=new gui();
-	gui tilesets=new gui();
 	gui tilesetsleft=new gui();
 	gui tilesetsright=new gui();
 	gui tilesetsmid=new gui();
-	gui tilesetslefticon=new gui();
-	gui tilesetrighticon=new gui();
 	gui center=new gui();
 	gui save=new gui();
 	gui play=new gui();
@@ -53,6 +53,10 @@ public class guis
 	gui editormode = new gui();
 	gui editorsave = new gui();
 	gui editorcancel = new gui();
+	gui editorleft = new gui();
+	gui editorright = new gui();
+	gui editorup = new gui();
+	gui editordown = new gui();
 
 	gui up=new gui();
 	gui down=new gui();
@@ -88,6 +92,11 @@ public class guis
 		tool3.setp(85,100,37,46);
 		tool4.setp(85,100,46,55);
 		tool5.setp(85,100,55,64);
+		pickertool1.setp(85,100,19,28);
+		pickertool2.setp(85,100,28,37);
+		pickertool3.setp(85,100,37,46);
+		pickertool4.setp(85,100,46,55);
+		pickertool5.setp(85,100,55,64);
 
 		pickerback.setp(0,15,10,19);
 		tilewrite.setp(0,15,19,28);
@@ -104,19 +113,18 @@ public class guis
 		mode.setp(15,30,90,100);
 		layer.setp(30,70,90,100);
 		viewmode.setp(70,85,90,100);
-		objectpicker.setp(30, 80, 0, 10);
-		objectpickerleft.setp(30, 55, 0, 10);
-		objectpickerright.setp(55, 80, 0, 10);
-		objectpickerlefticon.setp(30, 40, 0, 10);
-		objectpickerrighticon.setp(70, 80, 0, 10);
+
+		objectpickermid.setp(40, 70, 0, 10);
+		objectpickerleft.setp(30, 40, 0, 10);
+		objectpickerright.setp(70, 80, 0, 10);
+
 		newterrain.setp(80,100,10,20);
 		screenshot.setp(15,85,0,10);
-		tilesets.setp(0,100,0,10);
-		tilesetsleft.setp(0,50,0,10);
-		tilesetsright.setp(50,100,0,10);
+
+		tilesetsleft.setp(0,15,0,10);
 		tilesetsmid.setp(15,85,0,10);
-		tilesetslefticon.setp(0,15,0,10);
-		tilesetrighticon.setp(85,100,0,10);
+		tilesetsright.setp(85,100,0,10);
+
 		center.setp(85,100,81,90);
 		save.setp(0,15,19,28);
 		play.setp(0,15,28,37);
@@ -142,9 +150,14 @@ public class guis
 		sw5.setp(42,58,19,28);
 		sw6.setp(58,75,19,28);
 
-		editormode.setp(40,60,50,60);
-		editorsave.setp(40,60,40,50);
-		editorcancel.setp(40,60,30,40);
+		editormode.setp(20,40,50,60);
+		editorsave.setp(20,40,40,50);
+		editorcancel.setp(20,40,30,40);
+		editorleft.setp(50,65,40,50);
+		editorright.setp(65,80,40,50);
+		editorup.setp(58,72,30,40);
+		editordown.setp(58,72,50,60);
+
 
 		menu.setl(0,10,0,15);
 		map.setl(0,10,15,25);
@@ -163,6 +176,12 @@ public class guis
 		tool3.setl(90,100,40,50);
 		tool2.setl(90,100,30,40);
 		tool1.setl(90,100,20,30);
+		pickertool5.setl(90,100,60,70);
+		pickertool4.setl(90,100,50,60);
+		pickertool3.setl(90,100,40,50);
+		pickertool2.setl(90,100,30,40);
+		pickertool1.setl(90,100,20,30);
+
 		undo.setl(0,10,90,100);
 		redo.setl(90,100,90,100);
 		info.setl(0, 100, 70, 80);
@@ -173,19 +192,17 @@ public class guis
 		layer.setl(20,80,90,100);
 		viewmode.setl(80,90,90,100);
 
-		objectpicker.setl(40, 90, 0, 10);
-		objectpickerleft.setl(40, 60, 0, 10);
-		objectpickerright.setl(60, 90, 0, 10);
-		objectpickerlefticon.setl(40, 45, 0, 10);
-		objectpickerrighticon.setl(85, 90, 0, 10);
+		objectpickermid.setl(50, 80, 0, 10);
+		objectpickerleft.setl(40, 50, 0, 10);
+		objectpickerright.setl(80, 90, 0, 10);
+
 		newterrain.setl(90,100,10,20);
 		screenshot.setl(30,70,0,10);
-		tilesets.setl(0,100,0,10);
-		tilesetsleft.setl(0,50,0,10);
-		tilesetsright.setl(50,100,0,10);
-		tilesetsmid.setl(15,85,0,10);
-		tilesetslefticon.setl(0,15,0,10);
-		tilesetrighticon.setl(85,100,0,10);
+
+		tilesetsleft.setl(0,10,0,10);
+		tilesetsmid.setl(10,90,0,10);
+		tilesetsright.setl(90,100,0,10);
+
 		minimap.setl(0,17,60,90);
 		lock.setl(90,100,15,25);
 
@@ -219,9 +236,13 @@ public class guis
 		sw5.setl(18,26,14,28);
 		sw6.setl(26,34,14,28);
 
-		editormode.setl(45,55,50,60);
-		editorsave.setl(45,55,40,50);
-		editorcancel.setl(45,55,30,40);
+		editormode.setl(35,45,50,60);
+		editorsave.setl(35,45,40,50);
+		editorcancel.setl(35,45,30,40);
+		editorleft.setl(60,70,40,50);
+		editorright.setl(70,80,40,50);
+		editorup.setl(65,75,30,40);
+		editordown.setl(65,75,50,60);
 
 
 

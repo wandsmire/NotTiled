@@ -11,6 +11,7 @@ public class gui
 	float wl=0;
 	float hl=0;
 	boolean touched;
+	boolean edit;
 	
 	public gui(){}
 	public gui(float x,float y, float w, float h, float x2, float y2, float w2, float h2){
