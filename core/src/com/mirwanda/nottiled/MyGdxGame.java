@@ -4148,12 +4148,13 @@ String texta="";
     }
 
     private void ErrorBung(Exception e, String filenya) {
+        filenya="errorlog.txt";
         FileHandle file = Gdx.files.external(filenya);
         StringWriter sw = new StringWriter();
         e.printStackTrace(new PrintWriter(sw));
         String exceptionAsString = sw.toString();
         System.out.println(exceptionAsString);
-        file.writeString(exceptionAsString, false);
+        file.writeString("\n\n"+exceptionAsString, true);
 
         saveMap(curdir + "/" + curfile + "_re.tmx");
         prefs.putString("lof", "NotTiled/" + "sample/island.tmx");
@@ -4425,7 +4426,7 @@ String texta="";
             zis.close();
             fis.close();
         } catch (IOException e) {
-            ErrorBung(e,"nyok.txt");
+            ErrorBung(e,"errorlog.txt");
         }
 
     }
@@ -4742,7 +4743,7 @@ String texta="";
                             }
 
                         } catch (Exception e) {
-                            ErrorBung(e, "enyoh.txt");
+                            ErrorBung(e, "errorlog.txt");
                         }
                     }
                 });
@@ -4790,7 +4791,7 @@ String texta="";
                                 fh.writeString(sss, false);
 
                             } catch (Exception e) {
-                                ErrorBung(e, "enyoh.txt");
+                                ErrorBung(e, "errorlog.txt");
                             }
                         }
                     });
@@ -11693,11 +11694,13 @@ String texta="";
                                 //if (myParser.getAttributeValue(null, "trans")!=null) {
                                 tempTset.setTrans(myParser.getAttributeValue(null, "trans"));
                                 //}
+                                if (myParser.getAttributeValue(null, "source") != null) {
+                                    tempTset.setSource(myParser.getAttributeValue(null, "source"));
+                                }
+
+
                                 if (!alreadyloaded) {
 
-                                    if (myParser.getAttributeValue(null, "source") != null) {
-                                        tempTset.setSource(myParser.getAttributeValue(null, "source"));
-                                    }
 
                                     String foredirint, foredirext, foredir, tempdiro, tempdiri, combo;
                                     foredir = curdir;//should be tsxpath to folloe tsx pathing but whatever!!
@@ -13001,7 +13004,7 @@ String texta="";
 
                 }
                 //tileset properties
-                if (tapped(touch2, gui.tool2)) {
+                if (tapped(touch2, gui.pickertool2)) {
                     selTsetID = seltset;
                     int saiz = tilesets.size();
 
@@ -13055,12 +13058,12 @@ String texta="";
                     return true;
                 }
 
-                if (tapped(touch2, gui.tool1)) {
+                if (tapped(touch2, gui.pickertool1)) {
                     FileDialog(z.selectfile, "quickaddtset", "file", new String[]{".tsx", ".png", ".jpg", ".jpeg", ".bmp", ".gif"}, nullTable);
                     return true;
                 }
                 //tile management
-                if (tapped(touch2, gui.tool3)) {
+                if (tapped(touch2, gui.pickertool3)) {
 
                     int saiz = tilesets.size();
 
@@ -13075,7 +13078,7 @@ String texta="";
                     return true;
                 }
                 //delete button
-                if (tapped(touch2, gui.tool5)) {
+                if (tapped(touch2, gui.pickertool5)) {
                     tilesets.remove(seltset);
                     if (tilesets.size() > 0) {
                         if (seltset != 0) seltset -= 1;
@@ -13145,14 +13148,16 @@ String texta="";
                             }
                             break;
                         case "terraineditor":
-                            tileset tt = tilesets.get(selTsetID);
-                            if (tt.getTerrains().size() > 0) {
-                                tt.setSelTerrain(tt.getSelTerrain() + 1);
-                                if (tt.getSelTerrain() >= tt.getTerrains().size()) {
-                                    tt.setSelTerrain(0);
+                            if (tapped(touch2, gui.tilesetsmid)) {
+                                tileset tt = tilesets.get( selTsetID );
+                                if (tt.getTerrains().size() > 0) {
+                                    tt.setSelTerrain( tt.getSelTerrain() + 1 );
+                                    if (tt.getSelTerrain() >= tt.getTerrains().size()) {
+                                        tt.setSelTerrain( 0 );
+                                    }
                                 }
+                                return true;
                             }
-                            return true;
                     }
                 }
 
