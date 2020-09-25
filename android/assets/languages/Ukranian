@@ -366,4 +366,7 @@ netlog: "Net Вхід"
 stopserver: "зупинити сервер"
 disconnectclient: "клієнт Disconnect"
 leaveroom: "Залиште номер"
+macro: "Macro"
+runmacro: "Run Macro"
+macrotiles: "Macro Tiles"
 }

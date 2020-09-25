@@ -366,4 +366,7 @@ netlog: "ネットログイン"
 stopserver: "サーバーの停止"
 disconnectclient: "外しクライアント"
 leaveroom: "休暇ルーム"
+macro: "Macro"
+runmacro: "Run Macro"
+macrotiles: "Macro Tiles"
 }

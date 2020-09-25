@@ -366,4 +366,7 @@ netlog: "Log net"
 stopserver: "Parar Servidor"
 disconnectclient: "Desconectar cliente"
 leaveroom: "Quarto licença"
+macro: "Macro"
+runmacro: "Run Macro"
+macrotiles: "Macro Tiles"
 }

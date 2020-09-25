@@ -366,4 +366,7 @@ netlog: "Net Günlüğü"
 stopserver: "Dur Sunucusu"
 disconnectclient: "Bağlantıyı kes Müşteri"
 leaveroom: "Odayı terket"
+macro: "Macro"
+runmacro: "Run Macro"
+macrotiles: "Macro Tiles"
 }

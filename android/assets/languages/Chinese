@@ -366,4 +366,7 @@ netlog: "网络日志"
 stopserver: "停止服务器"
 disconnectclient: "断开客户端"
 leaveroom: "留有余地"
+macro: "Macro"
+runmacro: "Run Macro"
+macrotiles: "Macro Tiles"
 }

@@ -50,6 +50,7 @@ public class guis
 	gui tileproperties = new gui();
 	gui tilesettings = new gui();
 	gui tilewrite = new gui();
+	gui tilemode = new gui();
 	gui editormode = new gui();
 	gui editorsave = new gui();
 	gui editorcancel = new gui();
@@ -105,6 +106,7 @@ public class guis
 		tileremove.setp(0,15,46,55);
 		tileadd.setp(0,15,55,64);
 		tileoverlay.setp(0,100,70,100);
+		tilemode.setp(40,60,10,20);
 
 
 		info.setp(0, 100, 70, 80);
@@ -202,6 +204,7 @@ public class guis
 		tilesetsleft.setl(0,10,0,10);
 		tilesetsmid.setl(10,90,0,10);
 		tilesetsright.setl(90,100,0,10);
+		tilemode.setl(40,60,10,20);
 
 		minimap.setl(0,17,60,90);
 		lock.setl(90,100,15,25);

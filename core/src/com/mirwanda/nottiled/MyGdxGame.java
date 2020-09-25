@@ -538,6 +538,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         loadKryonet();
         initializePostProcessor();
         createSwatches();
+        brushsize=2;
+        activetool=4;
 
 
         //animation = GifDecoder.loadGIFAnimation(2, Gdx.files.external("loading.gif").read());
@@ -1787,19 +1789,38 @@ String texta="";
 
             ts = tilesets.get(seltset);
 
-            for (int i = 0; i < ts.getTilecount(); i++) {
+            java.util.List<terrain> tr = tilesets.get(seltset).getTerrains();
 
-                long ini = i;//+tilesets.get(seltset.getFirstgid();
-                boolean terrain = false, autotl = false;
 
-                java.util.List<terrain> tr = tilesets.get(seltset).getTerrains();
-                if (tr.size() > 0) {
-                    for (int n = 0; n < tr.size(); n++) {
-                        if (ini == tr.get(n).getTile()) {
-                            terrain = true;
+            if (pickAuto){ //auto list
+                for (int n = 0; n < tr.size(); n++) {
+                    tile t =tilesets.get( seltset ).getTiles().get( tr.get( n ).getTile());
+                    long ist = t.getTileID();//-tilesets.get(seltset).getFirstgid();
+                    int wd = ts.getWidth();
+                    int xpos2 = (int) (ist) % wd;
+                    int ypos2 = (int) (ist) / wd;
+                    int margin = ts.getMargin();
+                    int spacing = ts.getSpacing();
+
+                    batch.draw( ts.getTexture(), 0, -n * ts.getTileheight(), (xpos2 * (ts.getTilewidth() + spacing)) + margin, (ypos2 * (ts.getTileheight() + spacing)) + margin, ts.getTilewidth(), ts.getTileheight() );
+                    str1.getData().setScale( .2f );
+                    str1.draw( batch, tr.get( n ).getName(), 24, 14+ -n * ts.getTileheight(), ts.getTilewidth(), Align.left, false );
+                    str1.getData().setScale( 1f );
+
+                }
+            }else { //manual
+                for (int i = 0; i < ts.getTilecount(); i++) { //manual drawing
+
+                    long ini = i;//+tilesets.get(seltset.getFirstgid();
+                    boolean terrain = false, autotl = false;
+
+                    if (tr.size() > 0) {
+                        for (int n = 0; n < tr.size(); n++) {
+                            if (ini == tr.get( n ).getTile()) {
+                                terrain = true;
+                            }
                         }
                     }
-                }
 				/* cause lags if there are lots of autotiles
 				if (autotiles.size() > 0)
 				{
@@ -1819,45 +1840,46 @@ String texta="";
 					}
 				}
 				*/
-                tiles = ts.getTiles();
-                if (tiles.size() > 0) {
-                    for (int n = 0; n < tiles.size(); n++) {
-                        if (ini == tiles.get(n).getTileID()) {
+                    tiles = ts.getTiles();
+                    if (tiles.size() > 0) {
+                        for (int n = 0; n < tiles.size(); n++) {
+                            if (ini == tiles.get( n ).getTileID()) {
 
 
-                            if (tiles.get(n).getAnimation().size() > 0) {
-                                ini = tiles.get(n).getActiveFrameID();
+                                if (tiles.get( n ).getAnimation().size() > 0) {
+                                    ini = tiles.get( n ).getActiveFrameID();
+                                }
+
                             }
-
                         }
                     }
-                }
 
-                long ist = ini;//-tilesets.get(seltset).getFirstgid();
-                int wd = ts.getWidth();
-                int xpos = (i) % wd;
-                int ypos = (i) / wd;
-                int xpos2 = (int) (ist) % wd;
-                int ypos2 = (int) (ist) / wd;
-                int margin = ts.getMargin();
-                int spacing = ts.getSpacing();
+                    long ist = ini;//-tilesets.get(seltset).getFirstgid();
+                    int wd = ts.getWidth();
+                    int xpos = (i) % wd;
+                    int ypos = (i) / wd;
+                    int xpos2 = (int) (ist) % wd;
+                    int ypos2 = (int) (ist) / wd;
+                    int margin = ts.getMargin();
+                    int spacing = ts.getSpacing();
 
 
-                batch.draw(ts.getTexture(), xpos * ts.getTilewidth(), -ypos * ts.getTileheight(), (xpos2 * (ts.getTilewidth() + spacing)) + margin, (ypos2 * (ts.getTileheight() + spacing)) + margin, ts.getTilewidth(), ts.getTileheight());
-                if (sShowGID) {
-                    str1.getData().setScale(0.1f);
-                    str1.draw(batch, Long.toString(ini + tilesets.get(seltset).getFirstgid()), (float) xpos * ts.getTilewidth() + 2, (float) -ypos * ts.getTileheight() + ts.getTileheight() - 2, ts.getTilewidth(), Align.left, false);
-                    str1.draw(batch, Long.toString(ini), (float) xpos * ts.getTilewidth() + 2, (float) -ypos * ts.getTileheight() + ts.getTileheight() - 10, ts.getTilewidth(), Align.left, false);
+                    batch.draw( ts.getTexture(), xpos * ts.getTilewidth(), -ypos * ts.getTileheight(), (xpos2 * (ts.getTilewidth() + spacing)) + margin, (ypos2 * (ts.getTileheight() + spacing)) + margin, ts.getTilewidth(), ts.getTileheight() );
+                    if (sShowGID) {
+                        str1.getData().setScale( 0.1f );
+                        str1.draw( batch, Long.toString( ini + tilesets.get( seltset ).getFirstgid() ), (float) xpos * ts.getTilewidth() + 2, (float) -ypos * ts.getTileheight() + ts.getTileheight() - 2, ts.getTilewidth(), Align.left, false );
+                        str1.draw( batch, Long.toString( ini ), (float) xpos * ts.getTilewidth() + 2, (float) -ypos * ts.getTileheight() + ts.getTileheight() - 10, ts.getTilewidth(), Align.left, false );
 
-                    str1.getData().setScale(1f);
-                }
-                str1.getData().setScale(.2f);
-                if (terrain)
-                    str1.draw(batch, "Tr", xpos * ts.getTilewidth(), -ypos * ts.getTileheight() + Tsh * 3 / 4, Tsw, Align.center, false);
-                if (autotl)
-                    str1.draw(batch, "A", xpos * ts.getTilewidth(), -ypos * ts.getTileheight() + Tsh * 3 / 4, Tsw, Align.center, false);
-                str1.getData().setScale(1f);
-            }
+                        str1.getData().setScale( 1f );
+                    }
+                    str1.getData().setScale( .2f );
+                    if (terrain)
+                        str1.draw( batch, "Auto", xpos * ts.getTilewidth(), -ypos * ts.getTileheight() + Tsh * 3 / 4, Tsw, Align.center, false );
+                    if (autotl)
+                        str1.draw( batch, "Macro", xpos * ts.getTilewidth(), -ypos * ts.getTileheight() + Tsh * 3 / 4, Tsw, Align.center, false );
+                    str1.getData().setScale( 1f );
+                }//end of manual drawing
+            }//end of drawing
             batch.end();
 
 
@@ -1873,14 +1895,27 @@ String texta="";
             if (Tsw >= 64) weight = 2;
             int Tswa = tilesets.get(seltset).getTilewidth();
             int Tsha = tilesets.get(seltset).getTileheight();
-            for (int i = 0; i <= tilesets.get(seltset).getWidth(); i++) {
-                //if (i%5==0){cool=2;}else{cool=1;}
 
-                sr.rectLine((Tswa * i), Tsha, (i * Tswa), -Tsha * tilesets.get(seltset).getHeight() + Tsha, Tswa / 16f);
-            }
-            for (int j = -1; j < tilesets.get(seltset).getHeight(); j++) {
-                //if ((j+1)%5==0){cool=2;}else{cool=1;}
-                sr.rectLine(0, -(Tsha * j), Tswa * tilesets.get(seltset).getWidth(), -(j * Tsha), Tsha / 16f);
+            if (!pickAuto) {
+                for (int i = 0; i <= tilesets.get( seltset ).getWidth(); i++) {
+                    //if (i%5==0){cool=2;}else{cool=1;}
+
+                    sr.rectLine( (Tswa * i), Tsha, (i * Tswa), -Tsha * tilesets.get( seltset ).getHeight() + Tsha, Tswa / 16f );
+                }
+                for (int j = -1; j < tilesets.get( seltset ).getHeight(); j++) {
+                    //if ((j+1)%5==0){cool=2;}else{cool=1;}
+                    sr.rectLine( 0, -(Tsha * j), Tswa * tilesets.get( seltset ).getWidth(), -(j * Tsha), Tsha / 16f );
+                }
+            }else{
+                for (int i = 0; i <= 6; i++) {
+                    //if (i%5==0){cool=2;}else{cool=1;}
+
+                  if (i==0 || i==6)  sr.rectLine( (Tswa * i), Tsha, (i * Tswa), -Tsha * tilesets.get( seltset ).getTerrains().size() + Tsha, Tswa / 16f );
+                }
+                for (int j = -1; j < tilesets.get( seltset ).getTerrains().size(); j++) {
+                    //if ((j+1)%5==0){cool=2;}else{cool=1;}
+                    sr.rectLine( 0, -(Tsha * j), Tswa * 6, -(j * Tsha), Tsha / 16f );
+                }
             }
             //debugMe=tilesets.get(seltset).getWidth() + "-" + tilesets.get(seltset).getHeight();
             if (kartu == "tile" || tilePicker == "massprops") {
@@ -2000,10 +2035,14 @@ String texta="";
 
         }
 /////
+        if (kartu=="editor") uisrect( gui.tilemode, mouse, null );
         if (kartu == "tile" || kartu=="editor") {
             uisrect(gui.tilesetsmid, mouse, null);
-            uisrect(gui.tilesetsleft, mouse, null);
-            uisrect(gui.tilesetsright, mouse, null);
+            if (tilesets.size()>0) uisrect(gui.tilesetsleft, mouse, null);
+            if (tilesets.size()>0) uisrect(gui.tilesetsright, mouse, null);
+            if (tilesets.get( seltset ).getTerrains().size()>0) {
+                uisrect( gui.tilemode, mouse, null );
+            }
 
         }else{
 
@@ -2109,11 +2148,18 @@ String texta="";
                     uidrawbutton(txRight, "+", gui.editorright, 1);
                     uidrawbutton(txDown, "+", gui.editorup, 1);
                     uidrawbutton(txUp, "-", gui.editordown, 1);
+                    uidrawbutton(txTypeImage, z.autotile, gui.tilemode,3);
+
 
 
                 }
                 uidrawbutton(txundo, z.back, gui.pickerback,3);
                 //modeltekwan
+
+                if (tilesets.get( seltset ).getTerrains().size()>0) {
+                    if (pickAuto) {uidrawbutton(txTypeImage, z.tiles, gui.tilemode,3);}
+                    else{uidrawbutton(txTypeImage, z.autotile, gui.tilemode,3);}
+                }
 
                 uidrawbutton(txLeft, "", gui.tilesetsleft,1);
                 str1draw(ui, tilesets.get(seltset).getName(), gui.tilesetsmid);
@@ -2200,7 +2246,7 @@ String texta="";
         ui.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
     }
-
+    boolean pickAuto = false;
 
     private void drawGrid() {
         if (cammode != "View only") {
@@ -3695,6 +3741,9 @@ String texta="";
                     else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
                         uisrect(gui.play, mouse, vis("play"));//redo
                     }
+                    else if (p.getName().equalsIgnoreCase("tag") && p.getValue().equalsIgnoreCase("RW")) {
+                        uisrect(gui.play, mouse, vis("play"));//redo
+                    }
 
                 }
             }
@@ -3720,9 +3769,9 @@ String texta="";
 
 
                 uisrect(gui.picker, mouse, vis("tilepick"));//select tile
-                if (autotiles.size() > 0)
+                if (autotiles.size() > 0 || kartu=="editor")
                     uisrect(gui.autopicker, mouse, vis("autotilepick"));//select auto tile
-                if (autotiles.size() > 0)
+                if (autotiles.size() > 0 || kartu=="editor")
                     uisrect(gui.autotile, mouse, vis("refresh"));//tool switch
 
 
@@ -3964,6 +4013,9 @@ String texta="";
                         else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
                             uidrawbutton(txplay, z.play, gui.play, 2);
                         }
+                        else if (p.getName().equalsIgnoreCase("tag") && p.getValue().equalsIgnoreCase("RW")) {
+                            uidrawbutton(txplay, z.play, gui.play, 2);
+                        }
 
                     }
 
@@ -4025,9 +4077,9 @@ String texta="";
                      */
 
 
-                    if (autotiles.size() > 0) {
-                        uidrawbutton(txautopick, z.autotile, gui.autopicker, 2);
-                        uidrawbutton(txauto, z.refresh, gui.autotile, 2);
+                    if (autotiles.size() > 0|| kartu=="editor") {
+                        uidrawbutton(txautopick, z.macrotiles, gui.autopicker, 2);
+                        uidrawbutton(txplay, z.runmacro, gui.autotile, 2);
                     }
 
 
@@ -5200,7 +5252,7 @@ String texta="";
         bProperties = new TextButton(z.mapproperties, skin);
         bTileMgmt = new TextButton(z.layer, skin);
         bTsetMgmt = new TextButton(z.tileset, skin);
-        bAutoMgmt = new TextButton(z.autotile, skin);
+        bAutoMgmt = new TextButton(z.macro, skin);
         bUIEditor = new TextButton(z.uieditor, skin);
          bTools = new TextButton(z.tools, skin);
 
@@ -5258,22 +5310,7 @@ String texta="";
             @Override
             public void changed(ChangeEvent event, Actor actor) {
 
-                FileHandle fl = Gdx.files.external(rwpath);
-                if (!fl.exists()) fl.mkdirs();
-                FileHandle fla = Gdx.files.external(rwpath+ "/maps");
-                if (!fla.exists()) {
-                    fla.mkdirs();
-                }
-                saveMap(curdir + "/" + curfile);
-                FileHandle from = Gdx.files.external(curdir + "/" + curfile);
-                from.copyTo(Gdx.files.external(rwpath+ "/maps"));
-
-                FileHandle from2 = Gdx.files.external(curdir + "/" + curfile.substring(0, curfile.length() - 4) + "_map.png");
-                if (from2.exists())
-                    from2.copyTo(Gdx.files.external(rwpath+ "/maps"));
-
-                msgbox(z.mapsenttorustedwatfare);
-                cue("copytorw");
+                copyToRW();
 
             }
         });
@@ -5330,6 +5367,8 @@ String texta="";
                 fNTsh.setText(prefs.getString("Tsh", "20"));
                 fNTw.setText(prefs.getString("Tw", "20"));
                 fNTh.setText(prefs.getString("Th", "20"));
+                sbNMapFormat.setSelected("base64-gzip");
+
                 gotoStage(tNewFile);
                 cue("new");
             }
@@ -5555,6 +5594,24 @@ String texta="";
         setLinksMap();
     }
 
+    private void copyToRW(){
+        FileHandle fl = Gdx.files.external(rwpath);
+        if (!fl.exists()) fl.mkdirs();
+        FileHandle fla = Gdx.files.external(rwpath+ "/maps");
+        if (!fla.exists()) {
+            fla.mkdirs();
+        }
+        saveMap(curdir + "/" + curfile);
+        FileHandle from = Gdx.files.external(curdir + "/" + curfile);
+        from.copyTo(Gdx.files.external(rwpath+ "/maps"));
+
+        FileHandle from2 = Gdx.files.external(curdir + "/" + curfile.substring(0, curfile.length() - 4) + "_map.png");
+        if (from2.exists())
+            from2.copyTo(Gdx.files.external(rwpath+ "/maps"));
+
+        msgbox(z.mapsenttorustedwatfare);
+        cue("copytorw");
+    }
     private void setLinksMap(){
         if (landscape) {
             tLinks = new Table();
@@ -8978,6 +9035,7 @@ String texta="";
                         @Override
                         public void changed(ChangeEvent event, Actor actor) {
                             selLayer = Integer.parseInt(actor.getName());
+                            adjustTileset();
                             backToMap();
                             cue("layerselected");
                         }
@@ -9292,7 +9350,7 @@ String texta="";
     }
 
     public void loadAutoManagement() {
-        Label lAutotitle = new Label(z.autotile, skin);
+        Label lAutotitle = new Label(z.macro, skin);
         lautolist = new com.badlogic.gdx.scenes.scene2d.ui.List<String>(skin);
         bAutoadd = new TextButton(z.addnew, skin);
         bAutorename = new TextButton(z.rename, skin);
@@ -10910,6 +10968,8 @@ String texta="";
         Gdx.input.setInputProcessor(gd);
         resetMassprops();
         issettingtile=false;
+        pickAuto=false;
+        recenterpick();
         stage.clear(); //is this the bug?
         face.showbanner(false);
     }
@@ -11541,7 +11601,7 @@ String texta="";
                 Gdx.app.postRunnable(new Runnable() {
                     @Override
                     public void run() {
-
+                        log("here");
                         loadmap(filepath);
                         curdir = fNCurdir.getText();
                         curdir = curdir.replace("//", "/");
@@ -11551,14 +11611,26 @@ String texta="";
 
                         undolayer.clear();
                         redolayer.clear();
-
+                        int fill=-1;
+                        for (property p: properties){
+                            if (p.getName().equalsIgnoreCase( "fill" )){
+                                fill = Integer.parseInt( p.getValue() );
+                                curspr=fill;
+                                setTsetFromCurspr();
+                            }
+                        }
                         for (int k = 0; k < layers.size(); k++) {
                             java.util.List<Long> ls = new ArrayList<Long>();
                             java.util.List<Integer> lts = new ArrayList<Integer>();
 
                             for (long i = 0; i < Tw * Th; i++) {
-                                ls.add((long) 0);
-                                lts.add(-1);
+                                if (fill!=-1 && k==0){
+                                    ls.add((long) curspr);
+                                    lts.add(seltset);
+                                }else{
+                                    ls.add((long) 0);
+                                    lts.add(-1);
+                                }
                             }
                             layers.get(k).setStr(ls);
                             layers.get(k).setTset(lts);
@@ -12241,6 +12313,7 @@ String texta="";
 
 
         selLayer=0;
+        //recenterpick();
         //if (layers.size()>0) selLayer = layers.size()-1;
 
         /*
@@ -12864,10 +12937,16 @@ String texta="";
     }
 
     private void recenterpick() {
-        float ttsw = tilesets.get(seltset).getTilewidth();
-        float ttsh = tilesets.get(seltset).getTileheight();
-        float ttkw = tilesets.get(seltset).getWidth();
-        float ttkh = tilesets.get(seltset).getHeight();
+        float ttsw = tilesets.get( seltset ).getTilewidth();
+        float ttsh = tilesets.get( seltset ).getTileheight();
+        float ttkw = tilesets.get( seltset ).getWidth();
+        float ttkh = tilesets.get( seltset ).getHeight();
+
+        if (pickAuto) {
+            ttkw = 6;
+            ttkh = tilesets.get( seltset ).getTerrains().size();
+        }
+
 
         panTileTo((int) ttsw * ttkw / 2, (int) -(ttsh * ttkh / 2) + (ttsh) , .5f);
     }
@@ -12991,15 +13070,28 @@ String texta="";
         if (tilesets.size() > 0) {
             frompick = true;
             if (kartu.equalsIgnoreCase("tile")) {
-                //add new tileset
-                if (tapped(touch2, gui.tilewrite)) {
+
+                if (tapped(touch2, gui.tilemode)) {
+                    pickAuto =!pickAuto;
                     issettingtile=false;
                     resetMassprops();
+                    recenterpick();
+
+                    return true;
+                }
+
+                if (tapped(touch2, gui.tilewrite)) {
+                    issettingtile=false;
+                    adjustPickAuto();
+                    resetMassprops();
+                    recenterpick();
                     return true;
                 }
                 if (tapped(touch2, gui.tilesettings)) {
                     issettingtile=true;
+                    pickAuto=false;
                     resetMassprops();
+                    recenterpick();
                     return true;
                 }
                 if (tapped(touch2, gui.tileadd)) {
@@ -13132,6 +13224,9 @@ String texta="";
                 }
                 //tile management
                 if (tapped(touch2, gui.pickertool3)) {
+                    pickAuto=false;
+                    resetMassprops();
+                    recenterpick();
 
                     int saiz = tilesets.size();
 
@@ -13176,6 +13271,7 @@ String texta="";
                         if (seltset >= tilesets.size()) {
                             seltset = 0;
                         }
+                        adjustPickAuto();
                         recenterpick();
                         resetMassprops();
                         return true;
@@ -13186,6 +13282,7 @@ String texta="";
                         if (seltset <= -1) {
                             seltset = tilesets.size() - 1;
                         }
+                        adjustPickAuto();
                         recenterpick();
                         resetMassprops();
                         return true;
@@ -13277,6 +13374,24 @@ String texta="";
         //this line is to sovlve problem of the first line not clicked on 1 x 1 tile.
         if (touch.y > 0) ab = 1;
 
+        if (kartu == "tile") {
+            if (!issettingtile && pickAuto) {
+                int heit=ts.getTerrains().size();
+                if (touch.y < ts.getTileheight() && touch.y > -ts.getTileheight() * heit + ts.getTileheight() && touch.x > 0 && touch.x < ts.getTilewidth() * 6) {
+                    Integer aaaa = ts.getTerrains().get(((-ab + ts.getTileheight()) / ts.getTileheight())).getTile();
+                    Integer num = ts.getFirstgid()+ts.getTiles().get(aaaa).getTileID();
+                    curspr = num;
+                    adjustLayer( ts );
+                    addRecentTile( curspr );
+                    kartu = "world";
+                    if (activetool == 1) activetool = 0;
+                    cue( "tilepickclick" );
+
+                }
+                return true;
+            }
+        }
+
         if (touch.y < ts.getTileheight() && touch.y > -ts.getTileheight() * ts.getHeight() + ts.getTileheight() && touch.x > 0 && touch.x < ts.getTilewidth() * ts.getWidth()) {
             Integer num = ts.getFirstgid() + (ts.getWidth() * ((-ab + ts.getTileheight()) / ts.getTileheight()) + (ae / ts.getTilewidth()));
             Integer numis = (ts.getWidth() * ((-ab + ts.getTileheight()) / ts.getTileheight()) + (ae / ts.getTilewidth()));
@@ -13284,10 +13399,11 @@ String texta="";
             if (kartu == "tile") {
                 if (!issettingtile) {
                     curspr = num;
+                    adjustLayer( ts );
                     addRecentTile( curspr );
                     kartu = "world";
                     if (activetool == 1) activetool = 0;
-                    cue("tilepickclick");
+                    cue( "tilepickclick" );
                     return true;
                 }else{
                     curspr = num;
@@ -15770,6 +15886,34 @@ String texta="";
 
     }
 
+    private void adjustLayer(tileset ts){
+        for (property p:ts.getProperties()){
+            if (p.getName().equalsIgnoreCase( "layer" )){
+                for (int l=0; l<layers.size();l++){
+                    if (layers.get(l).getName().equalsIgnoreCase( p.getValue() )){
+                        selLayer=l;
+                        break;
+                    }
+                }
+            }
+        }
+
+    }
+    private void adjustTileset(){
+        for (tileset t : tilesets){
+            for (property p:t.getProperties()){
+
+                if (layers.get(selLayer).getName().equalsIgnoreCase( p.getValue() )){
+                    curspr=t.getFirstgid();
+                    setTsetFromCurspr();
+                    recenterpick();
+                    return;
+                }
+
+            }
+        }
+    }
+
     private boolean tapWorldMenu(Vector3 touch2) {
         if (cammode == "View only") {
             if (tapped(touch2, gui.center)) {
@@ -15812,6 +15956,7 @@ String texta="";
             } else if (layers.get(selLayer).getType() == layer.Type.IMAGE) {
                 mode = "image";
             }
+            adjustTileset();
             return true;
         }
         if (swatches) {
@@ -15822,7 +15967,7 @@ String texta="";
                     curspr = swatchValue.get( 0 );
                     setTsetFromCurspr();
                 }
-
+                adjustLayer( tilesets.get( seltset ) );
                 return true;
             }
 
@@ -15833,6 +15978,7 @@ String texta="";
                     curspr = swatchValue.get( 1 );
                     setTsetFromCurspr();
                 }
+                adjustLayer( tilesets.get( seltset ) );
                 return true;
             }
             if (tapped( touch2, gui.sw3 )) {
@@ -15842,6 +15988,7 @@ String texta="";
                     curspr = swatchValue.get( 2 );
                     setTsetFromCurspr();
                 }
+                adjustLayer( tilesets.get( seltset ) );
                 return true;
             }
             if (tapped( touch2, gui.sw4 )) {
@@ -15851,6 +15998,7 @@ String texta="";
                     curspr = swatchValue.get( 3 );
                     setTsetFromCurspr();
                 }
+                adjustLayer( tilesets.get( seltset ) );
                 return true;
             }
             if (tapped( touch2, gui.sw5 )) {
@@ -15860,6 +16008,7 @@ String texta="";
                     curspr = swatchValue.get( 4 );
                     setTsetFromCurspr();
                 }
+                adjustLayer( tilesets.get( seltset ) );
                 return true;
             }
             if (tapped( touch2, gui.sw6 )) {
@@ -15869,6 +16018,7 @@ String texta="";
                     curspr = swatchValue.get( 5 );
                     setTsetFromCurspr();
                 }
+                adjustLayer( tilesets.get( seltset ) );
                 return true;
             }
         }
@@ -15896,6 +16046,10 @@ String texta="";
                 else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
                     saveMap(curdir + "/" + curfile);
                     playmusic();
+                    return true;
+                }
+                else if (p.getName().equalsIgnoreCase("tag") && p.getValue().equalsIgnoreCase("RW")) {
+                    copyToRW();
                     return true;
                 }
 
@@ -16140,6 +16294,8 @@ String texta="";
         if (tapped(touch2, gui.picker)) {
             if (mode == "tile") {
                 if (!cue("tilepick") && lockUI) return true;
+                adjustPickAuto();
+
                 stamp = false;
                 kartu = "tile";
                 tilePicker = "";
@@ -16436,6 +16592,7 @@ String texta="";
         }
 
         if (mode=="pick"){
+
             if (tapped( touch2, gui.tilesetsmid )) {
                 editGUI( gui.tilesetsmid );
                 return true;
@@ -16485,6 +16642,10 @@ String texta="";
                 editGUI( gui.tilesettings );
                 return true;
             }
+            if (tapped( touch2, gui.tilemode )) {
+                editGUI( gui.tilemode );
+                return true;
+            }
             if (tapped( touch2, gui.tileproperties )) {
                 editGUI( gui.tileproperties );
                 return true;
@@ -16509,6 +16670,12 @@ String texta="";
                 editGUI( gui.layer );
                 return true;
             }
+
+            if (tapped( touch2, gui.play )) {
+                editGUI( gui.play );
+                return true;
+            }
+
 
             if (tapped( touch2, gui.info )) {
                 editGUI( gui.info );
@@ -16567,7 +16734,7 @@ String texta="";
             }
 
 
-            if (autotiles.size() > 0) {
+            //if (autotiles.size() > 0) {
                 //autotile
                 if (tapped( touch2, gui.autotile )) {
                     if (mode == "tile") {
@@ -16584,7 +16751,7 @@ String texta="";
                         return true;
                     }
                 }
-            }
+           // }
             if (mode == "tile") {
                 if (tapped( touch2, gui.tool1 )) {
                     editGUI( gui.tool1 );
@@ -16804,6 +16971,21 @@ String texta="";
 
     }
 
+    private void adjustPickAuto(){
+        if (tilesets.size()>0){
+            if (tilesets.get(seltset).getTerrains().size() >0) {
+                for (property p : tilesets.get( seltset ).getProperties()) {
+                    if (p.getName().equalsIgnoreCase( "forced_autotile" )) {
+                        pickAuto = true;
+                        recenterpick();
+                        break;
+                    }
+                }
+            }else {
+                pickAuto=false;
+            }
+        }
+    }
     private boolean softcue(String p0) {
         if (tutoring) {
             if (tutor.getT().get(activetutor).checkcue(p0) == true) {
@@ -17570,6 +17752,7 @@ String texta="";
                     if (selLayer <= -1) {
                         selLayer = layers.size() - 1;
                     }
+                    adjustTileset();
                     return true;
                 }
                 if (tapped(touch2, gui.viewmode)) {
@@ -17815,6 +17998,7 @@ String texta="";
             int Tsw = tilesets.get(seltset).getTilewidth();
             if (touch3.y < Tsh && touch3.y > -Tsh * tilesets.get(seltset).getHeight() + Tsh && touch3.x > 0 && touch3.x < Tsw * tilesets.get(seltset).getWidth()) {
                 startSelect = (tilesets.get(seltset).getWidth() * ((-ab + Tsh) / Tsh) + (ae / Tsw));
+                adjustLayer( tilesets.get(seltset) );
                 endSelect = startSelect;
                 initialSelect = startSelect;
             }
@@ -18435,12 +18619,24 @@ String texta="";
                         }
                     }
 
-                    if (tilecam.position.x < 0) tilecam.position.x = 0;
-                    if (tilecam.position.x > t.getWidth() * t.getTilewidth())
-                        tilecam.position.x = t.getWidth() * t.getTilewidth();
-                    if (tilecam.position.y > t.getTileheight()) tilecam.position.y = t.getTileheight();
-                    if (tilecam.position.y < -(t.getHeight() * t.getTileheight())+t.getTileheight())
-                        tilecam.position.y = -(t.getHeight() * t.getTileheight())+t.getTileheight();
+                    if (pickAuto){
+                        if (tilecam.position.x < 0) tilecam.position.x = 0;
+                        if (tilecam.position.x > 6 * t.getTilewidth())
+                            tilecam.position.x = 6* t.getTilewidth();
+                        if (tilecam.position.y > t.getTileheight())
+                            tilecam.position.y = t.getTileheight();
+                        if (tilecam.position.y < -(t.getTerrains().size() * t.getTileheight()) + t.getTileheight())
+                            tilecam.position.y = -(t.getTerrains().size()  * t.getTileheight()) + t.getTileheight();
+
+                    }else {
+                        if (tilecam.position.x < 0) tilecam.position.x = 0;
+                        if (tilecam.position.x > t.getWidth() * t.getTilewidth())
+                            tilecam.position.x = t.getWidth() * t.getTilewidth();
+                        if (tilecam.position.y > t.getTileheight())
+                            tilecam.position.y = t.getTileheight();
+                        if (tilecam.position.y < -(t.getHeight() * t.getTileheight()) + t.getTileheight())
+                            tilecam.position.y = -(t.getHeight() * t.getTileheight()) + t.getTileheight();
+                    }
 
 
                     tilecam.update();

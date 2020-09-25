@@ -366,4 +366,7 @@ netlog: "Net Log"
 stopserver: "Stop Server"
 disconnectclient: "Disconnect Client"
 leaveroom: "Leave Room"
+macro: "Macro"
+runmacro: "Run Macro"
+macrotiles: "Macro Tiles"
 }

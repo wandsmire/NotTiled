@@ -358,5 +358,8 @@ public class language
 	String stopserver;
 	String disconnectclient;
 	String leaveroom;
+	String macro;
+	String runmacro;
+	String macrotiles;
 
 }
