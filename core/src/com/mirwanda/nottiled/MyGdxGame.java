@@ -14656,9 +14656,12 @@ String texta="";
                     layers.get(selLayer).getStr().set(gogo, (long) y.getTileID() + tilesets.get(seltset).getFirstgid());
 
                 }else{
-
-                    findBestTile( aa[0],bb[0] );
-                    if (ATPath.getCount()==0) continue;
+                    int against = bb[0];
+                    if (bb[0]==aa[0]) against =bb[1];
+                    if (bb[1]==aa[0]) against =bb[2];
+                    if (bb[2]==aa[0]) against =bb[3];
+                    findBestTile( aa[0],against );
+                    if (ATPath.getCount()<=1) continue;
                     AutoTile nextAT = ATPath.get( 1 );
                     int ATid =nextAT.name;
                     //log("Result="+ATid+"");
