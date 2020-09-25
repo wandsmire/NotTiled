@@ -55,13 +55,13 @@ public class tile
 	
 	public boolean isTerrain()
 	{
-		if (!getTerrainString().equalsIgnoreCase("-1,-1,-1,-1")) 
+		if (terrain[0]==-1 || terrain[1]==-1 ||terrain[2]==-1 ||terrain[3]==-1)
 		{
-			return true;
+			return false;
 		}
 		else
 		{
-			return false;
+			return true;
 		}
 	}
 	
@@ -85,7 +85,49 @@ public class tile
 		}
 		return false;
 	}
-	
+
+	public boolean isTransition(){
+		if (this.terrain !=null)
+		{
+			if (terrain[0]!=terrain[1] || terrain[0]!=terrain[2] || terrain[0]!=terrain[3])
+			{
+				return true;
+			}
+			if (terrain[1]!=terrain[2] || terrain[1]!=terrain[3])
+			{
+				return true;
+			}
+			if (terrain[1]!=terrain[3])
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public int getTransA(){
+
+		int b=-1;
+		int a =terrain[0];
+		if (terrain[1]!=a) b=terrain[1];
+		if (terrain[2]!=a) b=terrain[2];
+		if (terrain[3]!=a) b=terrain[3];
+
+		return Math.min( a,b );
+	}
+
+	public int getTransB(){
+
+		int b=-1;
+		int a =terrain[0];
+		if (terrain[1]!=a) b=terrain[1];
+		if (terrain[2]!=a) b=terrain[2];
+		if (terrain[3]!=a) b=terrain[3];
+
+		return Math.max( a,b );
+	}
+
+
 	public void setActiveFrameID(int activeFrameGid)
 	{
 		this.activeFrameID = activeFrameGid;

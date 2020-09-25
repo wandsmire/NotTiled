@@ -1,6 +1,7 @@
 package com.mirwanda.nottiled;
 
 import com.badlogic.gdx.*;
+import com.badlogic.gdx.ai.pfa.GraphPath;
 import com.badlogic.gdx.audio.AudioDevice;
 import com.badlogic.gdx.audio.AudioRecorder;
 import com.badlogic.gdx.audio.Sound;
@@ -43,6 +44,8 @@ import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
+import com.mirwanda.nottiled.ai.ATGraph;
+import com.mirwanda.nottiled.ai.AutoTile;
 import com.mirwanda.nottiled.platformer.player;
 
 import static java.lang.Thread.sleep;
@@ -244,7 +247,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     TextField tfImageName, tfImageSource, tfImageKey, tfImageOpacity, tfImageOffsetX, tfImageOffsetY;
     SelectBox sbPropType, sbPropValbool;
     TextArea fPropVal; //str,int,float,color
-    TextButton bPropValfile, bPropApply, bPropCancel, bPropCopy, bPropPaste, bPropGid, bProppng;
+    TextButton bPropValfile, bPropApply, bPropCancel, bPropCopy, bPropPaste, bPropGid, bProppng, bPropCp;
     String clipProp = "", clipobjcpy = "";
     com.badlogic.gdx.scenes.scene2d.ui.List<String> llayerlist;
     com.badlogic.gdx.Input.TextInputListener pNewLayer;
@@ -3264,7 +3267,10 @@ String texta="";
         }
         stage.getViewport().setScreenSize(width, height);
         if (kartu == "stage") {
-            gotoStage(lastStage);
+            setMenuMap();
+            gotoStage(tMenu);
+
+            //gotoStage(lastStage);
             //backToMap();
         }else if (kartu == "game") {
         } else {
@@ -7012,6 +7018,7 @@ String texta="";
         bPropCancel = new TextButton(z.cancel, skin);
         bPropGid = new TextButton(z.tilepicker, skin);
         bProppng = new TextButton(z.loadpng, skin);
+        bPropCp = new TextButton(z.copy, skin);
 
         com.badlogic.gdx.scenes.scene2d.ui.Stack stack = new com.badlogic.gdx.scenes.scene2d.ui.Stack();
 
@@ -7091,6 +7098,13 @@ String texta="";
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 FileDialog(z.selectfile, "proppng", "file", new String[]{".png"}, tPropEditor);
+            }
+        });
+
+        bPropCp.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+            Gdx.app.getClipboard().setContents( fPropVal.getText() );
             }
         });
 
@@ -7335,6 +7349,7 @@ String texta="";
         tPropEditor.add(stack).colspan(2).left().height(btny * 4).row();
         tPropEditor.add(bPropGid).padTop(2).padBottom(5).colspan(2).left().row();
         tPropEditor.add(bProppng).padTop(2).padBottom(5).colspan(2).left().row();
+        tPropEditor.add(bPropCp).padTop(2).padBottom(5).colspan(2).left().row();
         tPropEditor.add(bPropApply).padTop(20).padBottom(5).colspan(2).left().row();
         tPropEditor.add(bPropCancel).padBottom(5).colspan(2).left().row();
         bPropValfile.setVisible(false);
@@ -8770,11 +8785,18 @@ String texta="";
                     lbl.setWrap(true);
                     tat.add(lbl).width(btnx - 55);
                     tat.setName(num + "");
+
                     tat.addListener(new ChangeListener() {
                         @Override
                         public void changed(ChangeEvent event, Actor actor) {
                             curspr = Integer.parseInt(actor.getName());
                             addRecentTile( curspr );
+                            if (layers.size()>3){
+                                if (layers.get(3).getName().equalsIgnoreCase( "Set" )){
+                                    selLayer=3;
+                                    layers.get(3).setVisible( true );
+                                }
+                            }
                             for (int i = 0; i < tilesets.size(); i++) {
                                 if (curspr >= tilesets.get(i).getFirstgid() && curspr < tilesets.get(i).getFirstgid() + tilesets.get(i).getTilecount()) {
                                     seltset = i;
@@ -8854,10 +8876,56 @@ String texta="";
         switch (wl) {
             case "layer":
                 tt = layers.size();
-                tbl.add(new Label(z.layer, skin)).colspan(2).row();
-                tbl.add(tit).colspan(2).row();
+                tbl.add(new Label(z.layer, skin)).colspan(4).row();
+                tbl.add(tit).colspan(4).row();
 
                 for (int i = tt-1; i >= 0; i--) {
+                    ///////
+                    Button moveup = new Button(skin);
+                    final Image imoveup = new Image();
+                    imoveup.setDrawable(new SpriteDrawable(new Sprite(txUp)));
+                    moveup.add(imoveup);
+                    moveup.setName(i + "");
+
+                    tbl.add(moveup).width(btnx*0.125f);
+
+                    moveup.addListener(new ChangeListener() {
+                        @Override
+                        public void changed(ChangeEvent event, Actor actor) {
+                            //backToMap();
+                            //////
+                            int dex = Integer.parseInt(actor.getName());
+                            if (dex < layers.size()-1) {
+                                java.util.Collections.swap(layers, dex, dex + 1);
+                            }
+                            //////
+                            loadList( "layer" );
+                        }
+                    });
+
+                    ///////
+                    Button movedn = new Button(skin);
+                    final Image imovedn = new Image();
+                    imovedn.setDrawable(new SpriteDrawable(new Sprite(txDown)));
+                    movedn.add(imovedn);
+                    movedn.setName(i + "");
+
+                    tbl.add(movedn).width(btnx*0.125f);
+
+                    movedn.addListener(new ChangeListener() {
+                        @Override
+                        public void changed(ChangeEvent event, Actor actor) {
+                            //backToMap();
+                            //////
+                            int dex = Integer.parseInt(actor.getName());
+                            if (dex > 0) {
+                                java.util.Collections.swap(layers, dex, dex - 1);
+                            }
+                            //////
+                            loadList( "layer" );
+                        }
+                    });
+                    ///////
                     String name = "", moe = "";
                     Button layerName = new Button(skin);
                     Button visible = new Button(skin);
@@ -8888,9 +8956,9 @@ String texta="";
                     lbl.setColor(1, 1, 1, 1);
                     lbl.setAlignment(Align.left);
                     lbl.setWrap(true);
-                    layerName.add(lbl).width(btnx*0.60f);
+                    layerName.add(lbl).width(btnx*0.35f);
                     layerName.setName(i + "");
-                    tbl.add(layerName).width(btnx*0.75f).colspan(1);
+                    tbl.add(layerName).width(btnx*0.50f).colspan(1);
                     ////
                     final Image vis = new Image();
                     if (layers.get(i).isVisible())
@@ -8951,7 +9019,7 @@ String texta="";
                 });
 
 
-                tbl.add(tut).colspan(2).row();
+                tbl.add(tut).colspan(4).row();
                 break;
 
             case "tset":
@@ -13097,6 +13165,12 @@ String texta="";
             if (tilesets.size() > 0) {
                 if (kartu.equalsIgnoreCase("tile")) {
 
+                    //longpressing in a tile picker
+                    if (tapped(touch2, gui.tilesetsmid)) {
+                        loadList("tset");
+                        return true;
+                    }
+
                     if (tapped(touch2, gui.tilesetsright)) {
                         seltset += 1;
                         if (seltset >= tilesets.size()) {
@@ -14111,13 +14185,19 @@ String texta="";
                             t = tilesets.get(seltset).getTiles().get(k);
                         }
                     }
+
+                    //OLD code for terrain
+                    /*
                     if (t == null) return;
                     int[] aa = null;
                     if (t.isTerrain()) aa = t.getTerrain();
 
                     if (t.isTerrain() && t.isCenter()) {
 
+                        //this loop detect the surrounding of a tile
                         for (int i = 0; i < 9; i++) {
+
+                            //gogo is for detecting index of surrounding tile
                             int gogo = num;
                             switch (i) {
                                 case 0:
@@ -14153,10 +14233,11 @@ String texta="";
                                     gogo = num + Tw + 1;
                                     break;
                                 case 8:
-
                                     gogo = num;
                                     break;
                             }
+
+                            //nyum is to find the str of gogo location
                             long nyum = layers.get(selLayer).getStr().get(gogo);
                             hex = Long.toHexString(nyum);
                             trailer = "00000000" + hex;
@@ -14171,7 +14252,7 @@ String texta="";
                                 }
                             }
                             if (t == null) continue;
-
+                            //so basically aa is for the mid, bb is for surrouding
                             int[] bb = t.getTerrain();
                             int[] cc = null;
                             if (bb != null) {
@@ -14237,6 +14318,62 @@ String texta="";
 
 
                     }
+
+
+                     */
+                    //// END OF OLD TERRAIN CODE
+                    updateAT();
+                    //NEW code for terrain
+                    if (t == null) return;
+
+                    if (t.isTerrain() && t.isCenter()) {
+                        //means aa will alwyas be the center
+                        //this loop detect the surrounding of a tile
+
+                        Terrainify(num, t, new int[]{0,1,2,3,4,5,6,7},false);
+                        log(numanuma.size()+"");
+
+                        while(!numanuma.isEmpty()){
+                            int gogo=0;
+                            int[] dir = new int[]{};
+                            switch ((int) numanuma.get(0).dir) {
+                                case 0:
+                                    dir = new int[]{0,1,3};
+                                    break;
+                                case 1:
+                                    dir = new int[]{1};
+                                    break;
+                                case 2:
+                                    dir = new int[]{2,1,4};
+                                    break;
+                                case 3:
+                                    dir = new int[]{3};
+                                    break;
+                                case 4:
+                                    dir = new int[]{4};
+                                    break;
+                                case 5:
+                                    dir = new int[]{5,3,6};
+                                    break;
+                                case 6:
+                                    dir = new int[]{6};
+                                    break;
+                                case 7:
+                                    dir = new int[]{7,6,4};
+                                    break;
+                            }
+
+                            Terrainify((int) numanuma.get(0).num, numanuma.get(0).t, dir,false);
+                            numanuma.remove(0);
+                        }
+
+
+
+                    }
+
+                    //// END OF NEW TERRAIN CODE
+
+
                     break;
 
                 case 2: //fill
@@ -14364,6 +14501,336 @@ String texta="";
             }
 
         }
+    }
+
+    ATGraph ATGraph;
+    GraphPath<AutoTile> ATPath;
+
+    private class tung{
+        public long num;
+        public tile t;
+        public int dir;
+        private tung(long num, tile t, int dir){
+            this.num=num;
+            this.t=t;
+            this.dir=dir;
+        }
+    }
+
+    private void updateAT(){
+        ATGraph = new ATGraph();
+        java.util.List<Vector2> history = new ArrayList<Vector2>();
+        java.util.List<Integer> historyA = new ArrayList<Integer>();
+
+        for (tile t: tilesets.get( seltset ).getTiles())
+        {
+            int cond=t.getTerrain()[0];
+            if (t.isTerrain() && t.isCenter() && !historyA.contains(cond)){
+                AutoTile myAT = new AutoTile(cond);
+                historyA.add(cond);
+                ATGraph.addAT(myAT);
+                log(myAT.name+"");
+            }
+        }
+
+        for (tile t: tilesets.get( seltset ).getTiles())
+        {
+            if (t.isTerrain() && t.isTransition()){
+                Vector2 newHist = new Vector2(t.getTransA(), t.getTransB());
+
+                if (!history.contains( newHist )){
+                    AutoTile AT1= ATGraph.getAT( (int) newHist.x );
+                    AutoTile AT2= ATGraph.getAT( (int) newHist.y );
+                    log(newHist.x+"-----"+newHist.y);
+                    ATGraph.connectAT(AT1,AT2);
+                    ATGraph.connectAT(AT2,AT1);
+                    history.add( newHist );
+                }
+            }
+        }
+    }
+
+    private void findBestTile(int A, int B){
+        AutoTile AT1= ATGraph.getAT(A);
+        AutoTile AT2= ATGraph.getAT(B);
+        ATPath = ATGraph.findPath(AT1, AT2);
+    }
+
+    java.util.List<tung> numanuma = new ArrayList<tung>();
+
+    private boolean Terrainify(int num, tile n, int[] directions, boolean fill){
+        boolean requestReterrain=false;
+        int[] aa = null;
+        Long from=null;
+        int tzet = 0;
+        layerhistory lh2=null;
+
+        if (n.isTerrain()) aa = n.getTerrain();
+
+        for (int i : directions) { //check start here
+
+            //gogo is for detecting index of surrounding tile
+            int gogo = num;
+            switch (i) {
+                case 0:
+                    if (num <= Tw || num % Tw == 0) continue;
+                    gogo = num - Tw - 1;
+                    break;
+                case 1:
+                    if (num <= Tw) continue;
+                    gogo = num - Tw;
+                    break;
+                case 2:
+                    if (num <= Tw || num % Tw == Tw - 1) continue;
+                    gogo = num - Tw + 1;
+                    break;
+                case 3:
+                    if (num <= 1 || num % Tw == 0) continue;
+                    gogo = num - 1;
+                    break;
+                case 4:
+                    if (num >= Tw * Th || num % Tw == Tw - 1) continue;
+                    gogo = num + 1;
+                    break;
+                case 5:
+                    if (num >= Tw * Th - Tw || num % Tw == 0) continue;
+                    gogo = num + Tw - 1;
+                    break;
+                case 6:
+                    if (num >= Tw * Th - Tw) continue;
+                    gogo = num + Tw;
+                    break;
+                case 7:
+                    if (num >= Tw * Th - Tw || num % Tw == Tw - 1) continue;
+                    gogo = num + Tw + 1;
+                    break;
+            }
+
+            //nyum is to find the str of gogo location
+            long nyum = layers.get(selLayer).getStr().get(gogo);
+            hex = Long.toHexString(nyum);
+            trailer = "00000000" + hex;
+            hex = trailer.substring(trailer.length() - 8);
+            long noi = Long.decode("#" + 00 + hex.substring(2)) - tilesets.get(seltset).getFirstgid();
+
+            tile t = null;
+
+            for (int k = 0; k < tilesets.get(seltset).getTiles().size(); k++) {
+                if (tilesets.get(seltset).getTiles().get(k).getTileID() == noi) {
+                    t = tilesets.get(seltset).getTiles().get(k);
+                }
+            }
+            if (t == null) continue;
+            //so basically aa is for the mid, bb is for surrouding
+            int[] bb = t.getTerrain();
+            int[] cc = null;
+            if (bb != null) {
+                cc = terrainInt( i,aa,bb );
+
+                java.util.List<Integer> lint = new ArrayList<Integer>();
+
+                for (int u = 0; u < tilesets.get(seltset).getTiles().size(); u++) {
+                    tile x = tilesets.get(seltset).getTiles().get(u);
+                    if (x.getTerrainString().equalsIgnoreCase(cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3])) {
+                        //tile found with the selected terrain
+                        lint.add(u);
+
+                    }
+                }
+                //if it is found.
+                if (lint.size() > 0) {
+                    tile y = tilesets.get(seltset).getTiles().get(lint.get((int) (Math.random() * lint.size())));
+
+
+                    from = layers.get(selLayer).getStr().get(gogo);
+                    tzet = layers.get(selLayer).getTset().get(gogo);
+                    lh2 = new layerhistory(true, from, (long) y.getTileID() + tilesets.get(seltset).getFirstgid(), gogo, selLayer, tzet, seltset);
+
+
+                    if (from != (long) y.getTileID() + tilesets.get(seltset).getFirstgid()) {
+                        undolayer.add(lh2);
+                        uploaddata(lh2);
+                        redolayer.clear();
+                    }
+
+                    layers.get(selLayer).getStr().set(gogo, (long) y.getTileID() + tilesets.get(seltset).getFirstgid());
+
+                }else{
+
+                    findBestTile( aa[0],bb[0] );
+                    if (ATPath.getCount()==0) continue;
+                    AutoTile nextAT = ATPath.get( 1 );
+                    int ATid =nextAT.name;
+                    //log("Result="+ATid+"");
+
+                    for (int u = 0; u < tilesets.get(seltset).getTiles().size(); u++) {
+
+                        tile x = tilesets.get(seltset).getTiles().get(u);
+                        if (x.getTerrainString().equalsIgnoreCase(ATid+ "," + ATid + "," + ATid + "," + ATid)) {
+                            lint.add(u);
+                        }
+                    }
+
+                    if (lint.size() > 0) {
+                        tile y = tilesets.get(seltset).getTiles().get(lint.get((int) (Math.random() * lint.size())));
+
+                        from = layers.get(selLayer).getStr().get(gogo);
+                        tzet = layers.get(selLayer).getTset().get(gogo);
+                        lh2 = new layerhistory(true, from, (long) y.getTileID() + tilesets.get(seltset).getFirstgid(), gogo, selLayer, tzet, seltset);
+
+
+                        if (from != (long) y.getTileID() + tilesets.get(seltset).getFirstgid()) {
+                            undolayer.add(lh2);
+                            uploaddata(lh2);
+                            redolayer.clear();
+                        }
+
+                        layers.get(selLayer).getStr().set(gogo, (long) y.getTileID() + tilesets.get(seltset).getFirstgid());
+
+
+                        switch (i) {
+                            case 0:
+                                if (num <= Tw || num % Tw == 0) continue;
+                                gogo = num - Tw - 1;
+                                break;
+                            case 1:
+                                if (num <= Tw) continue;
+                                gogo = num - Tw;
+                                break;
+                            case 2:
+                                if (num <= Tw || num % Tw == Tw - 1) continue;
+                                gogo = num - Tw + 1;
+                                break;
+                            case 3:
+                                if (num <= 1 || num % Tw == 0) continue;
+                                gogo = num - 1;
+                                break;
+                            case 4:
+                                if (num >= Tw * Th || num % Tw == Tw - 1) continue;
+                                gogo = num + 1;
+                                break;
+                            case 5:
+                                if (num >= Tw * Th - Tw || num % Tw == 0) continue;
+                                gogo = num + Tw - 1;
+                                break;
+                            case 6:
+                                if (num >= Tw * Th - Tw) continue;
+                                gogo = num + Tw;
+                                break;
+                            case 7:
+                                if (num >= Tw * Th - Tw || num % Tw == Tw - 1) continue;
+                                gogo = num + Tw + 1;
+                                break;
+                        }
+                        if (!fill) numanuma.add( new tung(gogo, y, i));
+                        requestReterrain=true;
+                    }
+                }
+
+
+            }
+        } //check ends here
+        if (requestReterrain) {
+            Terrainify( num,n,directions,true );
+        }
+        return false;
+    }
+    private void log(String s){
+        Gdx.app.log("",s);
+    }
+    private class sirch{
+        int distance;
+        int id;
+        boolean dest;
+        boolean checked;
+        java.util.List<Integer> hist = new ArrayList<Integer>();
+
+    }
+    java.util.List<sirch> sears = new ArrayList<sirch>();
+
+
+    private boolean recurseSearch(int i, int[] tujuan){
+        int check=0;
+        for (int s=0; s<sears.size();s++){
+            check+=1;
+            if (sears.get(s).checked) continue;
+            if (sears.get(s).dest) continue;
+
+            tile x = tilesets.get(seltset).getTiles().get(sears.get(s).id);
+            int[] cc=terrainInt( i,  x.getTerrain(),tujuan);
+            if (x.getTerrainString().equalsIgnoreCase(cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3])) {
+                //final destination achieved
+                sears.get(s).dest=true;
+            }else{
+
+                /////
+                for (int u = 0; u < tilesets.get(seltset).getTiles().size(); u++) {
+                    tile xx = tilesets.get(seltset).getTiles().get(u);
+
+                    int[] dd = xx.getTerrain();
+                    if (dd != null) {
+
+                      //  cc= terrainInt( i,aa,dd );
+                    }
+
+                    //creating the first generation of path
+                    if (xx.getTerrainString().equalsIgnoreCase(cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3])) {
+                        //tile found with the selected terrain
+                        sirch ss = new sirch();
+                        ss.distance+=ss.distance;
+                    //    ss.hist.add( aa[0] );
+                        ss.hist.add( dd[0] );
+                        ss.id=u;
+                        sears.add(ss);
+                    }
+
+                }
+
+                /////
+
+                //not the right one
+            }
+            sears.get(s).checked=true;
+        }
+        if (check==sears.size()) return true;
+        return false;
+    }
+
+
+
+
+    private int[] terrainInt(int direction, int[] aa, int[] bb){
+        int[] cc=null;
+        switch (direction) {
+            case 0:
+                cc = new int[]{bb[0], bb[1], bb[2], aa[3]};
+                break;
+            case 1:
+                cc = new int[]{bb[0], bb[1], aa[2], aa[3]};
+                break;
+            case 2:
+                cc = new int[]{bb[0], bb[1], aa[2], bb[3]};
+                break;
+            case 3:
+                cc = new int[]{bb[0], aa[1], bb[2], aa[3]};
+                break;
+            case 4:
+                cc = new int[]{aa[0], bb[1], aa[2], bb[3]};
+                break;
+            case 5:
+                cc = new int[]{bb[0], aa[1], bb[2], bb[3]};
+                break;
+            case 6:
+                cc = new int[]{aa[0], aa[1], bb[2], bb[3]};
+                break;
+            case 7:
+                cc = new int[]{aa[0], bb[1], bb[2], bb[3]};
+                break;
+            case 8:
+                cc = new int[]{aa[0], aa[1], aa[2], aa[3]};
+                break;
+        }
+        return cc;
     }
 
     private boolean tapped(Vector3 touch2, gui gui) {
@@ -15467,8 +15934,9 @@ String texta="";
             //autotile
             if (tapped(touch2, gui.autotile)) {
                 if (mode == "tile") {
+
+                    runAutoTiles();
                     cacheTiles();
-                    //runAutoTiles();
                     return true;
                 }
             }
