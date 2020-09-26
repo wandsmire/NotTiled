@@ -538,7 +538,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         loadKryonet();
         initializePostProcessor();
         createSwatches();
-        brushsize=2;
+        brushsize=0;
         activetool=4;
 
 
@@ -2023,6 +2023,8 @@ String texta="";
 
         if (tilesets.size() == 0) {
             //uisrect(0, 100,50,60);
+            uisrect(gui.pickerback, mouse, null);//tool switch
+
         } else {
             if (kartu == "pickanim") {
                 uisrect(gui.pickerback, mouse, null);//tool switch
@@ -2038,10 +2040,12 @@ String texta="";
         if (kartu=="editor") uisrect( gui.tilemode, mouse, null );
         if (kartu == "tile" || kartu=="editor") {
             uisrect(gui.tilesetsmid, mouse, null);
-            if (tilesets.size()>0) uisrect(gui.tilesetsleft, mouse, null);
-            if (tilesets.size()>0) uisrect(gui.tilesetsright, mouse, null);
-            if (tilesets.get( seltset ).getTerrains().size()>0) {
-                uisrect( gui.tilemode, mouse, null );
+            if (tilesets.size()>0) {
+                uisrect( gui.tilesetsleft, mouse, null );
+                uisrect( gui.tilesetsright, mouse, null );
+                if (tilesets.get( seltset ).getTerrains().size() > 0) {
+                    uisrect( gui.tilemode, mouse, null );
+                }
             }
 
         }else{
@@ -2129,6 +2133,8 @@ String texta="";
         if (tilesets.size() == 0) {
             //str1draw(ui, "Tileset is empty.",0,100,50);
             str1draw(ui, z.addnew + " " + z.tileset, gui.tilesetsmid);
+            uidrawbutton(txundo, z.back, gui.pickerback,3);
+
         } else {
 
             if (kartu == "tile" || kartu=="editor") {
@@ -2181,6 +2187,7 @@ String texta="";
                         for (tile tt : tilesets.get(seltset).getTiles())
                         {
                             if (tt.getTileID()== curspr - tilesets.get(seltset).getFirstgid()){
+                                if (tt.getProperties()==null) continue;
                                 for(property pp : tt.getProperties()){
                                     if (totalview<5) {
                                         txt += pp.getName() + " : " + pp.getValue() + "\n";
@@ -2774,53 +2781,77 @@ String texta="";
             batch.begin();
 
             if (layers.size() > 2 && tilesets.size() > 0) {
-                if (layers.get(2).getName().equalsIgnoreCase("Units") && tilesets.get(0).getName().equalsIgnoreCase("units")) {
+                if (layers.get(2).getName().equalsIgnoreCase("Units")) {
 
                     for (int aa = 0; aa < Tw * Th; aa++) {
 
                         long mm = layers.get(2).getStr().get(aa);
+                        int mmo = layers.get(2).getTset().get(aa);
+                        if (mmo==-1) continue;
                         int xpos = aa % Tw;
                         int ypos = aa / Tw;
                         int maex = -1, maye = -1;
-                        if (mm == 7) {
-                            maex = 0;
-                            maye = 0;
-                        }
-                        if (mm == 52) {
-                            maex = 1 * 56;
-                            maye = 0;
-                        }
-                        if (mm == 88) {
-                            maex = 2 * 56;
-                            maye = 0;
-                        }
-                        if (mm == 106) {
-                            maex = 3 * 56;
-                            maye = 0;
-                        }
-                        if (mm == 142) {
-                            maex = 4 * 56;
-                            maye = 0;
-                        }
-                        if (mm == 155) {
-                            maex = 0;
-                            maye = 56;
-                        }
-                        if (mm == 157) {
-                            maex = 1 * 56;
-                            maye = 56;
-                        }
-                        if (mm == 159) {
-                            maex = 2 * 56;
-                            maye = 56;
-                        }
-                        if (mm == 161) {
-                            maex = 3 * 56;
-                            maye = 56;
-                        }
-                        if (mm == 179) {
-                            maex = 4 * 56;
-                            maye = 56;
+                        for (tile t:tilesets.get(mmo).getTiles()){
+                            //log(mm+"P");
+
+                            if (t.getTileID()+tilesets.get(mmo).getFirstgid()==mm){
+                                boolean isCC=false;
+                                int team=-1;
+                                for (property p: t.getProperties()){
+                                    if (p.getName().equalsIgnoreCase( "unit" ) && p.getValue().equalsIgnoreCase( "commandCenter" ) ){
+                                        isCC=true;
+                                        //log(isCC+"P");
+                                    }
+                                    if (p.getName().equalsIgnoreCase( "team" )){
+                                       team=Integer.parseInt( p.getValue()  );
+                                    }
+                                }
+                                if (!isCC) continue;
+                                //log(isCC+"");
+                                switch (team){
+                                    case 0:
+                                        maex = 0;
+                                        maye = 0;
+                                        break;
+                                    case 1:
+                                        maex = 1 * 56;
+                                        maye = 0;
+                                        break;
+                                    case 2:
+                                        maex = 2 * 56;
+                                        maye = 0;
+                                        break;
+                                    case 3:
+                                        maex = 3 * 56;
+                                        maye = 0;
+                                        break;
+                                    case 4:
+                                        maex = 4 * 56;
+                                        maye = 0;
+                                        break;
+                                    case 5:
+                                        maex = 0;
+                                        maye = 56;
+                                        break;
+                                    case 6:
+                                        maex = 1 * 56;
+                                        maye = 56;
+                                        break;
+                                    case 7:
+                                        maex = 2 * 56;
+                                        maye = 56;
+                                        break;
+                                    case 8:
+                                        maex = 3 * 56;
+                                        maye = 56;
+                                        break;
+                                    case 9:
+                                        maex = 4 * 56;
+                                        maye = 56;
+                                        break;
+
+                                }
+                            }
                         }
 
                         if (maex != -1) {
@@ -2837,6 +2868,38 @@ String texta="";
                             tempdrawer2.setdrawer(0, xpos * Tsw - widthy / 2, -ypos * Tsh - widthy / 2, Tsw / 2, Tsh / 2, widthy, widthy, 1f, 1f, 0f, 0, 0, 32, 32, false, false);
                             tempdrawer2.draw(batch, txresources);
                         }
+                    }//for
+
+                }//if
+                if (layers.get(1).getName().equalsIgnoreCase("Items")) {
+
+                    for (int aa = 0; aa < Tw * Th; aa++) {
+
+                        long mm = layers.get(1).getStr().get(aa);
+                        int mmo = layers.get(1).getTset().get(aa);
+                        if (mmo==-1) continue;
+                        int xpos = aa % Tw;
+                        int ypos = aa / Tw;
+                        boolean isPool=false;
+                        for (tile t:tilesets.get(mmo).getTiles()){
+
+                            if (t.getTileID()+tilesets.get(mmo).getFirstgid()==mm){
+
+                                for (property p: t.getProperties()){
+                                    if (p.getName().equalsIgnoreCase( "res_pool" )){
+                                        isPool=true;
+                                    }
+                                }
+                                if (!isPool) continue;
+                            }
+                        }
+                        if (isPool) {
+                            drawer tempdrawer2 = new drawer();
+                            int widthy = (int) (cam.zoom * 30);
+                            tempdrawer2.setdrawer( 0, xpos * Tsw - widthy / 2, -ypos * Tsh - widthy / 2, Tsw / 2, Tsh / 2, widthy, widthy, 1f, 1f, 0f, 0, 0, 32, 32, false, false );
+                            tempdrawer2.draw( batch, txresources );
+                        }
+
                     }//for
 
                 }//if
@@ -7232,12 +7295,17 @@ String texta="";
                     for (int k = 0; k < tilesets.get(seltset).getTiles().size(); k++) {
                         if (tilesets.get(seltset).getTiles().get(k).getTileID() == o) {
                             ppt = tilesets.get(seltset).getTiles().get(k).getProperties();
+                            if (ppt==null)
+                            {
+                                ada=false;
+                            }else{
                             for (int j = 0; j < ppt.size(); j++) {
                                 if (ppt.get(j).getName().equalsIgnoreCase(temproname)) {
                                     ada = true;
                                     tgt = ppt.get(j);
                                     ka = k;
                                 }
+                            }
                             }
 
                         }
@@ -8553,7 +8621,7 @@ String texta="";
 
                     refreshProperties(autotiles.get(dex).getProperties());
                     selat = dex;
-                    lPropID.setText(z.autotile + " " + autotiles.get(dex).getName());
+                    lPropID.setText(z.macro + " " + autotiles.get(dex).getName());
                     sender = "auto";
                     gotoStage(tPropsMgmt);
                 }
@@ -8773,6 +8841,7 @@ String texta="";
                 srr[i] = autotiles.get(i).getName();
             }
         }
+
         lautolist.setItems(srr);
     }
 
@@ -9109,7 +9178,9 @@ String texta="";
                         public void changed(ChangeEvent event, Actor actor) {
 
                             seltset = Integer.parseInt(actor.getName());
+                            adjustPickAuto();
                             recenterpick();
+                            resetMassprops();
                             onToPicker();
 
                         }
@@ -9253,6 +9324,7 @@ String texta="";
 
                     srr.add(entry.file().getName());
                 }
+                java.util.Collections.sort(srr);
                 lptlist.setItems(srr.toArray(new String[0]));
                 gotoStage(tpt);
 
@@ -9418,7 +9490,7 @@ String texta="";
         bAutoadd.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                Gdx.input.getTextInput(pAutoadd, "New Autotile Name", "", "");
+                Gdx.input.getTextInput(pAutoadd, z.name, "", "");
             }
         });
 
@@ -9427,7 +9499,7 @@ String texta="";
             public void changed(ChangeEvent event, Actor actor) {
                 int dex = lautolist.getSelectedIndex();
                 if (dex >= 0) {
-                    Gdx.input.getTextInput(pAutorename, "Rename Autotile", autotiles.get(dex).getName(), "");
+                    Gdx.input.getTextInput(pAutorename, z.rename, autotiles.get(dex).getName(), "");
                 }
             }
         });
@@ -12937,6 +13009,7 @@ String texta="";
     }
 
     private void recenterpick() {
+        if (tilesets.size()==0) return;
         float ttsw = tilesets.get( seltset ).getTilewidth();
         float ttsh = tilesets.get( seltset ).getTileheight();
         float ttkw = tilesets.get( seltset ).getWidth();
@@ -13117,7 +13190,7 @@ String texta="";
                         {
                             if (massprops.get(i)) {
                                 for (tile t : tilesets.get(seltset).getTiles()) {
-                                    if (t.getTileID()==i) t.setProperties(null);
+                                    if (t.getTileID()==i) t.getProperties().clear();
                                 }
                             }
                         }
@@ -13219,6 +13292,7 @@ String texta="";
                 }
 
                 if (tapped(touch2, gui.pickertool1)) {
+                    pickAuto=false;
                     FileDialog(z.selectfile, "quickaddtset", "file", new String[]{".tsx", ".png", ".jpg", ".jpeg", ".bmp", ".gif"}, nullTable);
                     return true;
                 }
@@ -13243,6 +13317,7 @@ String texta="";
                 //delete button
                 if (tapped(touch2, gui.pickertool5)) {
                     tilesets.remove(seltset);
+                    pickAuto=false;
                     if (tilesets.size() > 0) {
                         if (seltset != 0) seltset -= 1;
                         recenterpick();
@@ -15904,12 +15979,21 @@ String texta="";
             for (property p:t.getProperties()){
 
                 if (layers.get(selLayer).getName().equalsIgnoreCase( p.getValue() )){
-                    curspr=t.getFirstgid();
+                    if (t.getTerrains().size()>0){
+                        for (tile tl: t.getTiles()){
+                            if (tl.isTerrain() && tl.isCenter()){
+                                curspr= tl.getTileID()+t.getFirstgid();
+                                break;
+                            }
+                        }
+
+                    }else{
+                        curspr=t.getFirstgid();
+                    }
                     setTsetFromCurspr();
                     recenterpick();
                     return;
                 }
-
             }
         }
     }
@@ -17747,21 +17831,41 @@ String texta="";
                     return true;
                 }
 
-                if (tapped(touch2, gui.layer)) {
+                if (tapped(touch2, gui.layer) || tapped(touch2, gui.layerpick) ) {
                     selLayer -= 1;
                     if (selLayer <= -1) {
                         selLayer = layers.size() - 1;
                     }
                     adjustTileset();
                     return true;
+                    //'812398BB9
                 }
+
                 if (tapped(touch2, gui.viewmode)) {
                     layers.get(selLayer).setVisible(!layers.get(selLayer).isVisible());
+                    return true;
+                }
+                if (tapped(touch2, gui.tool2) || tapped(touch2, gui.tool3)) {
+                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    //do nothing, just to prevent longpressing.
+                    return true;
+                }
+                if (tapped(touch2, gui.mode)) { //actually add new layer...
+                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    //do nothing, just to prevent longpressing.
+                    return true;
+                }
+                if (tapped(touch2, gui.play)) { //actually add new layer...
+                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    //do nothing, just to prevent longpressing.
                     return true;
                 }
                 if (tapped(touch2, gui.redo)) {
                     //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                     rotating = !rotating;
+                    return true;
+                }
+                if (sMinimap && tapped(touch2, gui.minimap)) {
                     return true;
                 }
                 if (tapped(touch2, gui.undo)) {
@@ -17983,10 +18087,19 @@ String texta="";
                 return true;
             }
         } else if (kartu == "tile") {
-
+            if (tapped(touch2, gui.tilesetsright)) {
+                return true;
+            }
+            if (tapped(touch2, gui.tilesetsleft)) {
+                return true;
+            }
             //longpressing in a tile picker
             if (tapped(touch2, gui.tilesetsmid)) {
                 loadList("tset");
+                return true;
+            }
+
+            if (pickAuto) {
                 return true;
             }
             stamp = true;

@@ -11,7 +11,7 @@ properties: [
 				value: 0
 			}
 			{
-				name: showonMap
+				name: showOnMap
 				type: String
 				value: true
 			}
