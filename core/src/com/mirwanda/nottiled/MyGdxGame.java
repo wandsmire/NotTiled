@@ -2395,7 +2395,7 @@ String texta="";
 
 
             if (sShowCustomGrid) {
-                sr.setColor(1, 0, 0, 1f);
+                sr.setColor(1, 0, 0, 0.5f);
                 offsetx = 0;
                 offsety = 0;
                 if (orientation.equalsIgnoreCase("isometric")) {
