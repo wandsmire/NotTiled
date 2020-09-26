@@ -13144,7 +13144,7 @@ String texta="";
             frompick = true;
             if (kartu.equalsIgnoreCase("tile")) {
 
-                if (tapped(touch2, gui.tilemode)) {
+                if (tapped(touch2, gui.tilemode) && tilesets.get( seltset ).getTerrains().size()>0) {
                     pickAuto =!pickAuto;
                     issettingtile=false;
                     resetMassprops();
