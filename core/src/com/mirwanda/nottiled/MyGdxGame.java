@@ -14581,11 +14581,13 @@ String texta="";
 
                      */
                     //// END OF OLD TERRAIN CODE
+
+                    if (oi==0) return;
                     updateAT();
                     //NEW code for terrain
                     if (t == null) return;
 
-                    if (t.isTerrain() && t.isCenter()) {
+                    if (t.isTerrainForEditor() && t.isCenter()) {
                         //means aa will alwyas be the center
                         //this loop detect the surrounding of a tile
 
@@ -14621,6 +14623,7 @@ String texta="";
                                     dir = new int[]{7,6,4};
                                     break;
                             }
+
 
                             Terrainify((int) numanuma.get(0).num, numanuma.get(0).t, dir,false);
                             numanuma.remove(0);
@@ -14781,11 +14784,15 @@ String texta="";
         java.util.List<Vector2> history = new ArrayList<Vector2>();
         java.util.List<Integer> historyA = new ArrayList<Integer>();
 
+        AutoTile myAT = new AutoTile(-1);
+        historyA.add(-1);
+        ATGraph.addAT(myAT);
+
         for (tile t: tilesets.get( seltset ).getTiles())
         {
             int cond=t.getTerrain()[0];
-            if (t.isTerrain() && t.isCenter() && !historyA.contains(cond)){
-                AutoTile myAT = new AutoTile(cond);
+            if (t.isTerrainForEditor() && t.isCenter() && !historyA.contains(cond)){
+                myAT = new AutoTile(cond);
                 historyA.add(cond);
                 ATGraph.addAT(myAT);
                 //log(myAT.name+"");
@@ -14794,13 +14801,19 @@ String texta="";
 
         for (tile t: tilesets.get( seltset ).getTiles())
         {
-            if (t.isTerrain() && t.isTransition()){
+            if (t.isTerrainForEditor() && t.isTransition()){
                 Vector2 newHist = new Vector2(t.getTransA(), t.getTransB());
-
-                if (!history.contains( newHist )){
+                boolean sdh=false;
+                for (Vector2 v: history){
+                    if (v.x ==t.getTransA() && v.y == t.getTransB())
+                    {
+                        sdh=true; break;
+                    }
+                }
+                if (!sdh){
                     AutoTile AT1= ATGraph.getAT( (int) newHist.x );
                     AutoTile AT2= ATGraph.getAT( (int) newHist.y );
-                    //log(newHist.x+"-----"+newHist.y); cool comment
+                    log(newHist.x+"-----"+newHist.y); //cool comment
                     ATGraph.connectAT(AT1,AT2);
                     ATGraph.connectAT(AT2,AT1);
                     history.add( newHist );
@@ -14810,9 +14823,11 @@ String texta="";
     }
 
     private void findBestTile(int A, int B){
-        AutoTile AT1= ATGraph.getAT(A);
-        AutoTile AT2= ATGraph.getAT(B);
-        ATPath = ATGraph.findPath(AT1, AT2);
+        try {
+            AutoTile AT1 = ATGraph.getAT( A );
+            AutoTile AT2 = ATGraph.getAT( B );
+            ATPath = ATGraph.findPath( AT1, AT2 );
+        }catch(Exception e){}
     }
 
     java.util.List<tung> numanuma = new ArrayList<tung>();
@@ -14823,8 +14838,14 @@ String texta="";
         Long from=null;
         int tzet = 0;
         layerhistory lh2=null;
+        //if (n==null) return true;
+        if (n!=null) {
+            if (n.isTerrainForEditor()) {
+                aa = n.getTerrain();
+            }
+        }
+        if (aa==null) aa = new int[]{-1,-1,-1,-1};
 
-        if (n.isTerrain()) aa = n.getTerrain();
 
         for (int i : directions) { //check start here
 
@@ -14875,17 +14896,23 @@ String texta="";
             tile t = null;
 
             for (int k = 0; k < tilesets.get(seltset).getTiles().size(); k++) {
-                if (tilesets.get(seltset).getTiles().get(k).getTileID() == noi) {
-                    t = tilesets.get(seltset).getTiles().get(k);
+                if (tilesets.get( seltset ).getTiles().get( k ).getTileID() == noi) {
+                    t = tilesets.get( seltset ).getTiles().get( k );
                 }
             }
-            if (t == null) continue;
+            int[] bb;
+            if (t == null) {
+                bb= new int[]{-1,-1,-1,-1};
+            }else{
+                bb = t.getTerrain();
+            }
             //so basically aa is for the mid, bb is for surrouding
-            int[] bb = t.getTerrain();
+
             int[] cc = null;
+
             if (bb != null) {
                 cc = terrainInt( i,aa,bb );
-
+                //log(cc[0]+","+cc[1]+","+cc[2]+","+cc[3]);
                 java.util.List<Integer> lint = new ArrayList<Integer>();
 
                 for (int u = 0; u < tilesets.get(seltset).getTiles().size(); u++) {
@@ -14893,7 +14920,6 @@ String texta="";
                     if (x.getTerrainString().equalsIgnoreCase(cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3])) {
                         //tile found with the selected terrain
                         lint.add(u);
-
                     }
                 }
                 //if it is found.
@@ -14913,42 +14939,62 @@ String texta="";
                     }
 
                     layers.get(selLayer).getStr().set(gogo, (long) y.getTileID() + tilesets.get(seltset).getFirstgid());
+                    layers.get(selLayer).getTset().set(gogo, seltset);
+
+                    if ((cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3]).equalsIgnoreCase( "-1,-1,-1,-1")){
+                        layers.get(selLayer).getStr().set(gogo, (long) 0);
+                        layers.get(selLayer).getTset().set(gogo, -1);
+
+                    }
 
                 }else{
+                    //no AI for bad terrain...
+                    // if (aa[0]==-1 && aa[1] ==-1 && aa[2]==-1 && aa[3]==-1) return true;
+                    if (bb[0]==-1 && bb[1] ==-1 && bb[2]==-1 && bb[3]==-1) return true;
                     int against = bb[0];
                     if (bb[0]==aa[0]) against =bb[1];
                     if (bb[1]==aa[0]) against =bb[2];
                     if (bb[2]==aa[0]) against =bb[3];
+
                     findBestTile( aa[0],against );
+                   log(ATPath.getCount()+"");
                     if (ATPath.getCount()<=1) continue;
                     AutoTile nextAT = ATPath.get( 1 );
                     int ATid =nextAT.name;
                     //log("Result="+ATid+"");
 
-                    for (int u = 0; u < tilesets.get(seltset).getTiles().size(); u++) {
 
-                        tile x = tilesets.get(seltset).getTiles().get(u);
-                        if (x.getTerrainString().equalsIgnoreCase(ATid+ "," + ATid + "," + ATid + "," + ATid)) {
-                            lint.add(u);
+                    for (int u = 0; u < tilesets.get( seltset ).getTiles().size(); u++) {
+
+                        tile x = tilesets.get( seltset ).getTiles().get( u );
+                        if (x.getTerrainString().equalsIgnoreCase( ATid + "," + ATid + "," + ATid + "," + ATid )) {
+                            lint.add( u );
+                            //log(u+"}"+ATid);
                         }
                     }
 
                     if (lint.size() > 0) {
-                        tile y = tilesets.get(seltset).getTiles().get(lint.get((int) (Math.random() * lint.size())));
+                        tile y = tilesets.get( seltset ).getTiles().get( lint.get( (int) (Math.random() * lint.size()) ) );
 
-                        from = layers.get(selLayer).getStr().get(gogo);
-                        tzet = layers.get(selLayer).getTset().get(gogo);
-                        lh2 = new layerhistory(true, from, (long) y.getTileID() + tilesets.get(seltset).getFirstgid(), gogo, selLayer, tzet, seltset);
+                            from = layers.get( selLayer ).getStr().get( gogo );
+                            tzet = layers.get( selLayer ).getTset().get( gogo );
+                            lh2 = new layerhistory( true, from, (long) y.getTileID() + tilesets.get( seltset ).getFirstgid(), gogo, selLayer, tzet, seltset );
 
+                            if (from != (long) y.getTileID() + tilesets.get( seltset ).getFirstgid()) {
+                                undolayer.add( lh2 );
+                                uploaddata( lh2 );
+                                redolayer.clear();
+                            }
 
-                        if (from != (long) y.getTileID() + tilesets.get(seltset).getFirstgid()) {
-                            undolayer.add(lh2);
-                            uploaddata(lh2);
-                            redolayer.clear();
-                        }
+                            layers.get( selLayer ).getStr().set( gogo, (long) y.getTileID() + tilesets.get( seltset ).getFirstgid() );
+                            layers.get( selLayer ).getTset().set( gogo, seltset );
+                            if (!fill) requestReterrain=true;
 
-                        layers.get(selLayer).getStr().set(gogo, (long) y.getTileID() + tilesets.get(seltset).getFirstgid());
-
+                            if (y.getTerrainString().equalsIgnoreCase( "-1.-1.-1.-1" )){
+                                layers.get( selLayer ).getStr().set( gogo, (long) 0 );
+                                layers.get( selLayer ).getTset().set( gogo, -1 );
+                                //requestReterrain=false;
+                            }
 
                         switch (i) {
                             case 0:
@@ -14985,7 +15031,8 @@ String texta="";
                                 break;
                         }
                         if (!fill) numanuma.add( new tung(gogo, y, i));
-                        requestReterrain=true;
+
+
                     }
                 }
 
@@ -14993,12 +15040,12 @@ String texta="";
             }
         } //check ends here
         if (requestReterrain) {
-            Terrainify( num,n,directions,true );
+                Terrainify( num, n, directions, true );
         }
         return false;
     }
     private void log(String s){
-        Gdx.app.log("",s);
+       // Gdx.app.log("",s);
     }
     private class sirch{
         int distance;
@@ -15062,6 +15109,8 @@ String texta="";
 
 
     private int[] terrainInt(int direction, int[] aa, int[] bb){
+        if (aa==null) aa=new int[]{-1,-1,-1,-1};
+        if (bb==null) bb=new int[]{-1,-1,-1,-1};
         int[] cc=null;
         switch (direction) {
             case 0:
@@ -17131,6 +17180,11 @@ String texta="";
                         recenterpick();
                         break;
                     }
+                    if (p.getName().equalsIgnoreCase( "forced_tile" )) {
+                        pickAuto = false;
+                        recenterpick();
+                        break;
+                    }
                 }
             }else {
                 pickAuto=false;
@@ -17260,6 +17314,21 @@ String texta="";
                     continue;
                 } else if (p.getName().equalsIgnoreCase("source")) {
                     am.setSource(Integer.parseInt(p.getValue()));
+                    continue;
+                } else if (p.getName().equalsIgnoreCase("hit")) {
+                    am.setHit(Integer.parseInt(p.getValue()));
+                    continue;
+                } else if (p.getName().equalsIgnoreCase("x")) {
+                    am.setPosx(Integer.parseInt(p.getValue()));
+                    continue;
+                } else if (p.getName().equalsIgnoreCase("y")) {
+                    am.setPosy(Integer.parseInt(p.getValue()));
+                    continue;
+                } else if (p.getName().equalsIgnoreCase("width")) {
+                    am.setWidth(Integer.parseInt(p.getValue()));
+                    continue;
+                } else if (p.getName().equalsIgnoreCase("height")) {
+                    am.setHeight(Integer.parseInt(p.getValue()));
                     continue;
                 } else if (p.getName().equalsIgnoreCase("against")) {
                     am.setAgainst(Integer.parseInt(p.getValue()));
@@ -17393,6 +17462,33 @@ String texta="";
                     try {
                         layers.get(am.getObjectgroup()).getObjects().clear();
                     } catch (Exception e) {
+                    }
+                    break;
+                case "hit":
+                    selLayer=am.getDestlayer();
+                    curspr=am.getSource();
+                    setTsetFromCurspr();
+                    int px=0;
+                    int py=0;
+                    int wi=100;
+                    int he=100;
+                    if (am.getPosx()!=-1){
+                        px= am.getPosx();
+                        wi = am.getWidth();
+                    }
+                    if (am.getPosy()!=-1){
+                        py= am.getPosy();
+                        he = am.getHeight();
+                    }
+                    for (int si=0; si<am.hit; si++){
+                        //Gdx.app.log("SOSO",px+"");
+
+                        int xpos = (int) ((px/100f*Tw) + (Math.random()*wi/100f*Tw));
+                        int ypos = (int) (py/100f*Th) + (int) (Math.random()*he/100f*Th);
+
+                        int nuhum = ypos*Tw+xpos;
+
+                        tapTile(nuhum, (si==0) );
                     }
                     break;
                 case "fill":

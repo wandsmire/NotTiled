@@ -7,6 +7,23 @@ public class automate
 	String type;
 	String name;
 	int source;
+	int posx=-1;
+
+
+
+	int posy=-1;
+	int width;
+	int height;
+
+	public int getHit() {
+		return hit;
+	}
+
+	public void setHit(int hit) {
+		this.hit = hit;
+	}
+
+	int hit;
 	int against;
 	int against2;
 	int against3;
@@ -23,6 +40,38 @@ public class automate
 	java.util.List<Integer> x=new ArrayList<Integer>();
 	java.util.List<Integer> y=new ArrayList<Integer>();
 	java.util.List<Integer> z=new ArrayList<Integer>();
+
+	public int getPosx() {
+		return posx;
+	}
+
+	public void setPosx(int posx) {
+		this.posx = posx;
+	}
+
+	public int getPosy() {
+		return posy;
+	}
+
+	public void setPosy(int posy) {
+		this.posy = posy;
+	}
+
+	public int getWidth() {
+		return width;
+	}
+
+	public void setWidth(int width) {
+		this.width = width;
+	}
+
+	public int getHeight() {
+		return height;
+	}
+
+	public void setHeight(int height) {
+		this.height = height;
+	}
 
 	public void setAgainst2(int against2)
 	{
