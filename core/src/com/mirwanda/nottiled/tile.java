@@ -64,6 +64,18 @@ public class tile
 			return true;
 		}
 	}
+
+	public boolean isTerrainForEditor()
+	{
+		if (getTerrainString().equalsIgnoreCase( "-1,-1,-1,-1" ))
+		{
+			return false;
+		}
+		else
+		{
+			return true;
+		}
+	}
 	
 	
 	public String getTerrainString()

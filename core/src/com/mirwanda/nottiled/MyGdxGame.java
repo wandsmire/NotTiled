@@ -1963,7 +1963,7 @@ String texta="";
                         for (int n = 0; n < tiles.size(); n++) {
                             if (ini == tiles.get(n).getTileID()) {
 
-                                if (tiles.get(n).isTerrain()) {
+                                if (tiles.get(n).isTerrainForEditor()) {
                                     terrain = true;
                                     curNodes = tiles.get(n).getTerrain();
                                 }
@@ -9147,6 +9147,8 @@ String texta="";
 
 
                 tbl.add(tut).colspan(4).row();
+                cue("layerpick");
+
                 break;
 
             case "tset":
@@ -9207,6 +9209,70 @@ String texta="";
                 tbl.add(tut).row();
 
                 break;
+            case "macro":
+                //cakwe
+                tbl.add(new Label(z.runmacro, skin)).row();
+
+                int macrosize=0;
+                for (int i = 0; i < autotiles.size(); i++) {
+                    autotile al = autotiles.get( i );
+                    automate am = new automate();
+
+                    for (int j = 0; j < al.getProperties().size(); j++) {
+
+                        property p = al.getProperties().get( j );
+                        if (p.getName().equalsIgnoreCase( "name" )) {
+                            ++macrosize;
+                            am.name = p.getValue();
+                            Button tat = new Button(skin);
+                            tat.defaults().left();
+                            Image img = null;
+
+                            String name = p.getValue();
+                            img = new Image(txplay);
+                            tat.add(img).width(btnx*0.15f).padLeft(10);
+
+                            Label lbl = new Label(name, skin);
+                            lbl.setColor(1, 1, 1, 1);
+                            lbl.setAlignment(Align.left);
+                            lbl.setWrap(true);
+                            tat.add(lbl).width(btnx*0.85f);
+                            tat.setName(name);
+                            tbl.add(tat).width(btnx).row();
+
+
+                            tat.addListener(new ChangeListener() {
+                                @Override
+                                public void changed(ChangeEvent event, Actor actor) {
+                                    runAutoTiles( actor.getName() );
+                                    backToMap();
+
+                                }
+                            });
+
+                            continue;
+                        }
+                    }
+
+                    if (macrosize==0) {
+                        runAutoTiles( "" );
+                        backToMap();
+                        return;
+                    }
+                }
+
+
+                tut.addListener(new ChangeListener() {
+                    @Override
+                    public void changed(ChangeEvent event, Actor actor) {
+                        backToMap();
+                    }
+                });
+
+                tbl.add(tut).row();
+
+                break;
+
         }
 
 
@@ -9215,7 +9281,6 @@ String texta="";
 
 
         gotoStage(tblmain);
-        cue("layerpick");
     }
 
     private void saveViewMode(){
@@ -13714,6 +13779,7 @@ String texta="";
                         }
                         return true;
                     case "terraineditor":
+                        //log(kartu+":"+tilePicker);
                         if (ts.getTerrains().size() == 0) return true;
                         tiles = ts.getTiles();
                         tile t = null;
@@ -13732,9 +13798,11 @@ String texta="";
                             t = tiles.get(tiles.size() - 1);
                         }
                         int[] cn = t.getTerrain();
-
+                        //log(t.getTerrainString());
                         int a = cn[0], b = cn[1], c = cn[2], d = cn[3];
                         int e = tilesets.get(selTsetID).getSelTerrain();
+
+
 
                         //ada tile kosong
                         if ((a == -1) || (b == -1) || (c == -1) || (d == -1)) {
@@ -16175,8 +16243,7 @@ String texta="";
             //autotile
             if (tapped(touch2, gui.autotile)) {
                 if (mode == "tile") {
-
-                    runAutoTiles();
+                    loadList("macro");
                     cacheTiles();
                     return true;
                 }
@@ -17156,7 +17223,8 @@ String texta="";
         return pixmap;
     }
 
-    private void runAutoTiles() {
+    public void runAutoTiles(String name) {
+        String currentName="";
         int autoundolayer = 1;
         autoed.clear();
         for (int i = 0; i < Tw * Th; i++) {
@@ -17187,6 +17255,9 @@ String texta="";
                 if (p.getName().equalsIgnoreCase("type")) {
                     am.setType(p.getValue());
                     continue;
+                } else if (p.getName().equalsIgnoreCase("name")) {
+                    currentName=p.getValue();
+                    continue;
                 } else if (p.getName().equalsIgnoreCase("source")) {
                     am.setSource(Integer.parseInt(p.getValue()));
                     continue;
@@ -17204,6 +17275,9 @@ String texta="";
                     continue;
                 } else if (p.getName().equalsIgnoreCase("against5")) {
                     am.setAgainst5(Integer.parseInt(p.getValue()));
+                    continue;
+                } else if (p.getName().equalsIgnoreCase("against6")) {
+                    am.setAgainst6(Integer.parseInt(p.getValue()));
                     continue;
                 } else if (p.getName().equalsIgnoreCase("beside")) {
                     am.setBeside(Integer.parseInt(p.getValue()));
@@ -17312,6 +17386,7 @@ String texta="";
 
             }//properties run
 
+            if (currentName!=name) continue;
             int repNum=1;
             switch (am.getType()) {
                 case "clearobjects":
@@ -17455,6 +17530,11 @@ String texta="";
                             if (am.getX().get(m) < 0 && k % Tw < tgt % Tw) continue;
                             if (am.getX().get(m) > 0 && k % Tw > tgt % Tw) continue;
                             if (tgt < 0 || tgt >= Tw * Th) continue;
+
+                            if (am.against!=0) {
+                                if (layers.get( am.getDestlayer() ).getStr().get( tgt ) != am.against)
+                                    continue;
+                            }
 
                             layers.get(am.getDestlayer()).getStr().set(tgt, (long) am.getZ().get(m));
                             try {
@@ -17783,7 +17863,7 @@ String texta="";
                 if (mode == "tile" || mode == "object") {
                     //msgbox("Longpress to run Auto tiles");
                     if (!softcue("refresh") && lockUI) return true;
-                    runAutoTiles();
+                    loadList( "macro" );
                     cue("refresh");
                     return true;
                 }
@@ -18129,158 +18209,307 @@ String texta="";
                         initialSelect = startSelect;
                     }
                     break;
-			/*
-		case "terraineditor":
-			if (ts.getTerrains().size()==0) return true;
-			tiles = ts.getTiles();
-			tile t=null;
-			int dst=num - ts.getFirstgid();
-			for (int n =0;n < tiles.size();n++)
-			{
-				if (tiles.get(n).getTileID()== dst){
-					t=tiles.get(n);
-					break;
-				}
-			}
 
-			if (t==null)
-			{
-				tile tt = new tile();
-				tt.setTileID(dst);
-				tiles.add(tt);
-				t=tiles.get(tiles.size()-1);
-			}
-			int[] cn=t.getTerrain();
 
-			int a=cn[0],b=cn[1],c=cn[2],d=cn[3];
-			int e =tilesets.get(selTsetID).getSelTerrain();
+                case "terraineditor":
 
-			//ada tile kosong
-			if ((a==-1) ||  (b==-1) || (c==-1) || (d==-1))
-			{
-				if (a!=e&&b!=e&&c!=e&&d!=e)
-				{
-					if (a==-1) a=e;
-					if (b==-1) b=e;
-					if (c==-1) c=e;
-					if (d==-1) d=e;
-					t.setTerrain(a,b,c,d);
-					return true;
-				}
-			}
+                    if (tapped(touch2, gui.tilesetsmid)) {
+                        tileset tt = tilesets.get( selTsetID );
+                        if (tt.getTerrains().size() > 0) {
+                            tt.setSelTerrain( tt.getSelTerrain() - 1 );
+                            if (tt.getSelTerrain() < 0) {
+                                tt.setSelTerrain( tt.getTerrains().size()-1 );
+                            }
+                        }
+                        return true;
+                    }
 
-			//kalau tidak ada yang kosong, takeover semua
-			if ((a>=0) && (b>=0) && (c>=0) && (d>=0))
-			{
-				if (!(a==e&&b==e&&c==e&&d==e))
-				{
-					a=e;b=e;c=e;d=e;
-					t.setTerrain(a,b,c,d);
-					return true;
-				}
+                    //laksan
+                    tileset ts = tilesets.get( selTsetID );
+                    ae = (int) touch3.x;
+                    ab = (int) touch3.y;
+                    Integer numf = ts.getFirstgid() + (ts.getWidth() * ((-ab + ts.getTileheight()) / ts.getTileheight()) + (ae / ts.getTilewidth()));
+                    int num = numf - ts.getFirstgid();
 
-			}
+                    int Tw=ts.getWidth();
+                    int Th=ts.getHeight();
+                    if (ts.getTerrains().size() == 0) return true;
 
-			//sisanya
-			if ((a==-1) && (b==-1) && (c==-1) && (d==-1))
-			{
-				a=e;b=e;c=e;d=e;
-				t.setTerrain(a,b,c,d);
-				return true;
-			}
+                    tiles = ts.getTiles();
+                    tile t = null;
+                    for (int n = 0; n < tiles.size(); n++) {
+                        if (tiles.get( n ).getTileID() == num) {
+                            t = tiles.get( n );
+                            break;
+                        }
+                    }
 
-			if ((a==e) && (b==e) && (c==e) && (d==e))
-			{
-				a=-1;b=-1;c=-1;d=e;
-				t.setTerrain(a,b,c,d);
-				return true;
-			}
+                    if (t == null) {
+                        tile tt = new tile();
+                        tt.setTileID( num );
+                        tiles.add( tt );
+                        t = tiles.get( tiles.size() - 1 );
+                    }
+                    int[] cn = t.getTerrain();
+                    int a = cn[0], b = cn[1], c = cn[2], d = cn[3];
+                    int e = tilesets.get( selTsetID ).getSelTerrain();
 
-			if ((a==-1) && (b==-1) && (c==-1) && (d==e))
-			{
-				a=-1;b=-1;c=e;d=e;
-				t.setTerrain(a,b,c,d);
-				return true;
-			}
-			if ((a==-1) && (b==-1) && (c==e) && (d==e))
-			{
-				a=-1;b=-1;c=e;d=-1;
-				t.setTerrain(a,b,c,d);
-				return true;
-			}
-			if ((a==-1) && (b==-1) && (c==e) && (d==-1))
-			{
-				a=e;b=-1;c=e;d=-1;
-				t.setTerrain(a,b,c,d);
-				return true;
-			}
-			if ((a==e) && (b==-1) && (c==e) && (d==-1))
-			{
-				a=e;b=-1;c=-1;d=-1;
-				t.setTerrain(a,b,c,d);
-				return true;
-			}
-			if ((a==e) && (b==-1) && (c==-1) && (d==-1))
-			{
-				a=e;b=e;c=-1;d=-1;
-				t.setTerrain(a,b,c,d);
-				return true;
-			}
-			if ((a==e) && (b==e) && (c==-1) && (d==-1))
-			{
-				a=-1;b=e;c=-1;d=-1;
-				t.setTerrain(a,b,c,d);
-				return true;
-			}
-			if ((a==-1) && (b==e) && (c==-1) && (d==-1))
-			{
-				a=-1;b=e;c=-1;d=e;
-				t.setTerrain(a,b,c,d);
-				return true;
-			}
-			if ((a==-1) && (b==e) && (c==-1) && (d==e))
-			{
-				a=e;b=e;c=e;d=-1;
-				t.setTerrain(a,b,c,d);
-				return true;
-			}
-			if ((a==e) && (b==e) && (c==e) && (d==-1))
-			{
-				a=e;b=e;c=-1;d=e;
-				t.setTerrain(a,b,c,d);
-				return true;
-			}
-			if ((a==e) && (b==e) && (c==-1) && (d==e))
-			{
-				a=-1;b=e;c=e;d=e;
-				t.setTerrain(a,b,c,d);
-				return true;
-			}
-			if ((a==-1) && (b==e) && (c==e) && (d==e))
-			{
-				a=e;b=-1;c=e;d=e;
-				t.setTerrain(a,b,c,d);
-				return true;
-			}
-			if ((a==e) && (b==-1) && (c==e) && (d==e))
-			{
-				a=e;b=-1;c=-1;d=e;
-				t.setTerrain(a,b,c,d);
-				return true;
-			}
-			if ((a==e) && (b==-1) && (c==-1) && (d==e))
-			{
-				a=-1;b=e;c=e;d=-1;
-				t.setTerrain(a,b,c,d);
-				return true;
-			}
-			if ((a==-1) && (b==e) && (c==e) && (d==-1))
-			{
-				a=-1;b=-1;c=-1;d=-1;
-				t.setTerrain(a,b,c,d);
-				return true;
-			}
-			*/
+                    if (a==-1 && b==-1 && c==-1 && d==e) {
+                    }else if (a==e && b==-1 && c==-1 && d==-1) {
+
+                    }else {
+                        if (!(a==-1 && b==-1 && c==-1 && d==-1)){
+                            t.setTerrain( -1, -1, -1, -1 );
+                            return true;
+                        }
+
+                    }
+
+                    if (a == -1 && b == -1 && c == -1 && d == -1) {
+                        for (int i = 0; i < 9; i++) {
+                            //gogo is for detecting index of surrounding tile
+                            int gogo = num;
+                            switch (i) {
+                                case 0:
+                                    if (num <= Tw || num % Tw == 0) continue;
+                                    gogo = num - Tw - 1;
+                                    break;
+                                case 1:
+                                    if (num <= Tw) continue;
+                                    gogo = num - Tw;
+                                    break;
+                                case 2:
+                                    if (num <= Tw || num % Tw == Tw - 1) continue;
+                                    gogo = num - Tw + 1;
+                                    break;
+                                case 3:
+                                    if (num <= 1 || num % Tw == 0) continue;
+                                    gogo = num - 1;
+                                    break;
+                                case 4:
+                                    if (num >= Tw * Th || num % Tw == Tw - 1) continue;
+                                    gogo = num + 1;
+                                    break;
+                                case 5:
+                                    if (num >= Tw * Th - Tw || num % Tw == 0) continue;
+                                    gogo = num + Tw - 1;
+                                    break;
+                                case 6:
+                                    if (num >= Tw * Th - Tw) continue;
+                                    gogo = num + Tw;
+                                    break;
+                                case 7:
+                                    if (num >= Tw * Th - Tw || num % Tw == Tw - 1) continue;
+                                    gogo = num + Tw + 1;
+                                    break;
+                                case 8:
+                                    gogo = num;
+                                    break;
+                            }
+
+
+                            tiles = ts.getTiles();
+                            t = null;
+                            for (int n = 0; n < tiles.size(); n++) {
+                                if (tiles.get( n ).getTileID() == gogo) {
+                                    t = tiles.get( n );
+                                    break;
+                                }
+                            }
+
+                            if (t == null) {
+                                tile tt = new tile();
+                                tt.setTileID( gogo );
+                                tiles.add( tt );
+                                t = tiles.get( tiles.size() - 1 );
+                            }
+                            cn = t.getTerrain();
+                            a = cn[0];
+                            b = cn[1];
+                            c = cn[2];
+                            d = cn[3];
+                            e = tilesets.get( selTsetID ).getSelTerrain();
+
+
+
+
+                                switch (i) {
+                                    case 0:
+                                        t.setTerrain( -1, -1, -1, e );
+                                        break;
+                                    case 1:
+                                        t.setTerrain( -1, -1, e, e );
+                                        break;
+                                    case 2:
+                                        t.setTerrain( -1, -1, e, -1 );
+                                        break;
+                                    case 3:
+                                        t.setTerrain( -1, e, -1, e );
+                                        break;
+                                    case 4:
+                                        t.setTerrain( e, -1, e, -1 );
+                                        break;
+                                    case 5:
+                                        t.setTerrain( -1, e, -1, -1 );
+                                        break;
+                                    case 6:
+                                        t.setTerrain( e, e, -1, -1 );
+                                        break;
+                                    case 7:
+                                        t.setTerrain( e, -1, -1, -1 );
+                                        break;
+                                    case 8:
+                                        t.setTerrain( e, e, e, e );
+                                        break;
+                                }
+
+                            }
+
+
+                        return true;
+                    }
+
+                    if (a == -1 && b == -1 && c == -1 && d == e) {
+                        for (int i = 0; i < 4; i++) {
+                            //gogo is for detecting index of surrounding tile
+                            int gogo = num;
+                            switch (i) {
+                                case 1:
+                                    if (num >= Tw * Th || num % Tw == Tw - 1) continue;
+                                    gogo = num + 1;
+                                    break;
+                                case 2:
+                                    if (num >= Tw * Th - Tw) continue;
+                                    gogo = num + Tw;
+                                    break;
+                                case 3:
+                                    if (num >= Tw * Th - Tw || num % Tw == Tw - 1) continue;
+                                    gogo = num + Tw + 1;
+                                    break;
+                                case 0:
+                                    gogo = num;
+                                    break;
+                            }
+
+
+                            tiles = ts.getTiles();
+                            t = null;
+                            for (int n = 0; n < tiles.size(); n++) {
+                                if (tiles.get( n ).getTileID() == gogo) {
+                                    t = tiles.get( n );
+                                    break;
+                                }
+                            }
+
+                            if (t == null) {
+                                tile tt = new tile();
+                                tt.setTileID( gogo );
+                                tiles.add( tt );
+                                t = tiles.get( tiles.size() - 1 );
+                            }
+                            cn = t.getTerrain();
+                            a = cn[0];
+                            b = cn[1];
+                            c = cn[2];
+                            d = cn[3];
+                            e = tilesets.get( selTsetID ).getSelTerrain();
+
+
+
+
+                            switch (i) {
+                                case 0:
+                                    t.setTerrain( -1, -1, -1, e );
+                                    break;
+                                case 1:
+                                    t.setTerrain( -1, -1, e, -1 );
+                                    break;
+                                case 2:
+                                    t.setTerrain( -1, e, -1, -1 );
+                                    break;
+                                case 3:
+                                    t.setTerrain( e, -1, -1, -1 );
+                                    break;
+                            }
+
+                        }
+
+
+                        return true;
+                    }
+
+                    if (a == e && b == -1 && c == -1 && d == -1) {
+                        for (int i = 0; i < 4; i++) {
+                            //gogo is for detecting index of surrounding tile
+                            int gogo = num;
+                            switch (i) {
+                                case 1:
+                                    if (num >= Tw * Th || num % Tw == Tw - 1) continue;
+                                    gogo = num + 1;
+                                    break;
+                                case 2:
+                                    if (num >= Tw * Th - Tw) continue;
+                                    gogo = num + Tw;
+                                    break;
+                                case 3:
+                                    if (num >= Tw * Th - Tw || num % Tw == Tw - 1) continue;
+                                    gogo = num + Tw + 1;
+                                    break;
+                                case 0:
+                                    gogo = num;
+                                    break;
+                            }
+
+
+                            tiles = ts.getTiles();
+                            t = null;
+                            for (int n = 0; n < tiles.size(); n++) {
+                                if (tiles.get( n ).getTileID() == gogo) {
+                                    t = tiles.get( n );
+                                    break;
+                                }
+                            }
+
+                            if (t == null) {
+                                tile tt = new tile();
+                                tt.setTileID( gogo );
+                                tiles.add( tt );
+                                t = tiles.get( tiles.size() - 1 );
+                            }
+                            cn = t.getTerrain();
+                            a = cn[0];
+                            b = cn[1];
+                            c = cn[2];
+                            d = cn[3];
+                            e = tilesets.get( selTsetID ).getSelTerrain();
+
+
+
+
+                            switch (i) {
+                                case 0:
+                                    t.setTerrain( e, -1, -1, -1 );
+                                    break;
+                                case 1:
+                                    t.setTerrain( -1, e, -1, -1 );
+                                    break;
+                                case 2:
+                                    t.setTerrain( -1, -1, e, -1 );
+                                    break;
+                                case 3:
+                                    t.setTerrain( -1, -1, -1, e );
+                                    break;
+                            }
+
+                        }
+
+
+                        return true;
+                    }
+
+
+
+
             }
 
 

@@ -5,12 +5,14 @@ import java.util.*;
 public class automate
 {
 	String type;
+	String name;
 	int source;
 	int against;
 	int against2;
 	int against3;
 	int against4;
 	int against5;
+	int against6;
 	int beside;
 	int sourcelayer;
 	int destlayer;
@@ -60,6 +62,16 @@ public class automate
 	public int getAgainst5()
 	{
 		return against5;
+	}
+
+	public void setAgainst6(int against6)
+	{
+		this.against6 = against6;
+	}
+
+	public int getAgainst6()
+	{
+		return against6;
 	}
 
 	public void setBeside(int beside)
