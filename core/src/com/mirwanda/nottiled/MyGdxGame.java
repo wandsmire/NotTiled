@@ -13519,7 +13519,7 @@ String texta="";
                 int heit=ts.getTerrains().size();
                 if (touch.y < ts.getTileheight() && touch.y > -ts.getTileheight() * heit + ts.getTileheight() && touch.x > 0 && touch.x < ts.getTilewidth() * 6) {
                     Integer aaaa = ts.getTerrains().get(((-ab + ts.getTileheight()) / ts.getTileheight())).getTile();
-                    Integer num = ts.getFirstgid()+ts.getTiles().get(aaaa).getTileID();
+                    Integer num = ts.getFirstgid()+aaaa;
                     curspr = num;
                     adjustLayer( ts );
                     addRecentTile( curspr );
