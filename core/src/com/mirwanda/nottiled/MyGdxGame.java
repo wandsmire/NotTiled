@@ -1794,8 +1794,8 @@ String texta="";
 
             if (pickAuto){ //auto list
                 for (int n = 0; n < tr.size(); n++) {
-                    tile t =tilesets.get( seltset ).getTiles().get( tr.get( n ).getTile());
-                    long ist = t.getTileID();//-tilesets.get(seltset).getFirstgid();
+                    //tile t =tilesets.get( seltset ).getTiles().get( tr.get( n ).getTile());
+                    long ist = tr.get(n).getTile();//t.getTileID();//-tilesets.get(seltset).getFirstgid();
                     int wd = ts.getWidth();
                     int xpos2 = (int) (ist) % wd;
                     int ypos2 = (int) (ist) / wd;
@@ -14590,7 +14590,7 @@ String texta="";
                         //this loop detect the surrounding of a tile
 
                         Terrainify(num, t, new int[]{0,1,2,3,4,5,6,7},false);
-                        log(numanuma.size()+"");
+                        //log(numanuma.size()+"");
 
                         while(!numanuma.isEmpty()){
                             int gogo=0;
@@ -14788,7 +14788,7 @@ String texta="";
                 AutoTile myAT = new AutoTile(cond);
                 historyA.add(cond);
                 ATGraph.addAT(myAT);
-                log(myAT.name+"");
+                //log(myAT.name+"");
             }
         }
 
@@ -14800,7 +14800,7 @@ String texta="";
                 if (!history.contains( newHist )){
                     AutoTile AT1= ATGraph.getAT( (int) newHist.x );
                     AutoTile AT2= ATGraph.getAT( (int) newHist.y );
-                    log(newHist.x+"-----"+newHist.y);
+                    //log(newHist.x+"-----"+newHist.y); cool comment
                     ATGraph.connectAT(AT1,AT2);
                     ATGraph.connectAT(AT2,AT1);
                     history.add( newHist );
