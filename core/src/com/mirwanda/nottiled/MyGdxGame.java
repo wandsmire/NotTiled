@@ -5668,6 +5668,7 @@ String texta="";
         FileHandle from = Gdx.files.external(curdir + "/" + curfile);
         from.copyTo(Gdx.files.external(rwpath+ "/maps"));
 
+        createRWthumbnail( curfile.substring(0, curfile.length() - 4) + "_map" );
         FileHandle from2 = Gdx.files.external(curdir + "/" + curfile.substring(0, curfile.length() - 4) + "_map.png");
         if (from2.exists())
             from2.copyTo(Gdx.files.external(rwpath+ "/maps"));
@@ -6488,6 +6489,296 @@ String texta="";
         backToMap();
         msgbox(z.exportfinished);
 
+    }
+
+    private void createRWthumbnail(String filenamenya) {
+        try {
+            Gdx.gl.glEnable(GL20.GL_BLEND);
+            int Tsw=1;
+            int Tsh=1;
+            Pixmap pm2 = new Pixmap(Tw, Th, Pixmap.Format.RGBA8888);
+            Pixmap pp = pixmapfromtexture( txresources,"ff00ff" );
+            Pixmap pn = pixmapfromtexture( txnumbers,"ff0099" );
+
+            int Tz = Math.max( Tw,Th );
+            tilesetsize = tilesets.size();
+            if (tilesetsize > 0 && !loadingfile) {
+                int offsetx = 0, offsety = 0;
+                int jon = 0, joni = 0;
+                long ini;
+                int total = Tw * Th;
+                int startx = 0, stopx = Tw;
+                int starty = 0, stopy = Th;
+
+                int aa = 0, bb = 0, cc = 0, dd = 0;
+                switch (renderorder) {
+                    case "right-down":
+                        aa = starty;
+                        bb = stopy;
+                        cc = startx;
+                        dd = stopx;
+                        break;
+                    case "left-down":
+                        aa = starty;
+                        bb = stopy;
+                        cc = -stopx + 1;
+                        dd = -startx + 1;
+                        break;
+                    case "right-up":
+                        aa = -stopy + 1;
+                        bb = -starty + 1;
+                        cc = startx;
+                        dd = stopx;
+                        break;
+                    case "left-up":
+                        aa = -stopy + 1;
+                        bb = -starty + 1;
+                        cc = -stopx + 1;
+                        dd = -startx + 1;
+                        break;
+                }
+
+
+                String flag;
+                Long mm = null;
+                flag = "00";
+
+                for (int jo = 0; jo < layers.size(); jo++) {
+                    if (layers.get(jo).getType() == layer.Type.TILE && layers.get(jo).isVisible()) {
+                        java.util.List<drawer> drawers = new ArrayList<drawer>();
+                        drawers.clear();
+                        java.util.List<drawer> drawers2 = new ArrayList<drawer>();
+                        drawers2.clear();
+                        java.util.List<drawer> drawers3 = new ArrayList<drawer>();
+                        drawers3.clear();
+                        for (int a = aa; a < bb; a++) {
+                            for (int b = cc; b < dd; b++) {
+                                //position=(Math.abs(a)*Tw)+Math.abs(b);
+
+                                position = (abs(a) * Tw) + abs(b);
+                                ini = layers.get(jo).getStr().get(position);
+                                initset = layers.get(jo).getTset().get(position);
+                                if (initset == -1) continue;
+                                if (ini == 0) continue;//dont draw empty, amazing performance boost
+                                xpos = position % Tw;
+                                ypos = position / Tw;
+                                if (orientation.equalsIgnoreCase("isometric")) {
+                                   // offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
+                                    //offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
+                                }
+
+                                mm = ini;
+                                flag = "00";
+                                if (ini > total) {
+                                    hex = Long.toHexString(ini);
+                                    trailer = "00000000" + hex;
+                                    hex = trailer.substring(trailer.length() - 8);
+                                    flag = hex.substring(0, 2);
+                                    mm = Long.decode("#00" + hex.substring(2, 8));
+                                }
+                                tiles = tilesets.get(initset).getTiles();
+                                tilesize = tiles.size();
+
+                                if (tilesize > 0) {
+                                    for (int n = 0; n < tilesize; n++) {
+                                        if (tiles.get(n).getAnimation().size() > 0) {
+                                            if (mm == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
+                                                mm = (long) tiles.get(n).getActiveFrameID() + tilesets.get(initset).getFirstgid();
+                                            }
+                                        }
+                                    }
+                                }
+
+                                sprX = (int) (mm - tilesets.get(initset).getFirstgid()) % (tilesets.get(initset).getWidth());
+                                sprY = (int) (mm - tilesets.get(initset).getFirstgid()) / (tilesets.get(initset).getWidth());
+                                margin = tilesets.get(initset).getMargin();
+                                spacing = tilesets.get(initset).getSpacing();
+                                Tswa = tilesets.get(initset).getTilewidth();
+                                Tsha = tilesets.get(initset).getTileheight();
+
+                                tempdrawer = new drawer();
+                                tempdrawer.mm = mm;
+                                int Tswad = 0;
+                                int Tshad = 0;
+
+                                Tswad = Tswa;
+                                Tshad = Tsha;
+
+                                switch (flag) {
+                                    case "20"://diagonal flip
+                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, true);
+                                        break;
+                                    case "40"://flipy
+                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
+                                        break;
+                                    case "60"://270 degrees clockwise
+                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        break;
+                                    case "80"://flipx
+                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                        break;
+                                    case "a0"://90 degress cw
+                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        break;
+                                    case "c0"://180 degrees cw
+                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        break;
+                                    case "00":
+                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        break;
+                                }
+                                drawers.add(tempdrawer);
+
+                                ///////////////////
+                                if (layers.get(jo).getName().equalsIgnoreCase("Units")) {
+
+
+                                        mm = layers.get(jo).getStr().get(position);
+                                        int mmo = layers.get(jo).getTset().get(position);
+                                        if (mmo==-1) continue;
+                                        int xpos = position % Tw;
+                                        int ypos = position / Tw;
+                                        int maex = -1, maye = -1;
+                                        for (tile t:tilesets.get(mmo).getTiles()){
+                                            //log(mm+"P");
+
+                                            if (t.getTileID()+tilesets.get(mmo).getFirstgid()==mm){
+                                                boolean isCC=false;
+                                                int team=-1;
+                                                for (property p: t.getProperties()){
+                                                    if (p.getName().equalsIgnoreCase( "unit" ) && p.getValue().equalsIgnoreCase( "commandCenter" ) ){
+                                                        isCC=true;
+                                                        //log(isCC+"P");
+                                                    }
+                                                    if (p.getName().equalsIgnoreCase( "team" )){
+                                                        team=Integer.parseInt( p.getValue()  );
+                                                    }
+                                                }
+                                                if (!isCC) continue;
+                                                //log(isCC+"");
+                                                switch (team){
+                                                    case 0:
+                                                        maex = 0;
+                                                        maye = 0;
+                                                        break;
+                                                    case 1:
+                                                        maex = 1 * 56;
+                                                        maye = 0;
+                                                        break;
+                                                    case 2:
+                                                        maex = 2 * 56;
+                                                        maye = 0;
+                                                        break;
+                                                    case 3:
+                                                        maex = 3 * 56;
+                                                        maye = 0;
+                                                        break;
+                                                    case 4:
+                                                        maex = 4 * 56;
+                                                        maye = 0;
+                                                        break;
+                                                    case 5:
+                                                        maex = 0;
+                                                        maye = 56;
+                                                        break;
+                                                    case 6:
+                                                        maex = 1 * 56;
+                                                        maye = 56;
+                                                        break;
+                                                    case 7:
+                                                        maex = 2 * 56;
+                                                        maye = 56;
+                                                        break;
+                                                    case 8:
+                                                        maex = 3 * 56;
+                                                        maye = 56;
+                                                        break;
+                                                    case 9:
+                                                        maex = 4 * 56;
+                                                        maye = 56;
+                                                        break;
+
+                                                }
+                                            }
+                                        }
+
+                                        if (maex != -1) {
+                                            drawer tempdrawer2 = new drawer();
+                                            int widthy = 56;
+                                            tempdrawer2.setdrawer( 0, xpos-(Tz/12f), ypos-(Tz/12f), maex, maye, widthy, widthy, 1f, 1f, 0f, maex, maye, 55, 55, false, false );
+                                            drawers3.add(tempdrawer2);
+                                        }
+
+                                }//if
+
+                                ///////////////////
+                                if (layers.get(jo).getName().equalsIgnoreCase("Items")) {
+
+
+                                    mm = layers.get(jo).getStr().get( position );
+                                    int mmo = layers.get(jo).getTset().get( position );
+                                    if (mmo == -1) continue;
+                                    int xpos = position % Tw;
+                                    int ypos = position / Tw;
+                                    boolean isPool = false;
+                                    for (tile t : tilesets.get( mmo ).getTiles()) {
+
+                                        if (t.getTileID() + tilesets.get( mmo ).getFirstgid() == mm) {
+
+                                            for (property p : t.getProperties()) {
+                                                if (p.getName().equalsIgnoreCase( "res_pool" )) {
+                                                    isPool = true;
+                                                    //Gdx.app.log( "",isPool+"" );
+                                                }
+                                            }
+                                            if (!isPool) continue;
+                                        }
+                                    }
+                                    if (isPool) {
+                                        drawer tempdrawer = new drawer();
+                                        int widthy = 32;
+                                        tempdrawer.setdrawer( 0, xpos-(Tz/20f), ypos-(Tz/20f), 0, 0, widthy, widthy, 1f, 1f, 0f, 0, 0, 32, 32, false, false );
+                                        drawers2.add( tempdrawer );
+                                        //tempdrawer.draw( batch, txresources );
+                                    }
+
+                                }
+
+
+
+                            } //for  b
+                        }//for a
+
+                        java.util.Collections.sort(drawers);//fps hogger
+
+                        for (drawer drawer : drawers) {
+                            drawer.draw(pm2, tilesets, Tsw, Tsh);
+                        }
+
+                        for (drawer drawer : drawers2) {
+                            drawer.draw(pm2, pp, (int) (Tz/10f), (int) (Tz/10f));
+                        }
+
+                        for (drawer drawer : drawers3) {
+                            drawer.draw(pm2, pn, (int) (Tz/6f), (int) (Tz/6f));
+                        }
+
+                    }
+                }//for jo
+
+
+            }//no tileswt
+
+
+            //
+            FileHandle fh = Gdx.files.external(curdir + "/" + filenamenya + ".png");
+            PixmapIO.writePNG(fh, pm2);
+            backToMap();
+            status(z.exportfinished,3);
+        } catch (Exception e) {
+            msgbox(z.error);
+            ErrorBung(e, "errorlog.txt");
+        }
     }
 
     private void exporttopng(String filenamenya) {
@@ -17962,7 +18253,7 @@ String texta="";
 
         if (kartu == "world") {
             //autotile
-            if (tapped(touch2, gui.autotile)) {
+            if (tapped(touch2, gui.autotile) && autotiles.size()>0) {
                 if (mode == "tile" || mode == "object") {
                     //msgbox("Longpress to run Auto tiles");
                     if (!softcue("refresh") && lockUI) return true;

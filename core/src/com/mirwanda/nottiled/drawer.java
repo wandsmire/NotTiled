@@ -96,6 +96,19 @@ public class drawer implements Comparable
 			//batch.draw(tilesets.get(initset).getTexture(), x, y, originX, originY, width, height, scaleX, scaleY, rotation, srcX, srcY, srcWidth, srcHeight, flipX, flipY);
 		}
 	}
+
+	public void draw(Pixmap pm2, Pixmap p,int Tsw,int Tsh)
+	{
+
+			for (int xa = 0; xa < Tsw; xa++) {
+				for (int ya = 0; ya < Tsh; ya++) {
+					Color c =  new Color(p.getPixel((int)((float)(xa/(float)Tsw)*width+srcX),(int)((float)(ya/(float)Tsw)*height+srcY)));
+					pm2.drawPixel((int)x+xa,(int)y+ya,Color.rgba8888(c));
+				}
+			}
+			//batch.draw(tilesets.get(initset).getTexture(), x, y, originX, originY, width, height, scaleX, scaleY, rotation, srcX, srcY, srcWidth, srcHeight, flipX, flipY);
+
+	}
 	
 	
 	public void draw(SpriteBatch batch,Texture texture)
