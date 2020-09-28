@@ -1526,12 +1526,12 @@ String texta="";
                 }
             }
             if (kartu == "world") {
-                if (cam.zoom < 2) {
+                if (cam.zoom < 100) {
                     cam.zoom = cam.zoom * 1.1f;
                     cam.update();
                 }
             } else if (kartu == "tile") {
-                if (tilecam.zoom < 2) {
+                if (tilecam.zoom < 100) {
                     tilecam.zoom = tilecam.zoom * 1.1f;
                     tilecam.update();
                 }
@@ -1549,12 +1549,12 @@ String texta="";
                 }
             }
             if (kartu == "world") {
-                if (cam.zoom > 0.000001) {
+                if (cam.zoom > 0.01) {
                     cam.zoom = cam.zoom / 1.1f;
                     cam.update();
                 }
             } else if (kartu == "tile") {
-                if (tilecam.zoom > 0.000001) {
+                if (tilecam.zoom > 0.01) {
                     tilecam.zoom = tilecam.zoom / 1.1f;
                     tilecam.update();
                 }
@@ -3729,7 +3729,7 @@ String texta="";
     }
 
     public void drawWorldUI() {
-
+        //status(cam.zoom+"",4);
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Vector3 mouse = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
