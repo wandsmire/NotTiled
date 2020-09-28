@@ -174,6 +174,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     layer cliplayer = new layer();
     int clipsource =0;
     java.util.List<tileset> tilesets = new ArrayList<tileset>();
+    java.util.List<tileset> tilesets2 = new ArrayList<tileset>();
     java.util.List<drawer> drawers = new ArrayList<drawer>();
     java.util.List<autotile> autotiles = new ArrayList<autotile>();
     java.util.List<TextField> tf = new ArrayList<TextField>();
@@ -4683,7 +4684,7 @@ String texta="";
 
     }
 
-    private void showtsetselection() {
+    private void showtsetselection(final java.util.List<tileset> tset) {
         bigman = new Table();
         bigman.setFillParent(true);
         Table tsetsel = new Table();
@@ -4695,10 +4696,10 @@ String texta="";
         cball.setChecked(true);
         cball.align(Align.left);
         tsetsel.add(cball).width(btnx).left().align(Align.left).row();
-        newcb = new CheckBox[tilesets.size()];
+        newcb = new CheckBox[tset.size()];
 
-        for (int i = 0; i < tilesets.size(); i++) {
-            newcb[i] = new CheckBox(tilesets.get(i).getName(), skin);
+        for (int i = 0; i < tset.size(); i++) {
+            newcb[i] = new CheckBox(tset.get(i).getName(), skin);
             newcb[i].setChecked(true);
             newcb[i].align(Align.left);
             tsetsel.add(newcb[i]).width(btnx).left().align(Align.left).row();
@@ -4708,11 +4709,19 @@ String texta="";
         okey.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                for (int i = tilesets.size() - 1; i >= 0; i--) {
+                for (int i = tset.size() - 1; i >= 0; i--) {
                     if (!newcb[i].isChecked()) {
-                        tilesets.remove(i);
+                        tset.remove(i);
                     }
                 }
+
+                if (tset ==tilesets2){
+                    for (tileset t: tilesets2){
+                        t.setFirstgid( requestGid() );
+                        tilesets.add(t);
+                    }
+                }
+                CacheAllTset();
                 backToMap();
                 cue("applytemplate");
             }
@@ -4723,15 +4732,15 @@ String texta="";
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 if (cball.isChecked()) {
-                    for (int i = 0; i < tilesets.size(); i++) {
+                    for (int i = 0; i < tset.size(); i++) {
                         newcb[i].setChecked(true);
                     }
                 } else {
-                    for (int i = 0; i < tilesets.size(); i++) {
+                    for (int i = 0; i < tset.size(); i++) {
                         newcb[i].setChecked(false);
                     }
                 }
-                CacheAllTset();
+                //CacheAllTset();
             }
         });
 
@@ -5089,7 +5098,7 @@ String texta="";
                         fImportHeight.setText(Tsh + "");
                     }
                     if (thefile.file().getName().toLowerCase().contains(".tsx")) {
-                        loadtsx(openedfile);
+                        loadtsx(openedfile, tilesets, curdir);
                     } else {
                         addImageTset(thefile);
                     }
@@ -11303,7 +11312,7 @@ String texta="";
 
                     switch (filehandles[i].extension().toLowerCase()) {
                         case "tsx":
-                            loadtsx(filehandles[i].path());
+                            loadtsx(filehandles[i].path(), tilesets, curdir);
                             break;
                         case "png":
                         case "jpg":
@@ -11327,7 +11336,7 @@ String texta="";
             case "seltsx":
                 errors = "";
                 loadingfile = true;
-                loadtsx(openedfile);
+                loadtsx(openedfile, tilesets, curdir);
 
                 saiz = tilesets.size();
                 srr = new String[saiz];
@@ -11351,12 +11360,18 @@ String texta="";
                 break;
             case "quickaddtset":
                 thefile = file;
-                fImportWidth.setText(Tsw + "");
-                fImportHeight.setText(Tsh + "");
-                cImportEmbed.setChecked(false);
-                gotoStage(tImport);
-                cue("import");
-                resetcam(false);
+                Gdx.app.log("",file.extension()+"||||"+file.path());
+                if (file.extension().equalsIgnoreCase( "tmx" )){
+                    extractTSET( file.path() );
+                    showtsetselection( tilesets2 );
+                }else {
+                    fImportWidth.setText( Tsw + "" );
+                    fImportHeight.setText( Tsh + "" );
+                    cImportEmbed.setChecked( false );
+                    gotoStage( tImport );
+                    cue( "import" );
+                    resetcam( false );
+                }
                 return;
 
             case "addtset":
@@ -12149,7 +12164,7 @@ String texta="";
 
                         loadingfile = false;
 
-                        showtsetselection();
+                        showtsetselection(tilesets);
                         saveMap(curdir + "/" + curfile);
                         cacheTiles();
                         uicam.zoom = 0.5f;
@@ -12327,7 +12342,7 @@ String texta="";
                                 }
                                 tempdir = source;
 
-                                loadtsx(foredir + "/" + tempdir);
+                                loadtsx(foredir + "/" + tempdir,tilesets, curdir);
                                 loadingfile = true;
                             }
                         }
@@ -12873,6 +12888,370 @@ String texta="";
             logNet( "[C] Opening new map..." );
         }
     }
+    String tempcurdir;
+    public void extractTSET(String filepath) {
+
+        errors = "";
+        try {
+            xmlFactoryObject = XmlPullParserFactory.newInstance();
+            myParser = xmlFactoryObject.newPullParser();
+            FileHandle file;
+            file = Gdx.files.external(filepath);
+            String path = file.parent().path();
+
+            if (!file.exists())
+            {
+                file = Gdx.files.absolute(filepath);
+//                path = file.parent().path().substring(Gdx.files.getExternalStoragePath().length());
+                path = file.parent().path();
+            }
+            FileInputStream stream = new FileInputStream(file.file());
+            Gdx.app.log("",path);
+
+            tempcurdir = path;
+            //curfile = file.file().getName();
+            myParser.setInput(stream, null);
+            //undolayer.clear();
+            //redolayer.clear();
+            //cliplayer =null;clipsource=0;
+            int event = myParser.getEventType();
+            //background = null;
+            //encoding = "";
+            tile tempTile = new tile();
+            obj tempobj = new obj();
+            String isi = "";
+            String prName = "";
+            String prValue = "";
+            int lastPid = 0;
+            //selgroup = -1;
+            //selLayer = 0;
+            templastID = 1;
+            //seltset = 0;
+            String owner = "";
+            //layers.clear();
+            tilesets2.clear();
+            //properties.clear();
+            //int curgroupid = -1;
+            //int curobjid = -1;
+            curid = 0;
+            while (event != XmlPullParser.END_DOCUMENT) {
+                String name = myParser.getName();
+
+
+                switch (event) {
+                    case XmlPullParser.START_TAG:
+
+                        if (name.equals("map")) { }
+                        if (name.equals("layer")) { }
+                        if (name.equals("terrain")) {
+                            terrain tr = new terrain();
+                            tr.setName(myParser.getAttributeValue(null, "name"));
+                            tr.setTile(Integer.parseInt(myParser.getAttributeValue(null, "tile")));
+                            tempTset.getTerrains().add(tr);
+                        }
+
+
+                        if (name.equals("data")) { }
+                        if (name.equals("tileset")) {
+                            tempTset = new tileset();
+                            String source = "";
+
+                            source = myParser.getAttributeValue(null, "source");
+
+                            owner = "tileset";
+                            alreadyloaded = false;
+
+                            if (myParser.getAttributeValue(null, "firstgid") != null) {
+                                tempTset.setFirstgid(Integer.parseInt(myParser.getAttributeValue(null, "firstgid")));
+                            } else {
+                                tempTset.setFirstgid(requestGid());
+                            }
+                            if (source == null) {
+
+                                tempTset.setName(myParser.getAttributeValue(null, "name"));
+                                if (myParser.getAttributeValue(null, "columns") != null) {
+                                    tempTset.setColumns(Integer.parseInt(myParser.getAttributeValue(null, "columns")));
+                                    tempTset.setTilecount(Integer.parseInt(myParser.getAttributeValue(null, "tilecount")));
+                                    tempTset.setWidth(tempTset.getColumns());
+                                    tempTset.setHeight(tempTset.getTilecount() / tempTset.getColumns());
+                                }
+
+                                if (myParser.getAttributeValue(null, "margin") != null)
+                                    tempTset.setMargin(Integer.parseInt(myParser.getAttributeValue(null, "margin")));
+                                if (myParser.getAttributeValue(null, "spacing") != null)
+                                    tempTset.setSpacing(Integer.parseInt(myParser.getAttributeValue(null, "spacing")));
+                                if (myParser.getAttributeValue(null, "tilewidth") != null) {
+                                    tempTset.setTilewidth(Integer.parseInt(myParser.getAttributeValue(null, "tilewidth")));
+                                } else {
+                                    tempTset.setTilewidth(Tsw);
+                                }
+                                if (myParser.getAttributeValue(null, "tileheight") != null) {
+                                    tempTset.setTileheight(Integer.parseInt(myParser.getAttributeValue(null, "tileheight")));
+                                } else {
+                                    tempTset.setTileheight(Tsh);
+                                }
+
+                                tilesets2.add(tempTset);
+                            } else {
+
+
+                                String foredir, tempdir;
+                                foredir = tempcurdir;
+                                if (foredir.substring(foredir.length() - 1).equalsIgnoreCase("/")) {
+                                    foredir = foredir.substring(0, foredir.length() - 1);
+                                }
+                                tempdir = source;
+
+                                loadtsx(foredir + "/" + tempdir,tilesets2, tempcurdir);
+                                //loadingfile = true;
+                            }
+                        }
+
+                        if (name.equals("image")) {
+                            if (owner.equalsIgnoreCase("tileset")) {
+                                String internalpath = "rusted_warfare/assets/tilesets";
+                                tempTset = tilesets2.get(tilesets2.size() - 1);
+                                //if (myParser.getAttributeValue(null, "trans")!=null) {
+                                tempTset.setTrans(myParser.getAttributeValue(null, "trans"));
+                                //}
+                                if (myParser.getAttributeValue(null, "source") != null) {
+                                    tempTset.setSource(myParser.getAttributeValue(null, "source"));
+                                }
+
+
+                                if (!alreadyloaded) {
+
+
+                                    String foredirint, foredirext, foredir, tempdiro, tempdiri, combo;
+                                    foredir = curdir;//should be tsxpath to folloe tsx pathing but whatever!!
+                                    if (foredir!="") {
+                                        if (foredir.substring(foredir.length() - 1).equalsIgnoreCase("/")) {
+                                            foredir = foredir.substring(0, foredir.length() - 1);
+                                        }
+                                    }
+                                    tempdiro = tempTset.getSource();
+                                    tempdiri = tempTset.getSource();
+
+                                    foredirint = internalpath;
+                                    foredirext = tempcurdir;
+
+
+                                    while (tempdiro.substring(0, 3).equalsIgnoreCase("../")) {
+                                        tempdiro = tempdiro.substring(3);
+                                        if (foredirext.lastIndexOf("/")==-1){
+                                            foredirext = "";
+
+                                        }else
+                                        {
+                                            foredirext = foredirext.substring(0, foredirext.lastIndexOf("/"));
+                                        }
+                                    }
+
+
+                                    if (tempdiri.lastIndexOf("/", tempdiri.lastIndexOf("/") - 1) != -1) {
+                                        tempdiri = tempdiri.substring(tempdiri.lastIndexOf("/", tempdiri.lastIndexOf("/") - 1));
+                                        tempdiri = tempdiri.replace("tilesets/", "");
+                                    }
+
+                                    FileHandle filehand = Gdx.files.internal(foredirint + "/" + tempdiri);
+
+                                    if (!filehand.exists()) {
+                                        filehand = Gdx.files.external(foredirext + "/" + tempdiro);
+                                        if (!filehand.exists()) {
+                                            filehand = Gdx.files.internal("empty.jpeg");
+                                        }
+                                    }
+
+                                    try {
+
+                                        tempTset.setTexture(new Texture(filehand));
+                                        tempTset.setPixmap(pixmapfromtexture(tempTset.getTexture(), tempTset.getTrans()));
+                                        if (tempTset.getTrans() != null) {
+                                            tempTset.setTexture(chromaKey(tempTset.getTexture(), tempTset.getTrans()));
+                                        }
+                                        if (myParser.getAttributeValue(null, "width") != null) {
+                                            tempTset.setOriginalwidth(Integer.parseInt(myParser.getAttributeValue(null, "width")));
+                                            tempTset.setOriginalheight(Integer.parseInt(myParser.getAttributeValue(null, "height")));
+                                        } else {
+
+                                            SimpleImageInfo sii;
+                                            sii = new SimpleImageInfo(filehand.read());
+                                            tempTset.setOriginalwidth(sii.getWidth());
+                                            tempTset.setOriginalheight(sii.getHeight());
+                                        }
+                                    } catch (Exception e) {
+                                        tempTset.setOriginalwidth(0);
+                                        tempTset.setOriginalheight(0);
+                                        errors += "Not Found: " + tempdiro + "\n" + e;
+                                    }
+                                }
+                                if (tempTset.getColumns() == 0) {
+                                    tempTset.setColumns((tempTset.getOriginalwidth() - tempTset.getMargin() * 2 + tempTset.getSpacing()) / (tempTset.getTilewidth() + tempTset.getSpacing()));
+                                    tempTset.setWidth(tempTset.getColumns());
+                                    tempTset.setHeight((tempTset.getOriginalheight() - tempTset.getMargin() * 2 + tempTset.getSpacing()) / (tempTset.getTileheight() + tempTset.getSpacing()));
+                                    tempTset.setTilecount(tempTset.getWidth() * tempTset.getHeight());
+                                }
+
+                                templastID += tempTset.getWidth() * tempTset.getHeight();
+                            }
+
+                        }
+
+                        if (name.equals("imagelayer")) {
+                        }
+
+                        if (name.equals("objectgroup")) {
+                        }
+
+                        if (name.equals("tile")) {
+                            if (owner.equalsIgnoreCase("tileset")) {
+                                tempTile = new tile();
+                                tempTile.setTileID(Integer.parseInt(myParser.getAttributeValue(null, "id")));
+                                if (myParser.getAttributeValue(null, "terrain") != null) {
+                                    tempTile.setTerrain(myParser.getAttributeValue(null, "terrain"));
+                                }
+
+                            }
+                            oldowner = owner;
+                            owner = "tile";
+                        }
+                        if (name.equals("frame")) {
+
+                            tempTile.getAnimation().add(new frame(Integer.parseInt(myParser.getAttributeValue(null, "tileid")), Integer.parseInt(myParser.getAttributeValue(null, "duration"))));
+
+
+                        }
+                        if (name.equals("property")) {
+
+                            String n = "", t = "", v = "";
+                            isi = "";
+                            if (myParser.getAttributeValue(null, "name") != null) {
+                                n = myParser.getAttributeValue(null, "name");
+                            }
+                            if (myParser.getAttributeValue(null, "type") != null) {
+                                t = myParser.getAttributeValue(null, "type");
+                            }
+                            if (myParser.getAttributeValue(null, "value") != null) {
+                                v = myParser.getAttributeValue(null, "value");
+                            }
+                            tempe = new property(n, t, v);
+                            isi = "";
+
+                        }
+                        if (name.equals("object")) { }
+                        if (name.equals("polyline")) {
+                        }
+                        if (name.equals("polygon")) {
+                        }
+
+                        if (name.equals("ellipse")) {
+                        }
+                        if (name.equals("point")) {
+                        }
+                        if (name.equals("text")) {
+                        }
+                        break;
+                    case XmlPullParser.TEXT:
+                        isi += myParser.getText();
+
+
+                        break;
+                    case XmlPullParser.END_TAG:
+                        if (name.equals("tile")) {
+                            if (oldowner.equalsIgnoreCase("tileset")) {
+                                tempTset.getTiles().add(tempTile);
+
+                            }
+                            owner = oldowner;
+                            oldowner = "";
+                        }
+                        if (name.equals("tileset")) {
+
+                            tempTset = null;
+                        }
+                        if (name.equals("text")) {
+                        }
+                        if (name.equals("property")) {
+                            String data = isi.replace("\n", "").trim();
+                            String rawe = isi.trim();
+                            if (tempe.getValue() != "") {
+                                data = tempe.getValue();
+                            } else {
+                                if (data != "") tempe.setValue(rawe);
+                            }
+
+                            if (tempe.getName().equalsIgnoreCase("embedded_png")) {
+
+                                String foredir = "", tempdir = "", combo = "";
+                                try {
+
+                                    Texture bucket;
+                                    String base64 = data;
+                                    byte[] decodedBytes = Base64Coder.decode(base64);
+                                    bucket = new Texture(new Pixmap(decodedBytes, 0, decodedBytes.length));
+
+
+                                    tempTset.setTexture(bucket);
+
+                                    if (tempTset.getTrans() != null) {
+                                        tempTset.setTexture(chromaKey(tempTset.getTexture(), tempTset.getTrans()));
+                                    }
+
+                                    tempTset.setPixmap(pixmapfromtexture(bucket, tempTset.getTrans()));
+
+
+                                    tempTset.setOriginalwidth(bucket.getWidth());
+                                    tempTset.setOriginalheight(bucket.getHeight());
+                                    if (tempTset.getColumns() == 0) {
+                                        tempTset.setColumns((tempTset.getOriginalwidth() - tempTset.getMargin() * 2 + tempTset.getSpacing()) / (tempTset.getTilewidth() + tempTset.getSpacing()));
+                                        tempTset.setWidth(tempTset.getColumns());
+                                        tempTset.setHeight((tempTset.getOriginalheight() - tempTset.getMargin() * 2 + tempTset.getSpacing()) / (tempTset.getTileheight() + tempTset.getSpacing()));
+                                        tempTset.setTilecount(tempTset.getWidth() * tempTset.getHeight());
+                                    }
+
+                                    templastID += tempTset.getWidth() * tempTset.getHeight();
+
+                                    alreadyloaded = true;
+                                } catch (Exception e) {
+                                    ErrorBung(e, "okok.txt");
+                                }
+
+
+                            }
+
+                            switch (owner) {
+                                case "tileset":
+                                    tempTset.getProperties().add(tempe);
+                                    break;
+                                case "tile":
+                                    tempTile.getProperties().add(tempe);
+                                    break;
+                            }
+
+                        }
+
+                        if (name.equals("data")) {
+                       }
+
+
+                        break;
+                }
+                event = myParser.next();
+            }
+
+            //uicam.position.set(120,-200,0);//center
+
+            //prefs.putString("lof", file.path());
+            //prefs.flush();
+
+            kartu = "world";
+            mode = "tile";
+            status(errors, 10);
+
+        } catch (Exception e) {
+            status("Error opening file.", 500);
+        }
+    }
 
     public void resetMinimap() {
 
@@ -13010,9 +13389,9 @@ String texta="";
         return 1;
     }
 
-    public void loadtsx(String source) {
+    public void loadtsx(String source, java.util.List<tileset> tilesets, String curdir){
         //msgbox(source);
-        loadingfile = true;
+        //loadingfile = true;
         String tsxpath = "";
         String owner = "";
         String isi = "";
@@ -13726,7 +14105,7 @@ String texta="";
 
                 if (tapped(touch2, gui.pickertool1)) {
                     pickAuto=false;
-                    FileDialog(z.selectfile, "quickaddtset", "file", new String[]{".tsx", ".png", ".jpg", ".jpeg", ".bmp", ".gif"}, nullTable);
+                    FileDialog(z.selectfile, "quickaddtset", "file", new String[]{".tmx",".tsx", ".png", ".jpg", ".jpeg", ".bmp", ".gif"}, nullTable);
                     return true;
                 }
                 //tile management
@@ -13842,7 +14221,7 @@ String texta="";
 
 
             } else {
-                FileDialog(z.selectfile, "quickaddtset", "file", new String[]{".tsx", ".png", ".jpg", ".jpeg", ".bmp", ".gif"}, nullTable);
+                FileDialog(z.selectfile, "quickaddtset", "file", new String[]{".tmx",".tsx", ".png", ".jpg", ".jpeg", ".bmp", ".gif"}, nullTable);
                 cue("addtileset");
             }
             return false;
