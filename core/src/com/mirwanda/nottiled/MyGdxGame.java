@@ -7180,6 +7180,31 @@ String texta="";
                 int newtset = layers.get(selLayer).getTset().get(i);
                 int layer = selLayer;
 
+                if (newtset!=-1) {
+                    for (tile t : tilesets.get( newtset ).getTiles()) {
+                        if (t.getTileID() + tilesets.get( newtset ).getFirstgid() == to && t.isTerrainForEditor()) {
+                            int[] tdata = t.getTerrain();
+                            int[] ndat = new int[]{tdata[1], tdata[0], tdata[3], tdata[2]};
+
+                            java.util.List<Integer> lint = new ArrayList<Integer>();
+
+                            for (int u = 0; u < tilesets.get( newtset ).getTiles().size(); u++) {
+                                tile xo = tilesets.get( newtset ).getTiles().get( u );
+                                if (xo.getTerrainString().equalsIgnoreCase( ndat[0] + "," + ndat[1] + "," + ndat[2] + "," + ndat[3] )) {
+                                    //tile found with the selected terrain
+                                    lint.add( u );
+                                }
+                            }
+                            //if it is found.
+                            if (lint.size() > 0) {
+                                tile yo = tilesets.get( newtset ).getTiles().get( lint.get( (int) (Math.random() * lint.size()) ) );
+                                to = yo.getTileID() + tilesets.get( newtset ).getFirstgid();
+                            }
+                            break;
+                        }
+                    }
+                }
+
                 layerhistory lh = new layerhistory(follower, from, to, location, layer, oldtset, newtset);
                 undolayer.add(lh);
 
@@ -7206,6 +7231,32 @@ String texta="";
                 int oldtset = layers.get(selLayer).getTset().get(location);
                 int newtset = layers.get(selLayer).getTset().get(i);
                 int layer = selLayer;
+
+
+                if (newtset!=-1) {
+                    for (tile t : tilesets.get( newtset ).getTiles()) {
+                        if (t.getTileID() + tilesets.get( newtset ).getFirstgid() == to && t.isTerrainForEditor()) {
+                            int[] tdata = t.getTerrain();
+                            int[] ndat = new int[]{tdata[2], tdata[3], tdata[0], tdata[1]};
+
+                            java.util.List<Integer> lint = new ArrayList<Integer>();
+
+                            for (int u = 0; u < tilesets.get( newtset ).getTiles().size(); u++) {
+                                tile xo = tilesets.get( newtset ).getTiles().get( u );
+                                if (xo.getTerrainString().equalsIgnoreCase( ndat[0] + "," + ndat[1] + "," + ndat[2] + "," + ndat[3] )) {
+                                    //tile found with the selected terrain
+                                    lint.add( u );
+                                }
+                            }
+                            //if it is found.
+                            if (lint.size() > 0) {
+                                tile yo = tilesets.get( newtset ).getTiles().get( lint.get( (int) (Math.random() * lint.size()) ) );
+                                to = yo.getTileID() + tilesets.get( newtset ).getFirstgid();
+                            }
+                            break;
+                        }
+                    }
+                }
 
                 layerhistory lh = new layerhistory(follower, from, to, location, layer, oldtset, newtset);
                 undolayer.add(lh);
@@ -7240,6 +7291,32 @@ String texta="";
                 int oldtset = layers.get(selLayer).getTset().get(location);
                 int newtset = layers.get(selLayer).getTset().get(i);
                 int layer = selLayer;
+
+                if (newtset!=-1) {
+                    for (tile t : tilesets.get( newtset ).getTiles()) {
+                        if (t.getTileID() + tilesets.get( newtset ).getFirstgid() == to && t.isTerrainForEditor()) {
+                            int[] tdata = t.getTerrain();
+                            int[] ndat = new int[]{tdata[3], tdata[2], tdata[1], tdata[0]};
+
+                            java.util.List<Integer> lint = new ArrayList<Integer>();
+
+                            for (int u = 0; u < tilesets.get( newtset ).getTiles().size(); u++) {
+                                tile xo = tilesets.get( newtset ).getTiles().get( u );
+                                if (xo.getTerrainString().equalsIgnoreCase( ndat[0] + "," + ndat[1] + "," + ndat[2] + "," + ndat[3] )) {
+                                    //tile found with the selected terrain
+                                    lint.add( u );
+                                }
+                            }
+                            //if it is found.
+                            if (lint.size() > 0) {
+                                tile yo = tilesets.get( newtset ).getTiles().get( lint.get( (int) (Math.random() * lint.size()) ) );
+                                to = yo.getTileID() + tilesets.get( newtset ).getFirstgid();
+                            }
+                            break;
+                        }
+                    }
+                }
+
 
                 layerhistory lh = new layerhistory(follower, from, to, location, layer, oldtset, newtset);
                 undolayer.add(lh);
