@@ -1,5 +1,7 @@
 package com.mirwanda.nottiled;
 
+import com.badlogic.gdx.Gdx;
+
 public class tile
 {
 	private int tileID;
@@ -30,8 +32,16 @@ public class tile
 
 	public void setTerrain(String s)
 	{
-		String sp[]=s.split(",");
-		this.terrain=new int[]{Integer.parseInt(sp[0]),Integer.parseInt(sp[1]),Integer.parseInt(sp[2]), Integer.parseInt(sp[3])};
+		if (s.equalsIgnoreCase( "" )) return;
+		String sp[]=s.split(",",-1);
+		int[] tr = new int[]{-1,-1,-1,-1};
+		//Gdx.app.log("A",s+"}}}"+sp.length);
+		if (!sp[0].equalsIgnoreCase( "" )) tr[0]=Integer.parseInt( sp[0] );
+		if (!sp[1].equalsIgnoreCase( "" )) tr[1]=Integer.parseInt( sp[1] );
+		if (!sp[2].equalsIgnoreCase( "" )) tr[2]=Integer.parseInt( sp[2] );
+		if (!sp[3].equalsIgnoreCase( "" )) tr[3]=Integer.parseInt( sp[3] );
+
+		this.terrain=tr;
 		
 	}
 	public void setTerrain(int a, int b, int c, int d)

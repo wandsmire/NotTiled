@@ -14591,7 +14591,7 @@ String texta="";
                         //means aa will alwyas be the center
                         //this loop detect the surrounding of a tile
 
-                        Terrainify(num, t, new int[]{0,1,2,3,4,5,6,7},false);
+                        Terrainify(num, t, new int[]{0,1,2,3,4,5,6,7,8},false);
                         //log(numanuma.size()+"");
 
                         while(!numanuma.isEmpty()){
@@ -14621,6 +14621,9 @@ String texta="";
                                     break;
                                 case 7:
                                     dir = new int[]{7,6,4};
+                                    break;
+                                case 8:
+                                    dir = new int[]{8};
                                     break;
                             }
 
@@ -14884,6 +14887,9 @@ String texta="";
                     if (num >= Tw * Th - Tw || num % Tw == Tw - 1) continue;
                     gogo = num + Tw + 1;
                     break;
+                case 8:
+                    gogo=num;
+                    break;
             }
 
             //nyum is to find the str of gogo location
@@ -15044,6 +15050,7 @@ String texta="";
         }
         return false;
     }
+    //private boolean singleTile;
     private void log(String s){
        // Gdx.app.log("",s);
     }
