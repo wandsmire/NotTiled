@@ -15,20 +15,22 @@ import com.badlogic.gdx.physics.box2d.World;
 
 public class gameobject extends Sprite {
     public game mygame;
-    public Body body;
     public gameobject(){}
     public gameobject.objecttype objtype;
     public enum move {RIGHT,LEFT,UP,DOWN}
     public move moving;
     public boolean status;
-    public Fixture fixture;
     public Fixture fixture2;
     public Fixture fixture3;
     public Fixture fixture4;
     public Fixture fixture5;
+
+    public Body body;
     BodyDef bdef = new BodyDef();
     PolygonShape shape = new PolygonShape();
     FixtureDef fdef = new FixtureDef();
+    public Fixture fixture;
+
     public java.util.List<TextureRegion> animations;
     public enum objecttype {
         PLAYER, PLAYERLEFT,PLAYERRIGHT,PLAYERTOP,PLAYERBOTTOM, PLAYERCENTER,

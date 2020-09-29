@@ -13,6 +13,14 @@ import com.badlogic.gdx.graphics.glutils.*;
 import com.badlogic.gdx.input.*;
 import com.badlogic.gdx.input.GestureDetector.*;
 import com.badlogic.gdx.math.*;
+import com.badlogic.gdx.physics.box2d.Body;
+import com.badlogic.gdx.physics.box2d.BodyDef;
+import com.badlogic.gdx.physics.box2d.Box2D;
+import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
+import com.badlogic.gdx.physics.box2d.Fixture;
+import com.badlogic.gdx.physics.box2d.FixtureDef;
+import com.badlogic.gdx.physics.box2d.PolygonShape;
+import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.scenes.scene2d.*;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.*;
@@ -46,6 +54,8 @@ import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import com.mirwanda.nottiled.ai.ATGraph;
 import com.mirwanda.nottiled.ai.AutoTile;
+import com.mirwanda.nottiled.platformer.WorldContactListener;
+import com.mirwanda.nottiled.platformer.game;
 import com.mirwanda.nottiled.platformer.player;
 
 import static java.lang.Thread.sleep;
@@ -253,6 +263,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     com.badlogic.gdx.scenes.scene2d.ui.List<String> llayerlist;
     com.badlogic.gdx.Input.TextInputListener pNewLayer;
     com.badlogic.gdx.Input.TextInputListener pNewLayerSC;
+    com.badlogic.gdx.Input.TextInputListener pBrushSize;
+
     com.badlogic.gdx.Input.TextInputListener pEditLayer;
     com.badlogic.gdx.Input.TextInputListener pSetOpacity;
     TextButton bAddLayer, bRemoveLayer, bMoveLayer, bEditLayer, bBackLayer, bSetOpacity;
@@ -510,6 +522,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
         gd = new GestureDetector(this);
         initSD();
+        initBox2D();
         loadGdxStuff();
         loadExport();
         loadListener();
@@ -539,7 +552,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         loadKryonet();
         initializePostProcessor();
         createSwatches();
-        brushsize=0;
         activetool=4;
 
 
@@ -553,6 +565,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     }
 
+    public Box2DDebugRenderer b2dr;
+    public World world;
+    public myContactListener mycontactlistener;
+
+    private void initBox2D(){
+        Box2D.init();
+        world = new World(new Vector2(0, 0), true);
+        b2dr = new Box2DDebugRenderer();
+
+        mycontactlistener = new myContactListener(this);
+        world.setContactListener(mycontactlistener);
+    }
     private void createSwatches(){
         Integer sw = 0;
         for (int ii=0;ii<6;ii++) {
@@ -900,6 +924,7 @@ String texta="";
                 drawLoadingScreen();
 
             } else {
+                world.step(1/60f,6,2);
 
                 Gdx.gl.glClearColor(bgr, bgg, bgb, 1f);
                 clsEnter();
@@ -1129,6 +1154,7 @@ String texta="";
                         drawObjectsInfo();
                         postProcessor.render();
                         drawWorldUI();
+                        b2dr.render(world,cam.combined);
 
                         drawstage(delta);
 
@@ -1382,7 +1408,7 @@ String texta="";
             pey = (float) Gdx.input.getY() / nssy;
 
 
-            Gdx.app.log("pexpey", ""+ Gdx.input.getX() + " | "+ nssx  + " | "+ Gdx.input.getY() + " | "+  nssy);
+            //Gdx.app.log("pexpey", ""+ Gdx.input.getX() + " | "+ nssx  + " | "+ Gdx.input.getY() + " | "+  nssy);
             if (pex > 0.90f) cam.translate( 5,0 );
             if (pex < 0.10f) cam.translate( -5,0 );
             if (pey > 0.90f) cam.translate( 0,-5 );
@@ -4172,13 +4198,7 @@ String texta="";
                         uidrawbutton(txcopy, z.copy, gui.tool4, 3);
                     }
 
-                    if (brushsize == 1) {
-                        uidrawbutton(txbrush, z.brush, gui.tool5, 3);
-                    } else {
-                        uidrawbutton(txpencil, z.pencil, gui.tool5, 3);
-                    }
-
-
+                    uidrawbutton(txbrush, z.brush, gui.tool5, 3);
                     uidrawbutton(txundo, z.undo, gui.undo, 3.1f);
                     uidrawbutton(txredo, z.redo, gui.redo, 3.1f);
                 } else if (mode == "object") {
@@ -7456,6 +7476,8 @@ String texta="";
                 oj.setName(tf.get(5).getText());
                 oj.setType(tf.get(6).getText());
                 oj.setRotation(Float.parseFloat(tf.get(7).getText()));
+                oj.destroyBody( world );
+                oj.updateVertices(world);
                 backToMap();
             }
         });
@@ -7469,6 +7491,8 @@ String texta="";
         bRemove.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                layers.get(selLayer).getObjects().get(oedit).destroyBody( world );
+
                 layers.get(selLayer).getObjects().remove(oedit);
                 backToMap();
             }
@@ -8563,6 +8587,31 @@ String texta="";
             }
 
         };
+
+        pBrushSize = new com.badlogic.gdx.Input.TextInputListener() {
+
+            @Override
+            public void input(String input) {
+                if (input == "") return;
+                try{
+                    int s = Integer.parseInt(input);
+                    brushsize=s;
+                    if (s <1 ) brushsize=1;
+                    if (s >10 ) brushsize=10;
+
+                }catch (Exception e){}
+
+
+
+            }
+
+            @Override
+            public void canceled() {
+            }
+
+        };
+
+
 
         pNewLayerSC = new com.badlogic.gdx.Input.TextInputListener() {
 
@@ -12616,8 +12665,6 @@ String texta="";
                                 tempobj.setGid(Integer.parseInt(myParser.getAttributeValue(null, "gid")));
                                 tempobj.setY(Float.parseFloat(myParser.getAttributeValue(null, "y")) - Tsh);
                             }
-                            if (myParser.getAttributeValue(null, "rotation") != null)
-                                tempobj.setRotation(Float.parseFloat(myParser.getAttributeValue(null, "rotation")));
 
                             float pWidth, pHeight;
                             if (myParser.getAttributeValue(null, "width") != null) {
@@ -12637,6 +12684,9 @@ String texta="";
                             }
                             tempobj.setW(pWidth);
                             tempobj.setH(pHeight);
+                            tempobj.setupBox2D( world );
+                            if (myParser.getAttributeValue(null, "rotation") != null)
+                                tempobj.setRotation(Float.parseFloat(myParser.getAttributeValue(null, "rotation")));
 
 
                             owner = "object";
@@ -13774,7 +13824,7 @@ String texta="";
 
                         if (mode == "tile") {
 
-                            tapTile(num, false);
+                            tapTile(num, false, true);
                         } else if (mode == "object") {
                             tapObject(num, touch, ae, ab);
 
@@ -14713,12 +14763,80 @@ String texta="";
         return false;
     }
 
+    public Body body;
+    BodyDef bdef = new BodyDef();
+    PolygonShape pshape;
+    FixtureDef fdef = new FixtureDef();
+    public Fixture fixture;
+    private static final double DEGREES_TO_RADIANS = (double)(Math.PI/180);
+    public obj.objecttype objType = obj.objecttype.POINTER;
+
+    public void destroyPointer() {
+        if (body != null) {
+            if (world.getBodyCount() > 0) {
+                world.destroyBody( body );
+            }
+        }
+    }
+
+    public void updatePointer(float x, float y){
+        if (body!=null) {
+            if (world.getBodyCount()>0) {
+                world.destroyBody( body );
+            }
+        }
+        bdef.type = BodyDef.BodyType.DynamicBody;
+        bdef.position.set(x,-y);
+        body = world.createBody(bdef);
+        fdef.filter.categoryBits = game.PLAYER_BIT;
+        fdef.filter.maskBits = game.DEFAULT_BIT;
+        fdef.isSensor = true;
+
+        pshape = new PolygonShape();
+        pshape.setAsBox( 5,5 );
+        fdef.shape = pshape;
+        fixture = body.createFixture(fdef);
+        objType = obj.objecttype.POINTER;
+        fixture.setUserData(objType);
+    }
+
+    public void showPropBox2D(obj ox){
+        gotoStage(tObjProp);
+        tf.get(0).setText(Integer.toString(ox.getId()));
+        tf.get(1).setText(Float.toString(ox.getX()));
+        tf.get(2).setText(Float.toString(ox.getY()));
+        tf.get(3).setText(Float.toString(ox.getW()));
+        tf.get(4).setText(Float.toString(ox.getH()));
+        if (ox.getName() != null) {
+            tf.get(5).setText(ox.getName());
+        } else {
+            tf.get(5).setText("");
+        }
+        if (ox.getType() != null) {
+            tf.get(6).setText(ox.getType());
+        } else {
+            tf.get(6).setText("");
+        }
+
+        if (Float.toString(ox.getRotation()) != null) {
+            tf.get(7).setText(Float.toString(ox.getRotation()));
+        } else {
+            tf.get(7).setText("");
+        }
+
+    }
+
     private boolean tapObject(Integer num, Vector3 touch, int ae, int ab) {
+        updatePointer(touch.x,-touch.y);
+        return true;
+        /*
         try {
             if (layers.size() > 0) {
                 for (int i = 0; i < layers.size(); i++) {
                     if (layers.get(i).getObjects().size() > 0 && layers.get(i).getType() == layer.Type.OBJECT) {
                         if (i == selgroup || objviewMode == 0) {
+                            //Gdx.app.log(touch.x+"",touch.y+"");
+
                             for (int j = 0; j < layers.get(i).getObjects().size(); j++) {
                                 obj ox = layers.get(i).getObjects().get(j);
                                 float offx = 0, offy = 0;
@@ -14817,9 +14935,8 @@ String texta="";
                                         nyok = new obj(curid, (int) (numa % Tw) * Tsh, (int) (numa / Tw) * Tsh, Tsh, Tsh, "", "");
                                     }
 
-                                     */
-                                }else {
 
+                                }else {
                                     if (touch.y <= -(ox.getY() - ox.getH()) - ox.getH() + Tsh + offy && touch.y >= -(ox.getY() - ox.getH()) - ox.getH() - ox.getH() + Tsh + offy && touch.x >= ox.getX() - offx && touch.x <= ox.getX() + ox.getW() - offx) {
                                         if (activeobjtool == 7) {
 
@@ -14949,23 +15066,27 @@ String texta="";
                             {
                                 nyok.setX((int) (numa % Tw)*Tsh );
                                 nyok.setY((int) (numa / Tw)*Tsh);
-                                nyok = new obj(curid, (int) (numa % Tw)*Tsh , (int) (numa / Tw)*Tsh, Tsh, Tsh, "", "");
+                                nyok = new obj(curid, (int) (numa % Tw)*Tsh , (int) (numa / Tw)*Tsh, Tsh, Tsh, "", "",world);
+                                nyok.updateVertices( world );
                             }
 
                         }else {
-                            nyok = new obj(curid, (ae / Tsw) * Tsw, ((-ab + Tsh) / Tsh) * Tsh, Tsw, Tsh, "", "");
+                            nyok = new obj(curid, (ae / Tsw) * Tsw, ((-ab + Tsh) / Tsh) * Tsh, Tsw, Tsh, "", "",world);
+                            nyok.updateVertices( world );
                         }
 
                         break;
                     case 2:
-                        nyok = new obj(curid, (ae / Tsw) * Tsw + (Tsw / 2), ((-ab + Tsh) / Tsh) * Tsh - Tsh / 2 + Tsh, Tsw, Tsh, "", "");
+                        nyok = new obj(curid, (ae / Tsw) * Tsw + (Tsw / 2), ((-ab + Tsh) / Tsh) * Tsh - Tsh / 2 + Tsh, Tsw, Tsh, "", "",world);
+                        nyok.updateVertices( world );
 
                         break;
 
 
                 }
             } else {
-                nyok = new obj(curid, (int) touch.x, -(int) touch.y + Tsh, Tsw, Tsh, "", "");
+                nyok = new obj(curid, (int) touch.x, -(int) touch.y + Tsh, Tsw, Tsh, "", "",world);
+                nyok.updateVertices( world );
 
             }
             switch (activeobjtool) {
@@ -15028,10 +15149,11 @@ String texta="";
 
         } catch (Exception e) {
         }
-        return false;
+        */
+        //return false;
     }
 
-    private void tapTile(int num, boolean follower) {
+    private void tapTile(int num, boolean follower, boolean terra) {
         if (cammode == "View only") return;
         //the actual stamping process.
         if (stamp && !roll) {
@@ -15333,6 +15455,7 @@ String texta="";
                     updateAT();
                     //NEW code for terrain
                     if (t == null) return;
+                    if (!terra) return;
 
                     if (t.isTerrainForEditor() && t.isCenter()) {
                         //means aa will alwyas be the center
@@ -16911,6 +17034,19 @@ String texta="";
             } else if (layers.get(selLayer).getType() == layer.Type.IMAGE) {
                 mode = "image";
             }
+
+            for (layer l: layers){
+                if (l.getType()==layer.Type.OBJECT){
+                    for (obj ob : l.getObjects()){
+                        ob.destroyBody( world );
+                    }
+                }
+            }
+
+            for (obj ob : layers.get(selLayer).getObjects()){
+                ob.updateVertices( world );
+            }
+
             adjustTileset();
             return true;
         }
@@ -17092,7 +17228,8 @@ String texta="";
             if (tapped(touch2, gui.tool5)) {
                 if (!cue("tool5") && lockUI) return true;
                 activetool = 4;
-
+                //celorit
+                //brushsize=1;
                 stamp = false;
                 return true;
             }
@@ -17263,7 +17400,9 @@ String texta="";
             if (mode == "image") {
                 fillImageLayerData();
                 gotoStage(tImageLayer);
+
             }
+            return true;
         }
         //object tool selector
         if (tapped(touch2, gui.objectpickerleft)) {
@@ -18242,7 +18381,7 @@ String texta="";
 
                         int nuhum = ypos*Tw+xpos;
 
-                        tapTile(nuhum, (si==0) );
+                        tapTile(nuhum, (si==0) ,true);
                     }
                     break;
                 case "fill":
@@ -18694,6 +18833,7 @@ String texta="";
 
 
 
+
     @Override
     public boolean longPress(float p1, float p2) {
         if (loadingfile) return true;
@@ -18823,9 +18963,10 @@ String texta="";
                 int ab = (int) touch.y;
                 if (touch.y > 0) ab = 1;
                 if (tapped(touch2, gui.tool5)) {
-                    brushsize += 1;
+                    //kucrut
+                    Gdx.input.getTextInput(pBrushSize, z.tilesize + " ["+brushsize+"]", "", "1-10");
+
                     activetool=4;
-                    if (brushsize == 2) brushsize = 0;
                     return true;
                 }
 
@@ -18949,19 +19090,24 @@ String texta="";
 
                 //code for brush, so basically draw around
                 if (activetool == 4) {
-                    tapTile(mapstartSelect, false);
-                    if (brushsize > 0) {
-                        int num = mapstartSelect;
-
-                        if ((num - 1) % Tw != Tw - 1 && num - 1 >= 0) tapTile(num - 1, true);
-                        if ((num + 1) % Tw != 0 && num + 1 < Tw * Th) tapTile(num + 1, true);
-                        if (num > Tw) tapTile(num - Tw, true);
-                        if (num < Tw * (Th - 1)) tapTile(num + Tw, true);
-
-                        if ((num - 1) % Tw != Tw - 1 && num > Tw) tapTile(num - Tw - 1, true);
-                        if ((num + 1) % Tw != 0 && num > Tw) tapTile(num - Tw + 1, true);
-                        if (num % Tw != 0 && num < Tw * (Th - 1)) tapTile(num + Tw - 1, true);
-                        if (num % Tw != Tw - 1 && num < Tw * (Th - 1)) tapTile(num + Tw + 1, true);
+                    tapTile(mapstartSelect, false, false);
+                    int num=mapstartSelect;
+                    for (int bx=0; bx<brushsize;bx++) {
+                        for (int by = 0; by < brushsize; by++) {
+                            //celor2
+                            int curx = num % Tw;
+                            int cury = num / Tw;
+                            int locx = curx - brushsize / 2 + bx;
+                            int locy = cury - brushsize / 2 + by;
+                            // Gdx.app.log( "", cury + "/" + curx + "/" + locy + "/" + locx );
+                            if (locx < 0) continue;
+                            if (locy < 0) continue;
+                            if (locx >= Tw) continue;
+                            if (locy >= Th) continue;
+                            boolean terrar =false;
+                            if (bx==0 || by ==0 || bx==brushsize-1 || by==brushsize-1) terrar=true;
+                            tapTile( locy * Tw + locx, true, terrar);
+                        }
                     }
                 }
 
@@ -19707,19 +19853,24 @@ String texta="";
             //remember that longpressing fill will turn it into brush?
             if (activetool == 4 & num != -1) {
                 //small brush
-                tapTile(num, true);
-
-                //big brush (including smaller one)
-                if (brushsize > 0) {
-                    if ((num - 1) % Tw != Tw - 1 && num - 1 >= 0) tapTile(num - 1, true);
-                    if ((num + 1) % Tw != 0 && num + 1 < Tw * Th) tapTile(num + 1, true);
-                    if (num > Tw) tapTile(num - Tw, true);
-                    if (num < Tw * (Th - 1)) tapTile(num + Tw, true);
-
-                    if ((num - 1) % Tw != Tw - 1 && num > Tw) tapTile(num - Tw - 1, true);
-                    if ((num + 1) % Tw != 0 && num > Tw) tapTile(num - Tw + 1, true);
-                    if (num % Tw != 0 && num < Tw * (Th - 1)) tapTile(num + Tw - 1, true);
-                    if (num % Tw != Tw - 1 && num < Tw * (Th - 1)) tapTile(num + Tw + 1, true);
+                tapTile(num, false, false);
+                //Gdx.app.log("aso",brushsize+"");
+                for (int bx=0; bx<brushsize;bx++) {
+                    for (int by = 0; by < brushsize; by++) {
+                        //celor
+                        int curx = num % Tw;
+                        int cury = num / Tw;
+                        int locx = curx - brushsize / 2 + bx;
+                        int locy = cury - brushsize / 2 + by;
+                        // Gdx.app.log( "", cury + "/" + curx + "/" + locy + "/" + locx );
+                        if (locx < 0) continue;
+                        if (locy < 0) continue;
+                        if (locx >= Tw) continue;
+                        if (locy >= Th) continue;
+                        boolean terrar =false;
+                        if (bx==0 || by ==0 || bx==brushsize-1 || by==brushsize-1) terrar=true;
+                        tapTile( locy * Tw + locx, true, terrar);
+                    }
                 }
 
                 nofling=0.4f;
@@ -20014,7 +20165,7 @@ String texta="";
                                 switch (currentShape)
                                 {
                                     case RECTANGLE:
-                                        tapTile(num + xx + (yy * Tw), !firstone);
+                                        tapTile(num + xx + (yy * Tw), !firstone, true);
                                         if (firstone) firstone = false;
                                         break;
                                     case CIRCLE:
@@ -20027,7 +20178,7 @@ String texta="";
                                         double skor = (radx*radx+rady*rady);
                                         //double skor = Math.sqrt(Math.pow(radx,2)*Math.pow(rady,2));
                                         //skor = Math.pow(radx+rady,2)/Math.pow(myrad,2); //DIAMOND
-                                       if (skor <=myrad*myrad) tapTile(num + xx + (yy * Tw), !firstone);
+                                       if (skor <=myrad*myrad) tapTile(num + xx + (yy * Tw), !firstone, true);
                                         if (firstone) firstone = false;
                                         break;
 
@@ -20069,14 +20220,14 @@ String texta="";
                         if (rising) {
                             for (int yy = 0; yy <= heih; yy++) {
                                 int xx = widih-Math.round((float) yy / (float) heih * (float) widih);
-                                tapTile(num + xx + (yy * Tw), !firstone);
+                                tapTile(num + xx + (yy * Tw), !firstone, true);
                                 if (firstone) firstone = false;
                             }
                         }else
                         {
                             for (int yy = 0; yy <= heih; yy++) {
                                 int xx = Math.round((float) yy / (float) heih * (float) widih);
-                                tapTile(num + xx + (yy * Tw), !firstone);
+                                tapTile(num + xx + (yy * Tw), !firstone, true);
                                 if (firstone) firstone = false;
                             }
                         }
@@ -20086,14 +20237,14 @@ String texta="";
                         if (rising) {
                             for (int xx = 0; xx <= widih; xx++) {
                                 int yy = heih-Math.round((float) xx / (float) widih * (float) heih);
-                                tapTile(num + xx + (yy * Tw), !firstone);
+                                tapTile(num + xx + (yy * Tw), !firstone, true);
                                 if (firstone) firstone = false;
                             }
                         }else
                         {
                             for (int xx = 0; xx <= widih; xx++) {
                                 int yy = Math.round((float) xx / (float) widih * (float) heih);
-                                tapTile(num + xx + (yy * Tw), !firstone);
+                                tapTile(num + xx + (yy * Tw), !firstone, true);
                                 if (firstone) firstone = false;
                             }
                         }

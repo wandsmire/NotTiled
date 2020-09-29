@@ -1,4 +1,14 @@
 package com.mirwanda.nottiled;
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.physics.box2d.Body;
+import com.badlogic.gdx.physics.box2d.BodyDef;
+import com.badlogic.gdx.physics.box2d.Fixture;
+import com.badlogic.gdx.physics.box2d.FixtureDef;
+import com.badlogic.gdx.physics.box2d.MassData;
+import com.badlogic.gdx.physics.box2d.PolygonShape;
+import com.badlogic.gdx.physics.box2d.World;
+import com.mirwanda.nottiled.platformer.game;
+
 import java.util.*;
 
 public class obj implements Cloneable
@@ -15,7 +25,21 @@ public class obj implements Cloneable
 	private boolean wrap=false;
 	private String text="";
 	private float rotation=0f;
-	
+
+	public Body body;
+	BodyDef bdef = new BodyDef();
+	PolygonShape pshape;
+	FixtureDef fdef = new FixtureDef();
+	public Fixture fixture;
+
+	public enum objecttype {
+		OBJECT, POINTER
+	}
+	public objecttype objType = objecttype.OBJECT;
+	public static final short DEFAULT_BIT = 1;
+	public static final short PLAYER_BIT = 2;
+
+
 	private java.util.List<property> properties = new ArrayList<property>();
 	
 	private String name;
@@ -40,11 +64,10 @@ public class obj implements Cloneable
 		this.w=w;
 		this.h=h;
 		this.name="";
-		
 	}
-	obj(){
-	}
-	obj(int id,int x,int y,int w,int h, String name, String type){
+	obj(){ }
+
+	obj(int id,int x,int y,int w,int h, String name, String type, World world){
 		this.id =id;
 		this.x =x;
 		this.y=y;
@@ -52,7 +75,42 @@ public class obj implements Cloneable
 		this.h=h;
 		this.name=name;
 		this.type=type;
+
+
 	}
+	public void setupBox2D(World world){
+	}
+	public void destroyBody(World world){
+		if (body!=null) {
+			if (world.getBodyCount()>0) {
+				world.destroyBody( body );
+			}
+		}
+	}
+	public void updateVertices(World world){
+		bdef.type = BodyDef.BodyType.StaticBody;
+		bdef.position.set(x,-y+20);
+		body = world.createBody(bdef);
+		fdef.filter.categoryBits = DEFAULT_BIT;
+		fdef.filter.maskBits = PLAYER_BIT;
+
+
+		Vector2[] vertices = new Vector2[4];
+		vertices[0] = new Vector2(0f  , 0f  );
+		vertices[1] = new Vector2(0 , -h  );
+		vertices[2] = new Vector2(w , -h);
+		vertices[3] = new Vector2(w , 0);
+		pshape = new PolygonShape();
+		pshape.set(vertices);
+		fdef.shape = pshape;
+		fixture = body.createFixture(fdef);
+		objType = objecttype.OBJECT;
+		fixture.setUserData(this);
+
+		float angle = (float) ((360-rotation)*DEGREES_TO_RADIANS);
+		body.setTransform( body.getPosition(),angle);
+	}
+	private static final double DEGREES_TO_RADIANS = (double)(Math.PI/180);
 
 	public void setRotation(float rotation)
 	{
