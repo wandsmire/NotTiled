@@ -2,6 +2,7 @@ package com.mirwanda.nottiled;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
+import com.badlogic.gdx.physics.box2d.EdgeShape;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.MassData;
@@ -21,7 +22,7 @@ public class obj implements Cloneable
 	private String type ="";
 	private String shape="";
 	private int gid=0;
-	private List<point> points = new ArrayList<point>();
+	private List<Vector2> points = new ArrayList<Vector2>();
 	private boolean wrap=false;
 	private String text="";
 	private float rotation=0f;
@@ -29,6 +30,7 @@ public class obj implements Cloneable
 	public Body body;
 	BodyDef bdef = new BodyDef();
 	PolygonShape pshape;
+	EdgeShape eshape;
 	FixtureDef fdef = new FixtureDef();
 	public Fixture fixture;
 
@@ -91,18 +93,74 @@ public class obj implements Cloneable
 		fdef.filter.categoryBits = DEFAULT_BIT;
 		fdef.filter.maskBits = PLAYER_BIT;
 
+		objType = objecttype.OBJECT;
 
 		Vector2[] vertices = new Vector2[4];
-		vertices[0] = new Vector2(0f  , 0f  );
-		vertices[1] = new Vector2(0 , h  );
-		vertices[2] = new Vector2(w , h);
-		vertices[3] = new Vector2(w , 0);
-		pshape = new PolygonShape();
-		pshape.set(vertices);
-		fdef.shape = pshape;
-		fixture = body.createFixture(fdef);
-		objType = objecttype.OBJECT;
-		fixture.setUserData(this);
+		if (shape=="image") {
+			vertices[0] = new Vector2( 0f, 0f );
+			vertices[1] = new Vector2( 0, h );
+			vertices[2] = new Vector2( w, h );
+			vertices[3] = new Vector2( w, 0 );
+			pshape = new PolygonShape();
+			pshape.set(vertices);
+			fdef.shape = pshape;
+			fixture = body.createFixture(fdef);
+			fixture.setUserData(this);
+
+
+		}else if (shape=="polygon"){
+			if (points.size()>2 & points.size()<9) {
+				vertices = new Vector2[points.size()];
+				for(int i=0;i<points.size();i++){
+					vertices[i]=new Vector2(points.get(i).x,-points.get(i).y);
+				}
+			}else
+			{
+				vertices[0] = new Vector2( 0f, 0f );
+				vertices[1] = new Vector2( 0, -10 );
+				vertices[2] = new Vector2( 10, -10 );
+				vertices[3] = new Vector2( 10, 0 );
+			}
+			pshape = new PolygonShape();
+			pshape.set(vertices);
+			fdef.shape = pshape;
+			fixture = body.createFixture(fdef);
+			fixture.setUserData(this);
+
+
+		}else if (shape=="polyline"){
+				for(int i=0;i<points.size()-1;i++){
+					eshape = new EdgeShape();
+					eshape.set(points.get( i ).x,-points.get( i ).y,points.get( i+1 ).x,-points.get( i+1 ).y);
+					fdef.shape = eshape;
+					fixture = body.createFixture(fdef);
+					fixture.setUserData(this);
+
+				}
+
+		}else if (shape=="point"){
+			vertices[0] = new Vector2( -Tsh/4f, -Tsh/4f );
+			vertices[1] = new Vector2( Tsh/4, -Tsh/4 );
+			vertices[2] = new Vector2( -Tsh/4, Tsh/4 );
+			vertices[3] = new Vector2( Tsh/4, Tsh/4 );
+			pshape = new PolygonShape();
+			pshape.set(vertices);
+			fdef.shape = pshape;
+			fixture = body.createFixture(fdef);
+			fixture.setUserData(this);
+		}else{
+			vertices[0] = new Vector2( 0f, 0f );
+			vertices[1] = new Vector2( 0, -h );
+			vertices[2] = new Vector2( w, -h );
+			vertices[3] = new Vector2( w, 0 );
+			pshape = new PolygonShape();
+			pshape.set(vertices);
+			fdef.shape = pshape;
+			fixture = body.createFixture(fdef);
+			fixture.setUserData(this);
+
+
+		}
 
 		float angle = (float) ((360-rotation)*DEGREES_TO_RADIANS);
 		body.setTransform( body.getPosition(),angle);
@@ -143,18 +201,18 @@ public class obj implements Cloneable
 		return gid;
 	}
 
-	public void setPoints(List<point> points)
+	public void setPoints(List<Vector2> points)
 	{
 		this.points = points;
 	}
 
-	public List<point> getPoints()
+	public List<Vector2> getPoints()
 	{
 		return points;
 	}
 	
 	public void addPoint(float x,float y){
-		this.points.add(new point(x,y));
+		this.points.add(new Vector2(x,y));
 	}
 	
 	public void undoPoint(){
@@ -168,8 +226,8 @@ public class obj implements Cloneable
 	{
 		float[] g=new float[points.size()*2];
 		for (int a=0;a<points.size();a++){
-		g[a*2]=points.get(a).getX()+getX();
-		g[a*2+1]=-points.get(a).getY()-getY()+tsh;
+		g[a*2]=points.get(a).x+getX();
+		g[a*2+1]=-points.get(a).y-getY()+tsh;
 		}
 		return g;
 	}
@@ -184,16 +242,16 @@ public class obj implements Cloneable
 		String[] parts = str.split(" ");
 		for (String s: parts){
 			String[] xny = s.split(",");
-			points.add(new point(Float.parseFloat(xny[0]),Float.parseFloat(xny[1])));
+			points.add(new Vector2(Float.parseFloat(xny[0]),Float.parseFloat(xny[1])));
 		}
 	}
 	
 	public String getPointsString()
 	{
 		StringBuilder sb=new StringBuilder();
-		for (point p: points){
+		for (Vector2 p: points){
 			Float xx,yy; String xx2,yy2;
-			xx=p.getX();yy=p.getY();
+			xx=p.x;yy=p.y;
 			if (xx % 1==0){
 				xx2=Integer.toString(xx.intValue());
 			}else

@@ -3134,10 +3134,11 @@ String texta="";
 
     private void drawObjects() {
         sr.setProjectionMatrix(cam.combined);
-        sr.begin(ShapeRenderer.ShapeType.Line);
+        sr.begin(ShapeRenderer.ShapeType.Line); //Edit it with filled to make it looks gorgeous.
+        Gdx.gl.glEnable(GL20.GL_BLEND);
 
         Gdx.gl20.glLineWidth(5);//average
-        sr.setColor(1, blink, 1, 1f);
+        sr.setColor(0, 0.5f, 0, 0.5f); //blink
 
         if (layers.size() > 0) {
             for (int i = 0; i < layers.size(); i++) {
@@ -3216,9 +3217,12 @@ String texta="";
                                     //str1.draw(batch, ox.getText(), ox.getX(), -ox.getYantingelag(Tsh));
 
                                     break;
+                                case "image":
+                                    sr.rect(ox.getX(), ox.getYantingelag(Tsh), 0, 0, ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation());
+                                    break;
                                 default:
                                     if (orientation.equalsIgnoreCase("orthogonal")) {
-                                        sr.rect(ox.getX(), ox.getYantingelag(Tsh), 0, 0, ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation());
+                                        sr.rect(ox.getX(), ox.getYantingelag(Tsh)-ox.getH(), 0, ox.getH(), ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation());
                                     }
                                     else if (orientation.equalsIgnoreCase("isometric"))
                                     {
@@ -3326,6 +3330,12 @@ String texta="";
                                 s.setRotation( 360-ox.getRotation() );
 
                                 //for RW ONLY
+                                if (layers.get(i).getName().equalsIgnoreCase( "UnitObjects" )){
+                                    if (s.getRotation()==360+90)
+                                    {
+                                        s.rotate90( true );
+                                    }
+                                }
 
 
                               //  s.rotate90( false );
@@ -3336,7 +3346,7 @@ String texta="";
                         }
                         String kucing = "";
                         if (ox.getName() != null) kucing = ox.getName();
-                        str1.getData().setScale(0.4f + Tsw / 160f);
+                        str1.getData().setScale(0.2f + Tsw / 160f);
 
                         str1.draw(batch, kucing, ox.getX()+1, ox.getYantingelag(Tsh));
                         if (ox.getShape() != null) {
@@ -6273,8 +6283,8 @@ String texta="";
                         if (oo.getShape().equalsIgnoreCase("polygon") || oo.getShape().equalsIgnoreCase("polyline")) {
                             sb.wlo(oo.getShape() + " = {");
                             for (int ok = 0; ok < oo.getPoints().size(); ok++) {
-                                float xar = oo.getPoints().get(ok).getX();
-                                float yar = oo.getPoints().get(ok).getY();
+                                float xar = oo.getPoints().get(ok).x;
+                                float yar = oo.getPoints().get(ok).y;
                                 if (ok != oo.getPoints().size() - 1) {
                                     sb.wl("{ x = " + xar + ", y = " + yar + " },");
                                 } else {
@@ -6480,8 +6490,8 @@ String texta="";
                         if (oo.getShape().equalsIgnoreCase("polygon") || oo.getShape().equalsIgnoreCase("polyline")) {
                             sb.wlo(oo.getShape() + "\":[");
                             for (int ok = 0; ok < oo.getPoints().size(); ok++) {
-                                float xar = oo.getPoints().get(ok).getX();
-                                float yar = oo.getPoints().get(ok).getY();
+                                float xar = oo.getPoints().get(ok).x;
+                                float yar = oo.getPoints().get(ok).y;
                                 if (ok != oo.getPoints().size() - 1) {
                                     sb.wl("\"{ \"x\":" + xar + ", y\":" + yar + " },");
                                 } else {
@@ -12799,7 +12809,7 @@ String texta="";
                         if (name.equals("object")) {
 
                             layers.get(layers.size() - 1).getObjects().add(tempobj);
-                            curobjid += 1;//untuk looping id
+                            curid=lastPid+1;
                         }
                         if (name.equals("tile")) {
                             if (oldowner.equalsIgnoreCase("tileset")) {
@@ -12974,6 +12984,7 @@ String texta="";
         uicam.update();
         loadingfile = false;
         firstload = loadtime;
+
 
         if (isCreateRoom) {
             FileHandle ff = Gdx.files.external( curdir + "/" + curfile );
@@ -13864,7 +13875,7 @@ String texta="";
                     } else if (orientation.equalsIgnoreCase("isometric")) {
                         touched = true;
                     }
-
+                    if (mode=="object") touched=true;
                     if (touched) {
 
                         int num = 0;
@@ -14866,7 +14877,7 @@ String texta="";
         fdef.isSensor = true;
 
         pshape = new PolygonShape();
-        pshape.setAsBox( 1,1 );
+        pshape.setAsBox( 3,3 );
         fdef.shape = pshape;
         fixture = body.createFixture(fdef);
         objType = obj.objecttype.POINTER;
@@ -14876,11 +14887,26 @@ String texta="";
     public void checkBox2D(obj ox){
         tempObjx.add( ox );
         loadList( "object" );
-        status( tempObjx.size()+"",1 );
+       // status( tempObjx.size()+"",1 );
     }
 
     public void showPropBox2D(obj ox){
         selobj=ox;
+            Gdx.app.log( "PP",activeobjtool+"");
+        if (activeobjtool == 7) {
+
+            Json json = new Json();
+            clipobjcpy = json.toJson(ox);
+            backToMap();
+            return;
+        }
+        else if (activeobjtool == 8) {
+            ox.destroyBody( world );
+            layers.get(selLayer).getObjects().remove(ox);
+            backToMap();
+            return;
+        }
+
         gotoStage(tObjProp);
         tf.get(0).setText(Integer.toString(ox.getId()));
         tf.get(1).setText(Float.toString(ox.getX()));
@@ -14913,327 +14939,194 @@ String texta="";
         updatePointer(touch.x,-touch.y);
         return true;
         /*
-        try {
-            if (layers.size() > 0) {
-                for (int i = 0; i < layers.size(); i++) {
-                    if (layers.get(i).getObjects().size() > 0 && layers.get(i).getType() == layer.Type.OBJECT) {
-                        if (i == selgroup || objviewMode == 0) {
-                            //Gdx.app.log(touch.x+"",touch.y+"");
+        */
+        //return false;
+    }
 
-                            for (int j = 0; j < layers.get(i).getObjects().size(); j++) {
-                                obj ox = layers.get(i).getObjects().get(j);
-                                float offx = 0, offy = 0;
-                                if (ox.getShape() != null) {
-                                    switch (ox.getShape()) {
+    private void longpressObject(float p1, float p2){
+        obj nyok = new obj();
 
-                                        case "point":
-                                        case "polygon":
-                                        case "polyline":
-                                            offx = ox.getWa();
-                                            offy = ox.getHa();
-                                        default:
+        String shapeNameX = "";
 
-
-                                            break;
-                                    }
-                                }
-
-                                if (orientation.equalsIgnoreCase("isometric")) {
-
-                                        int numa =-1;
-                                        float closest = 9999;
-                                        for (int g = 0; g < Tw * Th; g++) {
-                                            int offsetx = 0, offsety = 0;
-                                            xpos = g % Tw;
-                                            ypos = g / Tw;
-                                            offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
-                                            offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
-                                            int drawx = xpos * Tsw - offsetx;
-                                            int drawy = -ypos * Tsh - offsety;
-                                            int x = ae - drawx;
-                                            int y = ab - drawy;
-                                            int Tsws = Tsw / 2;
-                                            int Tshs = Tsh / 2;
-                                            float dx = Math.abs(x - Tsws);
-                                            float dy = Math.abs(y - Tshs);
-                                            if (dx / Tsws + dy / Tshs < closest) {
-                                                numa = g;
-                                                closest = dx / Tsws + dy / Tshs;
-                                            }
-
-                                        }
-
-                                    int newX=(int) (numa % Tw)*Tsh;
-                                    int newY=(int) (numa / Tw)*Tsh;
-
-                                    if (Math.abs(newX - ox.getX()) <Tsw && Math.abs(newY - ox.getY()) < Tsh){
-                                        oedit = j;
-                                        ogroup = i;
-                                        curobj = ox;
-                                        gotoStage(tObjProp);
-                                        tf.get(0).setText(Integer.toString(ox.getId()));
-                                        tf.get(1).setText(Float.toString(ox.getX()));
-                                        tf.get(2).setText(Float.toString(ox.getY()));
-                                        tf.get(3).setText(Float.toString(ox.getW()));
-                                        tf.get(4).setText(Float.toString(ox.getH()));
-                                        if (ox.getName() != null) {
-                                            tf.get(5).setText(ox.getName());
-                                        } else {
-                                            tf.get(5).setText("");
-                                        }
-                                        if (ox.getType() != null) {
-                                            tf.get(6).setText(ox.getType());
-                                        } else {
-                                            tf.get(6).setText("");
-                                        }
-
-                                        if (Float.toString(ox.getRotation()) != null) {
-                                            tf.get(7).setText(Float.toString(ox.getRotation()));
-                                        } else {
-                                            tf.get(7).setText("");
-                                        }
-                                        return true;
-
-                                    }
-
-                                    /*
-                                    int numa = -1;
-                                    float closest = 9999;
-
-                                        int x = ae - drawx;
-                                        int y = ab - drawy;
-                                        int Tsws = Tsw / 2;
-                                        int Tshs = Tsh / 2;
-                                        float dx = Math.abs(x - Tsws);
-                                        float dy = Math.abs(y - Tshs);
-                                        if (dx / Tsws + dy / Tshs < closest) {
-                                            numa = i;
-                                            closest = dx / Tsws + dy / Tshs;
-                                        }
+        switch (activeobjtool) {
+            case 0:
+                shapeNameX = "rectangle";
+                break;
+            case 1:
+                shapeNameX = "ellipse";
+                break;
+            case 2:
+                shapeNameX = "point";
+                break;
+            case 3:
+                shapeNameX = "polygon";
+                break;
+            case 4:
+                shapeNameX = "polyline";
+                break;
+            case 6:
+                shapeNameX = "image";
+                break;
+            case 5:
+                shapeNameX = "text";
+                break;
+            case 7:
+                shapeNameX = "copypaste";
+                break;
+            case 8:
+                shapeNameX = "eraser";
+                break;
+        }
 
 
-                                    if (numa != -1) {
-                                        nyok.setX((int) (numa % Tw) * Tsh);
-                                        nyok.setY((int) (numa / Tw) * Tsh);
-                                        nyok = new obj(curid, (int) (numa % Tw) * Tsh, (int) (numa / Tw) * Tsh, Tsh, Tsh, "", "");
-                                    }
+        Vector3 touch = new Vector3();
+        cam.unproject(touch.set(p1, p2, 0));
+        int ae = (int) touch.x;
+        int ab = (int) touch.y;
 
+        if (activeobjtool == 7) {
+            if (clipobjcpy == "") return;
 
-                                }else {
-                                    if (touch.y <= -(ox.getY() - ox.getH()) - ox.getH() + Tsh + offy && touch.y >= -(ox.getY() - ox.getH()) - ox.getH() - ox.getH() + Tsh + offy && touch.x >= ox.getX() - offx && touch.x <= ox.getX() + ox.getW() - offx) {
-                                        if (activeobjtool == 7) {
+            Json json = new Json();
+            nyok = json.fromJson(obj.class, clipobjcpy);
+            nyok.setId(curid);
 
-                                            Json json = new Json();
-                                            clipobjcpy = json.toJson(ox);
-
-                                            return true;
-                                        }
-                                        if (activeobjtool == 8) {
-                                            layers.get(i).getObjects().remove(j);
-
-                                            return true;
-                                        }
-                                        oedit = j;
-                                        ogroup = i;
-                                        curobj = ox;
-                                        gotoStage(tObjProp);
-                                        tf.get(0).setText(Integer.toString(ox.getId()));
-                                        tf.get(1).setText(Float.toString(ox.getX()));
-                                        tf.get(2).setText(Float.toString(ox.getY()));
-                                        tf.get(3).setText(Float.toString(ox.getW()));
-                                        tf.get(4).setText(Float.toString(ox.getH()));
-                                        if (ox.getName() != null) {
-                                            tf.get(5).setText(ox.getName());
-                                        } else {
-                                            tf.get(5).setText("");
-                                        }
-                                        if (ox.getType() != null) {
-                                            tf.get(6).setText(ox.getType());
-                                        } else {
-                                            tf.get(6).setText("");
-                                        }
-
-                                        if (Float.toString(ox.getRotation()) != null) {
-                                            tf.get(7).setText(Float.toString(ox.getRotation()));
-                                        } else {
-                                            tf.get(7).setText("");
-                                        }
-                                        return true;
-                                    }//if atas
-                                }
-                            }
-                        }
-
-
-                    }
-                }
-            }
-
-
-            obj nyok = new obj();
-
-
-            if (activeobjtool == 7) {
-                if (clipobjcpy == null) return true;
-
-                Json json = new Json();
-                nyok = json.fromJson(obj.class, clipobjcpy);
-                nyok.setId(curid);
-
-
-                curid += 1;
-
-                if (magnet == 1) {
-                    switch (nyok.getShape()) {
-                        case "rectangle":
-                        case "ellipse":
-                        case "polygon":
-                        case "polyline":
-                        case "image":
-                        case "text":
-                        default:
-                            nyok.setX((ae / Tsw) * Tsw);
-                            nyok.setY(((-ab + Tsh) / Tsh) * Tsh);
-                            break;
-                        case "point":
-                            nyok.setX((ae / Tsw) * Tsw + (Tsw / 2));
-                            nyok.setY(((-ab + Tsh) / Tsh) * Tsh - Tsh / 2 + Tsh);
-                            break;
-
-
-                    }
-                }else{
-                        nyok.setX((int) touch.x);
-                        nyok.setY(-(int) touch.y + Tsh);
-                }
-                layers.get(selLayer).getObjects().add(nyok);
-
-                return true;
-            }
-
-            String shapeNameX = "";
-
-            if (magnet == 1) {
-                switch (activeobjtool) {
-                    case 0:
-                    case 1:
-                    case 6:
-                    case 5:
-                    case 3:
-                    case 4:
-                        if (orientation.equalsIgnoreCase("isometric")) {
-                            int numa =-1;
-                            float closest = 9999;
-                            for (int i = 0; i < Tw * Th; i++) {
-                                int offsetx = 0, offsety = 0;
-                                xpos = i % Tw;
-                                ypos = i / Tw;
-                                offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
-                                offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
-                                int drawx = xpos * Tsw - offsetx;
-                                int drawy = -ypos * Tsh - offsety;
-                                int x = ae - drawx;
-                                int y = ab - drawy;
-                                int Tsws = Tsw / 2;
-                                int Tshs = Tsh / 2;
-                                float dx = Math.abs(x - Tsws);
-                                float dy = Math.abs(y - Tshs);
-                                if (dx / Tsws + dy / Tshs < closest) {
-                                    numa = i;
-                                    closest = dx / Tsws + dy / Tshs;
-                                }
-
-                            }
-
-                            if (numa!=-1)
-                            {
-                                nyok.setX((int) (numa % Tw)*Tsh );
-                                nyok.setY((int) (numa / Tw)*Tsh);
-                                nyok = new obj(curid, (int) (numa % Tw)*Tsh , (int) (numa / Tw)*Tsh, Tsh, Tsh, "", "",world);
-                                nyok.updateVertices( world );
-                            }
-
-                        }else {
-                            nyok = new obj(curid, (ae / Tsw) * Tsw, ((-ab + Tsh) / Tsh) * Tsh, Tsw, Tsh, "", "",world);
-                            nyok.updateVertices( world );
-                        }
-
-                        break;
-                    case 2:
-                        nyok = new obj(curid, (ae / Tsw) * Tsw + (Tsw / 2), ((-ab + Tsh) / Tsh) * Tsh - Tsh / 2 + Tsh, Tsw, Tsh, "", "",world);
-                        nyok.updateVertices( world );
-
-                        break;
-
-
-                }
-            } else {
-                nyok = new obj(curid, (int) touch.x, -(int) touch.y + Tsh, Tsw, Tsh, "", "",world);
-                nyok.updateVertices( world );
-
-            }
-            switch (activeobjtool) {
-                case 0:
-                    shapeNameX = "rectangle";
-                    break;
-                case 1:
-                    shapeNameX = "ellipse";
-                    break;
-                case 2:
-                    shapeNameX = "point";
-                    break;
-                case 3:
-                    shapeNameX = "polygon";
-                    break;
-                case 4:
-                    shapeNameX = "polyline";
-                    break;
-                case 6:
-                    shapeNameX = "image";
-                    break;
-                case 5:
-                    shapeNameX = "text";
-                    break;
-                case 7:
-                    shapeNameX = "copypaste";
-                    break;
-                case 8:
-                    shapeNameX = "eraser";
-                    break;
-            }
-
-            nyok.setShape(shapeNameX);
-            layers.get(selLayer).getObjects().add(nyok);
 
             curid += 1;
 
+            if (magnet == 1) {
+                switch (nyok.getShape()) {
+                    case "rectangle":
+                    case "ellipse":
+                    case "polygon":
+                    case "polyline":
+                    case "image":
+                    case "text":
+                    default:
+                        nyok.setX((ae / Tsw) * Tsw);
+                        nyok.setY(((-ab + Tsh) / Tsh) * Tsh);
+                        break;
+                    case "point":
+                        nyok.setX((ae / Tsw) * Tsw + (Tsw / 2));
+                        nyok.setY(((-ab + Tsh) / Tsh) * Tsh - Tsh / 2 + Tsh);
+                        break;
+
+
+                }
+            }else{
+                nyok.setX((int) p1);
+                nyok.setY(-(int) p2 + Tsh);
+            }
+            layers.get(selLayer).getObjects().add(nyok);
+
+            return;
+        }
+
+        if (magnet == 1) {
             switch (activeobjtool) {
-
+                case 0:
+                case 1:
                 case 6:
-                    newobject = nyok;
-                    pickTile("newimgobj");
-                    break;
-
                 case 5:
-                    newobject = nyok;
-                    Gdx.input.getTextInput(pnewtextobject, "Set Text", "", "");
+                    if (orientation.equalsIgnoreCase("isometric")) {
+                        int numa =-1;
+                        float closest = 9999;
+                        for (int i = 0; i < Tw * Th; i++) {
+                            int offsetx = 0, offsety = 0;
+                            xpos = i % Tw;
+                            ypos = i / Tw;
+                            offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
+                            offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
+                            int drawx = xpos * Tsw - offsetx;
+                            int drawy = -ypos * Tsh - offsety;
+                            float x = ae - drawx;
+                            float y = ab - drawy;
+                            int Tsws = Tsw / 2;
+                            int Tshs = Tsh / 2;
+                            float dx = Math.abs(x - Tsws);
+                            float dy = Math.abs(y - Tshs);
+                            if (dx / Tsws + dy / Tshs < closest) {
+                                numa = i;
+                                closest = dx / Tsws + dy / Tshs;
+                            }
 
+                        }
+
+                        if (numa!=-1)
+                        {
+                            nyok.setX((int) (numa % Tw)*Tsh );
+                            nyok.setY((int) (numa / Tw)*Tsh);
+                            nyok = new obj(curid, (int) (numa % Tw)*Tsh , (int) (numa / Tw)*Tsh, Tsh, Tsh, "", "",world);
+                            nyok.setShape(shapeNameX);
+                            nyok.updateVertices( world , Tsh);
+                        }
+
+                    }else {
+                        nyok = new obj(curid, (int) (ae / Tsw) * Tsw, (int) ((-ab + Tsh) / Tsh) * Tsh, Tsw, Tsh, "", "",world);
+                        nyok.setShape(shapeNameX);
+                        nyok.updateVertices( world, Tsh );
+                    }
 
                     break;
-                case 3:
-                case 4:
-                    newobject = nyok;
-                    newobject.addPoint(0, 0);
-                    mode = "newpoly";
+                case 2:
+                    nyok = new obj(curid, (int) (ae / Tsw) * Tsw + (Tsw / 2), (int) ((-ab + Tsh) / Tsh) * Tsh - Tsh / 2 + Tsh, Tsw, Tsh, "", "",world);
+                    nyok.setShape(shapeNameX);
+                    nyok.updateVertices( world, Tsh);
+
+                    break;
+                case 3: case 4:
+                    nyok = new obj(curid, (int) (ae / Tsw) * Tsw, (int) ((-ab + Tsh) / Tsh) * Tsh, Tsw, Tsh, "", "",world);
+                    nyok.setShape(shapeNameX);
+
                     break;
 
 
             }
+        } else {
+            Gdx.app.log("AA","AAAAA"+magnet);
+            switch (activeobjtool) {
+                case 0: case 1: case 5: case 6:
+                    nyok = new obj(curid, (int) (ae-Tsw/2f), (int) (-ab+Tsh*0.5f), Tsw, Tsh, "", "",world);
+                    nyok.setShape(shapeNameX);
+                    nyok.updateVertices( world, Tsh );
+                    break;
+                case 2: case 3: case 4:
+                    nyok = new obj(curid, (int) (ae), (int) (-ab+Tsh), Tsw, Tsh, "", "",world);
+                    nyok.setShape(shapeNameX);
+                    nyok.updateVertices( world, Tsh );
+                    break;
+            }
 
-        } catch (Exception e) {
+
         }
-        */
-        //return false;
+        layers.get(selLayer).getObjects().add(nyok);
+
+        curid += 1;
+
+        switch (activeobjtool) {
+
+            case 6:
+                newobject = nyok;
+                pickTile("newimgobj");
+                break;
+
+            case 5:
+                newobject = nyok;
+                Gdx.input.getTextInput(pnewtextobject, "Set Text", "", "");
+
+
+                break;
+            case 3:
+            case 4:
+                newobject = nyok;
+                newobject.addPoint(0, 0);
+                mode = "newpoly";
+                break;
+
+
+        }
+
+
     }
 
     private void tapTile(int num, boolean follower, boolean terra) {
@@ -17350,6 +17243,7 @@ String texta="";
                 if (newobject.getPointsSize() == 2) {
                     newobject.setShape("polyline");
                 }
+                newobject.updateVertices( world,Tsh );
                 mode = "object";
                 return true;
             }
@@ -19739,6 +19633,12 @@ String texta="";
 
 
     private boolean longpressobj(float p1, float p2) {
+
+
+
+        longpressObject( p1,p2 );
+        return true;
+        /*
         Vector3 touch = new Vector3();
         cam.unproject(touch.set(p1, p2, 0));
 
@@ -19787,6 +19687,8 @@ String texta="";
 
 
         return false;
+
+         */
     }
 
     @Override
