@@ -81,15 +81,12 @@ public class obj implements Cloneable
 	public void setupBox2D(World world){
 	}
 	public void destroyBody(World world){
-		if (body!=null) {
-			if (world.getBodyCount()>0) {
-				world.destroyBody( body );
-			}
-		}
+		world.destroyBody( body );
 	}
-	public void updateVertices(World world){
+
+	public void updateVertices(World world, int Tsh){
 		bdef.type = BodyDef.BodyType.StaticBody;
-		bdef.position.set(x,-y+20);
+		bdef.position.set(x,-y+Tsh);
 		body = world.createBody(bdef);
 		fdef.filter.categoryBits = DEFAULT_BIT;
 		fdef.filter.maskBits = PLAYER_BIT;
@@ -97,8 +94,8 @@ public class obj implements Cloneable
 
 		Vector2[] vertices = new Vector2[4];
 		vertices[0] = new Vector2(0f  , 0f  );
-		vertices[1] = new Vector2(0 , -h  );
-		vertices[2] = new Vector2(w , -h);
+		vertices[1] = new Vector2(0 , h  );
+		vertices[2] = new Vector2(w , h);
 		vertices[3] = new Vector2(w , 0);
 		pshape = new PolygonShape();
 		pshape.set(vertices);

@@ -54,7 +54,6 @@ import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import com.mirwanda.nottiled.ai.ATGraph;
 import com.mirwanda.nottiled.ai.AutoTile;
-import com.mirwanda.nottiled.platformer.WorldContactListener;
 import com.mirwanda.nottiled.platformer.game;
 import com.mirwanda.nottiled.platformer.player;
 
@@ -1395,6 +1394,7 @@ String texta="";
         if (!Gdx.input.isTouched() && iseditGUI) {
             iseditGUI=false;
         }
+
 
         if (roll) {
             if (!Gdx.input.isTouched()) {
@@ -3218,7 +3218,7 @@ String texta="";
                                     break;
                                 default:
                                     if (orientation.equalsIgnoreCase("orthogonal")) {
-                                        sr.rect(ox.getX(), ox.getYantingelag(Tsh) - ox.getH(), 0, 0, ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation());
+                                        sr.rect(ox.getX(), ox.getYantingelag(Tsh), 0, 0, ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation());
                                     }
                                     else if (orientation.equalsIgnoreCase("isometric"))
                                     {
@@ -3317,20 +3317,35 @@ String texta="";
                                 int margin = tilesets.get(kyut).getMargin();
                                 int spacing = tilesets.get(kyut).getSpacing();
                                 TextureRegion region = new TextureRegion(tilesets.get(kyut).getTexture(), (sprX * (Tsw + spacing)) + margin, (sprY * (Tsh + spacing)) + margin, Tsw, Tsh);
-                                batch.draw(region, ox.getX(), ox.getYantingelag(Tsh) - ox.getH() - ox.getH() + Tsh, ox.getW(), ox.getH());
+                                Sprite s = new Sprite(region);
+                               // s.setX( ox.getX() );
+                               // s.setY( ox.getYantingelag( Tsh ) - ox.getH());
+                                s.setBounds( ox.getX(),ox.getYantingelag( Tsh ),ox.getW(),ox.getH() );
+
+                                s.setOrigin( 0,0 );
+                                s.setRotation( 360-ox.getRotation() );
+
+                                //for RW ONLY
+
+
+                              //  s.rotate90( false );
+                                s.draw( batch );
+                                //batch.draw(region, ox.getX(), ox.getYantingelag(Tsh) - ox.getH(), 0,ox.getH(),ox.getW(), ox.getH(),1,1, 360-ox.getRotation(),true);
                             }
 
                         }
                         String kucing = "";
                         if (ox.getName() != null) kucing = ox.getName();
-                        str1.draw(batch, kucing, ox.getX(), ox.getYantingelag(Tsh));
+                        str1.getData().setScale(0.4f + Tsw / 160f);
+
+                        str1.draw(batch, kucing, ox.getX()+1, ox.getYantingelag(Tsh));
                         if (ox.getShape() != null) {
                             switch (ox.getShape()) {
                                 case "text":
                                     str1.getData().setScale(0.2f + Tsw / 160f);
                                     if (ox.getText() != null) {
                                         if (ox.isWrap()) {
-                                            str1.draw(batch, ox.getText(), ox.getX(), ox.getYantingelag(Tsh), ox.getW(), com.badlogic.gdx.utils.Align.left, true);
+                                            str1.draw(batch, ox.getText(), ox.getX(), ox.getYantingelag(Tsh), ox.getW(), com.badlogic.gdx.utils.Align.left, false);
                                         } else {
                                             str1.draw(batch, ox.getText(), ox.getX(), ox.getYantingelag(Tsh));
                                         }
@@ -7468,16 +7483,22 @@ String texta="";
         bApply.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                obj oj = layers.get(selLayer).getObjects().get(oedit);
-                oj.setX(Float.parseFloat(tf.get(1).getText()));
-                oj.setY(Float.parseFloat(tf.get(2).getText()));
-                oj.setW(Float.parseFloat(tf.get(3).getText()));
-                oj.setH(Float.parseFloat(tf.get(4).getText()));
+                obj oj=selobj;
+                try {
+                    oj.setX( Float.parseFloat( tf.get( 1 ).getText() ) );
+                    oj.setY( Float.parseFloat( tf.get( 2 ).getText() ) );
+                    oj.setW( Float.parseFloat( tf.get( 3 ).getText() ) );
+                    oj.setH( Float.parseFloat( tf.get( 4 ).getText() ) );
+                }catch (Exception e){
+                    msgbox("Invalid number format!");
+                    return;
+                }
+
                 oj.setName(tf.get(5).getText());
                 oj.setType(tf.get(6).getText());
                 oj.setRotation(Float.parseFloat(tf.get(7).getText()));
                 oj.destroyBody( world );
-                oj.updateVertices(world);
+                oj.updateVertices(world, Tsh);
                 backToMap();
             }
         });
@@ -7491,9 +7512,9 @@ String texta="";
         bRemove.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                layers.get(selLayer).getObjects().get(oedit).destroyBody( world );
+                selobj.destroyBody( world );
+                layers.get(selLayer).getObjects().remove( selobj);
 
-                layers.get(selLayer).getObjects().remove(oedit);
                 backToMap();
             }
         });
@@ -7523,6 +7544,7 @@ String texta="";
 
     }
 
+    obj selobj;
     public void loadPropEditor() {
 		/*
 		 Table tPropEditor;
@@ -7643,7 +7665,7 @@ String texta="";
 
                 switch (sender) {
                     case "object":
-                        pp = layers.get(selLayer).getObjects().get(oedit).getProperties();
+                        pp = selobj.getProperties();
                         break;
                     case "tile":
                         pp = tilesets.get(selTsetID).getTiles().get(selTileID).getProperties();
@@ -8848,7 +8870,7 @@ String texta="";
                 java.util.List<property> pp = new ArrayList<property>();
                 switch (sender) {
                     case "object":
-                        pp = layers.get(selLayer).getObjects().get(oedit).getProperties();
+                        pp = selobj.getProperties();
                         break;
                     case "tile":
                         pp = tilesets.get(selTsetID).getTiles().get(selTileID).getProperties();
@@ -8887,7 +8909,7 @@ String texta="";
 
                     switch (sender) {
                         case "object":
-                            layers.get(selLayer).getObjects().get(oedit).setProperties(at.getProperties());
+                            selobj.setProperties(at.getProperties());
                             break;
                         case "tile":
                             tilesets.get(selTsetID).getTiles().get(selTileID).setProperties(at.getProperties());
@@ -8998,9 +9020,9 @@ String texta="";
         bProps.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                refreshProperties(layers.get(selLayer).getObjects().get(oedit).getProperties());
+                refreshProperties(selobj.getProperties());
 
-                lPropID.setText(z.object + " " + z.properties + ": " + layers.get(selLayer).getObjects().get(oedit).getId());
+                lPropID.setText(z.object + " " + z.properties + ": " + selobj.getId());
                 sender = "object";
                 gotoStage(tPropsMgmt);
             }
@@ -9079,7 +9101,7 @@ String texta="";
                 java.util.List<property> pp = new ArrayList<property>();
                 switch (sender) {
                     case "object":
-                        pp = layers.get(selLayer).getObjects().get(oedit).getProperties();
+                        pp = selobj.getProperties();
                         break;
                     case "tset":
                         pp = tilesets.get(selTsetID).getProperties();
@@ -9158,7 +9180,7 @@ String texta="";
                 java.util.List<property> pp = new ArrayList<property>();
                 switch (sender) {
                     case "object":
-                        pp = layers.get(selLayer).getObjects().get(oedit).getProperties();
+                        pp = selobj.getProperties();
                         break;
                     case "tile":
                         pp = tilesets.get(selTsetID).getTiles().get(selTileID).getProperties();
@@ -9193,7 +9215,7 @@ String texta="";
                 java.util.List<property> pp = new ArrayList<property>();
                 switch (sender) {
                     case "object":
-                        pp = layers.get(selLayer).getObjects().get(oedit).getProperties();
+                        pp = selobj.getProperties();
                         break;
                     case "tile":
                         pp = tilesets.get(selTsetID).getTiles().get(selTileID).getProperties();
@@ -9698,6 +9720,56 @@ String texta="";
                 tbl.add(tut).row();
 
                 break;
+
+            case "object":
+                //cakwe
+                tbl.add(new Label(z.object, skin)).row();
+
+                int objectsize=0;
+                for (int i = 0; i < tempObjx.size(); i++) {
+                    obj oo = tempObjx.get( i );
+                    Button tat = new Button(skin);
+                    tat.defaults().left();
+                    Image img = null;
+
+                    String name = "["+oo.getId()+"] "+oo.getName();
+
+                    img = new Image(txTypeObject);
+                    tat.add(img).width(btnx*0.15f).padLeft(10);
+
+                    Label lbl = new Label(name, skin);
+                    lbl.setColor(1, 1, 1, 1);
+                    lbl.setAlignment(Align.left);
+                    lbl.setWrap(true);
+                    tat.add(lbl).width(btnx*0.85f);
+                    tat.setUserObject(oo);
+                    tbl.add(tat).width(btnx).row();
+
+
+                        tat.addListener(new ChangeListener() {
+                            @Override
+                            public void changed(ChangeEvent event, Actor actor) {
+                                showPropBox2D( (obj) actor.getUserObject() );
+                                //backToMap();
+
+                            }
+                        });
+
+                }
+
+
+                tut.addListener(new ChangeListener() {
+                    @Override
+                    public void changed(ChangeEvent event, Actor actor) {
+                        backToMap();
+                    }
+                });
+
+                tbl.add(tut).row();
+
+                break;
+
+
 
         }
 
@@ -11945,9 +12017,10 @@ String texta="";
                                         srz.endTag(null, "text");
                                         break;
                                     case "image":
-                                        int newyy = Integer.parseInt(yy);
-                                        newyy += Tsh;
-                                        srz.attribute("", "y", Integer.toString(newyy));
+                                       // float newyy = Float.parseFloat(yy);
+                                        //newyy += Tsh;
+                                        //srz.attribute("", "y", Float.toString(newyy));
+                                        srz.attribute("", "y", yy);
                                         srz.attribute("", "width", ww);
                                         srz.attribute("", "height", hh);
 
@@ -12663,7 +12736,7 @@ String texta="";
                             if (myParser.getAttributeValue(null, "gid") != null) {
                                 tempobj.setShape("image");
                                 tempobj.setGid(Integer.parseInt(myParser.getAttributeValue(null, "gid")));
-                                tempobj.setY(Float.parseFloat(myParser.getAttributeValue(null, "y")) - Tsh);
+                                tempobj.setY(Float.parseFloat(myParser.getAttributeValue(null, "y")));
                             }
 
                             float pWidth, pHeight;
@@ -14793,14 +14866,21 @@ String texta="";
         fdef.isSensor = true;
 
         pshape = new PolygonShape();
-        pshape.setAsBox( 5,5 );
+        pshape.setAsBox( 1,1 );
         fdef.shape = pshape;
         fixture = body.createFixture(fdef);
         objType = obj.objecttype.POINTER;
         fixture.setUserData(objType);
     }
 
+    public void checkBox2D(obj ox){
+        tempObjx.add( ox );
+        loadList( "object" );
+        status( tempObjx.size()+"",1 );
+    }
+
     public void showPropBox2D(obj ox){
+        selobj=ox;
         gotoStage(tObjProp);
         tf.get(0).setText(Integer.toString(ox.getId()));
         tf.get(1).setText(Float.toString(ox.getX()));
@@ -14826,7 +14906,10 @@ String texta="";
 
     }
 
+    java.util.List<obj> tempObjx = new ArrayList<obj>();
+
     private boolean tapObject(Integer num, Vector3 touch, int ae, int ab) {
+        tempObjx.clear();
         updatePointer(touch.x,-touch.y);
         return true;
         /*
@@ -17037,81 +17120,20 @@ String texta="";
 
             for (layer l: layers){
                 if (l.getType()==layer.Type.OBJECT){
-                    for (obj ob : l.getObjects()){
-                        ob.destroyBody( world );
+                    com.badlogic.gdx.utils.Array<Body> bds = new com.badlogic.gdx.utils.Array<Body>();
+                    world.getBodies( bds );
+                    for ( Body bd : bds){
+                        world.destroyBody( bd );
                     }
                 }
             }
 
             for (obj ob : layers.get(selLayer).getObjects()){
-                ob.updateVertices( world );
+                ob.updateVertices( world ,Tsh);
             }
 
             adjustTileset();
             return true;
-        }
-        if (swatches) {
-            if (tapped( touch2, gui.sw1 )) {
-                if (swatchValue.get( 0 ) == 0) {
-                    pickTile( "sw1" );
-                } else {
-                    curspr = swatchValue.get( 0 );
-                    setTsetFromCurspr();
-                }
-                adjustLayer( tilesets.get( seltset ) );
-                return true;
-            }
-
-            if (tapped( touch2, gui.sw2 )) {
-                if (swatchValue.get( 1 ) == 0) {
-                    pickTile( "sw2" );
-                } else {
-                    curspr = swatchValue.get( 1 );
-                    setTsetFromCurspr();
-                }
-                adjustLayer( tilesets.get( seltset ) );
-                return true;
-            }
-            if (tapped( touch2, gui.sw3 )) {
-                if (swatchValue.get( 2 ) == 0) {
-                    pickTile( "sw3" );
-                } else {
-                    curspr = swatchValue.get( 2 );
-                    setTsetFromCurspr();
-                }
-                adjustLayer( tilesets.get( seltset ) );
-                return true;
-            }
-            if (tapped( touch2, gui.sw4 )) {
-                if (swatchValue.get( 3 ) == 0) {
-                    pickTile( "sw4" );
-                } else {
-                    curspr = swatchValue.get( 3 );
-                    setTsetFromCurspr();
-                }
-                adjustLayer( tilesets.get( seltset ) );
-                return true;
-            }
-            if (tapped( touch2, gui.sw5 )) {
-                if (swatchValue.get( 4 ) == 0) {
-                    pickTile( "sw5" );
-                } else {
-                    curspr = swatchValue.get( 4 );
-                    setTsetFromCurspr();
-                }
-                adjustLayer( tilesets.get( seltset ) );
-                return true;
-            }
-            if (tapped( touch2, gui.sw6 )) {
-                if (swatchValue.get( 5 ) == 0) {
-                    pickTile( "sw6" );
-                } else {
-                    curspr = swatchValue.get( 5 );
-                    setTsetFromCurspr();
-                }
-                adjustLayer( tilesets.get( seltset ) );
-                return true;
-            }
         }
 
         if (tapped(touch2, gui.layerpick)) {
@@ -17199,6 +17221,70 @@ String texta="";
             }
         }
         if (mode == "tile") {
+            if (swatches) {
+                if (tapped( touch2, gui.sw1 )) {
+                    if (swatchValue.get( 0 ) == 0) {
+                        pickTile( "sw1" );
+                    } else {
+                        curspr = swatchValue.get( 0 );
+                        setTsetFromCurspr();
+                    }
+                    adjustLayer( tilesets.get( seltset ) );
+                    return true;
+                }
+
+                if (tapped( touch2, gui.sw2 )) {
+                    if (swatchValue.get( 1 ) == 0) {
+                        pickTile( "sw2" );
+                    } else {
+                        curspr = swatchValue.get( 1 );
+                        setTsetFromCurspr();
+                    }
+                    adjustLayer( tilesets.get( seltset ) );
+                    return true;
+                }
+                if (tapped( touch2, gui.sw3 )) {
+                    if (swatchValue.get( 2 ) == 0) {
+                        pickTile( "sw3" );
+                    } else {
+                        curspr = swatchValue.get( 2 );
+                        setTsetFromCurspr();
+                    }
+                    adjustLayer( tilesets.get( seltset ) );
+                    return true;
+                }
+                if (tapped( touch2, gui.sw4 )) {
+                    if (swatchValue.get( 3 ) == 0) {
+                        pickTile( "sw4" );
+                    } else {
+                        curspr = swatchValue.get( 3 );
+                        setTsetFromCurspr();
+                    }
+                    adjustLayer( tilesets.get( seltset ) );
+                    return true;
+                }
+                if (tapped( touch2, gui.sw5 )) {
+                    if (swatchValue.get( 4 ) == 0) {
+                        pickTile( "sw5" );
+                    } else {
+                        curspr = swatchValue.get( 4 );
+                        setTsetFromCurspr();
+                    }
+                    adjustLayer( tilesets.get( seltset ) );
+                    return true;
+                }
+                if (tapped( touch2, gui.sw6 )) {
+                    if (swatchValue.get( 5 ) == 0) {
+                        pickTile( "sw6" );
+                    } else {
+                        curspr = swatchValue.get( 5 );
+                        setTsetFromCurspr();
+                    }
+                    adjustLayer( tilesets.get( seltset ) );
+                    return true;
+                }
+            }
+
             if (tapped(touch2, gui.tool1)) {
                 if (!cue("tool1") && lockUI) return true;
                 activetool = 0;

@@ -32,15 +32,15 @@ public class myContactListener implements ContactListener {
             Fixture fixA = contact.getFixtureA();
             Fixture fixB = contact.getFixtureB();
             if (fixA.getUserData() == POINTER){
-                game.showPropBox2D((obj) fixB.getUserData());
+                game.checkBox2D((obj) fixB.getUserData());
 
             }
             if (fixB.getUserData() == POINTER){
-                game.showPropBox2D((obj) fixA.getUserData());
+                game.checkBox2D((obj) fixA.getUserData());
 
             }
 
-                Gdx.app.log("TEST","COLLIDED");
+              //  Gdx.app.log("TEST","COLLIDED");
 
 
         }
