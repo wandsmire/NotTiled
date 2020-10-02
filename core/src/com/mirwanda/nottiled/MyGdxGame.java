@@ -3134,14 +3134,186 @@ String texta="";
 
     private void drawObjects() {
         sr.setProjectionMatrix(cam.combined);
+        sr.begin(ShapeRenderer.ShapeType.Filled); //Edit it with filled to make it looks gorgeous.
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+
+        Gdx.gl20.glLineWidth(5);//average
+        sr.setColor(0.5f, 0.5f, 0.5f, 0.5f); //blink
+
+        if (layers.size() > 0) {
+            for (int i = 0; i < layers.size(); i++) {
+
+                if (i==selLayer){
+                    sr.setColor(0.5f, 0.7f, 0.5f, 0.5f); //blink
+
+                }else{
+                    sr.setColor(0.5f, 0.5f, 0.5f, 0.5f); //blink
+
+                }
+
+                boolean isShown = false;
+                switch (viewMode)
+                {
+                    case ALL:
+                        isShown=true;
+                        break;
+                    case STACK:
+                        if (i<=selLayer) isShown=true;
+                        break;
+                    case SINGLE:
+                        if (i==selLayer) isShown=true;
+                        break;
+                    case CUSTOM:
+                        if (layers.get(i).isVisible()) isShown=true;
+                        break;
+                }
+
+                if (layers.get(i).getType() == layer.Type.OBJECT && isShown && layers.get(i).getObjects().size() > 0) {
+
+                    for (int j = 0; j < layers.get(i).getObjects().size(); j++) {
+
+                        obj ox = layers.get(i).getObjects().get(j);
+
+                        if (ox.getShape() != null) {
+                            switch (ox.getShape()) {
+                                case "ellipse":
+                                    sr.ellipse(ox.getX(), -ox.getY() + Tsh - ox.getH(), ox.getW(), ox.getH());
+
+                                    break;
+                                case "point":
+                                    sr.ellipse(ox.getXa() + Tsh / 4, -ox.getYa() + Tsh - Tsh * 3 / 4, Tsw / 2, Tsh / 2);
+
+                                    sr.rect(ox.getXa() + Tsh / 4, -ox.getYa() + Tsh - Tsh * 3 / 4, Tsw / 2, Tsh / 2);
+
+                                    break;
+                                case "polygon":
+                                    //sr.ellipse(ox.getXa() + Tsh / 4, -ox.getYa() + Tsh - Tsh * 3 / 4, Tsw / 2, Tsh / 2);
+                                    //sr.ellipse(ox.getXa() + Tsh * 3 / 8, -ox.getYa() + Tsh - Tsh * 5 / 8, Tsw / 4, Tsh / 4);
+
+
+                                    float[] f = ox.getVertices(Tsh);
+                                    if (ox.getPointsSize() >= 3) {
+                                        Polygon polygon = new Polygon();
+                                        polygon.setVertices(f);
+                                        polygon.setOrigin(ox.getX(), -ox.getY() + Tsh);
+                                        polygon.rotate(360 - ox.getRotation());
+                                        sr.polygon(polygon.getTransformedVertices());
+                                    }
+
+                                    break;
+                                case "polyline":
+                                    //sr.ellipse(ox.getXa() + Tsh / 4f, -ox.getYa() + Tsh - Tsh * 3f / 4f, Tsw / 2f, Tsh / 2f);
+                                    //sr.ellipse(ox.getXa() + Tsh * 3f / 8f, -ox.getYa() + Tsh - Tsh * 5f / 8f, Tsw / 4f, Tsh / 4f);
+
+                                    /*
+                                    if (ox.getPointsSize() >= 2) {
+                                        f = ox.getVertices(Tsh);
+                                        Polyline polyline = new Polyline(f);
+                                        polyline.setOrigin(ox.getX(), -ox.getY() + Tsh);
+                                        polyline.rotate(360 - ox.getRotation());
+                                        sr.polyline(polyline.getTransformedVertices());
+                                    }
+                                    */
+
+                                    break;
+                                case "text":
+                                    sr.rect(ox.getX(), ox.getYantingelag(Tsh) - ox.getH(), 0, 0, ox.getW(), ox.getH(), 1, 1, ox.getRotation());
+                                    //str1.draw(batch, ox.getText(), ox.getX(), -ox.getYantingelag(Tsh));
+
+                                    break;
+                                case "image":
+                                    sr.rect(ox.getX(), ox.getYantingelag(Tsh), 0, 0, ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation());
+                                    break;
+                                default:
+                                    if (orientation.equalsIgnoreCase("orthogonal")) {
+                                        sr.rect(ox.getX(), ox.getYantingelag(Tsh)-ox.getH(), 0, ox.getH(), ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation());
+                                    }
+                                    else if (orientation.equalsIgnoreCase("isometric"))
+                                    {
+                                        int offsetx = 0, offsety = 0;
+                                        xpos = mapstartSelect % Tw;
+                                        ypos = mapstartSelect / Tw;
+                                        offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
+                                        offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
+                                        int xpos2 = mapendSelect % Tw;
+                                        int ypos2 = mapendSelect / Tw;
+                                        int offsetx2 = (xpos2 * Tsw / 2) + (ypos2 * Tsw / 2);
+                                        int offsety2 = (xpos2 * Tsh / 2) - (ypos2 * Tsh / 2);
+                                        int offsetx3 = (xpos2 * Tsw / 2) + (ypos * Tsw / 2);
+                                        int offsety3 = (xpos2 * Tsh / 2) - (ypos * Tsh / 2);
+                                        int offsetx4 = (xpos * Tsw / 2) + (ypos2 * Tsw / 2);
+                                        int offsety4 = (xpos * Tsh / 2) - (ypos2 * Tsh / 2);
+
+                                        //anchor
+                                        float offx= (ox.getX()/Tsh*Tsw/2) - (ox.getY()/Tsh*Tsw/2);//-ox.getY();
+                                        float offy= (-ox.getX()/Tsh*Tsh/2) - (ox.getY()/Tsh*Tsh/2); //-ox.getY()*Tsh/2;
+
+                                        //width & height
+                                        float wid= 0;//(ox.getW()/Tsh*Tsw/2);//-ox.getY();
+                                        float hei= 0;//(-ox.getW()/Tsh*Tsh/2); //-ox.getY()*Tsh/2;
+
+
+                                        float op1 = Tsw/2; //'0'
+                                        float op2 = Tsh; //0
+                                        float op3 = ox.getW()/Tsh*Tsw/2;
+                                        float op4 = ox.getW()/Tsh*Tsh/2;
+                                        float op5 = (ox.getW()/Tsh*Tsw/2) - (ox.getH()/Tsh*Tsw/2);
+                                        float op6 = (-ox.getH()/Tsh*Tsh/2) - (ox.getW()/Tsh*Tsh/2);
+                                        float op7 = -ox.getH()/Tsh*Tsw/2;
+                                        float op8 = -ox.getH()/Tsh*Tsh/2;
+
+                                        float p1 = offx + op1;
+                                        float p2 = offy + op2;
+                                        float p3 = offx + op1 + op3;
+                                        float p4 = offy + op2 - op4;
+                                        float p5 = offx + op1 + op5;
+                                        float p6 = offy + op2 + op6;
+                                        float p7 = offx + op1 + op7;
+                                        float p8 = offy + op2 + op8;
+
+                                        sr.rectLine(p1,p2,p3,p4,Tsw/16f);
+                                        sr.rectLine(p3,p4,p5,p6,Tsw/16f);
+                                        sr.rectLine(p5,p6,p7,p8,Tsw/16f);
+                                        sr.rectLine(p7,p8,p1,p2,Tsw/16f);
+
+                                    }
+                                    //str1.draw(batch, j+"", 0, -j);
+
+
+                                    break;
+                            }
+
+
+                        } else {
+                            sr.rect(ox.getX(), ox.getYantingelag(Tsh) - ox.getH(), ox.getW(), ox.getH());
+
+                        }
+
+
+                    }
+                }
+            }
+        }
+
+        sr.end();
+
         sr.begin(ShapeRenderer.ShapeType.Line); //Edit it with filled to make it looks gorgeous.
         Gdx.gl.glEnable(GL20.GL_BLEND);
 
         Gdx.gl20.glLineWidth(5);//average
-        sr.setColor(0, 0.5f, 0, 0.5f); //blink
+        //sr.setColor(0.8f, 0.8f, 0.8f, 0.5f); //blink
 
         if (layers.size() > 0) {
             for (int i = 0; i < layers.size(); i++) {
+
+                if (i==selLayer){
+                    sr.setColor(0.5f, 1f, 0.5f, 1f); //blink
+
+                }else{
+                    sr.setColor(0.8f, 0.8f, 0.8f, 0.5f); //blink
+
+                }
+
                 boolean isShown = false;
                 switch (viewMode)
                 {
@@ -3289,8 +3461,10 @@ String texta="";
                     }
                 }
             }
-            sr.end();
         }
+
+        sr.end();
+
     }
 
     public void drawObjectsInfo() {
@@ -4086,7 +4260,7 @@ String texta="";
             if (cammode != "View only") {
 
                 if (mode == "tile" || mode == "object"|| mode == "image") {
-                    str1draw(ui, layers.get(selLayer).getName(), gui.layer);
+                    if (layers.size() >0) str1draw(ui, layers.get(selLayer).getName(), gui.layer);
                     uidrawbutton(txlayer, z.layer, gui.layerpick, 1);
                     uidrawbutton(txmenu, z.menu, gui.menu, 2);
                     uidrawbutton(txmap, z.map, gui.map, 2);
@@ -7219,6 +7393,7 @@ String texta="";
     }
 
     private void runhmirror() {
+        if (layers.size()==0) return;
         redolayer.clear();
         for (int i = 0; i < Tw * Th; i++) {
             boolean follower = true;
@@ -7270,6 +7445,7 @@ String texta="";
     }
 
     private void runvmirror() {
+        if (layers.size()==0) return;
         redolayer.clear();
         for (int i = 0; i < Tw * Th; i++) {
             boolean follower = true;
@@ -7323,6 +7499,7 @@ String texta="";
     }
 
     private void runhvmirror() {
+        if (layers.size()==0) return;
         runhmirror();
         runvmirror();
         backToMap();
@@ -7330,6 +7507,7 @@ String texta="";
 
 
     private void runhvmirrorrev() {
+        if (layers.size()==0) return;
         redolayer.clear();
         for (int i = 0; i < Tw * Th; i++) {
             boolean follower = true;
@@ -8788,6 +8966,7 @@ String texta="";
                     llayerlist.setItems(srr);
                     if (dex < 1) dex = 1;
                     llayerlist.setSelectedIndex(dex - 1);
+                    updateObjectCollision();
                 }
             }
         });
@@ -9562,6 +9741,7 @@ String texta="";
                         @Override
                         public void changed(ChangeEvent event, Actor actor) {
                             selLayer = Integer.parseInt(actor.getName());
+                            updateObjectCollision();
                             adjustTileset();
                             backToMap();
                             cue("layerselected");
@@ -12957,7 +13137,7 @@ String texta="";
 
         } catch (Exception e) {
             newtmxfile(false);
-            status("Error opening file.", 500);
+            status("Error opening file.", 3);
             ErrorBung(e, "/maknyus.txt");
         }
         CacheAllTset();
@@ -14893,10 +15073,25 @@ String texta="";
     public void showPropBox2D(obj ox){
         selobj=ox;
             Gdx.app.log( "PP",activeobjtool+"");
+
         if (activeobjtool == 7) {
+            obj oc = new obj();
+            oc.setGid( ox.getGid() );
+            oc.setProperties( ox.getProperties() );
+            oc.setPoints( ox.getPoints() );
+            oc.setW( ox.getW() );
+            oc.setH( ox.getH() );
+            oc.setX( ox.getX() );
+            oc.setY(ox.getY());
+            oc.setId( ox.getId() );
+            oc.setName( ox.getName() );
+            oc.setRotation( ox.getRotation() );
+            oc.setShape( ox.getShape() );
+            oc.setType( ox.getType() );
+            oc.setText( ox.getText() );
 
             Json json = new Json();
-            clipobjcpy = json.toJson(ox);
+            clipobjcpy = json.toJson(oc);
             backToMap();
             return;
         }
@@ -15014,8 +15209,8 @@ String texta="";
 
                 }
             }else{
-                nyok.setX((int) p1);
-                nyok.setY(-(int) p2 + Tsh);
+                nyok.setX((int) ae);
+                nyok.setY(-(int) ab + Tsh);
             }
             layers.get(selLayer).getObjects().add(nyok);
 
@@ -15083,7 +15278,7 @@ String texta="";
 
             }
         } else {
-            Gdx.app.log("AA","AAAAA"+magnet);
+            //Gdx.app.log("AA","AAAAA"+magnet);
             switch (activeobjtool) {
                 case 0: case 1: case 5: case 6:
                     nyok = new obj(curid, (int) (ae-Tsw/2f), (int) (-ab+Tsh*0.5f), Tsw, Tsh, "", "",world);
@@ -15131,6 +15326,7 @@ String texta="";
 
     private void tapTile(int num, boolean follower, boolean terra) {
         if (cammode == "View only") return;
+        if (layers.size()==0) return;
         //the actual stamping process.
         if (stamp && !roll) {
             cue("stamp");
@@ -16937,6 +17133,7 @@ String texta="";
                 for (int l=0; l<layers.size();l++){
                     if (layers.get(l).getName().equalsIgnoreCase( p.getValue() )){
                         selLayer=l;
+                        updateObjectCollision();
                         break;
                     }
                 }
@@ -16968,6 +17165,25 @@ String texta="";
         }
     }
 
+    private void updateObjectCollision(){
+        if (layers.size()==0) return;
+        if (layers.get(selLayer).getType()!=layer.Type.OBJECT) return;
+
+            for (layer l: layers){
+            if (l.getType()==layer.Type.OBJECT){
+                com.badlogic.gdx.utils.Array<Body> bds = new com.badlogic.gdx.utils.Array<Body>();
+                world.getBodies( bds );
+                for ( Body bd : bds){
+                    world.destroyBody( bd );
+                }
+            }
+        }
+
+        for (obj ob : layers.get(selLayer).getObjects()){
+            ob.updateVertices( world ,Tsh);
+        }
+
+    }
     private boolean tapWorldMenu(Vector3 touch2) {
         if (cammode == "View only") {
             if (tapped(touch2, gui.center)) {
@@ -16998,6 +17214,7 @@ String texta="";
 
         //layer selection (top mid)
         if (tapped(touch2, gui.layer)) {
+            if (layers.size()==0) return true;
             selLayer += 1;
             if (layers.size() == selLayer) {
                 selLayer = 0;
@@ -17011,20 +17228,7 @@ String texta="";
                 mode = "image";
             }
 
-            for (layer l: layers){
-                if (l.getType()==layer.Type.OBJECT){
-                    com.badlogic.gdx.utils.Array<Body> bds = new com.badlogic.gdx.utils.Array<Body>();
-                    world.getBodies( bds );
-                    for ( Body bd : bds){
-                        world.destroyBody( bd );
-                    }
-                }
-            }
-
-            for (obj ob : layers.get(selLayer).getObjects()){
-                ob.updateVertices( world ,Tsh);
-            }
-
+            updateObjectCollision();
             adjustTileset();
             return true;
         }
@@ -18817,6 +19021,7 @@ String texta="";
     @Override
     public boolean longPress(float p1, float p2) {
         if (loadingfile) return true;
+        if (layers.size()==0) return true;
         if (kartu.equalsIgnoreCase("game")){return true;}
 
         //Gdx.input.vibrate(50);
@@ -18886,6 +19091,7 @@ String texta="";
                     if (selLayer <= -1) {
                         selLayer = layers.size() - 1;
                     }
+                    updateObjectCollision();
                     adjustTileset();
                     return true;
                     //'812398BB9
