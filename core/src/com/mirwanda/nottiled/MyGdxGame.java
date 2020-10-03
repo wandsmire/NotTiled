@@ -886,7 +886,7 @@ String texta="";
         ui.setProjectionMatrix(uicam.combined);
         ui.begin();
 
-        texta = "Make sure to give NotTiled access to your storage, \notherwise you will stuck on this screen...";
+        texta = z.storageaccess;// "Make sure to give NotTiled access to your storage, \notherwise you will stuck on this screen...";
 
         if (landscape) {
             ui.draw(txlauncher, (ssy / 2) - (156 / 2), (ssx / 2) - (156 / 2) + 50, 156, 156);
@@ -3844,11 +3844,18 @@ String texta="";
             h = gui.getH() - margin +1;
         }
         if (!landscape) {
+            ui.setColor(Color.BLACK);
+            ui.draw(tx, 1+(x / 100 * ssx)+((w - x) / 100 * ssx/2)-((h - y) / 100 * ssy/2), -1+y / 100 * ssy, (h - y) / 100 * ssy, (h - y) / 100 * ssy);
+            ui.setColor(Color.WHITE);
             ui.draw(tx, (x / 100 * ssx)+((w - x) / 100 * ssx/2)-((h - y) / 100 * ssy/2), y / 100 * ssy, (h - y) / 100 * ssy, (h - y) / 100 * ssy);
            // ui.draw(tx, x / 100 * ssx, y / 100 * ssy, (w - x) / 100 * ssx, (h - y) / 100 * ssy);
         } else {
+            ui.setColor(Color.BLACK);
+            ui.draw(tx, 1+(x / 100 * ssy)+((w - x) / 100 * ssy/2)-((h - y) / 100 * ssx/2), -1+y / 100 * ssx, (h - y) / 100 * ssx, (h - y) / 100 * ssx);
+            ui.setColor(Color.WHITE);
             ui.draw(tx, (x / 100 * ssy)+((w - x) / 100 * ssy/2)-((h - y) / 100 * ssx/2), y / 100 * ssx, (h - y) / 100 * ssx, (h - y) / 100 * ssx);
-//            ui.draw(tx, x / 100 * ssy, y / 100 * ssx, (w - x) / 100 * ssy, (h - y) / 100 * ssx);
+
+            //            ui.draw(tx, x / 100 * ssy, y / 100 * ssx, (w - x) / 100 * ssy, (h - y) / 100 * ssx);
         }
 
 ///////////LABEL///////////////////////////////////
@@ -18579,28 +18586,81 @@ String texta="";
                         }
                     }
                     break;
+                case "cleanup":
+                    //Fix the map before autotiling
+                    for (int x=0;x<3;x++) {
+                        for (int k = 0; k < Tw * Th; k++) {
+                            int dong = 0;
+                            long strs = -1;
+
+                            long lcen = -1, lleft = -1, ltop = -1, lright = -1, lbottom = -1;
+                            lcen = layers.get( am.getSourcelayer() ).getStr().get( k );
+                            if (k - Tw >= 0)
+                                ltop = layers.get( am.getSourcelayer() ).getStr().get( k - Tw );
+                            if (k + Tw < Tw * Th)
+                                lbottom = layers.get( am.getSourcelayer() ).getStr().get( k + Tw );
+                            if (k - 1 >= 0 && k % Tw != 0)
+                                lleft = layers.get( am.getSourcelayer() ).getStr().get( k - 1 );
+                            if (k + 1 < Tw * Th && k % Tw != Tw - 1)
+                                lright = layers.get( am.getSourcelayer() ).getStr().get( k + 1 );
+
+                            int tgt = -1;
+
+                            if (ltop != -1 && ltop != lcen) {
+                                dong++;
+                                strs = ltop;
+                            }
+                            if (lleft != -1 && lleft != lcen) {
+                                dong++;
+                                strs = lleft;
+                            }
+                            if (lright != -1 && lright != lcen) {
+                                dong++;
+                                strs = lright;
+                            }
+                            if (lbottom != -1 && lbottom != lcen) {
+                                dong++;
+                                strs = lbottom;
+                            }
+
+                            if (dong > 2) {
+                                Gdx.app.log( "AA", dong + "" );
+                                layers.get( am.getSourcelayer() ).getStr().set( k, strs );
+
+                                for (int l = 0; l < tilesets.size(); l++) {
+                                    if (strs >= tilesets.get( l ).getFirstgid() && strs < tilesets.get( l ).getFirstgid() + tilesets.get( l ).getTilecount()) {
+                                        layers.get( am.getSourcelayer() ).getTset().set( k, l );
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    break;
                 case "bitmask":
+
+
                     for (int k = 0; k < Tw * Th; k++) {
                         if (layers.get(am.getSourcelayer()).getStr().get(k) != am.getSource())
                             continue;
                         int count = 0;
                         int total = Tw * Th;
                         Long num1 = (long) 0, num2 = (long) 0, num4 = (long) 0, num8 = (long) 0, numa = (long) 0, numb = (long) 0, numc = (long) 0, numd = (long) 0;
-                        if (k - Tw >= 0)
+                        if (k - Tw >= 0) //top
                             num1 = layers.get(am.getSourcelayer()).getStr().get(k - Tw);
-                        if (k - 1 >= 0 && k % Tw != 0)
+                        if (k - 1 >= 0 && k % Tw != 0) //left
                             num2 = layers.get(am.getSourcelayer()).getStr().get(k - 1);
-                        if (k + 1 < total && k % Tw != Tw - 1)
+                        if (k + 1 < total && k % Tw != Tw - 1) //right
                             num4 = layers.get(am.getSourcelayer()).getStr().get(k + 1);
-                        if (k + Tw < total)
+                        if (k + Tw < total) //bottom
                             num8 = layers.get(am.getSourcelayer()).getStr().get(k + Tw);
-                        if (k - Tw - 1 >= 0 && k % Tw != 0)
+                        if (k - Tw - 1 >= 0 && k % Tw != 0) //tl
                             numa = layers.get(am.getSourcelayer()).getStr().get(k - Tw - 1);
-                        if (k - Tw + 1 >= 0 && k % Tw != Tw - 1)
+                        if (k - Tw + 1 >= 0 && k % Tw != Tw - 1) //tr
                             numb = layers.get(am.getSourcelayer()).getStr().get(k - Tw + 1);
-                        if (k + Tw - 1 < total && k % Tw != 0)
+                        if (k + Tw - 1 < total && k % Tw != 0) //bl
                             numc = layers.get(am.getSourcelayer()).getStr().get(k + Tw - 1);
-                        if (k + Tw + 1 < total && k % Tw != Tw - 1)
+                        if (k + Tw + 1 < total && k % Tw != Tw - 1) //br
                             numd = layers.get(am.getSourcelayer()).getStr().get(k + Tw + 1);
 
                         if (!am.getAgainst(num1)) count += 1;
@@ -18676,7 +18736,8 @@ String texta="";
 
                         }
                     }
-                    break;
+
+                        break;
                 case "completion":
                     for (int k = 0; k < Tw * Th; k++) {
 

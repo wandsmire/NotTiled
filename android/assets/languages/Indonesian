@@ -369,4 +369,5 @@ leaveroom: "Keluar dari Room"
 macro: "Macro"
 runmacro: "Run Macro"
 macrotiles: "Macro Tiles"
+storageaccess: "Pastikan untuk memberikan akses storage ke NotTiled, \nsupaya tidak stuck di splash screen ini..."
 }

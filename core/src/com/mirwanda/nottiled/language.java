@@ -361,5 +361,6 @@ public class language
 	String macro;
 	String runmacro;
 	String macrotiles;
+	String storageaccess;
 
 }

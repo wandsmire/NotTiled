@@ -369,4 +369,5 @@ leaveroom: "Покинуть комнату"
 macro: "Macro"
 runmacro: "Run Macro"
 macrotiles: "Macro Tiles"
+storageaccess: "Make sure to give NotTiled access to your storage, \notherwise you will stuck on this screen..."
 }
