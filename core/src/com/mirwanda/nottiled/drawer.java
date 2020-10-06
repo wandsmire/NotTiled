@@ -90,6 +90,59 @@ public class drawer implements Comparable
 			for (int xa = 0; xa < Tsw; xa++) {
 				for (int ya = 0; ya < Tsh; ya++) {
 					Color c =  new Color(tilesets.get(initset).getPixmap().getPixel((int)((float)(xa/(float)Tsw)*width+srcX),(int)((float)(ya/(float)Tsw)*height+srcY)));
+
+					/*
+										//red Team 2
+					if (c.r==c.b && c.g!=c.r){
+						c.set( c.g,c.r,c.r,c.a );
+					}
+										//blue Team 3
+					if (c.r==c.b && c.g!=c.r){
+						c.set( c.r,c.r,c.g,c.a );
+					}
+					//yellow Team 4
+
+					if (c.r==c.b && c.g!=c.r){
+						c.set( c.g,c.g,c.r,c.a );
+					}
+										//cyan Team 5
+
+					if (c.r==c.b && c.g!=c.r){
+						c.set( c.r,c.g,c.g,c.a );
+					}
+										//white Team 6, -1, -2
+
+					if (c.r==c.b && c.g!=c.r){
+						c.set( c.g,c.g,c.g,c.a );
+					}
+										//black Team 7
+
+					if (c.r==c.b && c.g!=c.r){
+						c.set( c.r,c.r,c.r,c.a );
+					}
+										//pink Team 8
+
+					if (c.r==c.b && c.g!=c.r){
+						c.set( c.g,c.r,c.g,c.a );
+					}
+
+										//orange Team 9
+
+					if (c.r==c.b && c.g!=c.r){
+						c.set( c.g,c.g/2f,c.r,c.a );
+					}
+
+										//purple Team 10
+
+					if (c.r==c.b && c.g!=c.r){
+						c.set( c.g/2f,c.r,c.g/2f,c.a );
+					}
+					 */
+
+
+
+
+
 					pm2.drawPixel((int)x+xa,(int)y+ya,Color.rgba8888(c));
 				}
 			}

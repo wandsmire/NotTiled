@@ -2707,30 +2707,32 @@ String texta="";
                                     Tswad = Tswa;
                                     Tshad = Tsha;
                                 }
+                                float ttx = - (Tswad/2) + (Tsw/2);
+                                float tty = - (Tshad/2) + (Tsh/2);
                                 switch (flag) {
                                     case "20"://diagonal flip 'THIS ONE"
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                        tempdrawer.setdrawer(initset, xpos * Tsw  + ttx - offsetx, -ypos * Tsh + tty  - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
                                         break;
                                     case "40"://flipy nd
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
                                         break;
                                     case "60"://270 degrees clockwise nd
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
                                         break;
                                     case "80"://flipx nd
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
                                         break;
                                     case "a0"://90 degress cw
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx   - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
                                         break;
                                     case "c0"://180 degrees cw nd
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx   - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
                                         break;
                                     case "e0"://180 degrees ccw "AND THIS ONE"
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
                                         break;
                                     case "00":
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx   - offsetx, -ypos * Tsh +tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
                                         break;
                                 }
                                 drawers.add(tempdrawer);
@@ -3494,7 +3496,10 @@ String texta="";
                                 int sprY = (ox.getGid() - tilesets.get(kyut).getFirstgid()) / (tilesets.get(kyut).getWidth());
                                 int margin = tilesets.get(kyut).getMargin();
                                 int spacing = tilesets.get(kyut).getSpacing();
-                                TextureRegion region = new TextureRegion(tilesets.get(kyut).getTexture(), (sprX * (Tsw + spacing)) + margin, (sprY * (Tsh + spacing)) + margin, Tsw, Tsh);
+                                int Tswa = tilesets.get(kyut).getTilewidth();
+                                int Tsha = tilesets.get(kyut).getTileheight();
+
+                                TextureRegion region = new TextureRegion(tilesets.get(kyut).getTexture(), (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha);
                                 Sprite s = new Sprite(region);
                                // s.setX( ox.getX() );
                                // s.setY( ox.getYantingelag( Tsh ) - ox.getH());
@@ -3555,6 +3560,7 @@ String texta="";
 
     @Override
     public void resize(int width, int height) {
+        //if (loadingfile) return;
         float tx, ty, tz;
         float tx1, ty1, tz1;
         float tx2, ty2, tz2;
@@ -3614,8 +3620,8 @@ String texta="";
 
             }
             if (startup != false) {
-                setMenuMap();
-                gotoStage(tMenu);
+                //setMenuMap();
+                //gotoStage(tMenu);
             }
             startup = true;
 
@@ -3627,6 +3633,7 @@ String texta="";
         tilecam.position.set(tx1, ty1, tz1);
         tilecam.update();
         gamecam.update();
+        recenterUI();
         resetMinimap();
         //resetcam(false);
         //minicam.position.set(tx3,ty3,tz3);
@@ -11767,10 +11774,12 @@ String texta="";
 
 
             t.setSource(cocos);
-
-
-            int Tswa = Integer.parseInt(fImportWidth.getText());
-            int Tsha = Integer.parseInt(fImportHeight.getText());
+            int Tswa = s.getWidth();
+            int Tsha = s.getHeight();
+            if (!fImportWidth.getText().equalsIgnoreCase( "" )) {
+                Tswa = Integer.parseInt( fImportWidth.getText() );
+                Tsha = Integer.parseInt( fImportHeight.getText() );
+            }
             t.setOriginalwidth(s.getWidth());
             t.setOriginalheight(s.getHeight());
             t.setColumns(s.getWidth() / Tswa);
@@ -13170,6 +13179,8 @@ String texta="";
         uicam.zoom = 0.5f;
         uicam.update();
         loadingfile = false;
+        //resize(ssx,ssy);
+        //recenterUI();
         firstload = loadtime;
 
 
@@ -13209,6 +13220,17 @@ String texta="";
             logNet( "[C] Opening new map..." );
         }
     }
+
+    public void recenterUI(){
+        if (landscape){
+            uicam.position.set( ssy/2,ssx/2,0 );
+            uicam.update();
+        }else{
+            uicam.position.set( ssx/2,ssy/2,0 );
+            uicam.update();
+        }
+    }
+
     String tempcurdir;
     public void extractTSET(String filepath) {
 
@@ -17174,17 +17196,17 @@ String texta="";
 
     private void updateObjectCollision(){
         if (layers.size()==0) return;
-        if (layers.get(selLayer).getType()!=layer.Type.OBJECT) return;
+       // if (layers.get(selLayer).getType()!=layer.Type.OBJECT) return;
 
-            for (layer l: layers){
-            if (l.getType()==layer.Type.OBJECT){
+           // for (layer l: layers){
+           // if (l.getType()==layer.Type.OBJECT){
                 com.badlogic.gdx.utils.Array<Body> bds = new com.badlogic.gdx.utils.Array<Body>();
                 world.getBodies( bds );
                 for ( Body bd : bds){
                     world.destroyBody( bd );
                 }
-            }
-        }
+            //}
+        //}
 
         for (obj ob : layers.get(selLayer).getObjects()){
             ob.updateVertices( world ,Tsh);
@@ -18578,6 +18600,10 @@ String texta="";
                 case "fill":
                     for (int k = 0; k < Tw * Th; k++) {
                         layers.get(am.getDestlayer()).getStr().set(k, (long) am.getSource());
+                        if (am.getSource()==0){
+                            layers.get(am.getDestlayer()).getTset().set(k, -1);
+                            break;
+                        }
                         for (int l = 0; l < tilesets.size(); l++) {
                             if (am.getSource() >= tilesets.get(l).getFirstgid() && am.getSource() < tilesets.get(l).getFirstgid() + tilesets.get(l).getTilecount()) {
                                 layers.get(am.getDestlayer()).getTset().set(k, l);
