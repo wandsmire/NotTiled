@@ -11,6 +11,8 @@ s>Tstis
 s>PoLLeN
 s>RT1_JMJS
 s>KusVoSlavuSatane
+s>Mark
+s>Gato
 m>Translators
 s>WandsMire (English & Bahasa)
 s>Paon (Japanese)

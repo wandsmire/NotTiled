@@ -8260,13 +8260,19 @@ String texta="";
         sbLanguage = new SelectBox(skin);
 
         java.util.List<String> srr = new ArrayList<String>();
-        FileHandle dirHandle;
-        dirHandle = Gdx.files.internal("languages/");
-        for (FileHandle entry : dirHandle.list()) {
-            if (!entry.file().getName().equalsIgnoreCase("characters")) {
-                srr.add(entry.file().getName());
-            }
-        }
+        srr.add("English");
+        srr.add("Spanish");
+        srr.add("Russian");
+        srr.add("Chinese");
+        srr.add("Japanese");
+        srr.add("French");
+        srr.add("Portuguese");
+        srr.add("Tagalog");
+        srr.add("Belarusian");
+        srr.add("Turkish");
+        srr.add("Ukranian");
+        srr.add("Indonesian");
+
         sbLanguage.setItems(srr.toArray(new String[0]));
         bBack3 = new TextButton(z.back, skin);
         bBack3.addListener(new ChangeListener() {
@@ -11077,6 +11083,56 @@ String texta="";
             public void changed(ChangeEvent event, Actor actor) {
                 tileset t = tilesets.get(selTsetID);
                 if (fTsPropName.getText() != "") t.setName(fTsPropName.getText());
+                if (!t.getSource().equalsIgnoreCase(fTsPropSource.getText())){
+                    //Gdx.app.log( "LLL","LL" );
+                    ///
+                    String internalpath = "rusted_warfare/assets/tilesets";
+                    String tempdiro = "", tempdiri = "", foredirint = "", foredirext = "";
+
+                    String foredir, tempdir, combo;
+                    foredir = curdir;//should be tsxpath to folloe tsx pathing but whatever!!
+                    //errors+=tsxpath+"ole\n";
+                    if (foredir.substring(foredir.length() - 1).equalsIgnoreCase("/")) {
+                        foredir = foredir.substring(0, foredir.length() - 1);
+                    }
+                    tempdiro = t.getSource();
+                    tempdiri = t.getSource();
+
+                    foredirint = curdir;
+                    foredirext = curdir;
+
+                    while (tempdiro.substring(0, 3).equalsIgnoreCase("../")) {
+                        tempdiro = tempdiro.substring(3);
+                        if (foredirext.lastIndexOf("/")==-1){
+                            foredirext = "";
+
+                        }else
+                        {
+                            foredirext = foredirext.substring(0, foredirext.lastIndexOf("/"));
+                        }
+                    }
+
+                    if (tempdiri.lastIndexOf("/", tempdiri.lastIndexOf("/") - 1) != -1) {
+                        tempdiri = tempdiri.substring(tempdiri.lastIndexOf("/", tempdiri.lastIndexOf("/") - 1));
+                        tempdiri = tempdiri.replace("tilesets/", "");
+                    }
+
+
+                    FileHandle filehand = Gdx.files.internal(foredirint + "/" + tempdiri);
+
+                    if (!filehand.exists()) {
+                        filehand = Gdx.files.external(foredirext + "/" + tempdiro);
+                        if (!filehand.exists()) {
+                            filehand = Gdx.files.internal("empty.jpeg");
+                        }
+                    }
+
+                    ///
+                    t.setTexture(new Texture(filehand));
+                    t.setPixmap(pixmapfromtexture(t.getTexture(), t.getTrans()));
+
+                }
+
                 if (fTsPropSource.getText() != "") t.setSource(fTsPropSource.getText());
                 if (fTsPropTsxFile.getText() != "") t.setTsxfile(fTsPropTsxFile.getText());
                 t.setUsetsx(cbTsPropUseTsx.isChecked());
@@ -11139,33 +11195,6 @@ String texta="";
                 } catch (Exception e) {
                 }
 
-                if (!fTsPropSource.getText().equalsIgnoreCase(tilesets.get(selTsetID).getSource())) {
-                    try {
-
-
-                        t = tilesets.get(selTsetID);
-                        t.setSource(fTsPropSource.getText());
-                        FileHandle f = Gdx.files.external(curdir + "/" + fTsPropSource.getText());
-                        FileHandle cek = Gdx.files.external(curdir + "/" + t.getSource());
-
-                        if (!cek.exists()) {
-                            com.mirwanda.nottiled.decoder.copyFile(f.file(), cek.file());
-                        }
-                        SimpleImageInfo s = new SimpleImageInfo(cek.file());
-                        t.setColumns(s.getWidth() / Tsw);
-                        t.setTilecount((s.getHeight() / Tsw) * (s.getWidth() / Tsh));
-                        t.setTilewidth(Tsw);
-                        t.setTileheight(Tsh);
-                        t.setWidth(s.getWidth() / Tsw);
-                        t.setHeight(s.getHeight() / Tsh);
-                        t.setOriginalwidth(s.getWidth());
-                        t.setOriginalheight(s.getHeight());
-                        t.setTexture(new Texture(Gdx.files.external(curdir + "/" + t.getSource())));
-
-
-                    } catch (IOException e) {
-                    }
-                }
                 ////////////////////
                 int dexo = ltsetlist.getSelectedIndex();
 					/*

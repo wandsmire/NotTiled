@@ -16,6 +16,7 @@ public class DesktopLauncher {
 		cfg.useGL30 = false;
 		cfg.width = 1920;
 		cfg.height = 1080;
+		cfg.x=-1;cfg.y=-1;
 		com.mirwanda.nottiled.nullInterface ni= new com.mirwanda.nottiled.nullInterface();
 		new LwjglApplication(new MyGdxGame("",ni), cfg);
 
