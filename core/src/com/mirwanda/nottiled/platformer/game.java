@@ -723,6 +723,10 @@ public class game {
 
         for (MapLayer mlayer: map.getLayers()){
             if (mlayer.getName().startsWith( "Tile" )) {
+                boolean over = false;
+                if (mlayer.getName().equalsIgnoreCase( "Tile 3" )){
+                    over=true;
+                }
                 TiledMapTileLayer tlayer = (TiledMapTileLayer) mlayer;
                 this.Tw= tlayer.getWidth();
                 this.Th=tlayer.getHeight();
@@ -750,52 +754,52 @@ public class game {
                                 newbrick.mygame = this;
 
                                 if (tlboxes.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.DynamicBody, gameobject.objecttype.BOX ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.DynamicBody, gameobject.objecttype.BOX ,null,null,over);
                                 } else if (tlcheckpoints.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, CHECKPOINT ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, CHECKPOINT ,null,null,over);
                                 } else if (tlcoins.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, COIN ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, COIN ,null,null,over);
                                     coin += 1;
                                 } else if (tlspikes.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 5, BodyDef.BodyType.StaticBody, SPIKE ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 5, BodyDef.BodyType.StaticBody, SPIKE ,null,null,over);
                                 } else if (tlgears.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, GEAR ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, GEAR ,null,null,over);
                                 } else if (tlgirls.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.GIRL ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.GIRL ,null,null,over);
                                 } else if (tlkeys.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.KEY ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.KEY ,null,null,over);
                                 } else if (tllocks.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.LOCK ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.LOCK ,null,null,over);
                                 } else if (tlbreakables.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.BREAKABLE ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.BREAKABLE ,null,null,over);
                                 } else if (tlsprings.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.SPRING ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.SPRING ,null,null,over);
                                 } else if (tlswitches.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.SWITCH ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.SWITCH ,null,null,over);
                                 } else if (tlswitchons.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.SWITCHON ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.SWITCHON ,null,null,over);
                                 } else if (tlswitchoffs.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.SWITCHOFF ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.SWITCHOFF ,null,null,over);
                                 } else if (tlplatformh.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLATFORMH ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLATFORMH ,null,null,over);
                                 } else if (tlplatformv.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLATFORMV ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLATFORMV ,null,null,over);
                                 } else if (tlplatforms.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlempty, xx, yy, 5, BodyDef.BodyType.StaticBody, gameobject.objecttype.PLATFORMS ,null,null);
+                                    newbrick.setupGameObject( world, tlempty, xx, yy, 5, BodyDef.BodyType.StaticBody, gameobject.objecttype.PLATFORMS ,null,null,over);
                                 } else if (tlmonsters.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 6, BodyDef.BodyType.DynamicBody, gameobject.objecttype.MONSTER ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 6, BodyDef.BodyType.DynamicBody, gameobject.objecttype.MONSTER ,null,null,over);
                                 } else if (tlladder.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.LADDER ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.LADDER ,null,null,over);
                                 } else if (tlfloater.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.FLOATER ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.FLOATER ,null,null,over);
                                 } else if (tlsinker.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 6, BodyDef.BodyType.StaticBody, gameobject.objecttype.SINKER ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 6, BodyDef.BodyType.StaticBody, gameobject.objecttype.SINKER ,null,null,over);
                                 } else if (tlleftslope.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.LEFTSLOPE ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.LEFTSLOPE ,null,null,over);
                                 } else if (tlrightslope.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.RIGHTSLOPE ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.RIGHTSLOPE ,null,null,over);
                                 } else if (tlmiscs.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.MISC ,null,null);
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.MISC ,null,null,over);
                                 }
 
                                 if (flip) newbrick.rotate( 180 );
@@ -826,14 +830,14 @@ public class game {
                     if (o.getProperties().containsKey( "transfer" )) {
                         gameobject newbrick = new gameobject();
                         newbrick.mygame = this;
-                        newbrick.setupGameObject( world, null, (int) rect.x, (int) rect.y, 2, BodyDef.BodyType.StaticBody, gameobject.objecttype.TRANSFER, o ,null);
+                        newbrick.setupGameObject( world, null, (int) rect.x, (int) rect.y, 2, BodyDef.BodyType.StaticBody, gameobject.objecttype.TRANSFER, o ,null,false);
                         this.objects.add( newbrick );
                     }
                     if (o.getProperties().containsKey( "item" )) {
                         if (checkQual( o )) {
                             gameobject newbrick = new gameobject();
                             newbrick.mygame = this;
-                            newbrick.setupGameObject( world, null, (int) rect.x, (int) rect.y, 5, BodyDef.BodyType.StaticBody, ITEM, o ,t );
+                            newbrick.setupGameObject( world, null, (int) rect.x, (int) rect.y, 5, BodyDef.BodyType.StaticBody, ITEM, o ,t ,false);
                             this.objects.add( newbrick );
                         }
                     }
@@ -841,12 +845,19 @@ public class game {
                         if (checkQual( o )) {
                             gameobject newbrick = new gameobject();
                             newbrick.mygame = this;
-                            newbrick.setupGameObject( world, null, (int) rect.x, (int) rect.y, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.BLOCK, o ,t );
+                            newbrick.setupGameObject( world, null, (int) rect.x, (int) rect.y, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.BLOCK, o ,t ,false);
                             this.objects.add( newbrick );
                         }
                     }
                     if (o.getProperties().containsKey( "mode" )) {
                         if (o.getProperties().get( "mode" ).toString().equalsIgnoreCase( "rpg" )){
+                            world.setGravity( new Vector2(0f,0f ));
+                            jumping=false;
+                            rpg=true;
+                        }
+                    }
+                    if (o.getProperties().containsKey( "maxspeed" )) {
+                        if (o.getProperties().get( "maxspeed" ).toString().equalsIgnoreCase( "rpg" )){
                             world.setGravity( new Vector2(0f,0f ));
                             jumping=false;
                             rpg=true;
@@ -991,8 +1002,12 @@ public class game {
             if (!debugmode) wl.draw(batch);
         }
         stateTime += delta;
+        if (starting){
+            TextureRegion currentFramea = animPlayer.get(dir).getKeyFrame(0, true);
+            player.setRegion(currentFramea);
 
-        if (player.moving && (!jumping || onplatformv) && (!ladder && !floater && !sinker))
+        }
+        else if (player.moving && (!jumping || onplatformv) && (!ladder && !floater && !sinker))
         {
             playerTime +=delta;
             TextureRegion currentFramea = animPlayer.get(dir).getKeyFrame(playerTime, true);
@@ -1004,6 +1019,8 @@ public class game {
         }
         else if ((ladder || floater || sinker) && player.moving )
         {
+            if (ladder) dir=3;
+
             playerTime +=delta;
 
             TextureRegion currentFramea = animPlayer.get(dir).getKeyFrame(playerTime, true);
@@ -1016,17 +1033,6 @@ public class game {
             player.setRegion(currentFramea);
         }
 
-        for (gameobject sboxes:objects)
-        {
-            if (sboxes.objtype==MONSTER){
-                TextureRegion currentFrame = animMonster.getKeyFrame(stateTime, true);
-                sboxes.setRegion(currentFrame);
-            }
-            // if (sboxes.objtype==ITEM){Gdx.app.log( "AS",sboxes.toString() );}
-            sboxes.update(delta);
-
-            if (!debugmode && sboxes.getTexture()!=null ) sboxes.draw(batch);
-        }
 
         if(touchedladder>0) { ladder=true; }
         else { ladder=false; }
@@ -1053,6 +1059,19 @@ public class game {
         }
 
 
+        for (gameobject sboxes:objects)
+        {
+            if (sboxes.over) continue;
+            if (sboxes.objtype==MONSTER){
+                TextureRegion currentFrame = animMonster.getKeyFrame(stateTime, true);
+                sboxes.setRegion(currentFrame);
+            }
+            // if (sboxes.objtype==ITEM){Gdx.app.log( "AS",sboxes.toString() );}
+            sboxes.update(delta);
+
+            if (!debugmode && sboxes.getTexture()!=null ) sboxes.draw(batch);
+        }
+
         player.update(delta);
         if (player.state != com.mirwanda.nottiled.platformer.player.playerState.DEAD){
             player.draw(batch);
@@ -1061,32 +1080,50 @@ public class game {
             player.b2body.setActive(false);
         }
 
+        for (gameobject sboxes:objects)
+        {
+            if (!sboxes.over) continue;
+            if (sboxes.objtype==MONSTER){
+                TextureRegion currentFrame = animMonster.getKeyFrame(stateTime, true);
+                sboxes.setRegion(currentFrame);
+            }
+            // if (sboxes.objtype==ITEM){Gdx.app.log( "AS",sboxes.toString() );}
+            sboxes.update(delta);
+
+            if (!debugmode && sboxes.getTexture()!=null ) sboxes.draw(batch);
+        }
+
+
     }
 
     public void playSfx(Sound s){
         if (s!=null) s.play(1.0f);
     }
 
+    public float walkForce=0.5f;
+    public float speedLimit=1f;
+    public float jumpForce=3f;
+    public float stompForce=8f;
+    public float slowSpeed=0.4f;
+    public float rpgSpeed=1f;
+
+
     public void pressup(){
         player.moving=true;
         if (rpg) dir=3;
-        float speedlimit =1.5f;
 
         if (!rpg) {
             if ((!jumping || onplatformv) && !ladder && !sinker && !floater) {
-                player.b2body.applyLinearImpulse( 0f, 2.8f, player.getX(), player.getY(), true );
+                player.b2body.applyLinearImpulse( 0f, jumpForce, player.getX(), player.getY(), true );
                 jumping = true;
                 onplatformv = false;
             }
             if (ladder || floater || sinker) {
-                player.b2body.setLinearVelocity( 0, 0.5f );
+                player.b2body.setLinearVelocity( 0, slowSpeed );
             }
         }else{
-            if (ladder || floater || sinker) {speedlimit = 0.4f; player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x,speedlimit);}
-            if (player.b2body.getLinearVelocity().y <=speedlimit) {
-                //player.faceright=false;
-                player.b2body.setLinearVelocity(0,speedlimit);
-            }
+            if (ladder || floater || sinker) {player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x,slowSpeed);}
+                player.b2body.setLinearVelocity(0,rpgSpeed);
 
         }
     }
@@ -1094,23 +1131,19 @@ public class game {
     public void pressdown(){
         player.moving=true;
         if (rpg) dir=0;
-        float speedlimit =-1.5f;
 
         if (!rpg) {
             if (stompinterval == 0 && !ladder && !sinker && !floater) {
-                player.b2body.applyLinearImpulse( 0f, -8f, player.getX(), player.getY(), true );
+                player.b2body.applyLinearImpulse( 0f, -stompForce, player.getX(), player.getY(), true );
                 stompinterval = 1;
             }
             if (ladder || floater || sinker) {
-                player.b2body.setLinearVelocity( player.b2body.getLinearVelocity().x, -0.5f );
+                player.b2body.setLinearVelocity( player.b2body.getLinearVelocity().x, -slowSpeed );
             }
         }else{
-            if (ladder || floater || sinker) {speedlimit = -0.4f; player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x,speedlimit);}
-            if (player.b2body.getLinearVelocity().y >=speedlimit) {
+            if (ladder || floater || sinker) {player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x,-slowSpeed);}
+            player.b2body.setLinearVelocity(0,-rpgSpeed);
 
-                //player.faceright=false;
-                player.b2body.setLinearVelocity(0,speedlimit);
-            }
 
         }
 
@@ -1119,14 +1152,13 @@ public class game {
     public void pressleft(){
         player.moving=true;
         dir=2;
-        float speedlimit =-1.5f;
-        if (ladder || floater || sinker) {speedlimit = -0.4f; player.b2body.setLinearVelocity(speedlimit,player.b2body.getLinearVelocity().y);}
-        if (player.b2body.getLinearVelocity().x >=speedlimit) {
+        if (ladder || floater || sinker) {player.b2body.setLinearVelocity(-slowSpeed,player.b2body.getLinearVelocity().y);}
+        if (player.b2body.getLinearVelocity().x >=-speedLimit) {
             player.faceright=false;
             if (!rpg){
-                player.b2body.applyLinearImpulse(-0.5f, 0, player.getX(), player.getY(), true);
+                player.b2body.applyLinearImpulse(-walkForce, 0, player.getX(), player.getY(), true);
             }else{
-                player.b2body.setLinearVelocity(speedlimit,0);
+                player.b2body.setLinearVelocity(-rpgSpeed,0);
 
             }
         }
@@ -1134,15 +1166,13 @@ public class game {
     public void pressright(){
         player.moving=true;
         dir=1;
-        float speedlimit =1.5f;
-        if (ladder || floater || sinker) {speedlimit = 0.4f; player.b2body.setLinearVelocity(speedlimit,player.b2body.getLinearVelocity().y);}
-        if (player.b2body.getLinearVelocity().x <=speedlimit){
-            //player.faceright=true;
+        if (ladder || floater || sinker) {player.b2body.setLinearVelocity(slowSpeed,player.b2body.getLinearVelocity().y);}
+        if (player.b2body.getLinearVelocity().x <=speedLimit){
             if (!rpg){
 
-                player.b2body.applyLinearImpulse(0.5f, 0, player.getX(), player.getY(), true);
+                player.b2body.applyLinearImpulse(walkForce, 0, player.getX(), player.getY(), true);
             }else{
-                player.b2body.setLinearVelocity(speedlimit,0);
+                player.b2body.setLinearVelocity(rpgSpeed,0);
 
             }
 

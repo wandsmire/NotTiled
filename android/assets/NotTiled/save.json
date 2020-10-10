@@ -2,12 +2,13 @@
 vars: [
 	{
 		key: usu
+		value: 1
 	}
 	{
 		key: asu
 	}
 ]
-x: 3.8000035
-y: 1.8399986
+x: 3.7900064
+y: 1.835
 mapname: Map02.tmx
 }

@@ -45,5 +45,6 @@ public class savegame {
     public java.util.List<KV> vars = new ArrayList<KV>();
     public float x;
     public float y;
+
     public String mapname;
 }

@@ -22,6 +22,7 @@ public class gameobject extends Sprite {
     public MapObject obj;
     public enum move {RIGHT,LEFT,UP,DOWN}
     public move moving;
+    public boolean over;
     public boolean status;
     public Fixture fixture2;
     public Fixture fixture3;
@@ -44,8 +45,9 @@ public class gameobject extends Sprite {
         LEFTSLOPE, RIGHTSLOPE, TRANSFER, BLOCK, ITEM
     }
 
-    public void setupGameObject(World world, TiledMapTile tlcece, int xx, int yy, int width, BodyDef.BodyType type, gameobject.objecttype objecttype, MapObject obj, TextureRegion tt)
+    public void setupGameObject(World world, TiledMapTile tlcece, int xx, int yy, int width, BodyDef.BodyType type, gameobject.objecttype objecttype, MapObject obj, TextureRegion tt, boolean over)
     {
+        this.over=over;
         if (tlcece!=null) {
             TextureRegion region = tlcece.getTextureRegion();
             setRegion( region );
@@ -95,8 +97,7 @@ public class gameobject extends Sprite {
 
 
                 break;
-            //lewatable SENSOR
-            case CHECKPOINT: case COIN:case KEY: case GIRL: case MISC: case LADDER:
+            case CHECKPOINT: case COIN:case KEY: case GIRL: case MISC:
             case FLOATER: case SINKER:
                 fdef.filter.categoryBits = game.COIN_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
@@ -104,6 +105,19 @@ public class gameobject extends Sprite {
                 bdef.position.set((xx * ts + tso) / 100f, (yy * ts + tso) / 100f);
                 body = world.createBody(bdef);
                 shape.setAsBox(width / 100f, width / 100f);
+                fdef.shape = shape;
+                fdef.isSensor = true;
+                fixture = body.createFixture(fdef);
+                fixture.setUserData(this);
+                break;
+            case LADDER:
+
+                fdef.filter.categoryBits = game.COIN_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
+                bdef.type = type;
+                bdef.position.set((xx * ts + tso) / 100f, (yy * ts + tso) / 100f);
+                body = world.createBody(bdef);
+                shape.setAsBox(width / 500f, width / 100f);
                 fdef.shape = shape;
                 fdef.isSensor = true;
                 fixture = body.createFixture(fdef);
