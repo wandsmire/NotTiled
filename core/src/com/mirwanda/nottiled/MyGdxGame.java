@@ -1049,16 +1049,16 @@ String texta="";
                             batch.begin();
 
                             ///
-                            mygame.pe.update( Gdx.graphics.getDeltaTime() );
+                            mygame.update( batch, delta, gamecam );
+                            mygame.meledak.update( Gdx.graphics.getDeltaTime() );
 
-                            mygame.pe.draw( batch );
-                            mygame.pe.setPosition( mygame.player.b2body.getPosition().x, mygame.player.b2body.getPosition().y );
-                            // if (mygame.pe.isComplete())
+                            mygame.meledak.draw( batch );
+                            mygame.meledak.setPosition( mygame.player.b2body.getPosition().x, mygame.player.b2body.getPosition().y );
+                            // if (mygame.meledak.isComplete())
 
 
                             ///
 
-                            mygame.update( batch, delta, gamecam );
                             batch.end();
                         }
                         postProcessor.render();

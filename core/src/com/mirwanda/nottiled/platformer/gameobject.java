@@ -1,10 +1,12 @@
 package com.mirwanda.nottiled.platformer;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.tiled.TiledMapTile;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.EdgeShape;
@@ -15,13 +17,35 @@ import com.badlogic.gdx.physics.box2d.MassData;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
 
+import java.util.ArrayList;
+
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ENEMYPROJECTILE;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYERPROJECTILE;
+
 public class gameobject extends Sprite {
+    public String name;
     public game mygame;
     public gameobject(){}
     public gameobject.objecttype objtype;
     public MapObject obj;
     public enum move {RIGHT,LEFT,UP,DOWN}
-    public move moving;
+    public int dir;
+    public boolean moving;
+    public float damage;
+    public float HP;
+    public float speed;
+    public boolean bird;
+    public float maxdistance;
+    public float distance;
+    java.util.List<Animation<TextureRegion>> anim = new ArrayList<>(); // Must declare frame type (TextureRegion)
+
+
+    ////
+    public boolean chase;
+    public float chaseRadius;
+    public int[] path;
+    public int currentPath;
+    ////
     public boolean over;
     public boolean status;
     public Fixture fixture2;
@@ -42,10 +66,10 @@ public class gameobject extends Sprite {
         WALLLEFT,WALLTOP,WALLBOTTOM,WALLRIGHT, WALLCENTER, LADDER, FLOATER, SINKER,
         BOX, CHECKPOINT, COIN, KEY, LOCK, GIRL, SPIKE, GEAR, BREAKABLE, SPRING,
         SWITCH, SWITCHON, SWITCHOFF, PLATFORMH, PLATFORMV, PLATFORMS, MONSTER, MISC,
-        LEFTSLOPE, RIGHTSLOPE, TRANSFER, BLOCK, ITEM
+        LEFTSLOPE, RIGHTSLOPE, TRANSFER, BLOCK, ITEM, PLAYERPROJECTILE, ENEMYPROJECTILE
     }
 
-    public void setupGameObject(World world, TiledMapTile tlcece, int xx, int yy, int width, BodyDef.BodyType type, gameobject.objecttype objecttype, MapObject obj, TextureRegion tt, boolean over)
+    public void setupGameObject(World world, TiledMapTile tlcece, float xx, float yy, int width, BodyDef.BodyType type, gameobject.objecttype objecttype, MapObject obj, TextureRegion tt, boolean over)
     {
         this.over=over;
         if (tlcece!=null) {
@@ -64,6 +88,9 @@ public class gameobject extends Sprite {
         }
         objtype = objecttype;
         switch(objtype){
+            case PLAYERPROJECTILE: case ENEMYPROJECTILE:
+                setPosition( xx, yy );
+                break;
             case TRANSFER: case BLOCK: case ITEM:
                 this.obj=obj;
                 setSize( 16 / 100f, 16 / 100f );
@@ -97,7 +124,7 @@ public class gameobject extends Sprite {
 
 
                 break;
-            case CHECKPOINT: case COIN:case KEY: case GIRL: case MISC:
+            case CHECKPOINT: case COIN:case KEY: case GIRL:
             case FLOATER: case SINKER:
                 fdef.filter.categoryBits = game.COIN_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
@@ -145,8 +172,41 @@ public class gameobject extends Sprite {
 
                 break;
 
+            case PLAYERPROJECTILE:
+                fdef.filter.categoryBits = game.PLAYERPROJECTILE_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
+                bdef.type = type;
+                bdef.position.set(xx, yy);
+                body = world.createBody(bdef);
+                shape.setAsBox(width / 100f, width / 100f);
+                fdef.shape = shape;
+                fdef.isSensor = true;
+                fixture = body.createFixture(fdef);
+                fixture.setUserData(this);
 
-                case PLATFORMS:
+                //setCategoryFilter(game.COIN_BIT);
+
+
+                break;
+
+            case ENEMYPROJECTILE:
+                fdef.filter.categoryBits = game.ENEMYPROJECTILE_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
+                bdef.type = type;
+                bdef.position.set(xx, yy);
+                body = world.createBody(bdef);
+                shape.setAsBox(width / 100f, width / 100f);
+                fdef.shape = shape;
+                fdef.isSensor = true;
+                fixture = body.createFixture(fdef);
+                fixture.setUserData(this);
+
+                //setCategoryFilter(game.COIN_BIT);
+
+
+                break;
+
+            case PLATFORMS:
 
                 fdef.filter.categoryBits = game.MARKER_BIT;
                 fdef.filter.maskBits = game.PLATFORM_BIT;
@@ -220,7 +280,7 @@ public class gameobject extends Sprite {
             case LOCK:  case BREAKABLE: case GEAR: case SPRING: case SPIKE:
             case SWITCH: case MONSTER:
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
-                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.PLAYERPROJECTILE_BIT;
                 /////
                 bdef.type = type;
                 bdef.position.set((xx * ts + tso) / 100f, (yy * ts + tso) / 100f);
@@ -361,26 +421,15 @@ public class gameobject extends Sprite {
 
 
 
-            default:
+            case MISC:
         }
 
 
 
 
-        if (objtype==objecttype.PLATFORMH){
-            moving=move.LEFT;
-        }
-
-        if (objtype==objecttype.PLATFORMV){
-            moving=move.UP;
-        }
-
-        if (objtype==objecttype.MONSTER){
-            moving=move.LEFT;
-        }
     }
 
-
+    public Vector2 lastPos;
     public void update(float dt){
 
 
@@ -393,54 +442,164 @@ public class gameobject extends Sprite {
                 rotate(5f);
                 break;
             case PLATFORMH:
-                if (moving== move.RIGHT)
-                {
-                    body.setLinearVelocity(0.5f,body.getLinearVelocity().y);
+
+            case PLATFORMV:
+
+
+            case PLAYERPROJECTILE:
+
+                switch(dir){
+                    case 0://bawah
+                        body.setLinearVelocity(0, -speed);
+                        break;
+                    case 1://kanan
+                        body.setLinearVelocity(speed, 0);
+                        break;
+                    case 2://kiri
+                        body.setLinearVelocity(-speed, 0);
+                        break;
+                    case 3://atas
+                        body.setLinearVelocity(0, speed);
+                        break;
                 }
-                else if (moving== move.LEFT)
-                {
-                    body.setLinearVelocity(-0.5f,body.getLinearVelocity().y);
+                distance+=speed;
+                if (distance>maxdistance){
+                    setCategoryFilter(game.DESTROYED_BIT);
+                    mygame.objects.remove(this);
+
                 }
                 break;
-            case PLATFORMV:
-                if (moving== move.UP)
-                {
-                    body.setLinearVelocity(body.getLinearVelocity().x, 0.5f);
+            case ENEMYPROJECTILE:
+
+                switch(dir){
+                    case 0://bawah
+                        body.setLinearVelocity(0, -speed);
+                        break;
+                    case 1://kanan
+                        body.setLinearVelocity(speed, 0);
+                        break;
+                    case 2://kiri
+                        body.setLinearVelocity(-speed, 0);
+                        break;
+                    case 3://atas
+                        body.setLinearVelocity(0, speed);
+                        break;
                 }
-                else
-                {
-                    body.setLinearVelocity(body.getLinearVelocity().x, -0.5f);
+                distance+=speed;
+                if (distance>maxdistance){
+                    setCategoryFilter(game.DESTROYED_BIT);
+                    mygame.objects.remove(this);
+
                 }
                 break;
 
             case MONSTER:
-                if (body.getPosition().dst( mygame.player.b2body.getPosition()) <50/100f && mygame.dead==0){
-                    if (body.getPosition().x>mygame.player.b2body.getPosition().x){
-                        moving=move.LEFT;
-                    }else
-                    {
-                        moving=move.RIGHT;
+                enemyshoot();
+                cooldown-=dt;
+                if (HP<=0 || body.getPosition().y<=-0.5f){
+                    setCategoryFilter(game.DESTROYED_BIT);
+                    mygame.objects.remove(this);
+
+                }
+
+                if (moving || bird) {
+                    TextureRegion currentFrame = anim.get( dir ).getKeyFrame( mygame.stateTime, true );
+                    setRegion( currentFrame );
+                }else{
+                    TextureRegion currentFrame = anim.get( dir ).getKeyFrame( 0f, true );
+                    setRegion( currentFrame );
+
+                }
+
+
+                if (chase){
+                    if (body.getPosition().dst( mygame.player.b2body.getPosition()) <chaseRadius/100f){
+                    moving=true;
+
+                        if (Math.abs( body.getPosition().x - mygame.player.b2body.getPosition().x ) >= speed*5 / 100f ) {
+
+                                if (body.getPosition().x > mygame.player.b2body.getPosition().x) {
+                                    dir = 2;
+                                } else {
+                                    dir = 1;
+                                }
+                            } else {
+                                if (Math.abs( body.getPosition().y - mygame.player.b2body.getPosition().y ) >= speed*5 / 100f) {
+                                    if (body.getPosition().y > mygame.player.b2body.getPosition().y) {
+                                        dir = 0;
+                                    } else {
+                                        dir = 3;
+                                    }
+                                }else{
+                                    moving=false;
+                                }
+
+
+                            }
+                    }else{
+                        //dir=0;
+                        moving=false;
                     }
                 }
 
-                if (moving== move.RIGHT)
-                {
-                   // if (body.getLinearVelocity().x >=-0.5f) {
-                       // body.applyLinearImpulse(-0.5f, 0, 0, 0, true);
-                        body.setLinearVelocity(0.5f,body.getLinearVelocity().y);
-                  //  }
-                    setFlip(true,false);
 
+                if (path!=null){
+                    if (lastPos==null){
+                        currentPath=0;
+                        dir = path[0];
+                        currentPath=0;
+                        lastPos=new Vector2(body.getPosition().x,body.getPosition().y);
+                        moving=true;
+                    }
+
+                    if(lastPos.dst(body.getPosition().x,body.getPosition().y) >=16/100f){
+                        currentPath+=1;
+                        if (currentPath>=path.length) currentPath=0;
+                        dir = path[currentPath];
+                        lastPos=new Vector2(body.getPosition().x,body.getPosition().y);
+                    }
                 }
-                else
-                {
-                   // if (body.getLinearVelocity().x <=0.5f) {
-                        body.setLinearVelocity(-0.5f,body.getLinearVelocity().y);
 
-                   // }
-                    setFlip(false,false);
 
+                if (mygame.player.state == player.playerState.DEAD) moving=false;
+
+                if (moving) {
+                    if (mygame.rpg||bird) {
+                        switch (dir) {
+                            case 0://bawah
+                                body.setLinearVelocity( 0, -speed );
+                                break;
+                            case 1://kanan
+                                body.setLinearVelocity( speed, 0 );
+                                break;
+                            case 2://kiri
+                                body.setLinearVelocity( -speed, 0 );
+                                break;
+                            case 3://atas
+                                body.setLinearVelocity( 0, speed );
+                                break;
+                        }
+                    }else{
+                        switch (dir) {
+
+                            case 1://kanan
+                                body.setLinearVelocity( speed, body.getLinearVelocity().y );
+                                break;
+                            case 2://kiri
+                                body.setLinearVelocity( -speed, body.getLinearVelocity().y );
+                                break;
+                            default:
+                                body.setLinearVelocity( 0, 0 );
+
+                                moving=false;
+                        }
+
+                    }
+                }else{
+                    if (mygame.rpg || bird)  body.setLinearVelocity( 0, 0 );
+                    body.setLinearVelocity(body.getLinearVelocity().x, body.getLinearVelocity().y);
                 }
+
                 break;
         }
 
@@ -457,5 +616,45 @@ public class gameobject extends Sprite {
 
 
     }
+
+    public float cooldown;
+    public float setcooldown=0.1f;
+    public void enemyshoot(){
+        if (cooldown>0) return;
+        gameobject newbrick = new gameobject();
+        newbrick.mygame = mygame;
+        newbrick.speed=4f;
+        newbrick.maxdistance=300f;
+        newbrick.damage=1;
+        newbrick.dir=dir;
+        float posx=body.getPosition().x;
+        float posy=body.getPosition().y;
+        switch (dir){
+            case 0:
+                newbrick.setRotation( 180 );
+                posy-=16/100f;
+
+                break;
+            case 1:
+                newbrick.setRotation( -90 );
+                posx+=16/100f;
+
+                break;
+            case 2:
+                posx-=16/100f;
+
+                newbrick.setRotation( 90 );
+                break;
+            case 3:
+                posy+=16/100f;
+
+                break;
+        }
+        newbrick.setupGameObject( mygame.world, mygame.tlplatformh.get(0),posx, posy, 5, BodyDef.BodyType.DynamicBody, ENEMYPROJECTILE, null ,null ,false);
+        mygame.objects.add( newbrick );
+        cooldown=setcooldown;
+
+    }
+
 
 }

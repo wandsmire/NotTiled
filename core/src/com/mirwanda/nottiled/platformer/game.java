@@ -42,8 +42,9 @@ import static com.mirwanda.nottiled.platformer.gameobject.objecttype.CHECKPOINT;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.COIN;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.GEAR;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ITEM;
-import static com.mirwanda.nottiled.platformer.gameobject.objecttype.MONSTER;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYERPROJECTILE;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.SPIKE;
+import static com.mirwanda.nottiled.platformer.player.playerState.DEAD;
 
 
 public class game {
@@ -58,6 +59,7 @@ public class game {
     public boolean loadingmap;
     public boolean rpg=false;
     public boolean uitest=false;
+    public float HP=5;
     public int dir;
 
     public WorldContactListener mycontactlistener;
@@ -65,6 +67,7 @@ public class game {
 
     public Vector2 checkpoint = new Vector2();
     public com.mirwanda.nottiled.platformer.player player;
+    public java.util.List<gameobject> preparedobjects = new ArrayList<gameobject>();;
     public java.util.List<gameobject> objects = new ArrayList<gameobject>();;
     public java.util.List<wall> walls  = new ArrayList<wall>();;
 
@@ -94,7 +97,6 @@ public class game {
     public java.util.List<TiledMapTile> tlleftslope=new ArrayList<TiledMapTile>();
     public java.util.List<TiledMapTile> tlrightslope=new ArrayList<TiledMapTile>();
 
-    Animation<TextureRegion> animMonster; // Must declare frame type (TextureRegion)
     Texture txMonster;
     java.util.List<Animation<TextureRegion>> animPlayer = new ArrayList<>(); // Must declare frame type (TextureRegion)
     Texture txPlayer;
@@ -148,31 +150,36 @@ public class game {
     public static final short DESTROYED_BIT = 16;
     public static final short MARKER_BIT = 32;
     public static final short PLATFORM_BIT = 64;
+    public static final short PLAYERPROJECTILE_BIT = 128;
+    public static final short ENEMYPROJECTILE_BIT = 256;
     public int Tw;
     public int Th;
     public float Tsw;
     public float Tsh;
-    public ParticleEffect pe;
+    public ParticleEffect meledak;
     public boolean gravity=true;
-
+    public int maxhp=5;
     public boolean initialise(String path, String filename){
 
         this.path = path;
         this.file = filename;
         rpg=false;
+        HP=maxhp;
         //starting = true;
-        pe = new ParticleEffect();
+        meledak = new ParticleEffect();
 
         if (playtest) {
-            pe.load( Gdx.files.external( path + "/died.p" ), Gdx.files.external( path ) );
+            meledak.load( Gdx.files.external( path + "/died.p" ), Gdx.files.external( path ) );
         }else{
-            pe.load( Gdx.files.internal( path + "/died.p" ), Gdx.files.internal( path ) );
+            meledak.load( Gdx.files.internal( path + "/died.p" ), Gdx.files.internal( path ) );
 
         }
-        pe.getEmitters().first().setPosition( Gdx.graphics.getWidth() / 2, Gdx.graphics.getHeight() / 2);
-        pe.scaleEffect(0.001f, 0.001f); //kudu disini
+        meledak.getEmitters().first().setPosition( Gdx.graphics.getWidth() / 2, Gdx.graphics.getHeight() / 2);
+        meledak.scaleEffect(0.001f, 0.001f); //kudu disini
 
-        objects = new ArrayList<gameobject>();;
+        objects = new ArrayList<gameobject>();
+        preparedobjects = new ArrayList<gameobject>();
+
         walls  = new ArrayList<wall>();;
 
         tlbrick=new ArrayList<TiledMapTile>();
@@ -372,6 +379,9 @@ public class game {
 
 
                                 switch (propname) {
+                                    case "":
+
+                                        break;
                                     case "brick":
 
                                         break;
@@ -442,27 +452,32 @@ public class game {
                                     case "platform":
 
                                         break;
-                                    case "monster":
+                                    default:
+                                        if (propname.equalsIgnoreCase( "" )) break;
 
-                                        txMonster = new Texture( Gdx.files.external( path + "/" + anim ) );
+                                        gameobject go = new gameobject();
+                                        go.name=propname;
+                                        Texture txMonster = new Texture( Gdx.files.external( path + "/" + anim ) );
                                         tmp = TextureRegion.split( txMonster,
-                                                txMonster.getWidth() / 2,
-                                                txMonster.getHeight() / 2 );
+                                                txMonster.getWidth() / 4,
+                                                txMonster.getHeight() / 4 );
 
-                                        TextureRegion[] walkFrames = new TextureRegion[2 * 2];
-                                        int index = 0;
-                                        for (int i = 0; i < 2; i++) {
-                                            for (int j = 0; j < 2; j++) {
+                                        for (int i = 0; i < 4; i++) {
+                                            TextureRegion[] walkFrames = new TextureRegion[4];
+                                            int index = 0;
+                                            for (int j = 0; j < 4; j++) {
                                                 walkFrames[index++] = tmp[i][j];
                                             }
+                                            Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
+                                            go.anim.add( tempAnim );
                                         }
-                                        animMonster = new Animation<TextureRegion>( 0.1f, walkFrames );
+                                        preparedobjects.add( go );
                                         break;
 
                                 }
                             }else{
                                 switch (propname) {
-                                    case "brick":
+                                    case "brick": case "":
 
                                         break;
                                     case "box":
@@ -532,22 +547,25 @@ public class game {
                                     case "platform":
 
                                         break;
-                                    case "monster":
-
-                                        txMonster = new Texture( Gdx.files.internal( path + "/" + anim ) );
+                                    default:
+                                        if (propname.equalsIgnoreCase( "" )) break;
+                                        gameobject go = new gameobject();
+                                        go.name=propname;
+                                        Texture txMonster = new Texture( Gdx.files.internal( path + "/" + anim ) );
                                         tmp = TextureRegion.split( txMonster,
-                                                txMonster.getWidth() / 2,
-                                                txMonster.getHeight() / 2 );
+                                                txMonster.getWidth() / 4,
+                                                txMonster.getHeight() / 4 );
 
-                                        TextureRegion[] walkFrames = new TextureRegion[2 * 2];
-                                        int index = 0;
-                                        for (int i = 0; i < 2; i++) {
-                                            for (int j = 0; j < 2; j++) {
+                                        for (int i = 0; i < 4; i++) {
+                                            TextureRegion[] walkFrames = new TextureRegion[4];
+                                            int index = 0;
+                                            for (int j = 0; j < 4; j++) {
                                                 walkFrames[index++] = tmp[i][j];
                                             }
+                                            Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
+                                            go.anim.add( tempAnim );
                                         }
-                                        animMonster = new Animation<TextureRegion>( 0.1f, walkFrames );
-                                        break;
+                                        preparedobjects.add( go );
 
                                 }
                             }
@@ -786,8 +804,6 @@ public class game {
                                     newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLATFORMV ,null,null,over);
                                 } else if (tlplatforms.contains( cece.getTile() )) {
                                     newbrick.setupGameObject( world, tlempty, xx, yy, 5, BodyDef.BodyType.StaticBody, gameobject.objecttype.PLATFORMS ,null,null,over);
-                                } else if (tlmonsters.contains( cece.getTile() )) {
-                                    newbrick.setupGameObject( world, tlcece, xx, yy, 6, BodyDef.BodyType.DynamicBody, gameobject.objecttype.MONSTER ,null,null,over);
                                 } else if (tlladder.contains( cece.getTile() )) {
                                     newbrick.setupGameObject( world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.LADDER ,null,null,over);
                                 } else if (tlfloater.contains( cece.getTile() )) {
@@ -802,9 +818,31 @@ public class game {
                                     newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.MISC ,null,null,over);
                                 }
 
+                                for (gameobject go: preparedobjects){
+                                    if (cece.getTile().getProperties().get( "name" )!=null) {
+                                        if (cece.getTile().getProperties().get( "name" ).toString().equalsIgnoreCase( go.name )) {
+                                            newbrick.HP = 5;
+                                            newbrick.speed=0.5f;
+                                            newbrick.chaseRadius = 100f;
+                                            newbrick.path=new int[]{0,0,2,2,3,3,1,1,2,1};
+                                            if (cece.getTile().getProperties().get( "bird" )!=null) newbrick.bird=true;
+                                            newbrick.chase = false;
+                                            newbrick.dir=2;
+                                            if (newbrick.bird) {
+                                                newbrick.setupGameObject( world, tlcece, xx, yy, 6, BodyDef.BodyType.KinematicBody, gameobject.objecttype.MONSTER, null, null, over );
+                                            }else{
+                                                newbrick.setupGameObject( world, tlcece, xx, yy, 6, BodyDef.BodyType.DynamicBody, gameobject.objecttype.MONSTER, null, null, over );
+
+                                            }
+
+                                            newbrick.anim = go.anim;
+                                        }
+                                    }
+                                }
+
                                 if (flip) newbrick.rotate( 180 );
                                 if (rota != 0) newbrick.rotate( rota * 90 );
-                                objects.add( newbrick );
+                                if (newbrick.getWidth()>0) objects.add( newbrick );
                             }
                             cece.setTile( null );
                         }
@@ -856,16 +894,6 @@ public class game {
                             rpg=true;
                         }
                     }
-                    if (o.getProperties().containsKey( "maxspeed" )) {
-                        if (o.getProperties().get( "maxspeed" ).toString().equalsIgnoreCase( "rpg" )){
-                            world.setGravity( new Vector2(0f,0f ));
-                            jumping=false;
-                            rpg=true;
-                        }
-                    }
-
-
-
                 }
 
             }
@@ -958,6 +986,11 @@ public class game {
     public void update(SpriteBatch batch, float delta, OrthographicCamera gamecam) {
         gc=gamecam;
         world.step(1/60f,6,2);
+        cooldown-=delta;
+
+        if (HP<=0){
+            killPlayer();
+        }
         if (!rpg) {
             if (Math.abs( player.b2body.getLinearVelocity().y ) >= 0.2f) {
                 jumping = true;
@@ -972,11 +1005,11 @@ public class game {
             stompinterval -= delta;
             if (stompinterval < 0) stompinterval = 0;
         }
-        if (player.b2body.getPosition().y<=-32/100f && player.state != com.mirwanda.nottiled.platformer.player.playerState.DEAD)
+        if (player.b2body.getPosition().y<=-32/100f && player.state != DEAD)
         {
             playSfx(sfxplayer);
             dead+=1;
-            player.state = com.mirwanda.nottiled.platformer.player.playerState.DEAD;
+            player.state = DEAD;
 
         }
 
@@ -1059,21 +1092,19 @@ public class game {
         }
 
 
+        for (int i = objects.size() - 1; i >= 0; i--){
+            objects.get( i ).update(delta);
+        }
+
         for (gameobject sboxes:objects)
         {
             if (sboxes.over) continue;
-            if (sboxes.objtype==MONSTER){
-                TextureRegion currentFrame = animMonster.getKeyFrame(stateTime, true);
-                sboxes.setRegion(currentFrame);
-            }
-            // if (sboxes.objtype==ITEM){Gdx.app.log( "AS",sboxes.toString() );}
-            sboxes.update(delta);
 
             if (!debugmode && sboxes.getTexture()!=null ) sboxes.draw(batch);
         }
 
         player.update(delta);
-        if (player.state != com.mirwanda.nottiled.platformer.player.playerState.DEAD){
+        if (player.state != DEAD){
             player.draw(batch);
         }else
         {
@@ -1083,12 +1114,7 @@ public class game {
         for (gameobject sboxes:objects)
         {
             if (!sboxes.over) continue;
-            if (sboxes.objtype==MONSTER){
-                TextureRegion currentFrame = animMonster.getKeyFrame(stateTime, true);
-                sboxes.setRegion(currentFrame);
-            }
-            // if (sboxes.objtype==ITEM){Gdx.app.log( "AS",sboxes.toString() );}
-            sboxes.update(delta);
+
 
             if (!debugmode && sboxes.getTexture()!=null ) sboxes.draw(batch);
         }
@@ -1109,8 +1135,8 @@ public class game {
 
 
     public void pressup(){
-        player.moving=true;
-        if (rpg) dir=3;
+        if (rpg) player.moving=true;
+        dir=3;
 
         if (!rpg) {
             if ((!jumping || onplatformv) && !ladder && !sinker && !floater) {
@@ -1129,8 +1155,8 @@ public class game {
     }
 
     public void pressdown(){
-        player.moving=true;
-        if (rpg) dir=0;
+        if (rpg) player.moving=true;
+        dir=0;
 
         if (!rpg) {
             if (stompinterval == 0 && !ladder && !sinker && !floater) {
@@ -1203,10 +1229,7 @@ public class game {
     }
 
     public void respawn(){
-        player.b2body.setLinearVelocity(0,0);
-        player.b2body.setActive(true);
-        player.b2body.setTransform(checkpoint.x,checkpoint.y,0);
-        player.state = com.mirwanda.nottiled.platformer.player.playerState.ALIVE;
+        load();
     }
 
     public void keyinput(){
@@ -1219,9 +1242,11 @@ public class game {
 
             if (victory||starting) return;
 
-            if (player.state == com.mirwanda.nottiled.platformer.player.playerState.DEAD) return;
+            if (player.state == DEAD) return;
 
-
+            if (Gdx.input.isKeyPressed( Input.Keys.X )) {
+                shoot();
+            }
             if (!rpg) {
                 if (Gdx.input.isKeyPressed( Input.Keys.RIGHT )) {
                     pressright();
@@ -1271,6 +1296,46 @@ public class game {
 
 
     }
+    float cooldown=0f;
+    float setcooldown=0.2f;
+
+    public void shoot(){
+        if (cooldown>0) return;
+        gameobject newbrick = new gameobject();
+        newbrick.mygame = this;
+        newbrick.speed=4f;
+        newbrick.maxdistance=300f;
+        newbrick.damage=1;
+        newbrick.dir=dir;
+        float posx=player.b2body.getPosition().x;
+        float posy=player.b2body.getPosition().y;
+        switch (dir){
+            case 0:
+                newbrick.setRotation( 180 );
+                posy-=16/100f;
+
+                break;
+            case 1:
+                newbrick.setRotation( -90 );
+                posx+=16/100f;
+
+                break;
+            case 2:
+                posx-=16/100f;
+
+                newbrick.setRotation( 90 );
+                break;
+            case 3:
+                posy+=16/100f;
+
+                break;
+        }
+        newbrick.setupGameObject( world, tlplatformh.get(0),posx, posy, 5, BodyDef.BodyType.DynamicBody, PLAYERPROJECTILE, null ,null ,false);
+        this.objects.add( newbrick );
+        cooldown=setcooldown;
+
+    }
+
 
     public void save(){
         save.mapname=file;
@@ -1303,6 +1368,25 @@ public class game {
         });
 
     }
+
+    public void killPlayer(){
+        if (player.state!= DEAD && !victory && !starting)
+        {
+            playSfx(sfxplayer);
+            dead+=1;
+
+            meledak.reset(false);
+            meledak.start();
+            player.state= DEAD;
+            ///////////////////
+
+
+
+            ///////////////////
+        }
+
+    }
+
 
 }
 

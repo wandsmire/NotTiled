@@ -32,7 +32,7 @@ public class player extends Sprite {
 
         FixtureDef fdef = new FixtureDef();
         fdef.filter.categoryBits = game.PLAYER_BIT;
-        fdef.filter.maskBits = game.DEFAULT_BIT | game.COIN_BIT | game.BRICK_BIT | game.PLATFORM_BIT;
+        fdef.filter.maskBits = game.DEFAULT_BIT | game.COIN_BIT | game.BRICK_BIT | game.PLATFORM_BIT |game.ENEMYPROJECTILE_BIT;
         EdgeShape shape = new EdgeShape();
         float size = 8/100f;
 

@@ -17,6 +17,7 @@ import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLATFORMH;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLATFORMV;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYER;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYERBOTTOM;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYERPROJECTILE;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.WALLCENTER;
 
 public class WorldContactListener implements ContactListener {
@@ -42,18 +43,7 @@ public class WorldContactListener implements ContactListener {
             {
                 gameobject myobject = (gameobject) fixobject.getUserData();
                 {
-                    switch (myobject.objtype){
-                        case MONSTER:
-                            //myobject.setCategoryFilter(game.DESTROYED_BIT);
-                            if (myobject.moving == gameobject.move.RIGHT) {
-                                myobject.moving = gameobject.move.LEFT;
 
-                            }
-                            else if (myobject.moving == gameobject.move.LEFT) {
-                                myobject.moving = gameobject.move.RIGHT;
-                            }
-                            break;
-                    }
                 }
             }
         }
@@ -66,20 +56,7 @@ public class WorldContactListener implements ContactListener {
             {
                 gameobject myobject = (gameobject) fixobject.getUserData();
                 {
-                    switch (myobject.objtype){
 
-                        case MONSTER:
-                            //myobject.setCategoryFilter(game.DESTROYED_BIT);
-                            if (myobject.moving == gameobject.move.RIGHT) {
-                                myobject.moving = gameobject.move.LEFT;
-
-                            }
-                            else if (myobject.moving == gameobject.move.LEFT) {
-                                myobject.moving = gameobject.move.RIGHT;
-                            }
-                            break;
-
-                    }
                 }
             }
         }
@@ -95,44 +72,18 @@ public class WorldContactListener implements ContactListener {
 
                     switch (myobject.objtype){
                         case PLATFORMS:
-                            //myobject.setCategoryFilter(game.DESTROYED_BIT);
-                            if (myobject2.objtype ==PLATFORMH) {
-                                if (myobject2.moving == gameobject.move.RIGHT) {
-                                    myobject2.moving = gameobject.move.LEFT;
 
-                                } else if (myobject2.moving == gameobject.move.LEFT) {
-                                    myobject2.moving = gameobject.move.RIGHT;
-                                }
-                            } else if (myobject2.objtype ==PLATFORMV){
-                                //myobject.setCategoryFilter(game.DESTROYED_BIT);
-                                if (myobject2.moving == gameobject.move.UP) {
-                                    myobject2.moving = gameobject.move.DOWN;
-
-                                }
-                                else if (myobject2.moving == gameobject.move.DOWN) {
-                                    myobject2.moving = gameobject.move.UP;
-                                }
-                            }
-                            break;
                         case MONSTER:
                             //myobject.setCategoryFilter(game.DESTROYED_BIT);
-                            if (myobject2.objtype ==MONSTER) {
-                                if (myobject.moving == gameobject.move.RIGHT) {
-                                    myobject.moving = gameobject.move.LEFT;
 
-                                } else if (myobject.moving == gameobject.move.LEFT) {
-                                    myobject.moving = gameobject.move.RIGHT;
-                                }
+                            if (myobject2.objtype ==PLAYERPROJECTILE) {
+                                myobject.HP-=myobject2.damage;
+                                myobject2.setCategoryFilter(game.DESTROYED_BIT);
+                                mygame.objects.remove(myobject2);
+
                             }
 
-                            if (myobject2.objtype == BOX) {
-                                if (myobject.moving == gameobject.move.RIGHT) {
-                                    myobject.moving = gameobject.move.LEFT;
 
-                                } else if (myobject.moving == gameobject.move.LEFT) {
-                                    myobject.moving = gameobject.move.RIGHT;
-                                }
-                            }
                         if (myobject2.objtype ==gameobject.objecttype.SWITCH) {
                             TextureRegion regon = null;
                             TextureRegion regoff = null;
@@ -159,12 +110,7 @@ public class WorldContactListener implements ContactListener {
                             }
                             mygame.playSfx(mygame.sfxswitch);
 
-                                if (myobject.moving == gameobject.move.RIGHT) {
-                                    myobject.moving = gameobject.move.LEFT;
 
-                                } else if (myobject.moving == gameobject.move.LEFT) {
-                                    myobject.moving = gameobject.move.RIGHT;
-                                }
 
                         }
 
@@ -184,36 +130,18 @@ public class WorldContactListener implements ContactListener {
                 switch (myobject2.objtype){
                     case PLATFORMS:
                         //myobject.setCategoryFilter(game.DESTROYED_BIT);
-                        if (myobject.objtype ==PLATFORMH) {
-                            if (myobject.moving == gameobject.move.RIGHT) {
-                                myobject.moving = gameobject.move.LEFT;
 
-                            } else if (myobject.moving == gameobject.move.LEFT) {
-                                myobject.moving = gameobject.move.RIGHT;
-                            }
-                        } else if (myobject.objtype ==PLATFORMV){
-                            //myobject.setCategoryFilter(game.DESTROYED_BIT);
-                            if (myobject.moving == gameobject.move.UP) {
-                                myobject.moving = gameobject.move.DOWN;
 
-                            }
-                            else if (myobject.moving == gameobject.move.DOWN) {
-                                myobject.moving = gameobject.move.UP;
-                            }
-                        }
                         break;
-
                     case MONSTER:
                         //myobject.setCategoryFilter(game.DESTROYED_BIT);
-                        if (myobject.objtype ==MONSTER) {
-                            if (myobject2.moving == gameobject.move.RIGHT) {
-                                myobject2.moving = gameobject.move.LEFT;
-
-                            } else if (myobject2.moving == gameobject.move.LEFT) {
-                                myobject2.moving = gameobject.move.RIGHT;
-                            }
+                        if (myobject.objtype ==PLAYERPROJECTILE) {
+                            myobject.HP-=myobject.damage;
+                            myobject.setCategoryFilter(game.DESTROYED_BIT);
+                            mygame.objects.remove(myobject);
 
                         }
+
                         if (myobject.objtype ==gameobject.objecttype.SWITCH) {
                             TextureRegion regon = null;
                             TextureRegion regoff = null;
@@ -240,12 +168,7 @@ public class WorldContactListener implements ContactListener {
                             }
                             mygame.playSfx(mygame.sfxswitch);
 
-                            if (myobject2.moving == gameobject.move.RIGHT) {
-                                myobject2.moving = gameobject.move.LEFT;
 
-                            } else if (myobject2.moving == gameobject.move.LEFT) {
-                                myobject2.moving = gameobject.move.RIGHT;
-                            }
 
                         }
 
@@ -335,7 +258,7 @@ public class WorldContactListener implements ContactListener {
                                 mygame.objects.remove(myobject);
                                 mygame.playSfx(mygame.sfxmonster);
                             }else{
-                                killPlayer();
+                                mygame.killPlayer();
                             }
                             break;
 
@@ -362,7 +285,8 @@ public class WorldContactListener implements ContactListener {
                                 mygame.objects.remove(myobject);
                                 mygame.playSfx(mygame.sfxmonster);
                             }else{
-                                killPlayer();
+                                mygame.killPlayer();
+
                             }
                             break;
 
@@ -389,14 +313,12 @@ public class WorldContactListener implements ContactListener {
                                 mygame.objects.remove(myobject);
                                 mygame.playSfx(mygame.sfxmonster);
                             }else{
-                                killPlayer();
+                                mygame.killPlayer();
+
                             }
                             break;
                         case BOX:
-                            if (myobject.body.getLinearVelocity().y!=0)
-                            {
-                                killPlayer();
-                            }
+
                             break;
                         case SWITCH:
                             TextureRegion regon = null;
@@ -439,7 +361,8 @@ public class WorldContactListener implements ContactListener {
 
             if (fixobject.getUserData()==WALLCENTER)
             {
-                killPlayer();
+                mygame.killPlayer();
+
             }
 
             if (fixobject.getUserData()!=null && gameobject.class.isAssignableFrom(fixobject.getUserData().getClass()))
@@ -459,12 +382,20 @@ public class WorldContactListener implements ContactListener {
                             }
                             break;
                         case SPIKE:
-                            killPlayer();
-                            break;
-                        case GEAR:
-                            killPlayer();
+                            mygame.killPlayer();
 
                             break;
+                        case GEAR:
+                            mygame.killPlayer();
+
+
+                            break;
+                        case ENEMYPROJECTILE:
+                            mygame.HP-=1;
+                            myobject.setCategoryFilter(game.DESTROYED_BIT);
+                            mygame.objects.remove(myobject);
+                            break;
+
                         case COIN:
                             mygame.coin-=1;
                             myobject.setCategoryFilter(game.DESTROYED_BIT);
@@ -690,20 +621,4 @@ public class WorldContactListener implements ContactListener {
 
     }
 
-    public void killPlayer(){
-        if (mygame.player.state!= player.playerState.DEAD && !mygame.victory && !mygame.starting)
-        {
-            mygame.playSfx(mygame.sfxplayer);
-            mygame.dead+=1;
-            mygame.pe.reset(false);
-            mygame.pe.start();
-            mygame.player.state= com.mirwanda.nottiled.platformer.player.playerState.DEAD;
-            ///////////////////
-
-
-
-            ///////////////////
-        }
-
-    }
 }
