@@ -1,6 +1,9 @@
 package com.mirwanda.nottiled.platformer;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.maps.MapObject;
+import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.physics.box2d.Contact;
 import com.badlogic.gdx.physics.box2d.ContactImpulse;
@@ -441,10 +444,11 @@ public class WorldContactListener implements ContactListener {
 
             if (fixobject.getUserData()!=null && gameobject.class.isAssignableFrom(fixobject.getUserData().getClass()))
             {
-                gameobject myobject = (gameobject) fixobject.getUserData();
+                final gameobject myobject = (gameobject) fixobject.getUserData();
                 {
                     switch (myobject.objtype){
                         case CHECKPOINT:
+                            mygame.save();
                             mygame.checkpoint.set(fixobject.getBody().getPosition().x,fixobject.getBody().getPosition().y);
                             mygame.playSfx(mygame.sfxcheckpoint);
                             break;
@@ -486,6 +490,79 @@ public class WorldContactListener implements ContactListener {
                             mygame.playSfx(mygame.sfxkey);
 
                             break;
+                        case ITEM: case BLOCK:
+
+                            MapObject o = myobject.obj;
+                            boolean qual=true;
+                            if (o.getProperties().get( "con" )!=null){
+                                String[] ss = o.getProperties().get( "con" ).toString().split( "," );
+                                String[] vv = o.getProperties().get( "conval" ).toString().split( "," );
+                                qual=false;
+                                int rq=0;
+                                for (int i=0;i<ss.length;i++) {
+                                    for (KV var : mygame.save.vars) {
+                                        if (ss[i].equalsIgnoreCase( var.key )) {
+                                            if (Integer.parseInt(vv[i]) == var.value) {
+                                                rq+=1;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                if (rq==ss.length) qual=true;
+                            }
+                            if (qual)
+                            {
+
+                                if (o.getProperties().get( "setvar" )!=null){
+                                    String[] ss = o.getProperties().get( "setvar" ).toString().split( "," );
+                                    String[] vv = o.getProperties().get( "setvarval" ).toString().split( "," );
+                                    int rq=0;
+                                    for (int i=0;i<ss.length;i++) {
+                                        mygame.setOrAddVars( ss[i],Integer.parseInt(vv[i]), game.VAROP.SET);
+                                    }
+                                }
+
+                                if (o.getProperties().get( "addvar" )!=null){
+                                    String[] ss = o.getProperties().get( "addvar" ).toString().split( "," );
+                                    String[] vv = o.getProperties().get( "addvarval" ).toString().split( "," );
+                                    int rq=0;
+                                    for (int i=0;i<ss.length;i++) {
+                                        mygame.setOrAddVars( ss[i],Integer.parseInt(vv[i]), game.VAROP.ADD);
+                                    }
+                                }
+
+                                if (o.getProperties().get( "subvar" )!=null){
+                                    String[] ss = o.getProperties().get( "subvar" ).toString().split( "," );
+                                    String[] vv = o.getProperties().get( "subvarval" ).toString().split( "," );
+                                    int rq=0;
+                                    for (int i=0;i<ss.length;i++) {
+                                        mygame.setOrAddVars( ss[i],Integer.parseInt(vv[i]), game.VAROP.SUB );
+                                    }
+                                }
+
+                                if (o.getProperties().get( "keep" )==null) {
+                                    myobject.setCategoryFilter( game.DESTROYED_BIT );
+                                    mygame.objects.remove( myobject );
+                                }
+
+                                mygame.playSfx(mygame.sfxkey);
+                                Gdx.app.log( "AS","AS" );
+
+                                if (o.getProperties().get( "load" )!=null){
+                                    mygame.load();
+                                }
+
+                                if (o.getProperties().get( "msg" )!=null){
+                                    mygame.msgindex=0;
+                                    mygame.briefing=o.getProperties().get( "msg" ).toString().split( "//" );
+                                    mygame.starting=true;
+                                    mygame.player.b2body.setLinearVelocity( 0,0 );
+                                }
+                            }
+
+
+                            break;
                         case LOCK:
                             if (mygame.key <1) return;
                             mygame.key-=1;
@@ -506,6 +583,36 @@ public class WorldContactListener implements ContactListener {
                                 mygame.player.b2body.setLinearVelocity(0, 0);
                                 mygame.playSfx(mygame.sfxgirl);
                             }
+
+                            break;
+                        case TRANSFER:
+
+                            if (myobject.obj!=null){
+                                final MapProperties mp = myobject.obj.getProperties();
+                                if (mp.get("transfer")==null) return;
+                                    if (mp.get( "transfer" ).toString().equalsIgnoreCase("") ){
+                                    }else{
+                                        mygame.bgm.stop();
+                                        mygame.loadingmap=true;
+                                        mygame.initialise(mygame.path, mp.get( "transfer" ).toString());
+
+                                    }
+
+                                Gdx.app.postRunnable(new Runnable() {
+
+                                    @Override
+                                    public void run () {
+                                        String[] xy= mp.get("pos").toString().split( "," );
+
+                                        Float px = Float.parseFloat(xy[0]);
+                                        Float py = Float.parseFloat(xy[1]);
+                                        mygame.player.b2body.setTransform((px+8)/100f, (mygame.Th*mygame.Tsh/100f)-(py+8)/100f,0);
+                                        mygame.player.b2body.setLinearVelocity( 0,0 );
+                                        //mygame.gc.position.set(mygame.player.b2body.getPosition().x,mygame.player.b2body.getPosition().y,0);
+                                    }
+                                });
+                            }
+
 
                             break;
 

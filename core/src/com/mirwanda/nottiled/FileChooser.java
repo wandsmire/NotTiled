@@ -5,9 +5,11 @@ import java.util.Comparator;
 
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
@@ -102,6 +104,9 @@ public class FileChooser extends Dialog
 
 	private void buildList()
 	{
+		Texture txback = new Texture(Gdx.files.internal( "images/up96.png" ));
+		Texture txfolder = new Texture(Gdx.files.internal( "images/folder96.png" ));
+		Texture txfile = new Texture(Gdx.files.internal( "images/file96.png" ));
 		FileHandle[] files = directory.list();
 		Arrays.sort(files, new Comparator<FileHandle>() {
 				@Override
@@ -119,8 +124,10 @@ public class FileChooser extends Dialog
 				}
 			});
 		ScrollPane pane = new ScrollPane(null, skin);
+
 		Table table = new Table().top().left();
 		table.defaults().left();
+		//table.debug();
 		ClickListener fileClickListener = new ClickListener(){
 			@Override
 			public void clicked(InputEvent event, float x, float y)
@@ -147,10 +154,13 @@ public class FileChooser extends Dialog
 		Label label;
 		if (!directory.path().equalsIgnoreCase("")) {
 			table.row();
+			Image img = new Image(txback);
+			table.add( img );
+
 			label = new Label("..", skin);
 			label.setName("..");
 			label.addListener(fileClickListener);
-			table.add(label).expandX().fillX();
+			table.add(label).expandX().fillX().colspan( 2 );
 		}
 		for (FileHandle file : files)
 		{
@@ -159,11 +169,14 @@ public class FileChooser extends Dialog
 				if (file.isDirectory())
 				{
 					table.row();
+					Image img = new Image(txfolder);
+					img.addListener( fileClickListener );
+					table.add( img );
 					label = new Label(file.name(), skin);
 					label.setColor(1f,1f,0f,1f);
 					label.setName(file.name());
 					label.addListener(fileClickListener);
-					table.add(label).expandX().fillX();
+					table.add(label).colspan(2).expandX().fillX();
 				} 
 			}
 			else
@@ -171,11 +184,16 @@ public class FileChooser extends Dialog
 				if (file.isDirectory())
 				{
 					table.row();
+					Image img = new Image(txfolder);
+					table.add( img );
 					label = new Label(file.name(), skin);
 					label.setColor(1f,1f,0f,1f);
+
 					label.setName(file.name());
 					label.addListener(fileClickListener);
-					table.add(label).expandX().fillX();
+					img.addListener( fileClickListener );
+
+					table.add(label).colspan(2).expandX().fillX();
 				} else{
 					if (filter.length>0){
 						for (String str: filter){
@@ -183,10 +201,17 @@ public class FileChooser extends Dialog
 							if (fn.length()>str.length()){
 							if (fn.substring(fn.length()-str.length()).equalsIgnoreCase(str)){
 								table.row();
+								table.add();
+
+								Image img = new Image(txfile);
+								table.add( img );
+
 								label = new Label(file.name(), skin);
 								label.setColor(1f,1f,1f,1f);
 								label.setName(file.name());
 								label.addListener(fileClickListener);
+								img.addListener( fileClickListener );
+
 								table.add(label).expandX().fillX();
 								break;
 							}
@@ -194,17 +219,24 @@ public class FileChooser extends Dialog
 						}
 					}else{
 						table.row();
+						table.add();
+
+						Image img = new Image(txfile);
+						table.add( img );
+
 						label = new Label(file.name(), skin);
 						label.setColor(1f,1f,1f,1f);
 						label.setName(file.name());
 						label.addListener(fileClickListener);
+						img.addListener( fileClickListener );
+
 						table.add(label).expandX().fillX();
 						
 					}
 				}
 			}
 		}
-		pane.setScrollingDisabled(true,false);
+		pane.setScrollingDisabled(false,false);
 		pane.setWidget(table);
 		this.getContentTable().reset();
 		this.getContentTable().add(pane).expand().fill();

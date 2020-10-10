@@ -63,6 +63,7 @@ public class guis
 	gui down=new gui();
 	gui left=new gui();
 	gui right=new gui();
+	gui jump=new gui();
 	gui restart=new gui();
 	gui exit=new gui();
 	gui respawn=new gui();
@@ -134,14 +135,17 @@ public class guis
 
 		canceltutorial.setp(30,70,20,30);
 
-		up.setp(80,100,10,20);
-		down.setp(60,80,0,10);
-		left.setp(0,20,10,20);
-		right.setp(20,40,10,20);
+		up.setp(16,36,18,26);
+		down.setp(16,36,2,10);
+		left.setp(4,26,10,18);
+		right.setp(26,48,10,18);
+		jump.setp(74,96,10,18);
+
 		restart.setp(0,20,90,100);
 		exit.setp(80,100,90,100);
-		respawn.setp(30,70,40,50);
-		gamestatus.setp(0,100,50,60);
+
+		respawn.setp(80,100,0,10);
+		gamestatus.setp(0,100,0,40);
 		lock.setp(85,100,10,19);
 
 		//swatches.setp(25,75,10,28);
@@ -222,14 +226,16 @@ public class guis
 
 		canceltutorial.setl(40,60,20,30);
 
-		up.setl(85,100,10,30);
-		down.setl(65,80,0,20);
-		left.setl(0,15,10,30);
-		right.setl(15,30,10,30);
+		up.setl(5,15,24,36);
+		down.setl(5,15,0, 12);
+		left.setl(0,10,12,24);
+		right.setl(10,20,12,24);
+		jump.setl(90,100,12,24);
+
 		restart.setl(0,10,90,100);
 		exit.setl(90,100,90,100);
-		respawn.setl(40,60,40,50);
-		gamestatus.setl(0,100,50,60);
+		respawn.setl(80,98,2,10);
+		gamestatus.setl(0,100,0,30);
 
 		//swatches.setl(10,35,0,28);
 		sw1.setl(10,18,0,14);

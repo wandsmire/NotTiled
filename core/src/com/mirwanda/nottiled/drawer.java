@@ -89,7 +89,62 @@ public class drawer implements Comparable
 		if (tilesets.get(initset).getTexture()!=null){
 			for (int xa = 0; xa < Tsw; xa++) {
 				for (int ya = 0; ya < Tsh; ya++) {
-					Color c =  new Color(tilesets.get(initset).getPixmap().getPixel((int)((float)(xa/(float)Tsw)*width+srcX),(int)((float)(ya/(float)Tsw)*height+srcY)));
+					Color c =  new Color(0,0,0,0);
+
+					if (flipX==false && flipY==false && rotation==0f){
+						c= new Color(tilesets.get(initset).getPixmap().getPixel((int)((float)(xa/(float)Tsw)*width+srcX),(int)((float)(ya/(float)Tsw)*height+srcY)));
+					}
+
+					if (flipX==true && flipY==false && rotation==0f){
+						c= new Color(tilesets.get(initset).getPixmap().getPixel((int)((float)((Tsw-1-xa)/(float)Tsw)*width+srcX),(int)((float)(ya/(float)Tsw)*height+srcY)));
+
+					}
+
+					if (flipX==false && flipY==true && rotation==0f){
+						//c =  new Color(1,0,0,1);
+						c= new Color(tilesets.get(initset).getPixmap().getPixel((int)((float)((xa)/(float)Tsw)*width+srcX),(int)((float)((Tsh-1-ya)/(float)Tsw)*height+srcY)));
+
+					}
+
+					if (flipX==false && flipY==false && rotation==180f){
+						//c =  new Color(1,0,0,1);
+						c= new Color(tilesets.get(initset).getPixmap().getPixel((int)((float)((Tsw-1-xa)/(float)Tsw)*width+srcX),(int)((float)((Tsh-1-ya)/(float)Tsw)*height+srcY)));
+
+					}
+
+					//rotation in libgdx is CCW
+					if (flipX==false && flipY==false && rotation==270f){
+
+						//c =  new Color(1,0,0,1);
+						c= new Color(tilesets.get(initset).getPixmap().getPixel((int)((float)((ya)/(float)Tsw)*width+srcX),(int)((float)((Tsw-1-xa)/(float)Tsw)*height+srcY)));
+
+					}
+
+					//rotation in libgdx is CCW
+					if (flipX==false && flipY==false && rotation==90f){
+
+						//c =  new Color(1,0,0,1);
+						c= new Color(tilesets.get(initset).getPixmap().getPixel((int)((float)((Tsh-1-ya)/(float)Tsw)*width+srcX),(int)((float)((xa)/(float)Tsw)*height+srcY)));
+
+					}
+
+					//rotation in libgdx is CCW
+					if (flipX==true && flipY==false && rotation==270f){
+
+						//c =  new Color(1,0,0,1);
+						//c= new Color(tilesets.get(initset).getPixmap().getPixel((int)((float)((Tsh-1-ya)/(float)Tsw)*width+srcX),(int)((float)((xa)/(float)Tsw)*height+srcY)));
+						c= new Color(tilesets.get(initset).getPixmap().getPixel((int)((float)((Tsh-1-ya)/(float)Tsw)*width+srcX),(int)((float)((Tsw-1-xa)/(float)Tsw)*height+srcY)));
+
+					}
+					//rotation in libgdx is CCW
+					if (flipX==true && flipY==false && rotation==90f){
+
+						//c =  new Color(1,0,0,1);
+						//c= new Color(tilesets.get(initset).getPixmap().getPixel((int)((float)((Tsh-1-ya)/(float)Tsw)*width+srcX),(int)((float)((xa)/(float)Tsw)*height+srcY)));
+						//c= new Color(tilesets.get(initset).getPixmap().getPixel((int)((float)((Tsh-1-ya)/(float)Tsw)*width+srcX),(int)((float)((Tsw-1-xa)/(float)Tsw)*height+srcY)));
+						c= new Color(tilesets.get(initset).getPixmap().getPixel((int)((float)((ya)/(float)Tsw)*width+srcX),(int)((float)((xa)/(float)Tsw)*height+srcY)));
+
+					}
 
 					/*
 										//red Team 2

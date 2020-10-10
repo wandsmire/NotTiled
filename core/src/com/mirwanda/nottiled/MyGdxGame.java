@@ -97,6 +97,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     String temprotype = "";
     String temprovalue = "";
     private java.util.List<Integer> swatchValue = new ArrayList<Integer>();
+    Pixmap pmMinimap;
+    Texture txMinimap;
     //////////////////////////////////////////////////////
 //            VARIABLES
 //////////////////////////////////////////////////////
@@ -910,6 +912,7 @@ String texta="";
         ui.end();
     }
 
+
     float loadingtime=0;
     @Override
     public void render() {
@@ -959,6 +962,9 @@ String texta="";
                     cammy.position.x = Interpolation.fade.apply(panOriginX, panTargetX, progress);
                     cammy.position.y = Interpolation.fade.apply(panOriginY, panTargetY, progress);
                     cammy.zoom = Interpolation.fade.apply(panOriginZoom, panTargetZoom, progress);
+                    //cammy.position.x = (float) Math.round(cammy.position.x * 100f) / 100f;
+                    //cammy.position.y = (float) Math.round(cammy.position.y * 100f) / 100f;
+
                     cammy.update();
                 }
 
@@ -1031,27 +1037,30 @@ String texta="";
                         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
                         batch.setProjectionMatrix(gamecam.combined);
                         batch.begin();
-                        batch.draw(mygame.txBackground, gamecam.position.x-2f,gamecam.position.y-2f,4,4);
+                        if (mygame.txBackground!=null) batch.draw(mygame.txBackground, gamecam.position.x-2f,gamecam.position.y-2f,4,4);
                         batch.end();
 
                         mygame.renderer.setView(gamecam);
-                        if (!mygame.debugmode) mygame.renderer.render();
-                        if (mygame.debugmode) mygame.b2dr.render(mygame.world,gamecam.combined);
-                        batch.setProjectionMatrix(gamecam.combined);
-                        batch.begin();
+                        if (!mygame.loadingmap) {
+                            if (!mygame.debugmode) mygame.renderer.render();
+                            if (mygame.debugmode)
+                                mygame.b2dr.render( mygame.world, gamecam.combined );
+                            batch.setProjectionMatrix( gamecam.combined );
+                            batch.begin();
 
-                        ///
-                        mygame.pe.update(Gdx.graphics.getDeltaTime());
+                            ///
+                            mygame.pe.update( Gdx.graphics.getDeltaTime() );
 
-                        mygame.pe.draw(batch);
-                        mygame.pe.setPosition(mygame.player.b2body.getPosition().x,mygame.player.b2body.getPosition().y);
-                       // if (mygame.pe.isComplete())
+                            mygame.pe.draw( batch );
+                            mygame.pe.setPosition( mygame.player.b2body.getPosition().x, mygame.player.b2body.getPosition().y );
+                            // if (mygame.pe.isComplete())
 
 
-                        ///
+                            ///
 
-                        mygame.update(batch, delta, gamecam);
-                        batch.end();
+                            mygame.update( batch, delta, gamecam );
+                            batch.end();
+                        }
                         postProcessor.render();
 
                         Vector3 mouse = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
@@ -1063,15 +1072,19 @@ String texta="";
                         uis.setProjectionMatrix(uicam.combined);
                         uis.begin(ShapeRenderer.ShapeType.Filled);
                         uis.setColor(0f, 0f, 0, 0.6f);
-                        if (Gdx.app.getType() != Application.ApplicationType.Desktop) {
-                            uisrect(gui.left, mouse, null);
-                            uisrect(gui.right, mouse, null);
-                            uisrect(gui.up, mouse, null);
-                            uisrect(gui.down, mouse, null);
+                        if (Gdx.app.getType() != Application.ApplicationType.Desktop || mygame.uitest) {
+                            if (!mygame.starting) {
+
+                                uisrect( gui.left, mouse, null );
+                                uisrect( gui.right, mouse, null );
+                                if (mygame.rpg) uisrect( gui.up, mouse, null );
+                                uisrect( gui.down, mouse, null );
+                                if (!mygame.rpg) uisrect( gui.jump, mouse, null );
+                            }
                         }
-                        uisrect(gui.restart,mouse,null);
+                        //uisrect(gui.restart,mouse,null);
                         if (mygame.player.state == player.playerState.DEAD ||(mygame.victory && mygame.nextlevel!=null)||mygame.starting) uisrect(gui.respawn,mouse,new Color(0,1f,0,1f));
-                        uisrect(gui.exit,mouse,null);
+                        if (mygame.playtest) uisrect(gui.exit,mouse,null);
                         if (mygame.victory || mygame.player.state == player.playerState.DEAD || mygame.starting) uisrect(gui.gamestatus,mouse,null);
                         uis.end();
 
@@ -1087,7 +1100,8 @@ String texta="";
                         }
                         else if (mygame.starting)
                         {
-                            String msg = mygame.briefing;
+
+                            String msg = mygame.briefing[mygame.msgindex];
                             if (msg==null) msg = "Ready?";
                             str1draw(ui,msg, gui.gamestatus);
 
@@ -1102,18 +1116,22 @@ String texta="";
 
 
 
-                        str1draw(ui,"Keys : "+mygame.key+" | Items Left : "+mygame.coin , gui.layer);
-                        if (Gdx.app.getType() != Application.ApplicationType.Desktop) {
-                            uidrawbutton(txLeft, "Left", gui.left,3);
-                            uidrawbutton(txDown, "Down", gui.down,3);
-                            uidrawbutton(txRight, "Right", gui.right,3);
-                            uidrawbutton(txUp, "Up", gui.up,3);
+                        //str1draw(ui,"Keys : "+mygame.key+" | Items Left : "+mygame.coin , gui.layer);
+                        if (Gdx.app.getType() != Application.ApplicationType.Desktop || mygame.uitest) {
+                            if (!mygame.starting) {
+                                uidrawbutton( txLeft, "Left", gui.left, 3 );
+                                uidrawbutton( txDown, "Down", gui.down, 3 );
+                                uidrawbutton( txRight, "Right", gui.right, 3 );
+                                if (mygame.rpg) uidrawbutton( txUp, "Up", gui.up, 3 );
+                                if (!mygame.rpg) uidrawbutton( txUp, "Jump", gui.jump, 3 );
+                            }
+
                         }
-                        str1draw(ui,"Restart", gui.restart);
+                        //str1draw(ui,"Restart", gui.restart);
                         if (mygame.player.state == player.playerState.DEAD) str1draw(ui,"Respawn", gui.respawn);
                         if (mygame.victory && mygame.nextlevel!=null) str1draw(ui,"Next Level", gui.respawn);
-                        if (mygame.starting) str1draw(ui,"Start", gui.respawn);
-                        str1draw(ui,"Exit", gui.exit);
+                        if (mygame.starting) str1draw(ui,"OK", gui.respawn);
+                        if (mygame.playtest) str1draw(ui,"Exit", gui.exit);
                         ui.end();
 
 
@@ -1374,6 +1392,13 @@ String texta="";
         }//if
     }
 
+    public void updateMinimap(){
+        if (sMinimap) {
+            pmMinimap = createRWthumbnail( "XOXXO" );
+            txMinimap = new Texture( pmMinimap );
+        }
+    }
+
     public void escapegame(){
         kartu="world";
         if (mygame.bgm.isPlaying()) mygame.bgm.stop();
@@ -1390,11 +1415,21 @@ String texta="";
         if (mygame.nextlevel!=null) playgame(mygame.nextlevel);
 
     }
+    boolean touched, usetool;
+    boolean touchable=true;
     void keyinput(float delta) {
         if (!Gdx.input.isTouched() && iseditGUI) {
             iseditGUI=false;
         }
 
+        if (Gdx.input.isTouched()) {
+            touched=true;
+        }
+        if (touched & usetool & !Gdx.input.isTouched()) {
+            touched=false;
+            usetool=false;
+            //updateMinimap();
+        }
 
         if (roll) {
             if (!Gdx.input.isTouched()) {
@@ -1447,14 +1482,21 @@ String texta="";
                     nextlevel();
                 }
                 else if (mygame.starting) {
-                    mygame.starting=false;
+                    if (mygame.msgindex < mygame.briefing.length-1){
+                        mygame.msgindex+=1;
+                    }else{
+                        mygame.starting=false;
+                    }
+
                 }
                 else if(mygame.player.state== player.playerState.DEAD){
                     mygame.respawn();
                 }
             }
 
-
+            if (touchable==false && !Gdx.input.isTouched()){
+                touchable=true;
+            }
             boolean pressed=false;
             for (int i = 0; i < 5; i++) { // 20 is max number of touch points
                 if (Gdx.input.isTouched(i)){
@@ -1462,14 +1504,15 @@ String texta="";
                     uicam.unproject(touch2.set(Gdx.input.getX(i), Gdx.input.getY(i), 0));
 
                     //no limitation
-                    if (tapped(touch2, gui.restart)) restartgame();
-                    if (tapped(touch2, gui.exit)) escapegame();
+                    //if (tapped(touch2, gui.restart)) restartgame();
+                    if (tapped(touch2, gui.exit) && mygame.playtest) escapegame();
 
                     //no press when victory
 
 
 
-                        if (tapped(touch2, gui.respawn)) {
+                        if (tapped(touch2, gui.gamestatus) && touchable) {
+                            touchable=false;
                             if (mygame.player.state == player.playerState.DEAD) {
                                 mygame.respawn();
                             }
@@ -1477,25 +1520,44 @@ String texta="";
                                 nextlevel();
                             }
                             if (mygame.starting) {
-                                mygame.starting=false;
+                                if (mygame.msgindex < mygame.briefing.length-1){
+                                    mygame.msgindex+=1;
+                                }else{
+                                    mygame.starting=false;
+                                }
+
                             }
                         }
 
                     if (mygame.victory || mygame.starting) return;
                     //no press when dead, no press when desktop
-                    if (Gdx.app.getType() == Application.ApplicationType.Desktop) return ;
-                    if (mygame.player.state== com.mirwanda.nottiled.platformer.player.playerState.DEAD) return;
-                    if (tapped(touch2, gui.up)) mygame.pressup();
-                    if (tapped(touch2, gui.down)) mygame.pressdown();
+                    if (Gdx.app.getType() != Application.ApplicationType.Desktop || mygame.uitest) {
+                        if (mygame.player.state == com.mirwanda.nottiled.platformer.player.playerState.DEAD)
+                            return;
+                        if (tapped( touch2, gui.up ) && mygame.rpg)
+                        {mygame.pressup();
+                            pressed = true;}
+                        if (tapped( touch2, gui.jump ) && !mygame.rpg)
+                        {mygame.pressup();
+                            pressed = true;}
+                        if (tapped( touch2, gui.down )) {mygame.pressdown();
+                            pressed = true;
+                        }
 
 
-                    if (tapped(touch2, gui.left)) {mygame.pressleft();pressed=true;}
-                    else if (tapped(touch2, gui.right)) {mygame.pressright();pressed=true;}
+                        if (tapped( touch2, gui.left )) {
+                            mygame.pressleft();
+                            pressed = true;
+                        } else if (tapped( touch2, gui.right )) {
+                            mygame.pressright();
+                            pressed = true;
+                        }
+                    }
 
                 }
 
             }
-            if (Gdx.app.getType() == Application.ApplicationType.Desktop) return ;
+            if (Gdx.app.getType() == Application.ApplicationType.Desktop && !mygame.uitest) return ;
 
             if (!pressed) {mygame.stand();}
             return;
@@ -1540,6 +1602,10 @@ String texta="";
             }
         }
 
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+           eraser=!eraser;
+        }
 
         if (Gdx.input.isKeyPressed(Input.Keys.X)) {
             if (cammode == "View only") {
@@ -3132,6 +3198,7 @@ String texta="";
         }//no tileswt
         caching = false;
 
+
     }
 
     private void drawObjects() {
@@ -3608,8 +3675,12 @@ String texta="";
         }
         stage.getViewport().setScreenSize(width, height);
         if (kartu == "stage") {
-            setMenuMap();
-            gotoStage(tMenu);
+            //setMenuMap();
+            gotoStage(lastStage);
+            if (lastStage==tMenu || lastStage==tMap){
+                setMenuMap();
+                gotoStage(tMenu);
+            }
 
             //gotoStage(lastStage);
             //backToMap();
@@ -3767,22 +3838,26 @@ String texta="";
             str1.getData().setScale(1f);
         }
 
-        float x = 0, y = 0, w = 0;
+        float x = 0, y = 0, w = 0,h=0;
         if (landscape) {
             x = gui.getXl();
             y = gui.getYl();
             w = gui.getWl();
+            h = gui.getHl();
+
 
         } else {
             x = gui.getX();
             y = gui.getY();
             w = gui.getW();
+            h = gui.getH();
+
 
         }
         if (!landscape) {
-            str1.draw(ui, strin, x / 100 * ssx, (y + 6) / 100 * ssy, (w - x) / 100 * ssx, Align.center, true);
+            str1.draw(ui, strin, x / 100 * ssx, (h-((h-y)/2.8f )) / 100 * ssy, (w - x) / 100 * ssx, Align.center, true);
         } else {
-            str1.draw(ui, strin, x / 100 * ssy, (y + 6) / 100 * ssx, (w - x) / 100 * ssy, Align.center, true);
+            str1.draw(ui, strin, x / 100 * ssy, (h-((h-y)/2.8f )) / 100 * ssx, (w - x) / 100 * ssy, Align.center, true);
         }
 
     }
@@ -4033,7 +4108,17 @@ String texta="";
                 uisrect(gui.map, mouse, vis("map"));//map props. button
                 uisrect(gui.save, mouse, vis("quicksave"));//main menu button
                 uisrect(gui.layerpick, mouse, vis("layerpick"));//layerpicker
-                //uisrect(gui.minimap,mouse,vis("minimap"));//map props. button
+                if (sMinimap){
+                if (!landscape) {
+                    uis.rect( gui.minimap.x/100f*ssx, gui.minimap.y/100f*ssy, (gui.minimap.w-gui.minimap.x)/100f*ssx,(gui.minimap.h-gui.minimap.y)/100f*ssy) ;
+                }else {
+                    uis.rect( gui.minimap.xl / 100f * ssy, gui.minimap.yl / 100f * ssx, (gui.minimap.wl - gui.minimap.xl) / 100f * ssy, (gui.minimap.hl - gui.minimap.yl) / 100f * ssx );
+                }
+                }
+
+
+
+
 
                 for (property p : properties)
                 {
@@ -4136,8 +4221,23 @@ String texta="";
 
             uis.end();
 
-            /////////////// minimap /////////////////
             if (sMinimap) {
+                uis.setProjectionMatrix( uicam.combined );
+                uis.begin( ShapeRenderer.ShapeType.Line );
+                uis.setColor( 0f, 0f, 0f, 0.7f );
+                if (!landscape) {
+                    uis.rect( gui.minimap.x / 100f * ssx, gui.minimap.y / 100f * ssy, (gui.minimap.w - gui.minimap.x) / 100f * ssx, (gui.minimap.h - gui.minimap.y) / 100f * ssy );
+                } else {
+                    uis.rect( gui.minimap.xl / 100f * ssy, gui.minimap.yl / 100f * ssx, (gui.minimap.wl - gui.minimap.xl) / 100f * ssy, (gui.minimap.hl - gui.minimap.yl) / 100f * ssx );
+
+                }
+                uis.end();
+            }
+            /////////////// minimap /////////////////
+            /*
+            if (sMinimap) {
+                if (txMinimap!=null) ui.draw(txMinimap,0,0);
+
                 if (!caching & caches.size() > 0) {
                     for (int i = 0; i < caches.size(); i++) {
 
@@ -4149,7 +4249,7 @@ String texta="";
 
                         cache.begin();
 
-                        cache.draw(myid); //call our cache with cache ID and draw it
+                        //cache.draw(myid); //call our cache with cache ID and draw it
                         cache.end();
 
 
@@ -4160,6 +4260,13 @@ String texta="";
                 uis.setProjectionMatrix(minicam.combined);
                 uis.begin(ShapeRenderer.ShapeType.Line);
                 uis.setColor(0f, 0f, 0f, 0.7f);
+                                if (!landscape) {
+                    uis.rect( gui.minimap.x/100f*ssx, gui.minimap.y/100f*ssy, (gui.minimap.w-gui.minimap.x)/100f*ssx,(gui.minimap.h-gui.minimap.y)/100f*ssy) ;
+                }else{
+                    uis.rect(  gui.minimap.xl/100f*ssy, gui.minimap.yl/100f*ssx, (gui.minimap.wl-gui.minimap.xl)/100f*ssy,(gui.minimap.hl-gui.minimap.yl)/100f*ssx) ;
+
+                }
+                uis.end();
                 int onset=0;
                 if (orientation.equalsIgnoreCase("isometric")){
                     onset=Tsw*Tw/2;
@@ -4176,6 +4283,7 @@ String texta="";
                 }
                 uis.end();
             }
+            */
             /////////////// tile view /////////////////
 
             ui.setProjectionMatrix(uicam.combined);
@@ -4274,6 +4382,25 @@ String texta="";
             if (cammode != "View only") {
 
                 if (mode == "tile" || mode == "object"|| mode == "image") {
+
+                    if (sMinimap) {
+                        if (txMinimap != null)
+                        {
+
+                            if (!landscape) {
+                                ui.draw( txMinimap, gui.minimap.x/100f*ssx, gui.minimap.y/100f*ssy, (gui.minimap.w-gui.minimap.x)/100f*ssx,(gui.minimap.h-gui.minimap.y)/100f*ssy) ;
+                            }else{
+                                ui.draw( txMinimap, gui.minimap.xl/100f*ssy, gui.minimap.yl/100f*ssx, (gui.minimap.wl-gui.minimap.xl)/100f*ssy,(gui.minimap.hl-gui.minimap.yl)/100f*ssx) ;
+
+                            }
+
+                            //uidraw( txMinimap, gui.minimap, 0);
+
+                        }
+
+                    }
+
+
                     if (layers.size() >0) str1draw(ui, layers.get(selLayer).getName(), gui.layer);
                     uidrawbutton(txlayer, z.layer, gui.layerpick, 1);
                     uidrawbutton(txmenu, z.menu, gui.menu, 2);
@@ -4300,7 +4427,7 @@ String texta="";
                     }
 
 
-                    if (sAutoSave) {
+                        if (sAutoSave) {
                         uidrawbutton(txsave2, z.save, gui.save, 2);
                     } else {
                         uidrawbutton(txsave, z.save, gui.save, 2);
@@ -4437,7 +4564,7 @@ String texta="";
 
                 //smaller yellow font for label
 
-                str1.getData().setScale(.7f);
+                str1.getData().setScale(.4f);
                 str1.setColor(1, 1, 0, 1);
                 if (mode == "tile" || mode == "object"|| mode == "image") {
                  //   str1drawlabel(ui, z.activelayer, gui.layer);
@@ -4580,8 +4707,6 @@ String texta="";
         txtile = new Texture(Gdx.files.internal("images/tile.png"));
         txauto = new Texture(Gdx.files.internal("images/autotile.png"));
 
-        txLeft = new Texture(Gdx.files.internal("images/left96.png"));
-        txRight = new Texture(Gdx.files.internal("images/right96.png"));
 
         txautopick = new Texture(Gdx.files.internal("images/autopick.png"));
         txresources = new Texture(Gdx.files.internal("images/resources.png"));
@@ -4596,6 +4721,8 @@ String texta="";
         txTypeGroup = new Texture(Gdx.files.internal("images/group.png"));
         txUp = new Texture(Gdx.files.internal("images/up96.png"));
         txDown = new Texture(Gdx.files.internal("images/down96.png"));
+        txLeft = new Texture(Gdx.files.internal("images/left96.png"));
+        txRight = new Texture(Gdx.files.internal("images/right96.png"));
         txClone = new Texture(Gdx.files.internal("images/clone.png"));
         txOutline = new Texture(Gdx.files.internal("images/outline.png"));
         txRectangle2 = new Texture(Gdx.files.internal("images/rectangle2.png"));
@@ -4901,6 +5028,7 @@ String texta="";
         resetMinimap();
         resetcam(false);
         loadingfile = false;
+        updateMinimap();
     }
 
     public void newtmxfileplus(boolean user) {
@@ -6733,7 +6861,7 @@ String texta="";
 
     }
 
-    private void createRWthumbnail(String filenamenya) {
+    private Pixmap createRWthumbnail(String filenamenya) {
         try {
             Gdx.gl.glEnable(GL20.GL_BLEND);
             int Tsw=1;
@@ -7013,13 +7141,19 @@ String texta="";
 
 
             //
-            FileHandle fh = Gdx.files.external(curdir + "/" + filenamenya + ".png");
-            PixmapIO.writePNG(fh, pm2);
-            backToMap();
-            status(z.exportfinished,3);
+            if (filenamenya!="XOXXO") {
+                FileHandle fh = Gdx.files.external( curdir + "/" + filenamenya + ".png" );
+                PixmapIO.writePNG( fh, pm2 );
+                backToMap();
+                status( z.exportfinished, 3 );
+                return null;
+            }else{
+                return pm2;
+            }
         } catch (Exception e) {
             msgbox(z.error);
             ErrorBung(e, "errorlog.txt");
+            return null;
         }
     }
 
@@ -7122,34 +7256,40 @@ String texta="";
                                 tempdrawer.mm = mm;
                                 int Tswad = 0;
                                 int Tshad = 0;
+                                int ttx=0;
+                                int tty=0;
 
                                 Tswad = Tswa;
                                 Tshad = Tsha;
 
                                 switch (flag) {
-                                    case "20"://diagonal flip
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, true);
+                                    case "20"://diagonal flip 'THIS ONE"
+                                        tempdrawer.setdrawer(initset, xpos * Tsw  + ttx - offsetx, ypos * Tsh + tty  - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
                                         break;
-                                    case "40"://flipy
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
+                                    case "40"://flipy nd
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
                                         break;
-                                    case "60"://270 degrees clockwise
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                    case "60"://270 degrees clockwise nd
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
                                         break;
-                                    case "80"://flipx
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                    case "80"://flipx nd
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
                                         break;
                                     case "a0"://90 degress cw
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx   - offsetx, ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
                                         break;
-                                    case "c0"://180 degrees cw
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                    case "c0"://180 degrees cw nd
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx   - offsetx, ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        break;
+                                    case "e0"://180 degrees ccw "AND THIS ONE"
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
                                         break;
                                     case "00":
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx   - offsetx, ypos * Tsh +tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
                                         break;
                                 }
                                 drawers.add(tempdrawer);
+
                             } //for  b
                         }//for a
 
@@ -7456,6 +7596,8 @@ String texta="";
             }
         }
         backToMap();
+        //updateMinimap();
+
     }
 
     private void runvmirror() {
@@ -7510,6 +7652,7 @@ String texta="";
             }
         }
         backToMap();
+        //updateMinimap();
     }
 
     private void runhvmirror() {
@@ -7517,6 +7660,8 @@ String texta="";
         runhmirror();
         runvmirror();
         backToMap();
+        //updateMinimap();
+
     }
 
 
@@ -7574,6 +7719,8 @@ String texta="";
 
 
         backToMap();
+        //updateMinimap();
+
     }
 
     private void beg() {
@@ -8245,7 +8392,7 @@ String texta="";
             loadInterface("custominterface.json");
         }
 
-        sAutoSave = prefs.getBoolean("autosave", true);
+        sAutoSave = prefs.getBoolean("autosave", false);
         sShowGID = prefs.getBoolean("gid", false);
         sShowGIDmap = prefs.getBoolean("gidmap", false);
         sSaveTsx = prefs.getBoolean("tsx", false);
@@ -11563,7 +11710,7 @@ String texta="";
         };
         fc.setDirectory(Gdx.files.external(lastpath));
         tOpen.clear();
-        tOpen.add(fc).width(ssx).height(ssy * .8f);
+        tOpen.add(fc).width(ssx).height(ssy * .7f).width( ssx*.9f );
         gotoStage(tOpen);
     }
 
@@ -11846,6 +11993,7 @@ String texta="";
         issettingtile=false;
         pickAuto=false;
         recenterpick();
+        //updateMinimap();
         stage.clear(); //is this the bug?
         face.showbanner(false);
     }
@@ -12520,13 +12668,27 @@ String texta="";
 
 
                         loadingfile = false;
+                        for (property p:properties){
+                            if (p.getName().equalsIgnoreCase( "type" ) && p.getValue().equalsIgnoreCase( "NotTiled platformer" )){
+                                FileHandle check = Gdx.files.external(curdir+"/"+"assets.zip");
+                                if (!check.exists()) {
+                                    FileHandle from = Gdx.files.internal( "platformer/assets.zip" );
+                                    FileHandle to = Gdx.files.external( curdir );
+                                    from.copyTo( to );
+                                    FileHandle zipo = Gdx.files.external( curdir + "/" + "assets.zip" );
+                                    unzip( zipo, to );
+                                }
 
+                                break;
+                            }
+                        }
                         showtsetselection(tilesets);
                         saveMap(curdir + "/" + curfile);
                         cacheTiles();
                         uicam.zoom = 0.5f;
                         uicam.update();
                         firstload = loadtime;
+                        updateMinimap();
                         cue("usetemplateok");
                     }
                 });
@@ -12535,7 +12697,6 @@ String texta="";
     }
 
     public void loadmap(String filepath) {
-
         errors = "";
         recents.addrecent(filepath);
         saveRecents();
@@ -13188,6 +13349,8 @@ String texta="";
         CacheAllTset();
         cacheTiles();
         resetSwatches();
+        updateMinimap();
+        updateObjectCollision();
 
 
         selLayer=0;
@@ -13211,6 +13374,7 @@ String texta="";
         //resize(ssx,ssy);
         //recenterUI();
         firstload = loadtime;
+        updateMinimap();
 
 
         if (isCreateRoom) {
@@ -14164,6 +14328,7 @@ String texta="";
 
             }
         }
+        //updateMinimap();
         return false;
 
     }
@@ -15253,8 +15418,9 @@ String texta="";
                     case "ellipse":
                     case "polygon":
                     case "polyline":
-                    case "image":
                     case "text":
+
+                    case "image":
                     default:
                         nyok.setX((ae / Tsw) * Tsw);
                         nyok.setY(((-ab + Tsh) / Tsh) * Tsh);
@@ -15263,6 +15429,8 @@ String texta="";
                         nyok.setX((ae / Tsw) * Tsw + (Tsw / 2));
                         nyok.setY(((-ab + Tsh) / Tsh) * Tsh - Tsh / 2 + Tsh);
                         break;
+
+
 
 
                 }
@@ -15309,13 +15477,17 @@ String texta="";
                         {
                             nyok.setX((int) (numa % Tw)*Tsh );
                             nyok.setY((int) (numa / Tw)*Tsh);
-                            nyok = new obj(curid, (int) (numa % Tw)*Tsh , (int) (numa / Tw)*Tsh, Tsh, Tsh, "", "",world);
+
+                                nyok = new obj(curid, (int) (numa % Tw)*Tsh , (int) (numa / Tw)*Tsh, Tsh, Tsh, "", "",world);
                             nyok.setShape(shapeNameX);
                             nyok.updateVertices( world , Tsh);
                         }
 
                     }else {
-                        nyok = new obj(curid, (int) (ae / Tsw) * Tsw, (int) ((-ab + Tsh) / Tsh) * Tsh, Tsw, Tsh, "", "",world);
+                        int dd=0;
+                        if (activeobjtool==6) dd=Tsh;
+
+                        nyok = new obj(curid, (int) (ae / Tsw) * Tsw, (int) ((-ab + Tsh) / Tsh) * Tsh+dd, Tsw, Tsh, "", "",world);
                         nyok.setShape(shapeNameX);
                         nyok.updateVertices( world, Tsh );
                     }
@@ -15866,6 +16038,7 @@ String texta="";
             }
 
         }
+        //pdateMinimap(); berat
     }
 
     ATGraph ATGraph;
@@ -17104,7 +17277,7 @@ String texta="";
             server.start();
             server.bind(port, 54777);
             if (mygame !=null){
-                mygame.server = server;
+                //mygame.server = server;
             }
 
 
@@ -17129,7 +17302,7 @@ String texta="";
             client.start();
             client.connect(5000, aipi, portNum , 54777);
             if (mygame !=null){
-                mygame.client = client;
+               // mygame.client = client;
             }
 
 
@@ -17229,9 +17402,11 @@ String texta="";
 
            // for (layer l: layers){
            // if (l.getType()==layer.Type.OBJECT){
+
                 com.badlogic.gdx.utils.Array<Body> bds = new com.badlogic.gdx.utils.Array<Body>();
                 world.getBodies( bds );
                 for ( Body bd : bds){
+                    if (world.getBodyCount()==0) break;
                     world.destroyBody( bd );
                 }
             //}
@@ -17326,17 +17501,26 @@ String texta="";
 
         if (tapped(touch2, gui.minimap) && sMinimap) {
             if (mode == "tile" || mode == "object" || mode == "image") {
-                cacheTiles();
+                //cacheTiles();
+                updateMinimap();
                 Vector3 ve = new Vector3();
-                minicam.unproject(ve.set(Gdx.input.getX(), Gdx.input.getY(), 0));
+                uicam.unproject(ve.set(Gdx.input.getX(), Gdx.input.getY(), 0));
                 //cam.position.set(ve.x,ve.y,ve.z);
                 //cam.update();
                 int onset = 0;
-                if (orientation.equalsIgnoreCase("isometric")) {
-                    onset = Tsw * Tw / 2;
-                }
-                if (ve.x > 0 - onset && ve.x < Tsw * Tw - onset && ve.y < Tsh && ve.y > -Tsh * Th) {
-                    panTo(ve.x, ve.y, cam.zoom, .5f);
+                //if (orientation.equalsIgnoreCase("isometric")) {
+                  //  onset = Tsw * Tw / 2;
+                //}
+                if (!landscape){
+                    float eiys = (ve.y-gui.minimap.getY()/100f*ssy)/((gui.minimap.getH()-gui.minimap.getY())/100f*ssy);
+                    float eiks = (ve.x-gui.minimap.getX()/100f*ssx)/((gui.minimap.getW()-gui.minimap.getX())/100f*ssx);
+                    panTo((eiks)*Tw*Tsw, eiys*Th*Tsh-(Th*Tsh), cam.zoom, .5f);
+
+                }else{
+                    float eiks = (ve.x-gui.minimap.getXl()/100f*ssy)/((gui.minimap.getWl()-gui.minimap.getXl())/100f*ssy);
+                    float eiys = (ve.y-gui.minimap.getYl()/100f*ssx)/((gui.minimap.getHl()-gui.minimap.getYl())/100f*ssx);
+                    panTo((eiks)*Tw*Tsw, eiys*Th*Tsh-(Th*Tsh), cam.zoom, .5f);
+
                 }
                 return true;
             }
@@ -17549,6 +17733,7 @@ String texta="";
                 } catch (Exception e) {
                     ErrorBung(e, "undo.txt");
                 }
+                //updateMinimap();
                 //if (sMinimap) cacheTiles();
                 return true;
             }
@@ -17597,6 +17782,7 @@ String texta="";
                         //redolayer.remove(lh);
                     }
                 }
+                //updateMinimap();
                 return true;
             }
 
@@ -19915,7 +20101,7 @@ String texta="";
             gamecam.zoom = 0.2f;
             gamecam.position.set(mygame.player.b2body.getPosition().x,mygame.player.b2body.getPosition().y,0);
             gamecam.update();
-            mygame.starting=true;
+            //mygame.starting=true;
 
         }else{
             Dialog dialog = new Dialog(z.confirmation, skin, "dialog") {
@@ -19939,7 +20125,7 @@ String texta="";
                     gamecam.zoom = 0.2f;
                     gamecam.position.set(mygame.player.b2body.getPosition().x,mygame.player.b2body.getPosition().y,0);
                     gamecam.update();
-                    mygame.starting=true;
+                    //mygame.starting=true;
                 }
             };
             Gdx.input.setInputProcessor(stage);
@@ -20117,6 +20303,7 @@ String texta="";
 
         //this is for map drawing
         if (roll) {
+            usetool=true;
             Vector3 touch = new Vector3();
             cam.unproject(touch.set(p1, p2, 0));
             int ae = (int) touch.x;
@@ -20564,6 +20751,7 @@ String texta="";
 
             }
             roll = false;
+            //updateMinimap();
         }
         if (activetool == 4) roll = false;
         return false;

@@ -4,8 +4,10 @@ import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.loaders.resolvers.ExternalFileHandleResolver;
+import com.badlogic.gdx.assets.loaders.resolvers.InternalFileHandleResolver;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
@@ -13,43 +15,53 @@ import com.badlogic.gdx.graphics.g2d.ParticleEffect;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.MapLayer;
+import com.badlogic.gdx.maps.MapObject;
+import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.maps.MapProperties;
+import com.badlogic.gdx.maps.objects.RectangleMapObject;
+import com.badlogic.gdx.maps.objects.TextureMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TiledMapTileSet;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.Box2D;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
 import com.badlogic.gdx.physics.box2d.World;
-import com.esotericsoftware.kryonet.Client;
-import com.esotericsoftware.kryonet.Server;
+import com.badlogic.gdx.utils.Json;
 
+import java.io.StringWriter;
 import java.util.ArrayList;
 
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.CHECKPOINT;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.COIN;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.GEAR;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ITEM;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.MONSTER;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.SPIKE;
 
+
 public class game {
-    public Server server;
-    public Client client;
+    public boolean debugmode = false;
+    public boolean playtest=true;
 
     public TiledMap map;
     public OrthogonalTiledMapRenderer renderer;
     public Box2DDebugRenderer b2dr;
     public World world;
     public String path,file;
+    public boolean loadingmap;
+    public boolean rpg=false;
+    public boolean uitest=false;
+    public int dir;
 
     public WorldContactListener mycontactlistener;
-
-
+    public savegame save = new savegame();
 
     public Vector2 checkpoint = new Vector2();
     public com.mirwanda.nottiled.platformer.player player;
@@ -84,12 +96,11 @@ public class game {
 
     Animation<TextureRegion> animMonster; // Must declare frame type (TextureRegion)
     Texture txMonster;
-    Animation<TextureRegion> animPlayer; // Must declare frame type (TextureRegion)
+    java.util.List<Animation<TextureRegion>> animPlayer = new ArrayList<>(); // Must declare frame type (TextureRegion)
     Texture txPlayer;
     public Texture txBackground;
     public TiledMapTile tlplayer=null;
     public TiledMapTile tlempty=null;
-    public boolean debugmode = false;
 
     //SOUND
     public Music bgm;
@@ -107,7 +118,7 @@ public class game {
     public int coin;
     public int dead;
     public String nextlevel;
-    public String briefing;
+    public String[] briefing;
     public String debriefing;
     public String died;
 
@@ -122,6 +133,7 @@ public class game {
     public boolean onplatformh;
     public boolean onplatformv;
     public gameobject currentplatform;
+    public int msgindex=0;
 
     public int touchedsinker;
 
@@ -136,157 +148,228 @@ public class game {
     public static final short DESTROYED_BIT = 16;
     public static final short MARKER_BIT = 32;
     public static final short PLATFORM_BIT = 64;
-
+    public int Tw;
+    public int Th;
+    public float Tsw;
+    public float Tsh;
     public ParticleEffect pe;
+    public boolean gravity=true;
 
     public boolean initialise(String path, String filename){
 
-            this.path = path;
-            this.file = filename;
-            starting = true;
-            pe = new ParticleEffect();
-            pe.load(Gdx.files.external(path + "/died.p"), Gdx.files.external(path));
-            pe.getEmitters().first().setPosition(Gdx.graphics.getWidth() / 2, Gdx.graphics.getHeight() / 2);
-            pe.scaleEffect(0.001f, 0.001f); //kudu disini
+        this.path = path;
+        this.file = filename;
+        rpg=false;
+        //starting = true;
+        pe = new ParticleEffect();
 
+        if (playtest) {
+            pe.load( Gdx.files.external( path + "/died.p" ), Gdx.files.external( path ) );
+        }else{
+            pe.load( Gdx.files.internal( path + "/died.p" ), Gdx.files.internal( path ) );
 
-            map = new TmxMapLoader(new ExternalFileHandleResolver()).load(path + "/" + filename);
-            renderer = new OrthogonalTiledMapRenderer(map);
+        }
+        pe.getEmitters().first().setPosition( Gdx.graphics.getWidth() / 2, Gdx.graphics.getHeight() / 2);
+        pe.scaleEffect(0.001f, 0.001f); //kudu disini
 
-            Box2D.init();
-            world = new World(new Vector2(0, -10), true);
-            b2dr = new Box2DDebugRenderer();
+        objects = new ArrayList<gameobject>();;
+        walls  = new ArrayList<wall>();;
 
-            mycontactlistener = new WorldContactListener(this);
-            world.setContactListener(mycontactlistener);
+        tlbrick=new ArrayList<TiledMapTile>();
+        tlboxes=new ArrayList<TiledMapTile>();
+        tlcheckpoints=new ArrayList<TiledMapTile>();
+        tlcoins=new ArrayList<TiledMapTile>();
+        tlspikes=new ArrayList<TiledMapTile>();
+        tlgears=new ArrayList<TiledMapTile>();
+        tlgirls=new ArrayList<TiledMapTile>();
+        tlkeys=new ArrayList<TiledMapTile>();
+        tllocks=new ArrayList<TiledMapTile>();
+        tlbreakables=new ArrayList<TiledMapTile>();
+        tlsprings=new ArrayList<TiledMapTile>();
+        tlswitches=new ArrayList<TiledMapTile>();
+        tlswitchons=new ArrayList<TiledMapTile>();
+        tlswitchoffs=new ArrayList<TiledMapTile>();
+        tlplatformh=new ArrayList<TiledMapTile>();
+        tlplatformv=new ArrayList<TiledMapTile>();
+        tlplatforms=new ArrayList<TiledMapTile>();
+        tlmonsters=new ArrayList<TiledMapTile>();
+        tlmiscs=new ArrayList<TiledMapTile>();
+        tlladder=new ArrayList<TiledMapTile>();
+        tlfloater=new ArrayList<TiledMapTile>();
+        tlsinker=new ArrayList<TiledMapTile>();
+        tlleftslope=new ArrayList<TiledMapTile>();
+        tlrightslope=new ArrayList<TiledMapTile>();
 
-            MapProperties mpa = map.getProperties();
-            if (mpa != null) {
-                String bgms = (String) mpa.get("bgm");
-                if (bgms != null) {
-                    if (Gdx.files.external(path + "/" + bgms).exists()) {
-                        bgm = Gdx.audio.newMusic(Gdx.files.external(path + "/" + bgms));
-                        bgm.setLooping(true);
+        if (playtest) {
+
+            map = new TmxMapLoader( new ExternalFileHandleResolver() ).load( path + "/" + filename );
+        }else{
+            map = new TmxMapLoader( new InternalFileHandleResolver() ).load( path + "/" + filename );
+
+        }
+        renderer = new OrthogonalTiledMapRenderer(map);
+
+        Box2D.init();
+        world = new World(new Vector2(0, -10), true);
+
+        b2dr = new Box2DDebugRenderer();
+
+        mycontactlistener = new WorldContactListener(this);
+        world.setContactListener(mycontactlistener);
+
+        MapProperties mpa = map.getProperties();
+        if (mpa != null) {
+            String bgms = (String) mpa.get("bgm");
+            if (bgms != null) {
+
+                if (playtest) {
+                    if (Gdx.files.external( path + "/" + bgms ).exists()) {
+                        bgm = Gdx.audio.newMusic( Gdx.files.external( path + "/" + bgms ) );
+                        bgm.setLooping( true );
+                        bgm.play();
+                    }
+                }else{
+                    if (Gdx.files.internal( path + "/" + bgms ).exists()) {
+                        bgm = Gdx.audio.newMusic( Gdx.files.internal( path + "/" + bgms ) );
+                        bgm.setLooping( true );
                         bgm.play();
                     }
 
                 }
 
-
-                String bgc = (String) mpa.get("background");
-                if (bgc != null) {
-                    if (Gdx.files.external(path + "/" + bgc).exists()) {
-                        txBackground = new Texture(Gdx.files.external(path + "/" + bgc));
-                    }
-                }
-
-                nextlevel = (String) mpa.get("nextlevel");
-                briefing = (String) mpa.get("briefing");
-                debriefing = (String) mpa.get("debriefing");
-                died = (String) mpa.get("diedmsg");
-
             }
 
 
-            stateTime = 0f;
-            playerTime = 0f;
+            String bgc = (String) mpa.get("background");
+            if (bgc != null) {
+
+                if (playtest) {
+
+                    if (Gdx.files.external( path + "/" + bgc ).exists()) {
+                        txBackground = new Texture( Gdx.files.external( path + "/" + bgc ) );
+                    } else {
+                        txBackground = null;
+                    }
+                }else
+                {
+                    if (Gdx.files.internal( path + "/" + bgc ).exists()) {
+                        txBackground = new Texture( Gdx.files.internal( path + "/" + bgc ) );
+                    } else {
+                        txBackground = null;
+                    }
+
+                }
+            }
+
+            nextlevel = (String) mpa.get("nextlevel");
+            //briefing = (String) mpa.get("briefing");
+            debriefing = (String) mpa.get("debriefing");
+            died = (String) mpa.get("diedmsg");
+
+        }
 
 
-            for (TiledMapTileSet tset : map.getTileSets()) {
-                TiledMapTileSet ttset = tset;
-                ttset.size();
-                for (int ts = 0; ts < ttset.size(); ts++) {
-                    TiledMapTile tltemp = ttset.getTile(ts);
+        stateTime = 0f;
+        playerTime = 0f;
 
-                    if (tltemp != null) {
-                        MapProperties mp = tltemp.getProperties();
-                        if (mp != null) {
-                            String propname = (String) mp.get("name");
-                            if (propname != null) {
 
-                                switch (propname) {
-                                    case "brick":
-                                        tlbrick.add(tltemp);
-                                        break;
-                                    case "box":
-                                        tlboxes.add(tltemp);
-                                        break;
-                                    case "checkpoint":
-                                        tlcheckpoints.add(tltemp);
-                                        break;
-                                    case "player":
-                                        tlplayer = tltemp;
-                                        break;
-                                    case "empty":
-                                        tlempty = tltemp;
-                                        break;
-                                    case "coin":
-                                        tlcoins.add(tltemp);
-                                        break;
-                                    case "spike":
-                                        tlspikes.add(tltemp);
-                                        break;
-                                    case "gear":
-                                        tlgears.add(tltemp);
-                                        break;
-                                    case "girl":
-                                        tlgirls.add(tltemp);
-                                        break;
-                                    case "key":
-                                        tlkeys.add(tltemp);
-                                        break;
-                                    case "lock":
-                                        tllocks.add(tltemp);
-                                        break;
-                                    case "breakable":
-                                        tlbreakables.add(tltemp);
-                                        break;
-                                    case "spring":
-                                        tlsprings.add(tltemp);
-                                        break;
-                                    case "switch":
-                                        tlswitches.add(tltemp);
-                                        break;
-                                    case "switchon":
-                                        tlswitchons.add(tltemp);
-                                        break;
-                                    case "switchoff":
-                                        tlswitchoffs.add(tltemp);
-                                        break;
-                                    case "platformh":
-                                        tlplatformh.add(tltemp);
-                                        break;
-                                    case "platformv":
-                                        tlplatformv.add(tltemp);
-                                        break;
-                                    case "platforms":
-                                        tlplatforms.add(tltemp);
-                                        break;
-                                    case "monster":
-                                        tlmonsters.add(tltemp);
-                                        break;
-                                    case "ladder":
-                                        tlladder.add(tltemp);
-                                        break;
-                                    case "floater":
-                                        tlfloater.add(tltemp);
-                                        break;
-                                    case "sinker":
-                                        tlsinker.add(tltemp);
-                                    case "leftslope":
-                                        tlleftslope.add(tltemp);
-                                        break;
-                                    case "rightslope":
-                                        tlrightslope.add(tltemp);
-                                        break;
-                                }
-                            } else {
-                                tlmiscs.add(tltemp);
+        for (TiledMapTileSet tset : map.getTileSets()) {
+            TiledMapTileSet ttset = tset;
+            ttset.size();
+            for (int ts = 0; ts < ttset.size(); ts++) {
+                TiledMapTile tltemp = ttset.getTile(ts);
+
+                if (tltemp != null) {
+                    MapProperties mp = tltemp.getProperties();
+                    if (mp != null) {
+                        String propname = (String) mp.get("name");
+                        if (propname != null) {
+
+                            switch (propname) {
+                                case "brick":
+                                    tlbrick.add(tltemp);
+                                    break;
+                                case "box":
+                                    tlboxes.add(tltemp);
+                                    break;
+                                case "checkpoint":
+                                    tlcheckpoints.add(tltemp);
+                                    break;
+                                case "player":
+                                    tlplayer = tltemp;
+                                    break;
+                                case "empty":
+                                    tlempty = tltemp;
+                                    break;
+                                case "coin":
+                                    tlcoins.add(tltemp);
+                                    break;
+                                case "spike":
+                                    tlspikes.add(tltemp);
+                                    break;
+                                case "gear":
+                                    tlgears.add(tltemp);
+                                    break;
+                                case "girl":
+                                    tlgirls.add(tltemp);
+                                    break;
+                                case "key":
+                                    tlkeys.add(tltemp);
+                                    break;
+                                case "lock":
+                                    tllocks.add(tltemp);
+                                    break;
+                                case "breakable":
+                                    tlbreakables.add(tltemp);
+                                    break;
+                                case "spring":
+                                    tlsprings.add(tltemp);
+                                    break;
+                                case "switch":
+                                    tlswitches.add(tltemp);
+                                    break;
+                                case "switchon":
+                                    tlswitchons.add(tltemp);
+                                    break;
+                                case "switchoff":
+                                    tlswitchoffs.add(tltemp);
+                                    break;
+                                case "platformh":
+                                    tlplatformh.add(tltemp);
+                                    break;
+                                case "platformv":
+                                    tlplatformv.add(tltemp);
+                                    break;
+                                case "platforms":
+                                    tlplatforms.add(tltemp);
+                                    break;
+                                case "monster":
+                                    tlmonsters.add(tltemp);
+                                    break;
+                                case "ladder":
+                                    tlladder.add(tltemp);
+                                    break;
+                                case "floater":
+                                    tlfloater.add(tltemp);
+                                    break;
+                                case "sinker":
+                                    tlsinker.add(tltemp);
+                                case "leftslope":
+                                    tlleftslope.add(tltemp);
+                                    break;
+                                case "rightslope":
+                                    tlrightslope.add(tltemp);
+                                    break;
                             }
+                        } else {
+                            tlmiscs.add(tltemp);
+                        }
 
 
-                            String anim = (String) mp.get("anim");
-                            if (anim != null && propname != null) {
+                        String anim = (String) mp.get("anim");
+                        if (anim != null && propname != null) {
+                            if (playtest) {
+
 
                                 switch (propname) {
                                     case "brick":
@@ -300,19 +383,20 @@ public class game {
 
                                         break;
                                     case "player":
-                                        txPlayer = new Texture(Gdx.files.external(path + "/" + anim));
-                                        TextureRegion[][] tmp = TextureRegion.split(txPlayer,
-                                                txPlayer.getWidth() / 2,
-                                                txPlayer.getHeight() / 2);
+                                        txPlayer = new Texture( Gdx.files.external( path + "/" + anim ) );
+                                        TextureRegion[][] tmp = TextureRegion.split( txPlayer,
+                                                txPlayer.getWidth() / 4,
+                                                txPlayer.getHeight() / 4 );
 
-                                        TextureRegion[] walkFrames = new TextureRegion[2 * 2];
-                                        int index = 0;
-                                        for (int i = 0; i < 2; i++) {
-                                            for (int j = 0; j < 2; j++) {
+                                        for (int i = 0; i < 4; i++) {
+                                            TextureRegion[] walkFrames = new TextureRegion[4];
+                                            int index = 0;
+                                            for (int j = 0; j < 4; j++) {
                                                 walkFrames[index++] = tmp[i][j];
                                             }
+                                            Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
+                                            animPlayer.add( tempAnim );
                                         }
-                                        animPlayer = new Animation<TextureRegion>(0.1f, walkFrames);
                                         break;
 
                                     case "empty":
@@ -360,30 +444,23 @@ public class game {
                                         break;
                                     case "monster":
 
-                                        txMonster = new Texture(Gdx.files.external(path + "/" + anim));
-                                        tmp = TextureRegion.split(txMonster,
+                                        txMonster = new Texture( Gdx.files.external( path + "/" + anim ) );
+                                        tmp = TextureRegion.split( txMonster,
                                                 txMonster.getWidth() / 2,
-                                                txMonster.getHeight() / 2);
+                                                txMonster.getHeight() / 2 );
 
-                                        walkFrames = new TextureRegion[2 * 2];
-                                        index = 0;
+                                        TextureRegion[] walkFrames = new TextureRegion[2 * 2];
+                                        int index = 0;
                                         for (int i = 0; i < 2; i++) {
                                             for (int j = 0; j < 2; j++) {
                                                 walkFrames[index++] = tmp[i][j];
                                             }
                                         }
-                                        animMonster = new Animation<TextureRegion>(0.1f, walkFrames);
+                                        animMonster = new Animation<TextureRegion>( 0.1f, walkFrames );
                                         break;
 
                                 }
-                            } else {
-
-                            }
-
-
-                            String sfx = (String) mp.get("sfx");
-                            if (sfx != null && propname != null) {
-
+                            }else{
                                 switch (propname) {
                                     case "brick":
 
@@ -392,21 +469,31 @@ public class game {
 
                                         break;
                                     case "checkpoint":
-                                        if (Gdx.files.external(path + "/" + sfx).exists())
-                                            sfxcheckpoint = Gdx.audio.newSound(Gdx.files.external(path + "/" + sfx));
+                                        //if (Gdx.files.external(path+"/"+sfx).exists()) sfxcheckpoint = Gdx.audio.newSound(Gdx.files.external(path+"/"+sfx));
 
                                         break;
                                     case "player":
-                                        if (Gdx.files.external(path + "/" + sfx).exists())
-                                            sfxplayer = Gdx.audio.newSound(Gdx.files.external(path + "/" + sfx));
+                                        txPlayer = new Texture( Gdx.files.internal( path + "/" + anim ) );
+                                        TextureRegion[][] tmp = TextureRegion.split( txPlayer,
+                                                txPlayer.getWidth() / 4,
+                                                txPlayer.getHeight() / 4 );
 
+                                        for (int i = 0; i < 4; i++) {
+                                            TextureRegion[] walkFrames = new TextureRegion[4];
+                                            int index = 0;
+                                            for (int j = 0; j < 4; j++) {
+                                                walkFrames[index++] = tmp[i][j];
+                                            }
+                                            Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
+                                            animPlayer.add( tempAnim );
+                                        }
                                         break;
+
                                     case "empty":
 
                                         break;
                                     case "coin":
-                                        if (Gdx.files.external(path + "/" + sfx).exists())
-                                            sfxcoin = Gdx.audio.newSound(Gdx.files.external(path + "/" + sfx));
+                                        // if (Gdx.files.external(path+"/"+sfx).exists()) sfxcoin = Gdx.audio.newSound(Gdx.files.external(path+"/"+sfx));
 
                                         break;
                                     case "spike":
@@ -416,31 +503,24 @@ public class game {
 
                                         break;
                                     case "girl":
-                                        if (Gdx.files.external(path + "/" + sfx).exists())
-                                            sfxgirl = Gdx.audio.newSound(Gdx.files.external(path + "/" + sfx));
+                                        // if (Gdx.files.external(path+"/"+sfx).exists()) sfxgirl= Gdx.audio.newSound(Gdx.files.external(path+"/"+sfx));
 
                                         break;
                                     case "key":
-                                        if (Gdx.files.external(path + "/" + sfx).exists())
-                                            sfxkey= Gdx.audio.newSound(Gdx.files.external(path + "/" + sfx));
 
                                         break;
                                     case "lock":
-                                        if (Gdx.files.external(path + "/" + sfx).exists())
-                                            sfxlock= Gdx.audio.newSound(Gdx.files.external(path + "/" + sfx));
-                                        break;
 
+                                        break;
                                     case "breakable":
 
                                         break;
                                     case "spring":
-                                        if (Gdx.files.external(path + "/" + sfx).exists())
-                                            sfxspring = Gdx.audio.newSound(Gdx.files.external(path + "/" + sfx));
+                                        //  if (Gdx.files.external(path+"/"+sfx).exists()) sfxspring = Gdx.audio.newSound(Gdx.files.external(path+"/"+sfx));
 
                                         break;
                                     case "switch":
-                                        if (Gdx.files.external(path + "/" + sfx).exists())
-                                            sfxswitch = Gdx.audio.newSound(Gdx.files.external(path + "/" + sfx));
+                                        // if (Gdx.files.external(path+"/"+sfx).exists()) sfxswitch = Gdx.audio.newSound(Gdx.files.external(path+"/"+sfx));
 
                                         break;
                                     case "switchon":
@@ -453,131 +533,434 @@ public class game {
 
                                         break;
                                     case "monster":
-                                        if (Gdx.files.external(path + "/" + sfx).exists())
-                                            sfxmonster = Gdx.audio.newSound(Gdx.files.external(path + "/" + sfx));
+
+                                        txMonster = new Texture( Gdx.files.internal( path + "/" + anim ) );
+                                        tmp = TextureRegion.split( txMonster,
+                                                txMonster.getWidth() / 2,
+                                                txMonster.getHeight() / 2 );
+
+                                        TextureRegion[] walkFrames = new TextureRegion[2 * 2];
+                                        int index = 0;
+                                        for (int i = 0; i < 2; i++) {
+                                            for (int j = 0; j < 2; j++) {
+                                                walkFrames[index++] = tmp[i][j];
+                                            }
+                                        }
+                                        animMonster = new Animation<TextureRegion>( 0.1f, walkFrames );
+                                        break;
+
+                                }
+                            }
+                        } else {
+
+                        }
+
+
+                        String sfx = (String) mp.get("sfx");
+                        if (sfx != null && propname != null) {
+                            if (playtest) {
+                                switch (propname) {
+                                    case "brick":
+
+                                        break;
+                                    case "box":
+
+                                        break;
+                                    case "checkpoint":
+                                        if (Gdx.files.external( path + "/" + sfx ).exists())
+                                            sfxcheckpoint = Gdx.audio.newSound( Gdx.files.external( path + "/" + sfx ) );
+
+                                        break;
+                                    case "player":
+                                        if (Gdx.files.external( path + "/" + sfx ).exists())
+                                            sfxplayer = Gdx.audio.newSound( Gdx.files.external( path + "/" + sfx ) );
+
+                                        break;
+                                    case "empty":
+
+                                        break;
+                                    case "coin":
+                                        if (Gdx.files.external( path + "/" + sfx ).exists())
+                                            sfxcoin = Gdx.audio.newSound( Gdx.files.external( path + "/" + sfx ) );
+
+                                        break;
+                                    case "spike":
+
+                                        break;
+                                    case "gear":
+
+                                        break;
+                                    case "girl":
+                                        if (Gdx.files.external( path + "/" + sfx ).exists())
+                                            sfxgirl = Gdx.audio.newSound( Gdx.files.external( path + "/" + sfx ) );
+
+                                        break;
+                                    case "key":
+                                        if (Gdx.files.external( path + "/" + sfx ).exists())
+                                            sfxkey = Gdx.audio.newSound( Gdx.files.external( path + "/" + sfx ) );
+
+                                        break;
+                                    case "lock":
+                                        if (Gdx.files.external( path + "/" + sfx ).exists())
+                                            sfxlock = Gdx.audio.newSound( Gdx.files.external( path + "/" + sfx ) );
+                                        break;
+
+                                    case "breakable":
+
+                                        break;
+                                    case "spring":
+                                        if (Gdx.files.external( path + "/" + sfx ).exists())
+                                            sfxspring = Gdx.audio.newSound( Gdx.files.external( path + "/" + sfx ) );
+
+                                        break;
+                                    case "switch":
+                                        if (Gdx.files.external( path + "/" + sfx ).exists())
+                                            sfxswitch = Gdx.audio.newSound( Gdx.files.external( path + "/" + sfx ) );
+
+                                        break;
+                                    case "switchon":
+
+                                        break;
+                                    case "switchoff":
+
+                                        break;
+                                    case "platform":
+
+                                        break;
+                                    case "monster":
+                                        if (Gdx.files.external( path + "/" + sfx ).exists())
+                                            sfxmonster = Gdx.audio.newSound( Gdx.files.external( path + "/" + sfx ) );
 
                                         break;
 
                                 }
-                            } else {
+                            }else{
+                                switch (propname) {
+                                    case "brick":
+
+                                        break;
+                                    case "box":
+
+                                        break;
+                                    case "checkpoint":
+                                        if (Gdx.files.internal(path + "/" + sfx).exists())
+                                            sfxcheckpoint = Gdx.audio.newSound( Gdx.files.internal(path + "/" + sfx));
+
+                                        break;
+                                    case "player":
+                                        if (Gdx.files.internal(path + "/" + sfx).exists())
+                                            sfxplayer = Gdx.audio.newSound( Gdx.files.internal(path + "/" + sfx));
+
+                                        break;
+                                    case "empty":
+
+                                        break;
+                                    case "coin":
+                                        if (Gdx.files.internal(path + "/" + sfx).exists())
+                                            sfxcoin = Gdx.audio.newSound( Gdx.files.internal(path + "/" + sfx));
+
+                                        break;
+                                    case "spike":
+
+                                        break;
+                                    case "gear":
+
+                                        break;
+                                    case "girl":
+                                        if (Gdx.files.internal(path + "/" + sfx).exists())
+                                            sfxgirl = Gdx.audio.newSound( Gdx.files.internal(path + "/" + sfx));
+
+                                        break;
+                                    case "key":
+                                        if (Gdx.files.internal(path + "/" + sfx).exists())
+                                            sfxkey= Gdx.audio.newSound( Gdx.files.internal(path + "/" + sfx));
+
+                                        break;
+                                    case "lock":
+                                        if (Gdx.files.internal(path + "/" + sfx).exists())
+                                            sfxlock= Gdx.audio.newSound( Gdx.files.internal(path + "/" + sfx));
+                                        break;
+
+                                    case "breakable":
+
+                                        break;
+                                    case "spring":
+                                        if (Gdx.files.internal(path + "/" + sfx).exists())
+                                            sfxspring = Gdx.audio.newSound( Gdx.files.internal(path + "/" + sfx));
+
+                                        break;
+                                    case "switch":
+                                        if (Gdx.files.internal(path + "/" + sfx).exists())
+                                            sfxswitch = Gdx.audio.newSound( Gdx.files.internal(path + "/" + sfx));
+
+                                        break;
+                                    case "switchon":
+
+                                        break;
+                                    case "switchoff":
+
+                                        break;
+                                    case "platform":
+
+                                        break;
+                                    case "monster":
+                                        if (Gdx.files.internal(path + "/" + sfx).exists())
+                                            sfxmonster = Gdx.audio.newSound( Gdx.files.internal(path + "/" + sfx));
+
+                                        break;
+
+                                }
 
                             }
+                        } else {
 
                         }
+
                     }
                 }
             }
+        }
 
-            for (MapLayer mlayer: map.getLayers()){
-            TiledMapTileLayer tlayer = (TiledMapTileLayer) mlayer;
-            for (int yy = 0; yy < tlayer.getHeight(); yy++) {
-                for (int xx = 0; xx < tlayer.getWidth(); xx++) {
-                    TiledMapTileLayer.Cell cece = tlayer.getCell(xx, yy);
+        for (MapLayer mlayer: map.getLayers()){
+            if (mlayer.getName().startsWith( "Tile" )) {
+                TiledMapTileLayer tlayer = (TiledMapTileLayer) mlayer;
+                this.Tw= tlayer.getWidth();
+                this.Th=tlayer.getHeight();
+                this.Tsw= tlayer.getTileWidth();
+                this.Tsh=tlayer.getTileHeight();
+                for (int yy = 0; yy < tlayer.getHeight(); yy++) {
+                    for (int xx = 0; xx < tlayer.getWidth(); xx++) {
+                        TiledMapTileLayer.Cell cece = tlayer.getCell( xx, yy );
 
-                    if (cece != null) {
+                        if (cece != null) {
 
-                        TiledMapTile tlcece = cece.getTile();
-                        boolean flip = cece.getFlipVertically();
-                        float rota = cece.getRotation();
-                        if (cece.getTile() == tlplayer) {
+                            TiledMapTile tlcece = cece.getTile();
+                            boolean flip = cece.getFlipVertically();
+                            float rota = cece.getRotation();
+                            if (cece.getTile() == tlplayer) {
 
-                            player = new player(world, tlcece.getTextureRegion(), (xx * 16 + 8) / 100f, (yy * 16 + 8) / 100f);//tlcece.getTextureRegion());
+                                player = new player( world, tlcece.getTextureRegion(), (xx * 16 + 8) / 100f, (yy * 16 + 8) / 100f );//tlcece.getTextureRegion());
 
-                        } else if (tlbrick.contains(cece.getTile())) {
-                            wall newwall = new wall();
-                            newwall.setupWalls(world, tlcece, xx, yy, 8);
-                            walls.add(newwall);
-                        } else {
-                            gameobject newbrick = new gameobject();
-                            newbrick.mygame = this;
+                            } else if (tlbrick.contains( cece.getTile() )) {
+                                wall newwall = new wall();
+                                newwall.setupWalls( world, tlcece, xx, yy, 7 );
+                                walls.add( newwall );
+                            } else {
+                                gameobject newbrick = new gameobject();
+                                newbrick.mygame = this;
 
-                            if (tlboxes.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 7, BodyDef.BodyType.DynamicBody, gameobject.objecttype.BOX);
-                            } else if (tlcheckpoints.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, CHECKPOINT);
-                            } else if (tlcoins.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, COIN);
-                                coin += 1;
-                            } else if (tlspikes.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 5, BodyDef.BodyType.StaticBody, SPIKE);
-                            } else if (tlgears.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, GEAR);
-                            } else if (tlgirls.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.GIRL);
-                            } else if (tlkeys.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.KEY);
-                            } else if (tllocks.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.LOCK);
-                            } else if (tlbreakables.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.BREAKABLE);
-                            } else if (tlsprings.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.SPRING);
-                            } else if (tlswitches.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.SWITCH);
-                            } else if (tlswitchons.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.SWITCHON);
-                            } else if (tlswitchoffs.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.SWITCHOFF);
-                            } else if (tlplatformh.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 7, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLATFORMH);
-                            } else if (tlplatformv.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 7, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLATFORMV);
-                            } else if (tlplatforms.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlempty, xx, yy, 5, BodyDef.BodyType.StaticBody, gameobject.objecttype.PLATFORMS);
-                            } else if (tlmonsters.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 6, BodyDef.BodyType.DynamicBody, gameobject.objecttype.MONSTER);
-                            } else if (tlladder.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.LADDER);
-                            } else if (tlfloater.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.FLOATER);
-                            } else if (tlsinker.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 6, BodyDef.BodyType.StaticBody, gameobject.objecttype.SINKER);
-                            } else if (tlleftslope.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.LEFTSLOPE);
-                            } else if (tlrightslope.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.RIGHTSLOPE);
-                            } else if (tlmiscs.contains(cece.getTile())) {
-                                newbrick.setupGameObject(world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.MISC);
+                                if (tlboxes.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.DynamicBody, gameobject.objecttype.BOX ,null,null);
+                                } else if (tlcheckpoints.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, CHECKPOINT ,null,null);
+                                } else if (tlcoins.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, COIN ,null,null);
+                                    coin += 1;
+                                } else if (tlspikes.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 5, BodyDef.BodyType.StaticBody, SPIKE ,null,null);
+                                } else if (tlgears.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, GEAR ,null,null);
+                                } else if (tlgirls.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.GIRL ,null,null);
+                                } else if (tlkeys.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.KEY ,null,null);
+                                } else if (tllocks.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.LOCK ,null,null);
+                                } else if (tlbreakables.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.BREAKABLE ,null,null);
+                                } else if (tlsprings.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.SPRING ,null,null);
+                                } else if (tlswitches.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.SWITCH ,null,null);
+                                } else if (tlswitchons.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.SWITCHON ,null,null);
+                                } else if (tlswitchoffs.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.SWITCHOFF ,null,null);
+                                } else if (tlplatformh.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLATFORMH ,null,null);
+                                } else if (tlplatformv.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLATFORMV ,null,null);
+                                } else if (tlplatforms.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlempty, xx, yy, 5, BodyDef.BodyType.StaticBody, gameobject.objecttype.PLATFORMS ,null,null);
+                                } else if (tlmonsters.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 6, BodyDef.BodyType.DynamicBody, gameobject.objecttype.MONSTER ,null,null);
+                                } else if (tlladder.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.LADDER ,null,null);
+                                } else if (tlfloater.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.FLOATER ,null,null);
+                                } else if (tlsinker.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 6, BodyDef.BodyType.StaticBody, gameobject.objecttype.SINKER ,null,null);
+                                } else if (tlleftslope.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.LEFTSLOPE ,null,null);
+                                } else if (tlrightslope.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.RIGHTSLOPE ,null,null);
+                                } else if (tlmiscs.contains( cece.getTile() )) {
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, gameobject.objecttype.MISC ,null,null);
+                                }
+
+                                if (flip) newbrick.rotate( 180 );
+                                if (rota != 0) newbrick.rotate( rota * 90 );
+                                objects.add( newbrick );
                             }
-
-                            if (flip) newbrick.rotate(180);
-                            if (rota != 0) newbrick.rotate(rota * 90);
-                            objects.add(newbrick);
+                            cece.setTile( null );
                         }
-                        cece.setTile(null);
+
+                    }
+                }
+            } else if (mlayer.getName().startsWith( "Object" )) {
+                MapObjects objects = map.getLayers().get(mlayer.getName()).getObjects();
+                for (MapObject o: objects){
+                    Rectangle rect;
+                    TextureRegion t=null;
+                    if (o instanceof TextureMapObject) {
+                        TextureMapObject tobj = (TextureMapObject) o;
+                        t=tobj.getTextureRegion();
+                        rect = new Rectangle( tobj.getX(),tobj.getY(),16,16 );
+                    }else{
+                        RectangleMapObject obj = (RectangleMapObject) o;
+                        rect = obj.getRectangle();
+
                     }
 
+
+                    if (o.getProperties().containsKey( "transfer" )) {
+                        gameobject newbrick = new gameobject();
+                        newbrick.mygame = this;
+                        newbrick.setupGameObject( world, null, (int) rect.x, (int) rect.y, 2, BodyDef.BodyType.StaticBody, gameobject.objecttype.TRANSFER, o ,null);
+                        this.objects.add( newbrick );
+                    }
+                    if (o.getProperties().containsKey( "item" )) {
+                        if (checkQual( o )) {
+                            gameobject newbrick = new gameobject();
+                            newbrick.mygame = this;
+                            newbrick.setupGameObject( world, null, (int) rect.x, (int) rect.y, 5, BodyDef.BodyType.StaticBody, ITEM, o ,t );
+                            this.objects.add( newbrick );
+                        }
+                    }
+                    if (o.getProperties().containsKey( "block" )) {
+                        if (checkQual( o )) {
+                            gameobject newbrick = new gameobject();
+                            newbrick.mygame = this;
+                            newbrick.setupGameObject( world, null, (int) rect.x, (int) rect.y, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.BLOCK, o ,t );
+                            this.objects.add( newbrick );
+                        }
+                    }
+                    if (o.getProperties().containsKey( "mode" )) {
+                        if (o.getProperties().get( "mode" ).toString().equalsIgnoreCase( "rpg" )){
+                            world.setGravity( new Vector2(0f,0f ));
+                            jumping=false;
+                            rpg=true;
+                        }
+                    }
+
+
+
                 }
+
             }
         }
         checkpoint.set(player.b2body.getPosition().x,player.b2body.getPosition().y);
 
         victory=false;
-            return false;
+        loadingmap=false;
+        return false;
 
 
 
     }
 
+    public void log(String s){
+        Gdx.app.log( "LOJ",s );
+    }
+    public boolean checkQual(MapObject o){
+        boolean qual=true;
+        //setOrAddVars( "asu",1,VAROP.SET );
+        //setOrAddVars( "sua",1,VAROP.SET );
+        //setOrAddVars( "isu",1,VAROP.SET );
+        if (o.getProperties().get( "req" )!=null){
+            String[] ss = o.getProperties().get( "req" ).toString().split( "," );
+            String[] vv = o.getProperties().get( "reqval" ).toString().split( "," );
+            qual=false;
+            int rq=0;
+            boolean recheck=true;
+            while (recheck) {
+                recheck=false;
+                for (int i = 0; i < ss.length; i++) {
+                    boolean ada = false;
+                    for (KV var : save.vars) {
+                        if (ss[i].equalsIgnoreCase( var.key )) {
+                            ada = true;
+                            if (vv[i].equalsIgnoreCase(var.value+"")) {
+                                rq += 1;
+                                break;
+                            }
+                        }
+                    }
+                    if (!ada) {
+                        setOrAddVars( ss[i], 0, VAROP.SET );
+                        recheck=true;
+                    }
+
+                }
+            }
+            if (rq==ss.length) qual=true;
+        }
+        if (qual)
+        {
+            return true;
+        }
+        return false;
+
+    }
+    public enum VAROP{SET,ADD, SUB}
+    public void setOrAddVars(String key, int value, VAROP v){
+        boolean ada = false;
+        KV varnya=null;
+        for (KV vr: save.vars){
+            if (key.equalsIgnoreCase( vr.key )){
+                varnya= vr;
+                ada=true;
+                break;
+            }
+        }
+
+        if (ada){
+            switch (v){
+                case SET:
+                    varnya.value=value;
+                    break;
+                case SUB:
+                    varnya.value-=value;
+                    break;
+                case ADD:
+                    varnya.value+=value;
+                    break;
+            }
+        }else{
+            save.vars.add( new KV(key,value ));
+        }
+    }
+
     public float anima;
     public int animet;
+    public OrthographicCamera gc;
     public void update(SpriteBatch batch, float delta, OrthographicCamera gamecam) {
+        gc=gamecam;
         world.step(1/60f,6,2);
-            if (Math.abs(player.b2body.getLinearVelocity().y)>=0.2f)
-            {
-                jumping=true;
-                jumpinterval=0;
-            }else
-            {
-                jumpinterval+=delta;
+        if (!rpg) {
+            if (Math.abs( player.b2body.getLinearVelocity().y ) >= 0.2f) {
+                jumping = true;
+                jumpinterval = 0;
+            } else {
+                jumpinterval += delta;
             }
 
-            if (jumpinterval >=0.1f){
-                jumping=false;
+            if (jumpinterval >= 0.1f) {
+                jumping = false;
             }
-            stompinterval-=delta;
-            if (stompinterval<0)stompinterval=0;
-
+            stompinterval -= delta;
+            if (stompinterval < 0) stompinterval = 0;
+        }
         if (player.b2body.getPosition().y<=-32/100f && player.state != com.mirwanda.nottiled.platformer.player.playerState.DEAD)
         {
             playSfx(sfxplayer);
@@ -598,7 +981,8 @@ public class game {
         Vector3 position = gamecam.position;
         position.x += (posex - position.x) * lerp * delta;
         position.y += (posey - position.y) * lerp * delta;
-
+        position.x = Math.round( position.x *500)/500f;
+        position.y = Math.round( position.y *500)/500f;
 
         gamecam.update();
 
@@ -611,32 +995,26 @@ public class game {
         if (player.moving && (!jumping || onplatformv) && (!ladder && !floater && !sinker))
         {
             playerTime +=delta;
-            TextureRegion currentFramea = animPlayer.getKeyFrame(playerTime, true);
+            TextureRegion currentFramea = animPlayer.get(dir).getKeyFrame(playerTime, true);
             player.setRegion(currentFramea);
         }
         else if (jumping && !ladder && !floater && !sinker && !onplatformv) {
-            TextureRegion currentFramea = animPlayer.getKeyFrame(3, true);
+            TextureRegion currentFramea = animPlayer.get(dir).getKeyFrame(0.5f, true);
             player.setRegion(currentFramea);
         }
         else if ((ladder || floater || sinker) && player.moving )
         {
             playerTime +=delta;
 
-            TextureRegion currentFramea = animPlayer.getKeyFrame(playerTime, true);
+            TextureRegion currentFramea = animPlayer.get(dir).getKeyFrame(playerTime, true);
             player.setRegion(currentFramea);
 
         }else
         {
             //idle animation if you will...
-            TextureRegion currentFramea = animPlayer.getKeyFrame(0, true);
+            TextureRegion currentFramea = animPlayer.get(dir).getKeyFrame(0, true);
             player.setRegion(currentFramea);
         }
-
-
-
-
-        if (player.faceright){
-            player.setFlip(true, false);}
 
         for (gameobject sboxes:objects)
         {
@@ -644,10 +1022,10 @@ public class game {
                 TextureRegion currentFrame = animMonster.getKeyFrame(stateTime, true);
                 sboxes.setRegion(currentFrame);
             }
-
+            // if (sboxes.objtype==ITEM){Gdx.app.log( "AS",sboxes.toString() );}
             sboxes.update(delta);
 
-            if (!debugmode) sboxes.draw(batch);
+            if (!debugmode && sboxes.getTexture()!=null ) sboxes.draw(batch);
         }
 
         if(touchedladder>0) { ladder=true; }
@@ -691,56 +1069,106 @@ public class game {
 
     public void pressup(){
         player.moving=true;
-        if ((!jumping || onplatformv) && !ladder && !sinker && !floater) {
-            player.b2body.applyLinearImpulse(0f,2.8f,player.getX(),player.getY(),true);
-            jumping=true;
-            onplatformv=false;
-        }
-        if (ladder||floater||sinker) {
-            player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x, 0.5f);
+        if (rpg) dir=3;
+        float speedlimit =1.5f;
+
+        if (!rpg) {
+            if ((!jumping || onplatformv) && !ladder && !sinker && !floater) {
+                player.b2body.applyLinearImpulse( 0f, 2.8f, player.getX(), player.getY(), true );
+                jumping = true;
+                onplatformv = false;
+            }
+            if (ladder || floater || sinker) {
+                player.b2body.setLinearVelocity( 0, 0.5f );
+            }
+        }else{
+            if (ladder || floater || sinker) {speedlimit = 0.4f; player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x,speedlimit);}
+            if (player.b2body.getLinearVelocity().y <=speedlimit) {
+                //player.faceright=false;
+                player.b2body.setLinearVelocity(0,speedlimit);
+            }
+
         }
     }
 
     public void pressdown(){
         player.moving=true;
-        if (stompinterval==0 && !ladder && !sinker && !floater) {
-            player.b2body.applyLinearImpulse(0f, -8f, player.getX(), player.getY(), true);
-            stompinterval=1;
-        }
-        if (ladder||floater||sinker) {
-            player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x, -0.5f);
+        if (rpg) dir=0;
+        float speedlimit =-1.5f;
+
+        if (!rpg) {
+            if (stompinterval == 0 && !ladder && !sinker && !floater) {
+                player.b2body.applyLinearImpulse( 0f, -8f, player.getX(), player.getY(), true );
+                stompinterval = 1;
+            }
+            if (ladder || floater || sinker) {
+                player.b2body.setLinearVelocity( player.b2body.getLinearVelocity().x, -0.5f );
+            }
+        }else{
+            if (ladder || floater || sinker) {speedlimit = -0.4f; player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x,speedlimit);}
+            if (player.b2body.getLinearVelocity().y >=speedlimit) {
+
+                //player.faceright=false;
+                player.b2body.setLinearVelocity(0,speedlimit);
+            }
+
         }
 
     }
 
     public void pressleft(){
         player.moving=true;
+        dir=2;
         float speedlimit =-1.5f;
         if (ladder || floater || sinker) {speedlimit = -0.4f; player.b2body.setLinearVelocity(speedlimit,player.b2body.getLinearVelocity().y);}
         if (player.b2body.getLinearVelocity().x >=speedlimit) {
             player.faceright=false;
-            player.b2body.applyLinearImpulse(-0.5f, 0, player.getX(), player.getY(), true);
+            if (!rpg){
+                player.b2body.applyLinearImpulse(-0.5f, 0, player.getX(), player.getY(), true);
+            }else{
+                player.b2body.setLinearVelocity(speedlimit,0);
 
+            }
         }
     }
     public void pressright(){
         player.moving=true;
+        dir=1;
         float speedlimit =1.5f;
         if (ladder || floater || sinker) {speedlimit = 0.4f; player.b2body.setLinearVelocity(speedlimit,player.b2body.getLinearVelocity().y);}
         if (player.b2body.getLinearVelocity().x <=speedlimit){
-            player.faceright=true;
-            player.b2body.applyLinearImpulse(0.5f, 0, player.getX(), player.getY(), true);
+            //player.faceright=true;
+            if (!rpg){
+
+                player.b2body.applyLinearImpulse(0.5f, 0, player.getX(), player.getY(), true);
+            }else{
+                player.b2body.setLinearVelocity(speedlimit,0);
+
+            }
+
         }
 
     }
 
     public void stand(){
-        player.moving=false;
-            player.b2body.setLinearVelocity(0, player.b2body.getLinearVelocity().y);
-        if (onplatformh){
-            player.b2body.setLinearVelocity(currentplatform.body.getLinearVelocity().x, player.b2body.getLinearVelocity().y);
-        }else if (onplatformv){
-            //player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x, currentplatform.body.getLinearVelocity().y);
+        if (!rpg) {
+            player.moving = false;
+            player.b2body.setLinearVelocity( 0, player.b2body.getLinearVelocity().y );
+            if (onplatformh) {
+                player.b2body.setLinearVelocity( currentplatform.body.getLinearVelocity().x, player.b2body.getLinearVelocity().y );
+            } else if (onplatformv) {
+                //player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x, currentplatform.body.getLinearVelocity().y);
+            }
+        }else
+        {
+            player.moving = false;
+            player.b2body.setLinearVelocity( 0, 0 );
+            if (onplatformh) {
+                player.b2body.setLinearVelocity( currentplatform.body.getLinearVelocity().x, player.b2body.getLinearVelocity().y );
+            } else if (onplatformv) {
+                //player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x, currentplatform.body.getLinearVelocity().y);
+            }
+
         }
     }
 
@@ -757,39 +1185,95 @@ public class game {
 
 
 
-        if (Gdx.app.getType() == Application.ApplicationType.Desktop) {
+        if (Gdx.app.getType() == Application.ApplicationType.Desktop && !uitest ) {
 
             if (victory||starting) return;
 
             if (player.state == com.mirwanda.nottiled.platformer.player.playerState.DEAD) return;
 
-            if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-                pressright();
-                player.moving=true;
-            } else if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-                pressleft();
 
-            } else {
-                stand();
+            if (!rpg) {
+                if (Gdx.input.isKeyPressed( Input.Keys.RIGHT )) {
+                    pressright();
+                    player.moving = true;
+                } else if (Gdx.input.isKeyPressed( Input.Keys.LEFT )) {
+                    pressleft();
+
+                } else {
+                    stand();
+
+                }
+
+                if (ladder || floater || sinker) {
+                    if (Gdx.input.isKeyPressed( Input.Keys.UP )) pressup();
+                } else {
+                    if (Gdx.input.isKeyJustPressed( Input.Keys.UP )) pressup();
+                }
+
+                if (ladder || floater || sinker) {
+                    if (Gdx.input.isKeyPressed( Input.Keys.DOWN )) pressdown();
+                } else {
+                    if (Gdx.input.isKeyJustPressed( Input.Keys.DOWN )) pressdown();
+                }
+            }else{
+                if (Gdx.input.isKeyPressed( Input.Keys.RIGHT )) {
+                    pressright();
+                    player.moving = true;
+                } else if (Gdx.input.isKeyPressed( Input.Keys.LEFT )) {
+                    pressleft();
+                    player.moving = true;
+                } else if (Gdx.input.isKeyPressed( Input.Keys.UP )) {
+                    pressup();
+                    player.moving = true;
+                } else if (Gdx.input.isKeyPressed( Input.Keys.DOWN )) {
+                    pressdown();
+                    player.moving = true;
+
+                } else {
+                    stand();
+
+                }
 
             }
 
-            if (ladder||floater||sinker){
-                if (Gdx.input.isKeyPressed(Input.Keys.UP)) pressup();
-            }
-            else
-            {
-                if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) pressup();
-            }
 
-            if (ladder||floater||sinker){
-                if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) pressdown();
-            }else
-            {
-                if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) pressdown();
-            }
         }
 
 
     }
+
+    public void save(){
+        save.mapname=file;
+        save.x=player.b2body.getPosition().x;
+        save.y=player.b2body.getPosition().y;
+        Json json = new Json();
+        FileHandle file = Gdx.files.local(path + "/save.json");
+        StringWriter sw = new StringWriter();
+        file.writeString(json.prettyPrint(save), false);
+    }
+
+    public void load(){
+        savegame at = new savegame();
+        Json json = new Json();
+        FileHandle f = Gdx.files.local(path + "/save.json");
+        at = json.fromJson(savegame.class, f);
+        save = at;
+
+        bgm.stop();
+        loadingmap=true;
+        initialise(path, at.mapname);
+
+        Gdx.app.postRunnable( new Runnable() {
+
+            @Override
+            public void run () {
+                player.b2body.setTransform(save.x, save.y,0);
+                player.b2body.setLinearVelocity( 0,0 );
+            }
+        });
+
+    }
+
 }
+
+
