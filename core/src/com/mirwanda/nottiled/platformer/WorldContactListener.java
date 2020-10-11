@@ -12,6 +12,7 @@ import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.Manifold;
 
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BOX;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ENEMY;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.MONSTER;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLATFORMH;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLATFORMV;
@@ -251,16 +252,7 @@ public class WorldContactListener implements ContactListener {
                 {
                     switch (myobject.objtype){
 
-                        case MONSTER:
-                            if (mygame.stompinterval>0){
-                                myobject.setCategoryFilter(game.DESTROYED_BIT);
-                                mygame.player.b2body.setLinearVelocity(0,2);
-                                mygame.objects.remove(myobject);
-                                mygame.playSfx(mygame.sfxmonster);
-                            }else{
-                                mygame.killPlayer();
-                            }
-                            break;
+
 
                     }
                 }
@@ -278,17 +270,7 @@ public class WorldContactListener implements ContactListener {
                 {
                     switch (myobject.objtype){
 
-                        case MONSTER:
-                            if (mygame.stompinterval>0){
-                                myobject.setCategoryFilter(game.DESTROYED_BIT);
-                                mygame.player.b2body.setLinearVelocity(0,2);
-                                mygame.objects.remove(myobject);
-                                mygame.playSfx(mygame.sfxmonster);
-                            }else{
-                                mygame.killPlayer();
 
-                            }
-                            break;
 
                     }
                 }
@@ -306,17 +288,7 @@ public class WorldContactListener implements ContactListener {
                 {
                     switch (myobject.objtype){
 
-                        case MONSTER:
-                            if (mygame.stompinterval>0){
-                                myobject.setCategoryFilter(game.DESTROYED_BIT);
-                                mygame.player.b2body.setLinearVelocity(0,2);
-                                mygame.objects.remove(myobject);
-                                mygame.playSfx(mygame.sfxmonster);
-                            }else{
-                                mygame.killPlayer();
 
-                            }
-                            break;
                         case BOX:
 
                             break;
@@ -421,19 +393,23 @@ public class WorldContactListener implements ContactListener {
                             mygame.playSfx(mygame.sfxkey);
 
                             break;
-                        case ITEM: case BLOCK:
 
-                            MapObject o = myobject.obj;
+                        case MONSTER:
+                            mygame.HP -= myobject.damage;
+
+                        case ITEM: case BLOCK:
+                            if (myobject.obj==null) return;
+                            final MapObject o = myobject.obj;
                             boolean qual=true;
-                            if (o.getProperties().get( "con" )!=null){
-                                String[] ss = o.getProperties().get( "con" ).toString().split( "," );
-                                String[] vv = o.getProperties().get( "conval" ).toString().split( "," );
+                            if (o.getProperties().get( "condition" )!=null){
+                                String[] ss = o.getProperties().get( "condition" ).toString().split( "," );
                                 qual=false;
                                 int rq=0;
                                 for (int i=0;i<ss.length;i++) {
+                                    String[] sv = ss[i].split( "=" );
                                     for (KV var : mygame.save.vars) {
-                                        if (ss[i].equalsIgnoreCase( var.key )) {
-                                            if (Integer.parseInt(vv[i]) == var.value) {
+                                        if (sv[0].equalsIgnoreCase( var.key )) {
+                                            if (Integer.parseInt(sv[1]) == var.value) {
                                                 rq+=1;
                                                 break;
                                             }
@@ -447,49 +423,76 @@ public class WorldContactListener implements ContactListener {
 
                                 if (o.getProperties().get( "setvar" )!=null){
                                     String[] ss = o.getProperties().get( "setvar" ).toString().split( "," );
-                                    String[] vv = o.getProperties().get( "setvarval" ).toString().split( "," );
-                                    int rq=0;
                                     for (int i=0;i<ss.length;i++) {
-                                        mygame.setOrAddVars( ss[i],Integer.parseInt(vv[i]), game.VAROP.SET);
+                                        String[] sv = ss[i].split( "=" );
+                                        mygame.setOrAddVars( sv[0],Integer.parseInt(sv[1]), game.VAROP.SET);
                                     }
                                 }
 
                                 if (o.getProperties().get( "addvar" )!=null){
                                     String[] ss = o.getProperties().get( "addvar" ).toString().split( "," );
-                                    String[] vv = o.getProperties().get( "addvarval" ).toString().split( "," );
-                                    int rq=0;
                                     for (int i=0;i<ss.length;i++) {
-                                        mygame.setOrAddVars( ss[i],Integer.parseInt(vv[i]), game.VAROP.ADD);
+                                        String[] sv = ss[i].split( "=" );
+                                        mygame.setOrAddVars( sv[0],Integer.parseInt(sv[1]), game.VAROP.ADD);
                                     }
                                 }
 
                                 if (o.getProperties().get( "subvar" )!=null){
                                     String[] ss = o.getProperties().get( "subvar" ).toString().split( "," );
-                                    String[] vv = o.getProperties().get( "subvarval" ).toString().split( "," );
-                                    int rq=0;
                                     for (int i=0;i<ss.length;i++) {
-                                        mygame.setOrAddVars( ss[i],Integer.parseInt(vv[i]), game.VAROP.SUB );
+                                        String[] sv = ss[i].split( "=" );
+                                        mygame.setOrAddVars( sv[0],Integer.parseInt(sv[1]), game.VAROP.SUB);
                                     }
                                 }
 
-                                if (o.getProperties().get( "keep" )==null) {
-                                    myobject.setCategoryFilter( game.DESTROYED_BIT );
-                                    mygame.objects.remove( myobject );
+                                if (myobject.objtype!=MONSTER){
+                                    if (o.getProperties().get( "keep" )==null) {
+                                        myobject.setCategoryFilter( game.DESTROYED_BIT );
+                                        mygame.objects.remove( myobject );
+                                    }
+
                                 }
 
                                 mygame.playSfx(mygame.sfxkey);
-                                Gdx.app.log( "AS","AS" );
 
                                 if (o.getProperties().get( "load" )!=null){
                                     mygame.load();
                                 }
 
-                                if (o.getProperties().get( "msg" )!=null){
+                                if (o.getProperties().get( "message" )!=null){
                                     mygame.msgindex=0;
-                                    mygame.briefing=o.getProperties().get( "msg" ).toString().split( "//" );
+                                    mygame.briefing=o.getProperties().get( "message" ).toString().split( "//" );
                                     mygame.starting=true;
                                     mygame.player.b2body.setLinearVelocity( 0,0 );
                                 }
+
+                                if (o.getProperties().get("transfer")!=null) {
+                                    if (o.getProperties().get( "transfer" ).toString().equalsIgnoreCase( "" )) {
+                                    } else {
+                                        mygame.bgm.stop();
+                                        mygame.loadingmap = true;
+                                        mygame.initialise( mygame.path, o.getProperties().get( "transfer" ).toString() );
+
+                                    }
+                                }
+
+                                if (o.getProperties().get("move")!=null) {
+
+                                    Gdx.app.postRunnable( new Runnable() {
+
+                                        @Override
+                                        public void run() {
+                                            String[] xy = o.getProperties().get( "move" ).toString().split( "," );
+
+                                            Float px = Float.parseFloat( xy[0] );
+                                            Float py = Float.parseFloat( xy[1] );
+                                            mygame.player.b2body.setTransform( (px + 8) / 100f, (mygame.Th * mygame.Tsh / 100f) - (py + 8) / 100f, 0 );
+                                            mygame.player.b2body.setLinearVelocity( 0, 0 );
+                                            //mygame.gc.position.set(mygame.player.b2body.getPosition().x,mygame.player.b2body.getPosition().y,0);
+                                        }
+                                    } );
+                                }
+
                             }
 
 
@@ -516,37 +519,6 @@ public class WorldContactListener implements ContactListener {
                             }
 
                             break;
-                        case TRANSFER:
-
-                            if (myobject.obj!=null){
-                                final MapProperties mp = myobject.obj.getProperties();
-                                if (mp.get("transfer")==null) return;
-                                    if (mp.get( "transfer" ).toString().equalsIgnoreCase("") ){
-                                    }else{
-                                        mygame.bgm.stop();
-                                        mygame.loadingmap=true;
-                                        mygame.initialise(mygame.path, mp.get( "transfer" ).toString());
-
-                                    }
-
-                                Gdx.app.postRunnable(new Runnable() {
-
-                                    @Override
-                                    public void run () {
-                                        String[] xy= mp.get("pos").toString().split( "," );
-
-                                        Float px = Float.parseFloat(xy[0]);
-                                        Float py = Float.parseFloat(xy[1]);
-                                        mygame.player.b2body.setTransform((px+8)/100f, (mygame.Th*mygame.Tsh/100f)-(py+8)/100f,0);
-                                        mygame.player.b2body.setLinearVelocity( 0,0 );
-                                        //mygame.gc.position.set(mygame.player.b2body.getPosition().x,mygame.player.b2body.getPosition().y,0);
-                                    }
-                                });
-                            }
-
-
-                            break;
-
 
                     }
                 }

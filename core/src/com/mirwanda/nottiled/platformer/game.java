@@ -37,6 +37,7 @@ import com.badlogic.gdx.utils.Json;
 
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.regex.Pattern;
 
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.CHECKPOINT;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.COIN;
@@ -59,7 +60,7 @@ public class game {
     public boolean loadingmap;
     public boolean rpg=false;
     public boolean uitest=false;
-    public float HP=5;
+    public float HP=1;
     public int dir;
 
     public WorldContactListener mycontactlistener;
@@ -68,8 +69,7 @@ public class game {
     public Vector2 checkpoint = new Vector2();
     public com.mirwanda.nottiled.platformer.player player;
     public java.util.List<gameobject> preparedobjects = new ArrayList<gameobject>();;
-    public java.util.List<gameobject> objects = new ArrayList<gameobject>();;
-    public java.util.List<wall> walls  = new ArrayList<wall>();;
+    public java.util.List<gameobject> objects = new ArrayList<gameobject>();
 
     //TILE
     public java.util.List<TiledMapTile> tlbrick=new ArrayList<TiledMapTile>();
@@ -158,7 +158,7 @@ public class game {
     public float Tsh;
     public ParticleEffect meledak;
     public boolean gravity=true;
-    public int maxhp=5;
+    public int maxhp=1;
     public boolean initialise(String path, String filename){
 
         this.path = path;
@@ -179,9 +179,6 @@ public class game {
 
         objects = new ArrayList<gameobject>();
         preparedobjects = new ArrayList<gameobject>();
-
-        walls  = new ArrayList<wall>();;
-
         tlbrick=new ArrayList<TiledMapTile>();
         tlboxes=new ArrayList<TiledMapTile>();
         tlcheckpoints=new ArrayList<TiledMapTile>();
@@ -763,15 +760,18 @@ public class game {
 
                                 player = new player( world, tlcece.getTextureRegion(), (xx * 16 + 8) / 100f, (yy * 16 + 8) / 100f );//tlcece.getTextureRegion());
 
-                            } else if (tlbrick.contains( cece.getTile() )) {
-                                wall newwall = new wall();
-                                newwall.setupWalls( world, tlcece, xx, yy, 7 );
-                                walls.add( newwall );
                             } else {
                                 gameobject newbrick = new gameobject();
                                 newbrick.mygame = this;
-
-                                if (tlboxes.contains( cece.getTile() )) {
+                                if (cece.getTile().getProperties().containsKey( "name" )){
+                                    if (cece.getTile().getProperties().get( "name" ).toString().equalsIgnoreCase( "halfbrick" )){
+                                        newbrick.setupGameObject( world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.HALFBRICK ,null,null,over);
+                                    }
+                                }
+                                if (tlbrick.contains( cece.getTile() )){
+                                    newbrick.setupGameObject( world, tlcece, xx, yy, 8, BodyDef.BodyType.StaticBody, gameobject.objecttype.BRICK ,null,null,over);
+                                }
+                                else if (tlboxes.contains( cece.getTile() )) {
                                     newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.DynamicBody, gameobject.objecttype.BOX ,null,null,over);
                                 } else if (tlcheckpoints.contains( cece.getTile() )) {
                                     newbrick.setupGameObject( world, tlcece, xx, yy, 7, BodyDef.BodyType.StaticBody, CHECKPOINT ,null,null,over);
@@ -824,9 +824,9 @@ public class game {
                                             newbrick.HP = 5;
                                             newbrick.speed=0.5f;
                                             newbrick.chaseRadius = 100f;
-                                            newbrick.path=new int[]{0,0,2,2,3,3,1,1,2,1};
+                                            //newbrick.path=new int[]{0,0,2,2,3,3,1,1,2,1};
                                             if (cece.getTile().getProperties().get( "bird" )!=null) newbrick.bird=true;
-                                            newbrick.chase = false;
+                                            newbrick.chase = true;
                                             newbrick.dir=2;
                                             if (newbrick.bird) {
                                                 newbrick.setupGameObject( world, tlcece, xx, yy, 6, BodyDef.BodyType.KinematicBody, gameobject.objecttype.MONSTER, null, null, over );
@@ -864,13 +864,6 @@ public class game {
 
                     }
 
-
-                    if (o.getProperties().containsKey( "transfer" )) {
-                        gameobject newbrick = new gameobject();
-                        newbrick.mygame = this;
-                        newbrick.setupGameObject( world, null, (int) rect.x, (int) rect.y, 2, BodyDef.BodyType.StaticBody, gameobject.objecttype.TRANSFER, o ,null,false);
-                        this.objects.add( newbrick );
-                    }
                     if (o.getProperties().containsKey( "item" )) {
                         if (checkQual( o )) {
                             gameobject newbrick = new gameobject();
@@ -887,6 +880,77 @@ public class game {
                             this.objects.add( newbrick );
                         }
                     }
+                    if (o.getProperties().containsKey( "enemy" )) {
+                        if (checkQual( o )) {
+                            gameobject newbrick = new gameobject();
+
+                            newbrick.HP = (o.getProperties().containsKey( "HP" )) ? Integer.parseInt(o.getProperties().get( "HP" ).toString()) : 1;
+                            newbrick.speed = (o.getProperties().containsKey( "speed" )) ? Float.parseFloat(o.getProperties().get( "speed" ).toString()) : 0.5f;
+                            newbrick.chase = (o.getProperties().containsKey( "chase" )) ? Boolean.parseBoolean(o.getProperties().get( "chase" ).toString()) : false;
+                            newbrick.chaseRadius = (o.getProperties().containsKey( "chaseRadius" )) ? Float.parseFloat(o.getProperties().get( "chaseRadius" ).toString()) : 100f;
+                            if (o.getProperties().containsKey( "path" )){
+                                String[] ss = o.getProperties().get( "path" ).toString().split( "," );
+                                  int[] myArray = new int[ss.length];
+
+                                for (int i=0;i<myArray.length;i++){
+                                    int k=0;
+                                    switch (ss[i]){
+                                        case "down": k=0; break;
+                                        case "right": k=1; break;
+                                        case "left": k=2; break;
+                                        case "up": k=3; break;
+                                        default:
+                                            k=Integer.parseInt(ss[i]);
+                                    }
+                                    myArray[i] = k;
+                                }
+                                newbrick.path=myArray; //new int[]{0,0,2,2,3,3,1,1,2,1};
+
+                            }else{
+                                newbrick.path=null; //new int[]{0,0,2,2,3,3,1,1,2,1};
+
+                            }
+                            newbrick.damage=(o.getProperties().containsKey( "damage" )) ? Float.parseFloat(o.getProperties().get( "damage" ).toString()) : 1f;
+                            newbrick.bird=(o.getProperties().containsKey( "bird" )) ? Boolean.parseBoolean(o.getProperties().get( "bird" ).toString()) : false;
+                            newbrick.dir = (o.getProperties().containsKey( "dir" )) ? Integer.parseInt(o.getProperties().get( "dir" ).toString()) : 2;
+
+                            if (o.getProperties().containsKey( "anim" )){
+                                String anim=o.getProperties().get( "anim" ).toString();
+                                Texture txMonster;
+                            if (playtest) {
+                                txMonster = new Texture( Gdx.files.external( path + "/" + anim ) );
+                            }else{
+                                txMonster = new Texture( Gdx.files.internal( path + "/" + anim ) );
+
+                            }
+                                TextureRegion[][] tmp = TextureRegion.split( txMonster,
+                                        txMonster.getWidth() / 4,
+                                        txMonster.getHeight() / 4 );
+
+                                for (int i = 0; i < 4; i++) {
+                                    TextureRegion[] walkFrames = new TextureRegion[4];
+                                    int index = 0;
+                                    for (int j = 0; j < 4; j++) {
+                                        walkFrames[index++] = tmp[i][j];
+                                    }
+                                    Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
+                                    newbrick.anim.add( tempAnim );
+                                }
+                            }
+
+                            newbrick.mygame = this;
+                            if (newbrick.bird) {
+                                newbrick.setupGameObject( world, null, (int) rect.x, (int) rect.y, 6, BodyDef.BodyType.KinematicBody, gameobject.objecttype.ENEMY, o, t, false );
+                            }else{
+                                newbrick.setupGameObject( world, null, (int) rect.x, (int) rect.y, 6, BodyDef.BodyType.DynamicBody, gameobject.objecttype.ENEMY, o, t, false );
+
+                            }
+                            this.objects.add( newbrick );
+
+
+                        }
+                    }
+
                     if (o.getProperties().containsKey( "mode" )) {
                         if (o.getProperties().get( "mode" ).toString().equalsIgnoreCase( "rpg" )){
                             world.setGravity( new Vector2(0f,0f ));
@@ -913,30 +977,30 @@ public class game {
     }
     public boolean checkQual(MapObject o){
         boolean qual=true;
-        //setOrAddVars( "asu",1,VAROP.SET );
-        //setOrAddVars( "sua",1,VAROP.SET );
-        //setOrAddVars( "isu",1,VAROP.SET );
-        if (o.getProperties().get( "req" )!=null){
-            String[] ss = o.getProperties().get( "req" ).toString().split( "," );
-            String[] vv = o.getProperties().get( "reqval" ).toString().split( "," );
+        if (o.getProperties().get( "required" )!=null){
+            String[] ss = o.getProperties().get( "required" ).toString().split( "," );
             qual=false;
             int rq=0;
             boolean recheck=true;
             while (recheck) {
                 recheck=false;
                 for (int i = 0; i < ss.length; i++) {
+                    String[] sv = ss[i].split( "=" );
+                    Gdx.app.log( sv[0]+"",sv[1]+"" );
                     boolean ada = false;
                     for (KV var : save.vars) {
-                        if (ss[i].equalsIgnoreCase( var.key )) {
+                        if (sv[0].equalsIgnoreCase( var.key )) {
                             ada = true;
-                            if (vv[i].equalsIgnoreCase(var.value+"")) {
+                            Gdx.app.log( sv[1]+"",var.value+"" );
+                            //var.value
+                            if (sv[1].equalsIgnoreCase(var.value+"")) {
                                 rq += 1;
                                 break;
                             }
                         }
                     }
                     if (!ada) {
-                        setOrAddVars( ss[i], 0, VAROP.SET );
+                        setOrAddVars( sv[0], 0, VAROP.SET );
                         recheck=true;
                     }
 
@@ -944,6 +1008,8 @@ public class game {
             }
             if (rq==ss.length) qual=true;
         }
+        Gdx.app.log( "A",qual+"" );
+
         if (qual)
         {
             return true;
@@ -985,7 +1051,7 @@ public class game {
     public OrthographicCamera gc;
     public void update(SpriteBatch batch, float delta, OrthographicCamera gamecam) {
         gc=gamecam;
-        world.step(1/60f,6,2);
+        if (!starting) world.step(1/60f,6,2);
         cooldown-=delta;
 
         if (HP<=0){
@@ -1030,10 +1096,6 @@ public class game {
 
         gamecam.update();
 
-        for (wall wl:walls)
-        {
-            if (!debugmode) wl.draw(batch);
-        }
         stateTime += delta;
         if (starting){
             TextureRegion currentFramea = animPlayer.get(dir).getKeyFrame(0, true);
@@ -1374,7 +1436,7 @@ public class game {
         {
             playSfx(sfxplayer);
             dead+=1;
-
+            meledak.setPosition( player.b2body.getPosition().x, player.b2body.getPosition().y );
             meledak.reset(false);
             meledak.start();
             player.state= DEAD;

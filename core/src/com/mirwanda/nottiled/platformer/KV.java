@@ -9,7 +9,7 @@ public class KV {
         this.key = key;
     }
 
-    public int getValue() {
+    public float getValue() {
         return value;
     }
 

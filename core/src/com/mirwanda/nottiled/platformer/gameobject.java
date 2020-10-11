@@ -20,7 +20,9 @@ import com.badlogic.gdx.physics.box2d.World;
 import java.util.ArrayList;
 
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ENEMYPROJECTILE;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.MONSTER;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYERPROJECTILE;
+import static com.mirwanda.nottiled.platformer.player.playerState.DEAD;
 
 public class gameobject extends Sprite {
     public String name;
@@ -31,7 +33,7 @@ public class gameobject extends Sprite {
     public enum move {RIGHT,LEFT,UP,DOWN}
     public int dir;
     public boolean moving;
-    public float damage;
+    public float damage=1;
     public float HP;
     public float speed;
     public boolean bird;
@@ -64,43 +66,103 @@ public class gameobject extends Sprite {
     public enum objecttype {
         PLAYER, PLAYERLEFT,PLAYERRIGHT,PLAYERTOP,PLAYERBOTTOM, PLAYERCENTER,
         WALLLEFT,WALLTOP,WALLBOTTOM,WALLRIGHT, WALLCENTER, LADDER, FLOATER, SINKER,
-        BOX, CHECKPOINT, COIN, KEY, LOCK, GIRL, SPIKE, GEAR, BREAKABLE, SPRING,
+        BRICK, HALFBRICK, BOX, CHECKPOINT, COIN, KEY, LOCK, GIRL, SPIKE, GEAR, BREAKABLE, SPRING,
         SWITCH, SWITCHON, SWITCHOFF, PLATFORMH, PLATFORMV, PLATFORMS, MONSTER, MISC,
-        LEFTSLOPE, RIGHTSLOPE, TRANSFER, BLOCK, ITEM, PLAYERPROJECTILE, ENEMYPROJECTILE
+        LEFTSLOPE, RIGHTSLOPE, TRANSFER, BLOCK, ITEM, ENEMY, PLAYERPROJECTILE, ENEMYPROJECTILE, LISTENER
     }
 
     public void setupGameObject(World world, TiledMapTile tlcece, float xx, float yy, int width, BodyDef.BodyType type, gameobject.objecttype objecttype, MapObject obj, TextureRegion tt, boolean over)
     {
-        this.over=over;
-        if (tlcece!=null) {
-            TextureRegion region = tlcece.getTextureRegion();
-            setRegion( region );
-            setColor( 1, 1, 1, 1 );
-            setSize( region.getRegionWidth() / 100f, region.getRegionHeight() / 100f );
-            setOrigin( tso / 100f, tso / 100f );
-        }
-        if (tt!=null) {
-            Gdx.app.log("ASO",tt.getRegionHeight()+"");
-            setRegion( tt );
-            setColor( 1, 1, 1, 1 );
-            setSize( tt.getRegionWidth() / 100f, tt.getRegionHeight() / 100f );
-            setOrigin( tso / 100f, tso / 100f );
-        }
         objtype = objecttype;
+        this.obj=obj;
+
         switch(objtype){
+            //object position
             case PLAYERPROJECTILE: case ENEMYPROJECTILE:
-                setPosition( xx, yy );
+                setPosition( 9999f,9999f );
                 break;
-            case TRANSFER: case BLOCK: case ITEM:
-                this.obj=obj;
-                setSize( 16 / 100f, 16 / 100f );
+            case ENEMY:
+                objtype=MONSTER;
+            case BLOCK: case ITEM:
+
                 setPosition( xx / 100f, yy / 100f );
-            break;
+                break;
+            //tile position
             default:
                 setPosition( xx * ts / 100f, yy * ts / 100f );
         }
-        switch (objecttype) {
+
+        this.over=over;
+        switch (objtype) {
             //dorongable
+            case BRICK:
+                EdgeShape shaper = new EdgeShape();
+                fdef.filter.categoryBits = game.DEFAULT_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
+                bdef.type = type;
+                bdef.position.set((xx * ts + tso) / 100f, (yy * ts + tso) / 100f);
+                body = world.createBody(bdef);
+                float sz = 8/100f;
+                //top line
+                shaper.set(-sz,sz,sz, sz);
+                fdef.shape = shaper;
+                body.createFixture(fdef).setUserData(gameobject.objecttype.WALLTOP);
+
+                //left line
+                shaper.set(-sz,-sz,-sz, sz);
+                fdef.shape = shaper;
+                fdef.friction=0;
+                body.createFixture(fdef).setUserData(gameobject.objecttype.WALLLEFT);
+
+                //right line
+                shaper.set(sz,sz,sz, -sz);
+                fdef.shape = shaper;
+                fdef.friction=0;
+                body.createFixture(fdef).setUserData(gameobject.objecttype.WALLRIGHT);
+
+                //bottom line
+                shaper.set(-sz,-sz,sz, -sz);
+                fdef.shape = shaper;
+                body.createFixture(fdef).setUserData(gameobject.objecttype.WALLBOTTOM);
+
+
+
+                break;
+
+            case HALFBRICK:
+                shaper = new EdgeShape();
+                fdef.filter.categoryBits = game.DEFAULT_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
+                bdef.type = type;
+                bdef.position.set((xx * ts + tso) / 100f, (yy * ts + tso) / 100f);
+                body = world.createBody(bdef);
+                sz = 8/100f;
+                //top line
+                shaper.set(-sz,sz,sz, sz);
+                fdef.shape = shaper;
+                body.createFixture(fdef).setUserData(gameobject.objecttype.WALLTOP);
+
+                //left line
+                shaper.set(-sz,0,-sz, sz);
+                fdef.shape = shaper;
+                fdef.friction=0;
+                body.createFixture(fdef).setUserData(gameobject.objecttype.WALLLEFT);
+
+                //right line
+                shaper.set(sz,sz,sz, 0);
+                fdef.shape = shaper;
+                fdef.friction=0;
+                body.createFixture(fdef).setUserData(gameobject.objecttype.WALLRIGHT);
+
+                //bottom line
+                shaper.set(-sz,0,sz, 0);
+                fdef.shape = shaper;
+                body.createFixture(fdef).setUserData(gameobject.objecttype.WALLBOTTOM);
+
+
+
+                break;
+
             case BOX:
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
@@ -283,8 +345,7 @@ public class gameobject extends Sprite {
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.PLAYERPROJECTILE_BIT;
                 /////
                 bdef.type = type;
-                bdef.position.set((xx * ts + tso) / 100f, (yy * ts + tso) / 100f);
-                setPosition(xx*ts/100f,yy*ts/100f);
+                bdef.position.set(getX()+width/100f, getY()+width/100f);
                 body = world.createBody(bdef);
 
                 shape.setAsBox(width / 100f, width / 100f);
@@ -425,6 +486,20 @@ public class gameobject extends Sprite {
         }
 
 
+        if (tlcece!=null) {
+            TextureRegion region = tlcece.getTextureRegion();
+            setRegion( region );
+            setColor( 1, 1, 1, 1 );
+            setSize( region.getRegionWidth() / 100f, region.getRegionHeight() / 100f );
+            setOrigin( tso / 100f, tso / 100f );
+        }
+        if (tt!=null) {
+            Gdx.app.log("ASO",tt.getRegionHeight()+"");
+            setRegion( tt );
+            setColor( 1, 1, 1, 1 );
+            setSize( tt.getRegionWidth() / 100f, tt.getRegionHeight() / 100f );
+            setOrigin( tso / 100f, tso / 100f );
+        }
 
 
     }
@@ -465,6 +540,7 @@ public class gameobject extends Sprite {
                 distance+=speed;
                 if (distance>maxdistance){
                     setCategoryFilter(game.DESTROYED_BIT);
+                    body.setLinearVelocity( 0,0 );
                     mygame.objects.remove(this);
 
                 }
@@ -494,11 +570,51 @@ public class gameobject extends Sprite {
                 break;
 
             case MONSTER:
-                enemyshoot();
+
+               if (body.getPosition().dst( mygame.player.b2body.getPosition()) <chaseRadius/100f) {
+                   if (mygame.player.state!= player.playerState.DEAD) enemyshoot();
+               }
+
                 cooldown-=dt;
                 if (HP<=0 || body.getPosition().y<=-0.5f){
                     setCategoryFilter(game.DESTROYED_BIT);
+                    body.setLinearVelocity( 0,0 );
+
+                    mygame.meledak.setPosition( body.getPosition().x, body.getPosition().y );
+                    mygame.meledak.reset(false);
+                    mygame.meledak.start();
+
+
                     mygame.objects.remove(this);
+                    if (obj!=null) {
+                        if (obj.getProperties().get( "xsetvar" ) != null) {
+                            String[] ss = obj.getProperties().get( "xsetvar" ).toString().split( "," );
+                            String[] vv = obj.getProperties().get( "xsetvarval" ).toString().split( "," );
+                            int rq = 0;
+                            for (int i = 0; i < ss.length; i++) {
+                                mygame.setOrAddVars( ss[i], Integer.parseInt( vv[i] ), game.VAROP.SET );
+                            }
+                        }
+
+                        if (obj.getProperties().get( "xaddvar" ) != null) {
+                            String[] ss = obj.getProperties().get( "xaddvar" ).toString().split( "," );
+                            String[] vv = obj.getProperties().get( "xaddvarval" ).toString().split( "," );
+                            int rq = 0;
+                            for (int i = 0; i < ss.length; i++) {
+                                mygame.setOrAddVars( ss[i], Integer.parseInt( vv[i] ), game.VAROP.ADD );
+                            }
+                        }
+
+                        if (obj.getProperties().get( "xsubvar" ) != null) {
+                            String[] ss = obj.getProperties().get( "xsubvar" ).toString().split( "," );
+                            String[] vv = obj.getProperties().get( "xsubvarval" ).toString().split( "," );
+                            int rq = 0;
+                            for (int i = 0; i < ss.length; i++) {
+                                mygame.setOrAddVars( ss[i], Integer.parseInt( vv[i] ), game.VAROP.SUB );
+                            }
+                        }
+                    }
+
 
                 }
 
@@ -512,38 +628,38 @@ public class gameobject extends Sprite {
                 }
 
 
-                if (chase){
-                    if (body.getPosition().dst( mygame.player.b2body.getPosition()) <chaseRadius/100f){
-                    moving=true;
+                if (path==null) {
+                    if (body.getPosition().dst( mygame.player.b2body.getPosition() ) < chaseRadius / 100f) {
+                        if (chase) moving = true;
 
-                        if (Math.abs( body.getPosition().x - mygame.player.b2body.getPosition().x ) >= speed*5 / 100f ) {
+                        if (Math.abs( body.getPosition().x - mygame.player.b2body.getPosition().x ) >= speed * 10 / 100f) {
 
-                                if (body.getPosition().x > mygame.player.b2body.getPosition().x) {
-                                    dir = 2;
+                            if (body.getPosition().x > mygame.player.b2body.getPosition().x) {
+                                dir = 2;
+                            } else {
+                                dir = 1;
+                            }
+                        } else {
+                            if (Math.abs( body.getPosition().y - mygame.player.b2body.getPosition().y ) >= speed * 10 / 100f) {
+                                if (body.getPosition().y > mygame.player.b2body.getPosition().y) {
+                                    dir = 0;
                                 } else {
-                                    dir = 1;
+                                    dir = 3;
                                 }
                             } else {
-                                if (Math.abs( body.getPosition().y - mygame.player.b2body.getPosition().y ) >= speed*5 / 100f) {
-                                    if (body.getPosition().y > mygame.player.b2body.getPosition().y) {
-                                        dir = 0;
-                                    } else {
-                                        dir = 3;
-                                    }
-                                }else{
-                                    moving=false;
-                                }
-
-
+                                moving = false;
                             }
-                    }else{
+
+
+                        }
+                    } else {
                         //dir=0;
-                        moving=false;
+                        moving = false;
                     }
                 }
 
 
-                if (path!=null){
+                else if (path!=null){
                     if (lastPos==null){
                         currentPath=0;
                         dir = path[0];
@@ -621,6 +737,7 @@ public class gameobject extends Sprite {
     public float setcooldown=0.1f;
     public void enemyshoot(){
         if (cooldown>0) return;
+        if (1==1) return;
         gameobject newbrick = new gameobject();
         newbrick.mygame = mygame;
         newbrick.speed=4f;

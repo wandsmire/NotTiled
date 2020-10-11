@@ -1053,7 +1053,6 @@ String texta="";
                             mygame.meledak.update( Gdx.graphics.getDeltaTime() );
 
                             mygame.meledak.draw( batch );
-                            mygame.meledak.setPosition( mygame.player.b2body.getPosition().x, mygame.player.b2body.getPosition().y );
                             // if (mygame.meledak.isComplete())
 
 
@@ -1101,7 +1100,7 @@ String texta="";
                         else if (mygame.starting)
                         {
 
-                            String msg = mygame.briefing[mygame.msgindex];
+                            String msg = mygame.briefing[mygame.msgindex].replace( "\\n","\n" );
                             if (msg==null) msg = "Ready?";
                             str1draw(ui,msg, gui.gamestatus);
 
