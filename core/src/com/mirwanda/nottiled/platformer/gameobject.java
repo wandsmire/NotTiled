@@ -1,6 +1,7 @@
 package com.mirwanda.nottiled.platformer;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -21,8 +22,6 @@ import java.util.ArrayList;
 
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ENEMYPROJECTILE;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.MONSTER;
-import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYERPROJECTILE;
-import static com.mirwanda.nottiled.platformer.player.playerState.DEAD;
 
 public class gameobject extends Sprite {
     public String name;
@@ -30,6 +29,7 @@ public class gameobject extends Sprite {
     public gameobject(){}
     public gameobject.objecttype objtype;
     public MapObject obj;
+    public Sound sfx,sfxdead;
     public enum move {RIGHT,LEFT,UP,DOWN}
     public int dir;
     public boolean moving;
@@ -40,7 +40,8 @@ public class gameobject extends Sprite {
     public float maxdistance;
     public float distance;
     java.util.List<Animation<TextureRegion>> anim = new ArrayList<>(); // Must declare frame type (TextureRegion)
-
+    java.util.List<Animation<TextureRegion>> panim = new ArrayList<>(); // Must declare frame type (TextureRegion)
+    public Vector2 pimagesize;
 
     ////
     public boolean chase;
@@ -71,10 +72,12 @@ public class gameobject extends Sprite {
         LEFTSLOPE, RIGHTSLOPE, TRANSFER, BLOCK, ITEM, ENEMY, PLAYERPROJECTILE, ENEMYPROJECTILE, LISTENER
     }
 
-    public void setupGameObject(World world, TiledMapTile tlcece, float xx, float yy, int width, BodyDef.BodyType type, gameobject.objecttype objecttype, MapObject obj, TextureRegion tt, boolean over)
+    public void setupGameObject(World world, TiledMapTile tlcece, float xx, float yy, float width, float height, BodyDef.BodyType type, gameobject.objecttype objecttype, MapObject obj, TextureRegion tt, boolean over)
     {
         objtype = objecttype;
         this.obj=obj;
+        float Tswh=width/2f;
+        float Tshh=height/2f;
 
         switch(objtype){
             //object position
@@ -89,7 +92,7 @@ public class gameobject extends Sprite {
                 break;
             //tile position
             default:
-                setPosition( xx * ts / 100f, yy * ts / 100f );
+                setPosition( xx / 100f, yy / 100f );
         }
 
         this.over=over;
@@ -100,9 +103,9 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 bdef.type = type;
-                bdef.position.set((xx * ts + tso) / 100f, (yy * ts + tso) / 100f);
+                bdef.position.set((xx + Tswh) / 100f, (yy + Tshh) / 100f);
                 body = world.createBody(bdef);
-                float sz = 8/100f;
+                float sz = Tswh/100f;
                 //top line
                 shaper.set(-sz,sz,sz, sz);
                 fdef.shape = shaper;
@@ -134,7 +137,7 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 bdef.type = type;
-                bdef.position.set((xx * ts + tso) / 100f, (yy * ts + tso) / 100f);
+                bdef.position.set((xx + Tswh) / 100f, (yy + Tshh) / 100f);
                 body = world.createBody(bdef);
                 sz = 8/100f;
                 //top line
@@ -168,7 +171,7 @@ public class gameobject extends Sprite {
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 bdef.type = type;
                 bdef.linearDamping = 2f;
-                bdef.position.set((xx * ts + tso) / 100f, (yy * ts + tso) / 100f);
+                bdef.position.set((xx + Tswh) / 100f, (yy + Tshh) / 100f);
                 body = world.createBody(bdef);
                 shape.setAsBox(width / 100f, width / 100f);
 
@@ -191,9 +194,9 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.COIN_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 bdef.type = type;
-                bdef.position.set((xx * ts + tso) / 100f, (yy * ts + tso) / 100f);
+                bdef.position.set((xx + Tswh) / 100f, (yy + Tshh) / 100f);
                 body = world.createBody(bdef);
-                shape.setAsBox(width / 100f, width / 100f);
+                shape.setAsBox(Tswh / 100f, Tshh / 100f);
                 fdef.shape = shape;
                 fdef.isSensor = true;
                 fixture = body.createFixture(fdef);
@@ -204,9 +207,9 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.COIN_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 bdef.type = type;
-                bdef.position.set((xx * ts + tso) / 100f, (yy * ts + tso) / 100f);
+                bdef.position.set((xx + Tswh) / 100f, (yy + Tshh) / 100f);
                 body = world.createBody(bdef);
-                shape.setAsBox(width / 500f, width / 100f);
+                shape.setAsBox(Tswh / 500f, Tshh / 100f);
                 fdef.shape = shape;
                 fdef.isSensor = true;
                 fixture = body.createFixture(fdef);
@@ -221,9 +224,9 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.COIN_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 bdef.type = type;
-                bdef.position.set((xx +tso) / 100f, (yy + tso) / 100f);
+                bdef.position.set((xx + Tswh) / 100f, (yy + Tshh) / 100f);
                 body = world.createBody(bdef);
-                shape.setAsBox(width / 100f, width / 100f);
+                shape.setAsBox(Tswh / 100f, Tshh / 100f);
                 fdef.shape = shape;
                 fdef.isSensor = true;
                 fixture = body.createFixture(fdef);
@@ -257,7 +260,7 @@ public class gameobject extends Sprite {
                 bdef.type = type;
                 bdef.position.set(xx, yy);
                 body = world.createBody(bdef);
-                shape.setAsBox(width / 100f, width / 100f);
+                shape.setAsBox(width / 200f, height / 200f);
                 fdef.shape = shape;
                 fdef.isSensor = true;
                 fixture = body.createFixture(fdef);
@@ -273,7 +276,7 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.MARKER_BIT;
                 fdef.filter.maskBits = game.PLATFORM_BIT;
                 bdef.type = type;
-                bdef.position.set((xx * ts + tso) / 100f, (yy * ts + tso) / 100f);
+                bdef.position.set((xx + Tswh) / 100f, (yy + Tshh) / 100f);
                 body = world.createBody(bdef);
                 shape.setAsBox(width / 100f, width / 100f);
                 fdef.shape = shape;
@@ -291,7 +294,7 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.DESTROYED_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 bdef.type = type;
-                bdef.position.set((xx * ts + tso) / 100f, (yy * ts + tso) / 100f);
+                    bdef.position.set((xx + Tswh) / 100f, (yy + Tshh) / 100f);
                 body = world.createBody(bdef);
                 shape.setAsBox(width / 100f, width / 100f);
                 fdef.shape = shape;
@@ -309,7 +312,7 @@ public class gameobject extends Sprite {
                 fdef.filter.maskBits = game.MARKER_BIT | game.PLAYER_BIT;
                 /////
                 bdef.type = type;
-                bdef.position.set((xx * ts + tso) / 100f, (yy * ts + tso) / 100f);
+                bdef.position.set((xx + Tswh) / 100f, (yy + Tshh) / 100f);
                 setPosition(xx*ts/100f,yy*ts/100f);
                 body = world.createBody(bdef);
                 body.setGravityScale(0);
@@ -328,10 +331,10 @@ public class gameobject extends Sprite {
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 /////
                 bdef.type = type;
-                bdef.position.set((xx  + tso) / 100f, (yy  + tso) / 100f);
+                bdef.position.set((xx + Tswh) / 100f, (yy + Tshh) / 100f);
                 body = world.createBody(bdef);
 
-                shape.setAsBox(width / 100f, width / 100f);
+                shape.setAsBox(Tswh / 100f, Tshh / 100f);
                 fdef.shape = shape;
                 fixture = body.createFixture(fdef);
                 //setCategoryFilter(fixture,game.DEFAULT_BIT);
@@ -345,10 +348,10 @@ public class gameobject extends Sprite {
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.PLAYERPROJECTILE_BIT;
                 /////
                 bdef.type = type;
-                bdef.position.set(getX()+width/100f, getY()+width/100f);
+                bdef.position.set((xx + Tswh) / 100f, (yy + Tshh) / 100f);
                 body = world.createBody(bdef);
 
-                shape.setAsBox(width / 100f, width / 100f);
+                shape.setAsBox(width / 200f, height / 200f);
                 fdef.shape = shape;
                 fixture = body.createFixture(fdef);
                 //setCategoryFilter(fixture,game.DEFAULT_BIT);
@@ -363,7 +366,7 @@ public class gameobject extends Sprite {
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 /////
                 bdef.type = type;
-                bdef.position.set((xx * ts + tso) / 100f, (yy * ts + tso) / 100f);
+                bdef.position.set((xx + Tswh) / 100f, (yy + Tshh) / 100f);
                 setPosition(xx*ts/100f,yy*ts/100f);
                 body = world.createBody(bdef);
                 //top line
@@ -400,7 +403,7 @@ public class gameobject extends Sprite {
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 /////
                 bdef.type = type;
-                bdef.position.set((xx * ts + tso) / 100f, (yy * ts + tso) / 100f);
+                bdef.position.set((xx + Tswh) / 100f, (yy + Tshh) / 100f);
                 setPosition(xx*ts/100f,yy*ts/100f);
                 body = world.createBody(bdef);
                 //top line
@@ -436,7 +439,7 @@ public class gameobject extends Sprite {
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 /////
                 bdef.type = type;
-                bdef.position.set((xx * ts + tso) / 100f, (yy * ts + tso) / 100f);
+                bdef.position.set((xx + Tswh) / 100f, (yy + Tshh) / 100f);
                 setPosition(xx*ts/100f,yy*ts/100f);
                 body = world.createBody(bdef);
                 //top line
@@ -485,21 +488,25 @@ public class gameobject extends Sprite {
             case MISC:
         }
 
+        setSize( width/ 100f, height / 100f );
+        //setOrigin( width / 100f, height / 100f );
+
 
         if (tlcece!=null) {
             TextureRegion region = tlcece.getTextureRegion();
             setRegion( region );
             setColor( 1, 1, 1, 1 );
-            setSize( region.getRegionWidth() / 100f, region.getRegionHeight() / 100f );
-            setOrigin( tso / 100f, tso / 100f );
+            setSize( width / 100f, height / 100f );
+            setOrigin( Tswh/ 100f, Tshh / 100f );
         }
         if (tt!=null) {
             Gdx.app.log("ASO",tt.getRegionHeight()+"");
             setRegion( tt );
             setColor( 1, 1, 1, 1 );
-            setSize( tt.getRegionWidth() / 100f, tt.getRegionHeight() / 100f );
-            setOrigin( tso / 100f, tso / 100f );
+            setSize( width / 100f, height / 100f );
+            setOrigin( Tswh/ 100f, Tshh / 100f );
         }
+
 
 
     }
@@ -508,7 +515,7 @@ public class gameobject extends Sprite {
     public void update(float dt){
 
 
-       if (body!=null) setPosition(body.getPosition().x-tso/100f,body.getPosition().y-tso/100f);
+       if (body!=null) setPosition(body.getPosition().x-getWidth()/2f,body.getPosition().y-getHeight()/2f);
 
 
         switch (objtype) {
@@ -567,6 +574,12 @@ public class gameobject extends Sprite {
                     mygame.objects.remove(this);
 
                 }
+
+                //if (moving) {
+                    TextureRegion currentFrame = anim.get( dir ).getKeyFrame( mygame.stateTime, true );
+                    setRegion( currentFrame );
+                //}
+
                 break;
 
             case MONSTER:
@@ -619,10 +632,10 @@ public class gameobject extends Sprite {
                 }
 
                 if (moving || bird) {
-                    TextureRegion currentFrame = anim.get( dir ).getKeyFrame( mygame.stateTime, true );
+                     currentFrame = anim.get( dir ).getKeyFrame( mygame.stateTime, true );
                     setRegion( currentFrame );
                 }else{
-                    TextureRegion currentFrame = anim.get( dir ).getKeyFrame( 0f, true );
+                     currentFrame = anim.get( dir ).getKeyFrame( 0f, true );
                     setRegion( currentFrame );
 
                 }
@@ -734,44 +747,53 @@ public class gameobject extends Sprite {
     }
 
     public float cooldown;
-    public float setcooldown=0.1f;
+    public float pcooldown =1;
+    public float pspeed =4;
+    public float pmaxdistance =300;
+    public int pdamage =1;
+    public boolean canshoot=false;
+
+
     public void enemyshoot(){
-        if (cooldown>0) return;
-        if (1==1) return;
+        if (cooldown>0||!canshoot) return;
         gameobject newbrick = new gameobject();
         newbrick.mygame = mygame;
-        newbrick.speed=4f;
-        newbrick.maxdistance=300f;
-        newbrick.damage=1;
+        newbrick.speed=pspeed;
+        newbrick.maxdistance=pmaxdistance;
+        newbrick.damage=pdamage;
+        newbrick.anim=panim;
         newbrick.dir=dir;
         float posx=body.getPosition().x;
         float posy=body.getPosition().y;
         switch (dir){
             case 0:
-                newbrick.setRotation( 180 );
+              //  newbrick.setRotation( 180 );
                 posy-=16/100f;
 
                 break;
             case 1:
-                newbrick.setRotation( -90 );
+               // newbrick.setRotation( -90 );
                 posx+=16/100f;
 
                 break;
             case 2:
                 posx-=16/100f;
 
-                newbrick.setRotation( 90 );
+              //  newbrick.setRotation( 90 );
                 break;
             case 3:
                 posy+=16/100f;
 
                 break;
         }
-        newbrick.setupGameObject( mygame.world, mygame.tlplatformh.get(0),posx, posy, 5, BodyDef.BodyType.DynamicBody, ENEMYPROJECTILE, null ,null ,false);
+        newbrick.setupGameObject( mygame.world,null,posx, posy, pimagesize.x, pimagesize.y, BodyDef.BodyType.DynamicBody, ENEMYPROJECTILE, null ,null ,false);
         mygame.objects.add( newbrick );
-        cooldown=setcooldown;
+        cooldown= pcooldown;
 
     }
 
+    public void playSfx(Sound s){
+        s.play(1.0f);
+    }
 
 }

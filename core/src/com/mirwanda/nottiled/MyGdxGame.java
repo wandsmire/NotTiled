@@ -1042,9 +1042,7 @@ String texta="";
 
                         mygame.renderer.setView(gamecam);
                         if (!mygame.loadingmap) {
-                            if (!mygame.debugmode) mygame.renderer.render();
-                            if (mygame.debugmode)
-                                mygame.b2dr.render( mygame.world, gamecam.combined );
+                            mygame.renderer.render();
                             batch.setProjectionMatrix( gamecam.combined );
                             batch.begin();
 
@@ -1053,6 +1051,10 @@ String texta="";
                             mygame.meledak.update( Gdx.graphics.getDeltaTime() );
 
                             mygame.meledak.draw( batch );
+
+                            if (mygame.debugmode)
+                                mygame.b2dr.render( mygame.world, gamecam.combined );
+
                             // if (mygame.meledak.isComplete())
 
 

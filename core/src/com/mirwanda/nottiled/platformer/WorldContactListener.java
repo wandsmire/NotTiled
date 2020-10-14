@@ -3,19 +3,13 @@ package com.mirwanda.nottiled.platformer;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.MapObject;
-import com.badlogic.gdx.maps.MapProperties;
-import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.physics.box2d.Contact;
 import com.badlogic.gdx.physics.box2d.ContactImpulse;
 import com.badlogic.gdx.physics.box2d.ContactListener;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.Manifold;
 
-import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BOX;
-import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ENEMY;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.MONSTER;
-import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLATFORMH;
-import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLATFORMV;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYER;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYERBOTTOM;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYERPROJECTILE;
@@ -88,12 +82,6 @@ public class WorldContactListener implements ContactListener {
                         if (myobject2.objtype ==gameobject.objecttype.SWITCH) {
                             TextureRegion regon = null;
                             TextureRegion regoff = null;
-                            for (TiledMapTile tmt : mygame.tlswitchons) {
-                                regon = tmt.getTextureRegion();
-                            }
-                            for (TiledMapTile tmt : mygame.tlswitchoffs) {
-                                regoff = tmt.getTextureRegion();
-                            }
                             for (gameobject goj : mygame.objects) {
                                 if (goj.objtype == gameobject.objecttype.SWITCHON) {
                                     goj.objtype = gameobject.objecttype.SWITCHOFF;
@@ -109,7 +97,6 @@ public class WorldContactListener implements ContactListener {
                                     continue;
                                 }
                             }
-                            mygame.playSfx(mygame.sfxswitch);
 
 
 
@@ -121,7 +108,7 @@ public class WorldContactListener implements ContactListener {
                             if (myobject2.objtype ==MONSTER) {
                                 myobject2.setCategoryFilter(game.DESTROYED_BIT);
                                 mygame.objects.remove(myobject2);
-                                mygame.playSfx(mygame.sfxmonster);
+                                //mygame.playSfx(mygame.sfxmonster);
                             }
                             break;
 
@@ -146,13 +133,7 @@ public class WorldContactListener implements ContactListener {
                         if (myobject.objtype ==gameobject.objecttype.SWITCH) {
                             TextureRegion regon = null;
                             TextureRegion regoff = null;
-                            for (TiledMapTile tmt : mygame.tlswitchons) {
-                                regon = tmt.getTextureRegion();
-                            }
-                            for (TiledMapTile tmt : mygame.tlswitchoffs) {
-                                regoff = tmt.getTextureRegion();
-                            }
-                            for (gameobject goj : mygame.objects) {
+                         for (gameobject goj : mygame.objects) {
                                 if (goj.objtype == gameobject.objecttype.SWITCHON) {
                                     goj.objtype = gameobject.objecttype.SWITCHOFF;
                                     goj.setCategoryFilter(game.DESTROYED_BIT);
@@ -167,7 +148,7 @@ public class WorldContactListener implements ContactListener {
                                     continue;
                                 }
                             }
-                            mygame.playSfx(mygame.sfxswitch);
+                           // mygame.playSfx(mygame.sfxswitch);
 
 
 
@@ -179,7 +160,7 @@ public class WorldContactListener implements ContactListener {
                         if (myobject.objtype ==MONSTER) {
                             myobject.setCategoryFilter(game.DESTROYED_BIT);
                             mygame.objects.remove(myobject);
-                            mygame.playSfx(mygame.sfxmonster);
+                           // mygame.playSfx(mygame.sfxmonster);
                         }
                         break;
 
@@ -201,7 +182,7 @@ public class WorldContactListener implements ContactListener {
                             myobject.setCategoryFilter(game.DESTROYED_BIT);
                             mygame.player.b2body.setLinearVelocity(0,2);
                             mygame.objects.remove(myobject);
-                            mygame.playSfx(mygame.sfxmonster);
+                            //mygame.playSfx(mygame.sfxmonster);
                             break;
                         case PLATFORMH:
                             mygame.onplatformh=true;
@@ -232,7 +213,7 @@ public class WorldContactListener implements ContactListener {
                             myobject.setCategoryFilter(game.DESTROYED_BIT);
                             mygame.player.b2body.setLinearVelocity(0,2);
                             mygame.objects.remove(myobject);
-                            mygame.playSfx(mygame.sfxmonster);
+                            //mygame.playSfx(mygame.sfxmonster);
                             break;
 
                     }
@@ -295,14 +276,6 @@ public class WorldContactListener implements ContactListener {
                         case SWITCH:
                             TextureRegion regon = null;
                             TextureRegion regoff = null;
-                            for (TiledMapTile tmt: mygame.tlswitchons)
-                            {
-                                regon = tmt.getTextureRegion();
-                            }
-                            for (TiledMapTile tmt: mygame.tlswitchoffs)
-                            {
-                                regoff = tmt.getTextureRegion();
-                            }
                             for (gameobject goj: mygame.objects)
                             {
                                 if (goj.objtype==gameobject.objecttype.SWITCHON){
@@ -319,7 +292,7 @@ public class WorldContactListener implements ContactListener {
                                     continue;
                                 }
                             }
-                            mygame.playSfx(mygame.sfxswitch);
+                           // mygame.playSfx(mygame.sfxswitch);
                             break;
                     }
                 }
@@ -345,12 +318,15 @@ public class WorldContactListener implements ContactListener {
                         case CHECKPOINT:
                             mygame.save();
                             mygame.checkpoint.set(fixobject.getBody().getPosition().x,fixobject.getBody().getPosition().y);
-                            mygame.playSfx(mygame.sfxcheckpoint);
+                            myobject.playSfx(myobject.sfx );
+
                             break;
                         case SPRING:
                             if (mygame.player.b2body.getLinearVelocity().y<0) {
                                 mygame.player.b2body.setLinearVelocity(0, 4);
-                                mygame.playSfx(mygame.sfxspring);
+                               // mygame.playSfx(mygame.sfxspring);
+                                myobject.playSfx(myobject.sfx );
+
                             }
                             break;
                         case SPIKE:
@@ -372,7 +348,9 @@ public class WorldContactListener implements ContactListener {
                             mygame.coin-=1;
                             myobject.setCategoryFilter(game.DESTROYED_BIT);
                             mygame.objects.remove(myobject);
-                            mygame.playSfx(mygame.sfxcoin);
+                            //mygame.playSfx(mygame.sfxcoin);
+                            myobject.playSfx(myobject.sfx );
+
                             break;
                         case LADDER:
                             mygame.touchedladder+=1;
@@ -390,7 +368,6 @@ public class WorldContactListener implements ContactListener {
                             mygame.key+=1;
                             myobject.setCategoryFilter(game.DESTROYED_BIT);
                             mygame.objects.remove(myobject);
-                            mygame.playSfx(mygame.sfxkey);
 
                             break;
 
@@ -453,7 +430,7 @@ public class WorldContactListener implements ContactListener {
 
                                 }
 
-                                mygame.playSfx(mygame.sfxkey);
+                                //mygame.playSfx(mygame.sfxkey);
 
                                 if (o.getProperties().get( "load" )!=null){
                                     mygame.load();
@@ -502,7 +479,7 @@ public class WorldContactListener implements ContactListener {
                             mygame.key-=1;
                             myobject.setCategoryFilter(game.DESTROYED_BIT);
                             mygame.objects.remove(myobject);
-                            mygame.playSfx(mygame.sfxlock);
+                            //mygame.playSfx(mygame.sfxlock);
                             break;
                         case BREAKABLE:
 
@@ -515,7 +492,7 @@ public class WorldContactListener implements ContactListener {
                             if (mygame.coin==0) {
                                 mygame.victory = true;
                                 mygame.player.b2body.setLinearVelocity(0, 0);
-                                mygame.playSfx(mygame.sfxgirl);
+                                //mygame.playSfx(mygame.sfxgirl);
                             }
 
                             break;

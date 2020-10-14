@@ -67,7 +67,7 @@ public class player extends Sprite {
         b2body.createFixture(fdef).setUserData(gameobject.objecttype.PLAYERBOTTOM);
 
         PolygonShape shape2 = new PolygonShape();
-        shape2.setAsBox(5/100f,8/100f);
+        shape2.setAsBox(5/100f,7/100f);
 
         fdef.shape = shape2;
         fdef.isSensor=false;
