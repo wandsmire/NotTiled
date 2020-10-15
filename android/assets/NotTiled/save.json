@@ -2,7 +2,7 @@
 vars: [
 	{
 		key: coin
-		value: 2
+		value: 5
 		hud: true
 		iconx: 1
 		hasicon: true
@@ -10,16 +10,17 @@ vars: [
 	}
 	{
 		key: asu
-		value: 1
+		value: 3
 	}
 	{
 		key: energy
+		value: 9
 		hud: true
 		hasicon: true
 		keephud: true
 	}
 ]
-x: 1.2133335
+x: 1.2249995
 y: 1.5249999
 mapname: Map01.tmx
 }

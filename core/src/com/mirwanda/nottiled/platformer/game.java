@@ -535,7 +535,7 @@ public class game {
 
 
     public void pressup(){
-        if (rpg) player.moving=true;
+        if (rpg || ladder) player.moving=true;
         player.dir=3;
 
         if (!rpg) {
@@ -555,7 +555,7 @@ public class game {
     }
 
     public void pressdown(){
-        if (rpg) player.moving=true;
+        if (rpg || ladder) player.moving=true;
         player.dir=0;
 
         if (!rpg) {

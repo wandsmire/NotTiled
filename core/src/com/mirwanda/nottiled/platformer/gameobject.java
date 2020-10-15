@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.MapObject;
+import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
@@ -574,33 +575,31 @@ public class gameobject extends Sprite {
                 mygame.meledak.reset(false);
                 mygame.meledak.start();
 
+                MapProperties o=null;
+                if (obj!=null) o=obj.getProperties();
+                if (tlcece!=null) o=tlcece.getProperties();
 
-                if (obj!=null) {
-                    if (obj.getProperties().get( "xsetvar" ) != null) {
-                        String[] ss = obj.getProperties().get( "xsetvar" ).toString().split( "," );
-                        String[] vv = obj.getProperties().get( "xsetvarval" ).toString().split( "," );
-                        int rq = 0;
-                        for (int i = 0; i < ss.length; i++) {
-                            mygame.setOrAddVars( ss[i], Integer.parseInt( vv[i] ), game.VAROP.SET );
-                        }
+                if (o.get( "xsetvar" ) != null) {
+                    String[] ss = o.get( "xsetvar" ).toString().split( "," );
+                    for (int i = 0; i < ss.length; i++) {
+                        String[] sv = ss[i].split( "=" );
+                        mygame.setOrAddVars( sv[0], Integer.parseInt( sv[1] ), game.VAROP.SET );
                     }
+                }
 
-                    if (obj.getProperties().get( "xaddvar" ) != null) {
-                        String[] ss = obj.getProperties().get( "xaddvar" ).toString().split( "," );
-                        String[] vv = obj.getProperties().get( "xaddvarval" ).toString().split( "," );
-                        int rq = 0;
-                        for (int i = 0; i < ss.length; i++) {
-                            mygame.setOrAddVars( ss[i], Integer.parseInt( vv[i] ), game.VAROP.ADD );
-                        }
+                if (o.get( "xaddvar" ) != null) {
+                    String[] ss = o.get( "xaddvar" ).toString().split( "," );
+                    for (int i = 0; i < ss.length; i++) {
+                        String[] sv = ss[i].split( "=" );
+                        mygame.setOrAddVars( sv[0], Integer.parseInt( sv[1] ), game.VAROP.ADD );
                     }
+                }
 
-                    if (obj.getProperties().get( "xsubvar" ) != null) {
-                        String[] ss = obj.getProperties().get( "xsubvar" ).toString().split( "," );
-                        String[] vv = obj.getProperties().get( "xsubvarval" ).toString().split( "," );
-                        int rq = 0;
-                        for (int i = 0; i < ss.length; i++) {
-                            mygame.setOrAddVars( ss[i], Integer.parseInt( vv[i] ), game.VAROP.SUB );
-                        }
+                if (o.get( "xsubvar" ) != null) {
+                    String[] ss = o.get( "xsubvar" ).toString().split( "," );
+                    for (int i = 0; i < ss.length; i++) {
+                        String[] sv = ss[i].split( "=" );
+                        mygame.setOrAddVars( sv[0], Integer.parseInt( sv[1] ), game.VAROP.SUB );
                     }
                 }
 
