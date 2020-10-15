@@ -63,7 +63,11 @@ public class guis
 	gui down=new gui();
 	gui left=new gui();
 	gui right=new gui();
-	gui jump=new gui();
+	gui action1=new gui();
+	gui action2=new gui();
+	gui action3=new gui();
+	gui action4=new gui();
+
 	gui restart=new gui();
 	gui exit=new gui();
 	gui respawn=new gui();
@@ -139,7 +143,10 @@ public class guis
 		down.setp(16,36,2,10);
 		left.setp(4,26,10,18);
 		right.setp(26,48,10,18);
-		jump.setp(74,96,10,18);
+		action1.setp(74,96,10,18);
+		action2.setp(64,84,2,10);
+		action3.setp(52,74,10,18);
+		action4.setp(64,84,18,26);
 
 		restart.setp(0,20,90,100);
 		exit.setp(80,100,90,100);
@@ -230,7 +237,11 @@ public class guis
 		down.setl(5,15,0, 12);
 		left.setl(0,10,12,24);
 		right.setl(10,20,12,24);
-		jump.setl(90,100,12,24);
+		action1.setl(90,100,12,24);
+		action2.setl(85,95,0,12);
+		action3.setl(80,90,12,24);
+		action4.setl(85,95,24,36);
+
 
 		restart.setl(0,10,90,100);
 		exit.setl(90,100,90,100);

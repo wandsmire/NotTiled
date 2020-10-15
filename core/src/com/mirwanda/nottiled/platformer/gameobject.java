@@ -24,7 +24,7 @@ import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ENEMYPROJEC
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.MONSTER;
 
 public class gameobject extends Sprite {
-    public String name;
+    public String name="";
     public game mygame;
     public gameobject(){}
     public gameobject.objecttype objtype;
@@ -35,9 +35,14 @@ public class gameobject extends Sprite {
     public boolean moving;
     public float damage=0;
     public float HP=1;
+    public float maxHP=1;
     public float speed;
     public boolean bird;
     public boolean heavy;
+    public actions action;
+    public enum actions{JUMP,DASH,SHOOT}
+    public float impulse;
+    public String bindvar;
     public TiledMapTile tlcece;
     public float maxdistance;
     public float distance;
@@ -72,7 +77,7 @@ public class gameobject extends Sprite {
     public enum objecttype {
         PLAYER,
         WALLLEFT,WALLTOP,WALLBOTTOM,WALLRIGHT, WALLCENTER, LADDER, FLOATER, SINKER,
-        BRICK, HALFBRICK, BOX, CHECKPOINT,  BREAKABLE, SPRING,
+        BRICK, HALFBRICK, BOX, CHECKPOINT,  BREAKABLE, SPRING,ACTION,
         SWITCH, SWITCHON, SWITCHOFF, PLATFORMH, PLATFORMV, PLATFORMS, MONSTER, MISC,
         LEFTSLOPE, RIGHTSLOPE, TRANSFER, BLOCK, ITEM, ENEMY, PLAYERPROJECTILE, ENEMYPROJECTILE, LISTENER
     }
@@ -557,18 +562,19 @@ public class gameobject extends Sprite {
        if (body!=null) setPosition(body.getPosition().x-getWidth()/2f,body.getPosition().y-getHeight()/2f);
 
         if (rotating) rotate(5f);
-
+        if (cooldown >=0) cooldown-=dt;
         if (destructible){
             if (HP<=0 || body.getPosition().y<=-0.5f){
                 setCategoryFilter(game.DESTROYED_BIT);
                 body.setLinearVelocity( 0,0 );
+                mygame.objects.remove(this);
+
 
                 mygame.meledak.setPosition( body.getPosition().x, body.getPosition().y );
                 mygame.meledak.reset(false);
                 mygame.meledak.start();
 
 
-                mygame.objects.remove(this);
                 if (obj!=null) {
                     if (obj.getProperties().get( "xsetvar" ) != null) {
                         String[] ss = obj.getProperties().get( "xsetvar" ).toString().split( "," );
@@ -597,7 +603,6 @@ public class gameobject extends Sprite {
                         }
                     }
                 }
-
 
             }
 
@@ -634,6 +639,11 @@ public class gameobject extends Sprite {
                     mygame.objects.remove(this);
 
                 }
+                if (anim!=null) {
+                    TextureRegion currentFrame = anim.get( dir ).getKeyFrame( mygame.stateTime, true );
+                    setRegion( currentFrame );
+                }
+
                 break;
             case ENEMYPROJECTILE:
 
@@ -673,7 +683,6 @@ public class gameobject extends Sprite {
                    if (mygame.player.state!= states.DEAD) enemyshoot();
                }
 
-                cooldown-=dt;
 
                 if (anim.size()>0) {
                     if (moving || bird) {

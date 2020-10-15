@@ -1,5 +1,25 @@
 {
-x: 2.3083332
-y: 2.468333
-mapname: Map02.tmx
+vars: [
+	{
+		key: coin
+		value: 2
+		hud: true
+		iconx: 1
+		hasicon: true
+		icony: 2
+	}
+	{
+		key: asu
+		value: 1
+	}
+	{
+		key: energy
+		hud: true
+		hasicon: true
+		keephud: true
+	}
+]
+x: 1.2133335
+y: 1.5249999
+mapname: Map01.tmx
 }

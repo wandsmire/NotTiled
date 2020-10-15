@@ -1074,13 +1074,16 @@ String texta="";
                         uis.begin(ShapeRenderer.ShapeType.Filled);
                         uis.setColor(0f, 0f, 0, 0.6f);
                         if (Gdx.app.getType() != Application.ApplicationType.Desktop || mygame.uitest) {
-                            if (!mygame.starting) {
+                            if (!mygame.starting && mygame.player.state != gameobject.states.DEAD) {
 
                                 uisrect( gui.left, mouse, null );
                                 uisrect( gui.right, mouse, null );
-                                if (mygame.rpg) uisrect( gui.up, mouse, null );
+                                uisrect( gui.up, mouse, null );
                                 uisrect( gui.down, mouse, null );
-                                if (!mygame.rpg) uisrect( gui.jump, mouse, null );
+                                if (mygame.action1!=null) uisrect( gui.action1, mouse, null );
+                                if (mygame.action2!=null) uisrect( gui.action2, mouse, null );
+                                if (mygame.action3!=null) uisrect( gui.action3, mouse, null );
+                                if (mygame.action4!=null) uisrect( gui.action4, mouse, null );
                             }
                         }
                         //uisrect(gui.restart,mouse,null);
@@ -1091,7 +1094,15 @@ String texta="";
 
                         ui.setProjectionMatrix(uicam.combined);
                         ui.begin();
+                        str1.getData().setScale(0.8f);
+                        if (landscape) {
+                            mygame.drawHUD( ui, str1, ssy, ssx );
+                        }else{
+                            mygame.drawHUD( ui, str1, ssx, ssy );
+
+                        }
                         str1.getData().setScale(4f);
+
                         if (mygame.victory)
                         {
                             String msg = mygame.debriefing;
@@ -1119,12 +1130,15 @@ String texta="";
 
                         //str1draw(ui,"Keys : "+mygame.key+" | Items Left : "+mygame.coin , gui.layer);
                         if (Gdx.app.getType() != Application.ApplicationType.Desktop || mygame.uitest) {
-                            if (!mygame.starting) {
+                            if (!mygame.starting && mygame.player.state != gameobject.states.DEAD) {
                                 uidrawbutton( txLeft, "Left", gui.left, 3 );
                                 uidrawbutton( txDown, "Down", gui.down, 3 );
                                 uidrawbutton( txRight, "Right", gui.right, 3 );
-                                if (mygame.rpg) uidrawbutton( txUp, "Up", gui.up, 3 );
-                                if (!mygame.rpg) uidrawbutton( txUp, "Jump", gui.jump, 3 );
+                                uidrawbutton( txUp, "Up", gui.up, 3 );
+                                if (mygame.action1!=null) uidrawbutton( txRight, mygame.action1.name, gui.action1, 3 );
+                                if (mygame.action2!=null) uidrawbutton( txDown, mygame.action2.name, gui.action2, 3 );
+                                if (mygame.action3!=null) uidrawbutton( txLeft, mygame.action3.name, gui.action3, 3 );
+                                if (mygame.action4!=null) uidrawbutton( txUp, mygame.action4.name, gui.action4, 3 );
                             }
 
                         }
@@ -1535,24 +1549,15 @@ String texta="";
                     if (Gdx.app.getType() != Application.ApplicationType.Desktop || mygame.uitest) {
                         if (mygame.player.state == com.mirwanda.nottiled.platformer.gameobject.states.DEAD)
                             return;
-                        if (tapped( touch2, gui.up ) && mygame.rpg)
-                        {mygame.pressup();
-                            pressed = true;}
-                        if (tapped( touch2, gui.jump ) && !mygame.rpg)
-                        {mygame.pressup();
-                            pressed = true;}
-                        if (tapped( touch2, gui.down )) {mygame.pressdown();
-                            pressed = true;
-                        }
-
-
-                        if (tapped( touch2, gui.left )) {
-                            mygame.pressleft();
-                            pressed = true;
-                        } else if (tapped( touch2, gui.right )) {
-                            mygame.pressright();
-                            pressed = true;
-                        }
+                        pressed = true;
+                        if (tapped( touch2, gui.up )) mygame.pressup();
+                        if (tapped( touch2, gui.left )) mygame.pressleft();
+                        if (tapped( touch2, gui.down )) mygame.pressdown();
+                        if (tapped( touch2, gui.right )) mygame.pressright();
+                        if (mygame.action1!=null && tapped( touch2, gui.action1 )) mygame.act( mygame.action1 );
+                        if (mygame.action2!=null && tapped( touch2, gui.action2 )) mygame.act( mygame.action2 );
+                        if (mygame.action3!=null && tapped( touch2, gui.action3 )) mygame.act( mygame.action3 );
+                        if (mygame.action4!=null && tapped( touch2, gui.action4 )) mygame.act( mygame.action4 );
                     }
 
                 }

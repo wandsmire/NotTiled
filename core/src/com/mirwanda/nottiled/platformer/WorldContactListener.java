@@ -1,15 +1,19 @@
 package com.mirwanda.nottiled.platformer;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.MapProperties;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Contact;
 import com.badlogic.gdx.physics.box2d.ContactImpulse;
 import com.badlogic.gdx.physics.box2d.ContactListener;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.Manifold;
 
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ACTION;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BLOCK;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BRICK;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.CHECKPOINT;
@@ -118,6 +122,83 @@ public class WorldContactListener implements ContactListener {
                 }
             }
 
+            if (o.get( "sethud" )!=null) {
+                boolean keep =  (o.get( "keephud" ) !=null) ? true: false;
+
+                if (o.get( "icon" ) !=null) {
+                    String[] ss = o.get( "icon" ).toString().split( "," );
+                    mygame.setHUD(o.get( "sethud" ).toString(), keep, true, Integer.parseInt(ss[0]),Integer.parseInt(ss[1]));
+
+                }else{
+                    mygame.setHUD(o.get( "sethud" ).toString(), keep, false,0,0);
+                }
+
+            }
+
+            if (o.get( "setaction" ) != null) {
+                gameobject newbrick = new gameobject();
+                newbrick.mygame = mygame;
+                newbrick.objtype= ACTION;
+                newbrick.bindvar = (o.containsKey( "bindvar" )) ?  o.get( "bindvar" ).toString() : null;
+                newbrick.name = (o.containsKey( "label" )) ?  o.get( "label" ).toString() : null;
+
+
+                switch (o.get( "action" ).toString()){
+                    case "jump":
+                        newbrick.action = gameobject.actions.JUMP;
+                        newbrick.impulse = (o.containsKey( "impulse" )) ? Float.parseFloat( o.get( "impulse" ).toString() ) : 1;
+                        newbrick.pcooldown = (o.containsKey( "cooldown" )) ? Float.parseFloat( o.get( "cooldown" ).toString() ) : 1;
+
+                        break;
+                    case "dash":
+                        newbrick.action = gameobject.actions.DASH;
+                        newbrick.impulse = (o.containsKey( "impulse" )) ? Float.parseFloat( o.get( "impulse" ).toString() ) : 1;
+                        newbrick.pcooldown = (o.containsKey( "cooldown" )) ? Float.parseFloat( o.get( "cooldown" ).toString() ) : 1;
+
+                        break;
+                    case "shoot":
+                        newbrick.action = gameobject.actions.SHOOT;
+                        newbrick.pcooldown = (o.containsKey( "cooldown" )) ? Float.parseFloat( o.get( "cooldown" ).toString() ) : 1;
+                        newbrick.pspeed = (o.containsKey( "pspeed" )) ? Float.parseFloat( o.get( "pspeed" ).toString() ) : 4;
+                        newbrick.pmaxdistance = (o.containsKey( "pmaxdistance" )) ? Integer.parseInt( o.get( "pmaxdistance" ).toString() ) : 300;
+                        newbrick.pdamage = (o.containsKey( "pdamage" )) ? Integer.parseInt( o.get( "pdamage" ).toString() ) : 1;
+                        if (o.containsKey( "panim" )) {
+                            String anim = o.get( "panim" ).toString();
+                            Texture txMonster = new Texture( mygame.getFile( mygame.path + "/" + anim ) );
+                            TextureRegion[][] tmp = TextureRegion.split( txMonster,
+                                    txMonster.getWidth() / 4,
+                                    txMonster.getHeight() / 4 );
+                            newbrick.pimagesize=new Vector2(txMonster.getWidth()/4,txMonster.getHeight() / 4);
+                            for (int i = 0; i < 4; i++) {
+                                TextureRegion[] walkFrames = new TextureRegion[4];
+                                int index = 0;
+                                for (int j = 0; j < 4; j++) {
+                                    walkFrames[index++] = tmp[i][j];
+                                }
+                                Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
+                                newbrick.panim.add( tempAnim );
+                            }
+                        }
+
+                        break;
+                }
+                switch (o.get( "slot" ).toString()){
+                    case "1":
+                        mygame.action1=newbrick;
+                        break;
+                    case "2":
+                        mygame.action2=newbrick;
+                        break;
+                    case "3":
+                        mygame.action3=newbrick;
+                        break;
+                    case "4":
+                        mygame.action4=newbrick;
+                        break;
+                }
+
+            }
+
             if (o.get( "move" ) != null) {
 
                 Gdx.app.postRunnable( new Runnable() {
@@ -138,6 +219,14 @@ public class WorldContactListener implements ContactListener {
                 myobject.setCategoryFilter( game.DESTROYED_BIT );
                 mygame.objects.remove( myobject );
             }
+        }else{ //!qual
+            if (o.get( "premessage" ) != null) {
+                mygame.msgindex = 0;
+                mygame.briefing = o.get( "premessage" ).toString().split( "//" );
+                mygame.starting = true;
+                mygame.player.body.setLinearVelocity( 0, 0 );
+            }
+
         }
 
         }
