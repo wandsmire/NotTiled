@@ -8,19 +8,8 @@ vars: [
 		hasicon: true
 		icony: 2
 	}
-	{
-		key: asu
-		value: 3
-	}
-	{
-		key: energy
-		value: 9
-		hud: true
-		hasicon: true
-		keephud: true
-	}
 ]
-x: 1.2249995
+x: 1.215
 y: 1.5249999
 mapname: Map01.tmx
 }

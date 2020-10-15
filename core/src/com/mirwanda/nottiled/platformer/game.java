@@ -711,7 +711,7 @@ public class game {
 //        Gdx.app.log(go.pcooldown+"", go.cooldown+"");
         if (go==null) return;
         if (go.cooldown>0) return;
-        Gdx.app.log(go.bindvar, getVar( go.bindvar )+"");
+        //Gdx.app.log(go.bindvar, getVar( go.bindvar )+"");
         if (go.bindvar!=null){
             if (getVar( go.bindvar )<=0) {return;}else{
                 setOrAddVars( go.bindvar,1,VAROP.SUB );
@@ -844,268 +844,159 @@ public class game {
 
     public void setGameObject(boolean object, TiledMapTileLayer.Cell cece, float xx, float yy, float ww, float hh, boolean over, MapObject obj){
 
-        if (!object && cece!=null) {
+        if (!object && cece==null) return; //empty tile
 
-            TiledMapTile tlcece = cece.getTile();
-            boolean flip = cece.getFlipVertically();
-            float rota = cece.getRotation();
-
-
-            if (cece.getTile().getProperties().containsKey( "name" )) {
-
-                    gameobject newbrick = new gameobject();
-                    newbrick.mygame = this;
+        MapProperties o;
+        MapObject objx = null;
+        TextureRegion t = null;
+        TiledMapTile tlcece=null;
+        boolean flip=false;
+        float rota=0f;
 
 
-                newbrick.damage = (cece.getTile().getProperties().containsKey( "damage" )) ? Float.parseFloat( cece.getTile().getProperties().get( "damage" ).toString() ) : 0f;
-                newbrick.rotating = (cece.getTile().getProperties().containsKey( "rotating" )) ? true : false;
-                newbrick.destructible = (cece.getTile().getProperties().containsKey( "destructible" )) ? true : false;
-                newbrick.HP = (cece.getTile().getProperties().containsKey( "HP" )) ? Integer.parseInt( cece.getTile().getProperties().get( "HP" ).toString() ) : 1;
-                newbrick.maxHP=newbrick.HP;
-                newbrick.heavy = (cece.getTile().getProperties().containsKey( "heavy" )) ? true : false;
+        if (!object) { //tile
+            tlcece = cece.getTile();
+            o=tlcece.getProperties();
+            flip = cece.getFlipVertically();
+            rota = cece.getRotation();
+        }else { //object
+            objx=obj;
+            o = obj.getProperties();
+            if (obj instanceof TiledMapTileMapObject) {
+                t = ((TiledMapTileMapObject) obj).getTextureRegion();
+            }
+        }
 
-                if (cece.getTile().getProperties().containsKey( "sfx" )) {
-                        String sfx = cece.getTile().getProperties().get("sfx").toString();
-                        if (getFile( path + "/" + sfx ).exists())
-                            newbrick.sfx = Gdx.audio.newSound( getFile( path + "/" + sfx ) );
-                    }
-                    if (cece.getTile().getProperties().containsKey( "sfxdead" )) {
-                        String sfx = cece.getTile().getProperties().get("sfxdead").toString();
-                        if (getFile( path + "/" + sfx ).exists())
-                            newbrick.sfxdead = Gdx.audio.newSound( getFile( path + "/" + sfx ) );
-                    }
+        gameobject newbrick = new gameobject();
+        newbrick.mygame = this;
+        newbrick.damage = (o.containsKey( "damage" )) ? Float.parseFloat( o.get( "damage" ).toString() ) : 0f;
+        newbrick.rotating = (o.containsKey( "rotating" )) ? true : false;
+        newbrick.destructible = (o.containsKey( "destructible" )) ? true : false;
+        newbrick.HP = (o.containsKey( "HP" )) ? Integer.parseInt( o.get( "HP" ).toString() ) : 1;
+        newbrick.maxHP=newbrick.HP;
+        newbrick.heavy = (o.containsKey( "heavy" )) ? true : false;
 
-                if (cece.getTile().getProperties().containsKey( "size" )) {
-                    String[] sz = cece.getTile().getProperties().get("size").toString().split( "," );
-                    ww=Float.parseFloat(sz[0]);
-                    hh=Float.parseFloat(sz[1]);
-                }
+        if (o.containsKey( "sfx" )) {
+                String sfx = o.get("sfx").toString();
+                if (getFile( path + "/" + sfx ).exists())
+                    newbrick.sfx = Gdx.audio.newSound( getFile( path + "/" + sfx ) );
+            }
 
-                switch (cece.getTile().getProperties().get( "name" ).toString()) {
-                        case "player":
-                            String anim = cece.getTile().getProperties().get( "anim" ).toString();
-                            Texture txPlayer = new Texture( getFile( path + "/" + anim ) );
-                            TextureRegion[][] tmp = TextureRegion.split( txPlayer,
-                                    txPlayer.getWidth() / 4,
-                                    txPlayer.getHeight() / 4 );
+        if (o.containsKey( "sfxdead" )) {
+            String sfx = o.get("sfxdead").toString();
+            if (getFile( path + "/" + sfx ).exists())
+                newbrick.sfxdead = Gdx.audio.newSound( getFile( path + "/" + sfx ) );
+        }
 
-                            for (int i = 0; i < 4; i++) {
-                                TextureRegion[] walkFrames = new TextureRegion[4];
-                                int index = 0;
-                                for (int j = 0; j < 4; j++) {
-                                    walkFrames[index++] = tmp[i][j];
-                                }
-                                Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
-                                newbrick.anim.add( tempAnim );
-                            }
+        if (o.containsKey( "size" )) {
+            String[] sz = o.get("size").toString().split( "," );
+            ww=Float.parseFloat(sz[0]);
+            hh=Float.parseFloat(sz[1]);
+        }
 
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLAYER, null, null, over );
-                            player=newbrick;
-                            break;
-                        case "brick":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.BRICK, null, null, over );
-                            break;
-                        case "halfbrick":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.HALFBRICK, null, null, over );
-                            break;
-                        case "box":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.DynamicBody, gameobject.objecttype.BOX, null, null, over );
-                            break;
-                        case "checkpoint":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, CHECKPOINT, null, null, over );
-                            break;
-                        case "spring":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.SPRING, null, null, over );
-                            break;
-                        case "switch":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.SWITCH, null, null, over );
-                            break;
-                        case "switchon":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.SWITCHON, null, null, over );
-                            break;
-                        case "switchoff":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.SWITCHOFF, null, null, over );
-                            break;
-                        case "platformh":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLATFORMH, null, null, over );
-                            break;
-                        case "platformv":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLATFORMV, null, null, over );
-                            break;
-                        case "platforms":
-                            newbrick.setupGameObject( world, null, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.PLATFORMS, null, null, over );
-                            break;
-                        case "ladder":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.LADDER, null, null, over );
-                            break;
-                        case "leftslope":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.LEFTSLOPE, null, null, over );
-                            break;
-                        case "rightslope":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.RIGHTSLOPE, null, null, over );
-                            break;
-                        case "miscs":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.MISC, null, null, over );
-                            break;
-                        case "item":
-                            if (checkQual( tlcece.getProperties() )) {
-                                newbrick.setupGameObject( world, tlcece, xx,yy, ww, hh, BodyDef.BodyType.StaticBody, ITEM, null, null, false );
-                            }
-                            break;
-                        case "block":
-                            if (checkQual( tlcece.getProperties() )) {
-                                newbrick.setupGameObject( world, tlcece, xx,yy, ww, hh, BodyDef.BodyType.StaticBody, BLOCK, null, null, false );
-                            }
-                            break;
-                        case "listener":
-                            if (checkQual( tlcece.getProperties() )) {
-                                newbrick.setupGameObject( world, tlcece, xx,yy, ww, hh, BodyDef.BodyType.StaticBody, LISTENER, null, null, false );
-                            }
-                            break;
-                        case "action":
-                            newbrick.setupGameObject( world, tlcece, xx,yy, ww, hh, BodyDef.BodyType.StaticBody, LISTENER, null, null, false );
+        if (o.containsKey( "mode" )) {
+            if (o.get( "mode" ).toString().equalsIgnoreCase( "rpg" )) {
+                world.setGravity( new Vector2( 0f, 0f ) );
+                jumping = false;
+                rpg = true;
+                return;
+            }
+        }
 
-                            return;
+        if (o.containsKey( "name" )) {
+            switch (o.get( "name" ).toString()) {
+                case "player":
+                    String anim = o.get( "anim" ).toString();
+                    Texture txPlayer = new Texture( getFile( path + "/" + anim ) );
+                    TextureRegion[][] tmp = TextureRegion.split( txPlayer,
+                            txPlayer.getWidth() / 4,
+                            txPlayer.getHeight() / 4 );
 
-
-                    default: //other names, including the old monster
-                            TiledMapTile o = cece.getTile();
-                            newbrick.speed = (o.getProperties().containsKey( "speed" )) ? Float.parseFloat( o.getProperties().get( "speed" ).toString() ) : 0.5f;
-                            newbrick.chase = (o.getProperties().containsKey( "chase" )) ? true : false;
-                            newbrick.chaseRadius = (o.getProperties().containsKey( "chaseRadius" )) ? Float.parseFloat( o.getProperties().get( "chaseRadius" ).toString() ) : 100f;
-                            if (o.getProperties().containsKey( "path" )) {
-                                String[] ss = o.getProperties().get( "path" ).toString().split( "," );
-                                int[] myArray = new int[ss.length];
-
-                                for (int i = 0; i < myArray.length; i++) {
-                                    int k = 0;
-                                    switch (ss[i]) {
-                                        case "down":
-                                            k = 0;
-                                            break;
-                                        case "right":
-                                            k = 1;
-                                            break;
-                                        case "left":
-                                            k = 2;
-                                            break;
-                                        case "up":
-                                            k = 3;
-                                            break;
-                                        default:
-                                            k = Integer.parseInt( ss[i] );
-                                    }
-                                    myArray[i] = k;
-                                }
-                                newbrick.path = myArray; //new int[]{0,0,2,2,3,3,1,1,2,1};
-
-                            } else {
-                                newbrick.path = null; //new int[]{0,0,2,2,3,3,1,1,2,1};
-
-                            }
-                            newbrick.bird = (o.getProperties().containsKey( "bird" )) ? true : false;
-                            newbrick.canshoot = (o.getProperties().containsKey( "canshoot" )) ? true : false;
-                            newbrick.pcooldown = (o.getProperties().containsKey( "pcooldown" )) ? Float.parseFloat( o.getProperties().get( "pcooldown" ).toString() ) : 1;
-                            newbrick.pspeed = (o.getProperties().containsKey( "pspeed" )) ? Float.parseFloat( o.getProperties().get( "pspeed" ).toString() ) : 4;
-                            newbrick.pmaxdistance = (o.getProperties().containsKey( "pmaxdistance" )) ? Integer.parseInt( o.getProperties().get( "pmaxdistance" ).toString() ) : 300;
-                            newbrick.pdamage = (o.getProperties().containsKey( "pdamage" )) ? Integer.parseInt( o.getProperties().get( "pdamage" ).toString() ) : 1;
-                            Vector2 imgsize= new Vector2(16f,16f);
-                            Vector2 pimgsize= new Vector2(16f,16f);
-
-                            if (o.getProperties().containsKey( "anim" )) {
-                                anim = o.getProperties().get( "anim" ).toString();
-                                Texture txMonster = new Texture( getFile( path + "/" + anim ) );
-                                tmp = TextureRegion.split( txMonster,
-                                        txMonster.getWidth() / 4,
-                                        txMonster.getHeight() / 4 );
-                                imgsize=new Vector2(txMonster.getWidth()/4,txMonster.getHeight() / 4);
-                                for (int i = 0; i < 4; i++) {
-                                    TextureRegion[] walkFrames = new TextureRegion[4];
-                                    int index = 0;
-                                    for (int j = 0; j < 4; j++) {
-                                        walkFrames[index++] = tmp[i][j];
-                                    }
-                                    Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
-                                    newbrick.anim.add( tempAnim );
-                                }
-                            }
-
-                            if (o.getProperties().containsKey( "panim" )) {
-                                anim = o.getProperties().get( "panim" ).toString();
-                                Texture txMonster = new Texture( getFile( path + "/" + anim ) );
-                                tmp = TextureRegion.split( txMonster,
-                                        txMonster.getWidth() / 4,
-                                        txMonster.getHeight() / 4 );
-                                newbrick.pimagesize=new Vector2(txMonster.getWidth()/4,txMonster.getHeight() / 4);
-                                for (int i = 0; i < 4; i++) {
-                                    TextureRegion[] walkFrames = new TextureRegion[4];
-                                    int index = 0;
-                                    for (int j = 0; j < 4; j++) {
-                                        walkFrames[index++] = tmp[i][j];
-                                    }
-                                    Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
-                                    newbrick.panim.add( tempAnim );
-                                }
-                            }
-
-                            newbrick.mygame = this;
-                            if (newbrick.bird || newbrick.heavy) {
-                                newbrick.setupGameObject( world, tlcece, (int) xx, (int) yy, imgsize.x, imgsize.y, BodyDef.BodyType.KinematicBody, gameobject.objecttype.MONSTER, null, null, false );
-                            } else {
-                                newbrick.setupGameObject( world, tlcece, (int) xx, (int) yy, imgsize.x, imgsize.y, BodyDef.BodyType.DynamicBody, gameobject.objecttype.MONSTER, null, null, false );
-
-                            }
-
+                    for (int i = 0; i < 4; i++) {
+                        TextureRegion[] walkFrames = new TextureRegion[4];
+                        int index = 0;
+                        for (int j = 0; j < 4; j++) {
+                            walkFrames[index++] = tmp[i][j];
+                        }
+                        Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
+                        newbrick.anim.add( tempAnim );
                     }
 
+                    newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLAYER, objx, t, over );
+                    player = newbrick;
+                    break;
+                case "brick":
+                    newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.BRICK, objx, t, over );
+                    break;
+                case "halfbrick":
+                    newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.HALFBRICK, objx, t, over );
+                    break;
+                case "box":
+                    newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.DynamicBody, gameobject.objecttype.BOX, objx, t, over );
+                    break;
+                case "checkpoint":
+                    newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, CHECKPOINT, objx, t, over );
+                    break;
+                case "spring":
+                    newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.SPRING, objx, t, over );
+                    break;
+                case "switch":
+                    newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.SWITCH, objx, t, over );
+                    break;
+                case "switchon":
+                    newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.SWITCHON, objx, t, over );
+                    break;
+                case "switchoff":
+                    newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.SWITCHOFF, objx, t, over );
+                    break;
+                case "platformh":
+                    newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLATFORMH, objx, t, over );
+                    break;
+                case "platformv":
+                    newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLATFORMV, objx, t, over );
+                    break;
+                case "platforms":
+                    newbrick.setupGameObject( world, null, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.PLATFORMS, objx, t, over );
+                    break;
+                case "ladder":
+                    newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.LADDER, objx, t, over );
+                    break;
+                case "leftslope":
+                    newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.LEFTSLOPE, objx, t, over );
+                    break;
+                case "rightslope":
+                    newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.RIGHTSLOPE, objx, t, over );
+                    break;
+                case "miscs":
+                    newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.MISC, objx, t, over );
+                    break;
+                case "item":
+                    if (checkQual( o)) {
+                        newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, ITEM, objx, t, over );
+                    }
+                    break;
+                case "block":
+                    if (checkQual( o )) {
+                        newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, BLOCK, objx, t, over );
+                    }
+                    break;
+                case "listener":
+                    if (checkQual( o )) {
+                        newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, LISTENER, objx, t, over );
+                    }
+                    break;
+                case "action":
+                    newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, LISTENER, objx, t, over );
 
-                    if (flip) newbrick.rotate( 180 );
-                    if (rota != 0) newbrick.rotate( rota * 90 );
-                    if (newbrick.getWidth() > 0) objects.add( newbrick );
-                
-            }else{
-                gameobject newbrick = new gameobject();
-                newbrick.mygame = this;
-                newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.MISC, null, null, over );
-                if (flip) newbrick.rotate( 180 );
-                if (rota != 0) newbrick.rotate( rota * 90 );
-                if (newbrick.getWidth() > 0) objects.add( newbrick );
+                    return;
 
-            }
-            cece.setTile( null );
-        }else if (object) {
-            TextureRegion t=null;
-            if (obj instanceof TiledMapTileMapObject){
-                t=((TiledMapTileMapObject) obj).getTextureRegion();
-            }
 
-            if (obj.getProperties().get( "name" )=="item") {
-                if (checkQual( obj.getProperties() )) {
-                    gameobject newbrick = new gameobject();
-                    newbrick.mygame = this;
-                    newbrick.setupGameObject( world, null, xx,yy, ww, hh, BodyDef.BodyType.StaticBody, ITEM, obj, t, false );
-                    this.objects.add( newbrick );
-                }
-            }
-            if (obj.getProperties().get( "name" )=="block") {
-                if (checkQual(  obj.getProperties() )) {
-                    gameobject newbrick = new gameobject();
-                    newbrick.mygame = this;
-                    newbrick.setupGameObject( world, null, xx,yy,ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.BLOCK, obj, t, false );
-                    this.objects.add( newbrick );
-                }
-            }
-            if (obj.getProperties().get( "name" )=="enemy") {
-                if (checkQual(  obj.getProperties() )) {
-                    gameobject newbrick = new gameobject();
-
-                    newbrick.HP = (obj.getProperties().containsKey( "HP" )) ? Integer.parseInt( obj.getProperties().get( "HP" ).toString() ) : 1;
-                    newbrick.maxHP = newbrick.HP;
-                    newbrick.speed = (obj.getProperties().containsKey( "speed" )) ? Float.parseFloat( obj.getProperties().get( "speed" ).toString() ) : 0.5f;
-                    newbrick.chase = (obj.getProperties().containsKey( "chase" )) ? Boolean.parseBoolean( obj.getProperties().get( "chase" ).toString() ) : false;
-                    newbrick.chaseRadius = (obj.getProperties().containsKey( "chaseRadius" )) ? Float.parseFloat( obj.getProperties().get( "chaseRadius" ).toString() ) : 100f;
-                    if (obj.getProperties().containsKey( "path" )) {
-                        String[] ss = obj.getProperties().get( "path" ).toString().split( "," );
+                default: //other names, including the old monster
+                    newbrick.speed = (o.containsKey( "speed" )) ? Float.parseFloat( o.get( "speed" ).toString() ) : 0.5f;
+                    newbrick.chase = (o.containsKey( "chase" )) ? true : false;
+                    newbrick.chaseRadius = (o.containsKey( "chaseRadius" )) ? Float.parseFloat( o.get( "chaseRadius" ).toString() ) : 100f;
+                    if (o.containsKey( "path" )) {
+                        String[] ss = o.get( "path" ).toString().split( "," );
                         int[] myArray = new int[ss.length];
 
                         for (int i = 0; i < myArray.length; i++) {
@@ -1134,20 +1025,19 @@ public class game {
                         newbrick.path = null; //new int[]{0,0,2,2,3,3,1,1,2,1};
 
                     }
-                    newbrick.damage = (obj.getProperties().containsKey( "damage" )) ? Float.parseFloat( obj.getProperties().get( "damage" ).toString() ) : 1f;
-                    newbrick.bird = (obj.getProperties().containsKey( "bird" )) ? Boolean.parseBoolean( obj.getProperties().get( "bird" ).toString() ) : false;
-                    newbrick.canshoot = (obj.getProperties().containsKey( "canshoot" )) ? true : false;
-                    newbrick.pcooldown = (obj.getProperties().containsKey( "pcooldown" )) ? Float.parseFloat( obj.getProperties().get( "pcooldown" ).toString() ) : 1;
-                    newbrick.pspeed = (obj.getProperties().containsKey( "pspeed" )) ? Float.parseFloat( obj.getProperties().get( "pspeed" ).toString() ) : 4;
-                    newbrick.pmaxdistance = (obj.getProperties().containsKey( "pmaxdistance" )) ? Integer.parseInt( obj.getProperties().get( "pmaxdistance" ).toString() ) : 300;
-                    newbrick.pdamage = (obj.getProperties().containsKey( "pdamage" )) ? Integer.parseInt( obj.getProperties().get( "pdamage" ).toString() ) : 1;
+                    newbrick.bird = (o.containsKey( "bird" )) ? true : false;
+                    newbrick.canshoot = (o.containsKey( "canshoot" )) ? true : false;
+                    newbrick.pcooldown = (o.containsKey( "pcooldown" )) ? Float.parseFloat( o.get( "pcooldown" ).toString() ) : 1;
+                    newbrick.pspeed = (o.containsKey( "pspeed" )) ? Float.parseFloat( o.get( "pspeed" ).toString() ) : 4;
+                    newbrick.pmaxdistance = (o.containsKey( "pmaxdistance" )) ? Integer.parseInt( o.get( "pmaxdistance" ).toString() ) : 300;
+                    newbrick.pdamage = (o.containsKey( "pdamage" )) ? Integer.parseInt( o.get( "pdamage" ).toString() ) : 1;
                     Vector2 imgsize = new Vector2( 16f, 16f );
                     Vector2 pimgsize = new Vector2( 16f, 16f );
 
-                    if (obj.getProperties().containsKey( "anim" )) {
-                        String anim = obj.getProperties().get( "anim" ).toString();
+                    if (o.containsKey( "anim" )) {
+                        anim = o.get( "anim" ).toString();
                         Texture txMonster = new Texture( getFile( path + "/" + anim ) );
-                        TextureRegion[][] tmp = TextureRegion.split( txMonster,
+                        tmp = TextureRegion.split( txMonster,
                                 txMonster.getWidth() / 4,
                                 txMonster.getHeight() / 4 );
                         imgsize = new Vector2( txMonster.getWidth() / 4, txMonster.getHeight() / 4 );
@@ -1162,10 +1052,10 @@ public class game {
                         }
                     }
 
-                    if (obj.getProperties().containsKey( "panim" )) {
-                        String anim = obj.getProperties().get( "panim" ).toString();
+                    if (o.containsKey( "panim" )) {
+                        anim = o.get( "panim" ).toString();
                         Texture txMonster = new Texture( getFile( path + "/" + anim ) );
-                        TextureRegion[][] tmp = TextureRegion.split( txMonster,
+                        tmp = TextureRegion.split( txMonster,
                                 txMonster.getWidth() / 4,
                                 txMonster.getHeight() / 4 );
                         newbrick.pimagesize = new Vector2( txMonster.getWidth() / 4, txMonster.getHeight() / 4 );
@@ -1181,29 +1071,26 @@ public class game {
                     }
 
                     newbrick.mygame = this;
-                    if (newbrick.bird) {
-                        newbrick.setupGameObject( world, null, xx, yy, imgsize.x, imgsize.y, BodyDef.BodyType.KinematicBody, gameobject.objecttype.ENEMY, obj, t, false );
+                    if (newbrick.bird || newbrick.heavy) {
+                        newbrick.setupGameObject( world, tlcece, (int) xx, (int) yy, imgsize.x, imgsize.y, BodyDef.BodyType.KinematicBody, gameobject.objecttype.MONSTER, objx, t, over );
                     } else {
-                        newbrick.setupGameObject( world, null, xx, yy, imgsize.x, imgsize.y, BodyDef.BodyType.DynamicBody, gameobject.objecttype.ENEMY, obj, t, false );
+                        newbrick.setupGameObject( world, tlcece, (int) xx, (int) yy, imgsize.x, imgsize.y, BodyDef.BodyType.DynamicBody, gameobject.objecttype.MONSTER, objx, t, over );
 
                     }
-                    this.objects.add( newbrick );
 
-
-                }
             }
 
-            if (obj.getProperties().containsKey( "mode" )) {
-                if (obj.getProperties().get( "mode" ).toString().equalsIgnoreCase( "rpg" )) {
-                    world.setGravity( new Vector2( 0f, 0f ) );
-                    jumping = false;
-                    rpg = true;
-                }
-            }
 
+        }else{ //no name properties, decoration tile.
+            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.MISC, objx, t, over );
         }
-    }
 
+        if (flip) newbrick.rotate( 180 );
+        if (rota != 0) newbrick.rotate( rota * 90 );
+        objects.add( newbrick );
+        if (!object) cece.setTile( null );
+
+    }
 
 }
 
