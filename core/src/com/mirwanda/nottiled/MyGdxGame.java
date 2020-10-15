@@ -55,7 +55,7 @@ import com.esotericsoftware.kryonet.Server;
 import com.mirwanda.nottiled.ai.ATGraph;
 import com.mirwanda.nottiled.ai.AutoTile;
 import com.mirwanda.nottiled.platformer.game;
-import com.mirwanda.nottiled.platformer.player;
+import com.mirwanda.nottiled.platformer.gameobject;
 
 import static java.lang.Thread.sleep;
 
@@ -1084,9 +1084,9 @@ String texta="";
                             }
                         }
                         //uisrect(gui.restart,mouse,null);
-                        if (mygame.player.state == player.playerState.DEAD ||(mygame.victory && mygame.nextlevel!=null)||mygame.starting) uisrect(gui.respawn,mouse,new Color(0,1f,0,1f));
+                        if (mygame.player.state == gameobject.states.DEAD ||(mygame.victory && mygame.nextlevel!=null)||mygame.starting) uisrect(gui.respawn,mouse,new Color(0,1f,0,1f));
                         if (mygame.playtest) uisrect(gui.exit,mouse,null);
-                        if (mygame.victory || mygame.player.state == player.playerState.DEAD || mygame.starting) uisrect(gui.gamestatus,mouse,null);
+                        if (mygame.victory || mygame.player.state == gameobject.states.DEAD || mygame.starting) uisrect(gui.gamestatus,mouse,null);
                         uis.end();
 
                         ui.setProjectionMatrix(uicam.combined);
@@ -1108,7 +1108,7 @@ String texta="";
 
 
                         }
-                        else if (mygame.player.state == player.playerState.DEAD)
+                        else if (mygame.player.state == gameobject.states.DEAD)
                         {
                             String msg = mygame.died;
                             if (msg==null) msg = "Oops... try again?";
@@ -1129,7 +1129,7 @@ String texta="";
 
                         }
                         //str1draw(ui,"Restart", gui.restart);
-                        if (mygame.player.state == player.playerState.DEAD) str1draw(ui,"Respawn", gui.respawn);
+                        if (mygame.player.state == gameobject.states.DEAD) str1draw(ui,"Respawn", gui.respawn);
                         if (mygame.victory && mygame.nextlevel!=null) str1draw(ui,"Next Level", gui.respawn);
                         if (mygame.starting) str1draw(ui,"OK", gui.respawn);
                         if (mygame.playtest) str1draw(ui,"Exit", gui.exit);
@@ -1490,7 +1490,7 @@ String texta="";
                     }
 
                 }
-                else if(mygame.player.state== player.playerState.DEAD){
+                else if(mygame.player.state== gameobject.states.DEAD){
                     mygame.respawn();
                 }
             }
@@ -1514,7 +1514,7 @@ String texta="";
 
                         if (tapped(touch2, gui.gamestatus) && touchable) {
                             touchable=false;
-                            if (mygame.player.state == player.playerState.DEAD) {
+                            if (mygame.player.state == gameobject.states.DEAD) {
                                 mygame.respawn();
                             }
                             if (mygame.victory && mygame.nextlevel!=null) {
@@ -1533,7 +1533,7 @@ String texta="";
                     if (mygame.victory || mygame.starting) return;
                     //no press when dead, no press when desktop
                     if (Gdx.app.getType() != Application.ApplicationType.Desktop || mygame.uitest) {
-                        if (mygame.player.state == com.mirwanda.nottiled.platformer.player.playerState.DEAD)
+                        if (mygame.player.state == com.mirwanda.nottiled.platformer.gameobject.states.DEAD)
                             return;
                         if (tapped( touch2, gui.up ) && mygame.rpg)
                         {mygame.pressup();
@@ -20100,7 +20100,7 @@ String texta="";
                 msgbox("Error, make sure to put your game on the Sample folder.");
             }
             gamecam.zoom = 0.2f;
-            gamecam.position.set(mygame.player.b2body.getPosition().x,mygame.player.b2body.getPosition().y,0);
+            gamecam.position.set(mygame.player.body.getPosition().x,mygame.player.body.getPosition().y,0);
             gamecam.update();
             //mygame.starting=true;
 
@@ -20124,7 +20124,7 @@ String texta="";
                         msgbox("Error, make sure to put your game on the Sample folder.");
                     }
                     gamecam.zoom = 0.2f;
-                    gamecam.position.set(mygame.player.b2body.getPosition().x,mygame.player.b2body.getPosition().y,0);
+                    gamecam.position.set(mygame.player.body.getPosition().x,mygame.player.body.getPosition().y,0);
                     gamecam.update();
                     //mygame.starting=true;
                 }

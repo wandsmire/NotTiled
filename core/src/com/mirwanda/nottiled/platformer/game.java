@@ -40,13 +40,12 @@ import java.util.ArrayList;
 
 import javax.xml.soap.Text;
 
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BLOCK;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.CHECKPOINT;
-import static com.mirwanda.nottiled.platformer.gameobject.objecttype.COIN;
-import static com.mirwanda.nottiled.platformer.gameobject.objecttype.GEAR;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ITEM;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.LISTENER;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYERPROJECTILE;
-import static com.mirwanda.nottiled.platformer.gameobject.objecttype.SPIKE;
-import static com.mirwanda.nottiled.platformer.player.playerState.DEAD;
+import static com.mirwanda.nottiled.platformer.gameobject.states.DEAD;
 
 
 public class game {
@@ -68,11 +67,9 @@ public class game {
     public savegame save = new savegame();
 
     public Vector2 checkpoint = new Vector2();
-    public com.mirwanda.nottiled.platformer.player player;
+    public gameobject player;
     public java.util.List<gameobject> objects = new ArrayList<gameobject>();
 
-    java.util.List<Animation<TextureRegion>> animPlayer = new ArrayList<>(); // Must declare frame type (TextureRegion)
-    Texture txPlayer;
     public Texture txBackground;
 
     //SOUND
@@ -119,7 +116,7 @@ public class game {
     public float Tsw;
     public float Tsh;
     public ParticleEffect meledak;
-    public int maxhp=10;
+    public int maxhp=1000;
 
     public boolean initialise(String path, String filename){
 
@@ -228,7 +225,7 @@ public class game {
 
             }
         }
-        checkpoint.set(player.b2body.getPosition().x,player.b2body.getPosition().y);
+        checkpoint.set(player.body.getPosition().x,player.body.getPosition().y);
 
         victory=false;
         loadingmap=false;
@@ -241,10 +238,10 @@ public class game {
     public void log(String s){
         Gdx.app.log( "LOJ",s );
     }
-    public boolean checkQual(MapObject o){
+    public boolean checkQual(MapProperties o){
         boolean qual=true;
-        if (o.getProperties().get( "required" )!=null){
-            String[] ss = o.getProperties().get( "required" ).toString().split( "," );
+        if (o.get( "requires" )!=null){
+            String[] ss = o.get( "requires" ).toString().split( "," );
             qual=false;
             int rq=0;
             boolean recheck=true;
@@ -274,7 +271,6 @@ public class game {
             }
             if (rq==ss.length) qual=true;
         }
-        Gdx.app.log( "A",qual+"" );
 
         if (qual)
         {
@@ -320,11 +316,11 @@ public class game {
         if (!starting) world.step(1/60f,6,2);
         cooldown-=delta;
 
-        if (HP<=0){
+        if (player.HP<=0){
             killPlayer();
         }
         if (!rpg) {
-            if (Math.abs( player.b2body.getLinearVelocity().y ) >= 0.2f) {
+            if (Math.abs( player.body.getLinearVelocity().y ) >= 0.2f) {
                 jumping = true;
                 jumpinterval = 0;
             } else {
@@ -337,7 +333,7 @@ public class game {
             stompinterval -= delta;
             if (stompinterval < 0) stompinterval = 0;
         }
-        if (player.b2body.getPosition().y<=-32/100f && player.state != DEAD)
+        if (player.body.getPosition().y<=-32/100f && player.state != DEAD)
         {
             //playSfx(sfxplayer);
             dead+=1;
@@ -347,11 +343,11 @@ public class game {
 
 
 
-        //gamecam.position.set(player.b2body.getPosition().x,player.b2body.getPosition().y,0);
+        //gamecam.position.set(player.body.getPosition().x,player.body.getPosition().y,0);
 
         //if (gamecam.position.x >)
-        float posex = player.b2body.getPosition().x;
-        float posey = player.b2body.getPosition().y;
+        float posex = player.body.getPosition().x;
+        float posey = player.body.getPosition().y;
 
         float lerp = 5f;
         Vector3 position = gamecam.position;
@@ -364,18 +360,18 @@ public class game {
 
         stateTime += delta;
         if (starting){
-            TextureRegion currentFramea = animPlayer.get(dir).getKeyFrame(0, true);
+            TextureRegion currentFramea = player.anim.get(dir).getKeyFrame(0, true);
             player.setRegion(currentFramea);
 
         }
         else if (player.moving && (!jumping || onplatformv) && (!ladder && !floater && !sinker))
         {
             playerTime +=delta;
-            TextureRegion currentFramea = animPlayer.get(dir).getKeyFrame(playerTime, true);
+            TextureRegion currentFramea = player.anim.get(dir).getKeyFrame(playerTime, true);
             player.setRegion(currentFramea);
         }
         else if (jumping && !ladder && !floater && !sinker && !onplatformv) {
-            TextureRegion currentFramea = animPlayer.get(dir).getKeyFrame(0.5f, true);
+            TextureRegion currentFramea = player.anim.get(dir).getKeyFrame(0.5f, true);
             player.setRegion(currentFramea);
         }
         else if ((ladder || floater || sinker) && player.moving )
@@ -384,13 +380,13 @@ public class game {
 
             playerTime +=delta;
 
-            TextureRegion currentFramea = animPlayer.get(dir).getKeyFrame(playerTime, true);
+            TextureRegion currentFramea = player.anim.get(dir).getKeyFrame(playerTime, true);
             player.setRegion(currentFramea);
 
         }else
         {
             //idle animation if you will...
-            TextureRegion currentFramea = animPlayer.get(dir).getKeyFrame(0, true);
+            TextureRegion currentFramea = player.anim.get(dir).getKeyFrame(0, true);
             player.setRegion(currentFramea);
         }
 
@@ -398,25 +394,21 @@ public class game {
         if(touchedladder>0) { ladder=true; }
         else { ladder=false; }
 
-        if(touchedfloater>0) { floater=true; }
-        else { floater=false; }
 
-        if(touchedsinker>0) { sinker=true; }
-        else { sinker=false; }
 
         if (floater){
-            player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x,0);
-            player.b2body.setGravityScale(-0.7f);
+            player.body.setLinearVelocity(player.body.getLinearVelocity().x,0);
+            player.body.setGravityScale(-0.7f);
         }else if (ladder){
-            player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x,0);
-            player.b2body.setGravityScale(0f);
+            player.body.setLinearVelocity(player.body.getLinearVelocity().x,0);
+            player.body.setGravityScale(0f);
         }else if (sinker){
 
-            player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x,0);
-            player.b2body.setGravityScale(0.7f);
+            player.body.setLinearVelocity(player.body.getLinearVelocity().x,0);
+            player.body.setGravityScale(0.7f);
         } else
         {
-            player.b2body.setGravityScale(1);
+            player.body.setGravityScale(1);
         }
 
 
@@ -436,7 +428,8 @@ public class game {
             player.draw(batch);
         }else
         {
-            player.b2body.setActive(false);
+            player.body.setActive(false);
+            objects.remove( player );
         }
 
         for (gameobject sboxes:objects)
@@ -468,16 +461,16 @@ public class game {
 
         if (!rpg) {
             if ((!jumping || onplatformv) && !ladder && !sinker && !floater) {
-                player.b2body.applyLinearImpulse( 0f, jumpForce, player.getX(), player.getY(), true );
+                player.body.applyLinearImpulse( 0f, jumpForce, player.getX(), player.getY(), true );
                 jumping = true;
                 onplatformv = false;
             }
             if (ladder || floater || sinker) {
-                player.b2body.setLinearVelocity( 0, slowSpeed );
+                player.body.setLinearVelocity( 0, slowSpeed );
             }
         }else{
-            if (ladder || floater || sinker) {player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x,slowSpeed);}
-                player.b2body.setLinearVelocity(0,rpgSpeed);
+            if (ladder || floater || sinker) {player.body.setLinearVelocity(player.body.getLinearVelocity().x,slowSpeed);}
+                player.body.setLinearVelocity(0,rpgSpeed);
 
         }
     }
@@ -488,15 +481,15 @@ public class game {
 
         if (!rpg) {
             if (stompinterval == 0 && !ladder && !sinker && !floater) {
-                player.b2body.applyLinearImpulse( 0f, -stompForce, player.getX(), player.getY(), true );
+                //player.body.applyLinearImpulse( 0f, -stompForce, player.getX(), player.getY(), true );
                 stompinterval = 1;
             }
             if (ladder || floater || sinker) {
-                player.b2body.setLinearVelocity( player.b2body.getLinearVelocity().x, -slowSpeed );
+                player.body.setLinearVelocity( player.body.getLinearVelocity().x, -slowSpeed );
             }
         }else{
-            if (ladder || floater || sinker) {player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x,-slowSpeed);}
-            player.b2body.setLinearVelocity(0,-rpgSpeed);
+            if (ladder || floater || sinker) {player.body.setLinearVelocity(player.body.getLinearVelocity().x,-slowSpeed);}
+            player.body.setLinearVelocity(0,-rpgSpeed);
 
 
         }
@@ -506,13 +499,12 @@ public class game {
     public void pressleft(){
         player.moving=true;
         dir=2;
-        if (ladder || floater || sinker) {player.b2body.setLinearVelocity(-slowSpeed,player.b2body.getLinearVelocity().y);}
-        if (player.b2body.getLinearVelocity().x >=-speedLimit) {
-            player.faceright=false;
+        if (ladder || floater || sinker) {player.body.setLinearVelocity(-slowSpeed,player.body.getLinearVelocity().y);}
+        if (player.body.getLinearVelocity().x >=-speedLimit) {
             if (!rpg){
-                player.b2body.applyLinearImpulse(-walkForce, 0, player.getX(), player.getY(), true);
+                player.body.applyLinearImpulse(-walkForce, 0, player.getX(), player.getY(), true);
             }else{
-                player.b2body.setLinearVelocity(-rpgSpeed,0);
+                player.body.setLinearVelocity(-rpgSpeed,0);
 
             }
         }
@@ -520,13 +512,13 @@ public class game {
     public void pressright(){
         player.moving=true;
         dir=1;
-        if (ladder || floater || sinker) {player.b2body.setLinearVelocity(slowSpeed,player.b2body.getLinearVelocity().y);}
-        if (player.b2body.getLinearVelocity().x <=speedLimit){
+        if (ladder || floater || sinker) {player.body.setLinearVelocity(slowSpeed,player.body.getLinearVelocity().y);}
+        if (player.body.getLinearVelocity().x <=speedLimit){
             if (!rpg){
 
-                player.b2body.applyLinearImpulse(walkForce, 0, player.getX(), player.getY(), true);
+                player.body.applyLinearImpulse(walkForce, 0, player.getX(), player.getY(), true);
             }else{
-                player.b2body.setLinearVelocity(rpgSpeed,0);
+                player.body.setLinearVelocity(rpgSpeed,0);
 
             }
 
@@ -537,20 +529,20 @@ public class game {
     public void stand(){
         if (!rpg) {
             player.moving = false;
-            player.b2body.setLinearVelocity( 0, player.b2body.getLinearVelocity().y );
+            player.body.setLinearVelocity( 0, player.body.getLinearVelocity().y );
             if (onplatformh) {
-                player.b2body.setLinearVelocity( currentplatform.body.getLinearVelocity().x, player.b2body.getLinearVelocity().y );
+                player.body.setLinearVelocity( currentplatform.body.getLinearVelocity().x, player.body.getLinearVelocity().y );
             } else if (onplatformv) {
-                //player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x, currentplatform.body.getLinearVelocity().y);
+                //player.body.setLinearVelocity(player.body.getLinearVelocity().x, currentplatform.body.getLinearVelocity().y);
             }
         }else
         {
             player.moving = false;
-            player.b2body.setLinearVelocity( 0, 0 );
+            player.body.setLinearVelocity( 0, 0 );
             if (onplatformh) {
-                player.b2body.setLinearVelocity( currentplatform.body.getLinearVelocity().x, player.b2body.getLinearVelocity().y );
+                player.body.setLinearVelocity( currentplatform.body.getLinearVelocity().x, player.body.getLinearVelocity().y );
             } else if (onplatformv) {
-                //player.b2body.setLinearVelocity(player.b2body.getLinearVelocity().x, currentplatform.body.getLinearVelocity().y);
+                //player.body.setLinearVelocity(player.body.getLinearVelocity().x, currentplatform.body.getLinearVelocity().y);
             }
 
         }
@@ -635,8 +627,8 @@ public class game {
         newbrick.maxdistance=300f;
         newbrick.damage=1;
         newbrick.dir=dir;
-        float posx=player.b2body.getPosition().x;
-        float posy=player.b2body.getPosition().y;
+        float posx=player.body.getPosition().x;
+        float posy=player.body.getPosition().y;
         switch (dir){
             case 0:
                 newbrick.setRotation( 180 );
@@ -667,8 +659,8 @@ public class game {
 
     public void save(){
         save.mapname=file;
-        save.x=player.b2body.getPosition().x;
-        save.y=player.b2body.getPosition().y;
+        save.x=player.body.getPosition().x;
+        save.y=player.body.getPosition().y;
         Json json = new Json();
         FileHandle file = Gdx.files.local(path + "/save.json");
         StringWriter sw = new StringWriter();
@@ -690,8 +682,8 @@ public class game {
 
             @Override
             public void run () {
-                player.b2body.setTransform(save.x, save.y,0);
-                player.b2body.setLinearVelocity( 0,0 );
+                player.body.setTransform(save.x, save.y,0);
+                player.body.setLinearVelocity( 0,0 );
             }
         });
 
@@ -702,7 +694,7 @@ public class game {
         {
             //playSfx(sfxplayer);
             dead+=1;
-            meledak.setPosition( player.b2body.getPosition().x, player.b2body.getPosition().y );
+            meledak.setPosition( player.body.getPosition().x, player.body.getPosition().y );
             meledak.reset(false);
             meledak.start();
             player.state= DEAD;
@@ -724,6 +716,7 @@ public class game {
     }
 
     public void setGameObject(boolean object, TiledMapTileLayer.Cell cece, float xx, float yy, float ww, float hh, boolean over, MapObject obj){
+
         if (!object && cece!=null) {
 
             TiledMapTile tlcece = cece.getTile();
@@ -732,32 +725,19 @@ public class game {
 
 
             if (cece.getTile().getProperties().containsKey( "name" )) {
-                if (cece.getTile().getProperties().get( "name" ).toString().equalsIgnoreCase( "player" )) {
-                    String anim = cece.getTile().getProperties().get( "anim" ).toString();
-                    txPlayer = new Texture( getFile( path + "/" + anim ) );
-                    TextureRegion[][] tmp = TextureRegion.split( txPlayer,
-                            txPlayer.getWidth() / 4,
-                            txPlayer.getHeight() / 4 );
-
-                    for (int i = 0; i < 4; i++) {
-                        TextureRegion[] walkFrames = new TextureRegion[4];
-                        int index = 0;
-                        for (int j = 0; j < 4; j++) {
-                            walkFrames[index++] = tmp[i][j];
-                        }
-                        Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
-                        animPlayer.add( tempAnim );
-                    }
-
-                    player = new player( world, tlcece.getTextureRegion(), (xx+6) / 100f, (yy) / 100f );//tlcece.getTextureRegion());
-
-
-                } else {
 
                     gameobject newbrick = new gameobject();
                     newbrick.mygame = this;
 
-                    if (cece.getTile().getProperties().containsKey( "sfx" )) {
+
+                newbrick.damage = (cece.getTile().getProperties().containsKey( "damage" )) ? Float.parseFloat( cece.getTile().getProperties().get( "damage" ).toString() ) : 0f;
+                newbrick.rotating = (cece.getTile().getProperties().containsKey( "rotating" )) ? true : false;
+                newbrick.destructible = (cece.getTile().getProperties().containsKey( "destructible" )) ? true : false;
+                newbrick.HP = (cece.getTile().getProperties().containsKey( "HP" )) ? Integer.parseInt( cece.getTile().getProperties().get( "HP" ).toString() ) : 1;
+                newbrick.heavy = (cece.getTile().getProperties().containsKey( "heavy" )) ? true : false;
+
+
+                if (cece.getTile().getProperties().containsKey( "sfx" )) {
                         String sfx = cece.getTile().getProperties().get("sfx").toString();
                         if (getFile( path + "/" + sfx ).exists())
                             newbrick.sfx = Gdx.audio.newSound( getFile( path + "/" + sfx ) );
@@ -768,7 +748,33 @@ public class game {
                             newbrick.sfxdead = Gdx.audio.newSound( getFile( path + "/" + sfx ) );
                     }
 
-                    switch (cece.getTile().getProperties().get( "name" ).toString()) {
+                if (cece.getTile().getProperties().containsKey( "size" )) {
+                    String[] sz = cece.getTile().getProperties().get("size").toString().split( "," );
+                    ww=Float.parseFloat(sz[0]);
+                    hh=Float.parseFloat(sz[1]);
+                }
+
+                switch (cece.getTile().getProperties().get( "name" ).toString()) {
+                        case "player":
+                            String anim = cece.getTile().getProperties().get( "anim" ).toString();
+                            Texture txPlayer = new Texture( getFile( path + "/" + anim ) );
+                            TextureRegion[][] tmp = TextureRegion.split( txPlayer,
+                                    txPlayer.getWidth() / 4,
+                                    txPlayer.getHeight() / 4 );
+
+                            for (int i = 0; i < 4; i++) {
+                                TextureRegion[] walkFrames = new TextureRegion[4];
+                                int index = 0;
+                                for (int j = 0; j < 4; j++) {
+                                    walkFrames[index++] = tmp[i][j];
+                                }
+                                Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
+                                newbrick.anim.add( tempAnim );
+                            }
+
+                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLAYER, null, null, over );
+                            player=newbrick;
+                            break;
                         case "brick":
                             newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.BRICK, null, null, over );
                             break;
@@ -780,24 +786,6 @@ public class game {
                             break;
                         case "checkpoint":
                             newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, CHECKPOINT, null, null, over );
-                            break;
-                        case "coin":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, COIN, null, null, over );
-                            break;
-                        case "spike":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, SPIKE, null, null, over );
-                            break;
-                        case "gear":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, GEAR, null, null, over );
-                            break;
-                        case "key":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww,hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.KEY, null, null, over );
-                            break;
-                        case "lock":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.LOCK, null, null, over );
-                            break;
-                        case "breakable":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.BREAKABLE, null, null, over );
                             break;
                         case "spring":
                             newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.SPRING, null, null, over );
@@ -823,12 +811,6 @@ public class game {
                         case "ladder":
                             newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.LADDER, null, null, over );
                             break;
-                        case "floater":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.FLOATER, null, null, over );
-                            break;
-                        case "sinker":
-                            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.SINKER, null, null, over );
-                            break;
                         case "leftslope":
                             newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.LEFTSLOPE, null, null, over );
                             break;
@@ -838,11 +820,27 @@ public class game {
                         case "miscs":
                             newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.MISC, null, null, over );
                             break;
-                        default: //other names, including the old monster
+                        case "item":
+                            if (checkQual( tlcece.getProperties() )) {
+                                newbrick.setupGameObject( world, tlcece, xx,yy, ww, hh, BodyDef.BodyType.StaticBody, ITEM, null, null, false );
+                            }
+                            break;
+                        case "block":
+                            if (checkQual( tlcece.getProperties() )) {
+                                newbrick.setupGameObject( world, tlcece, xx,yy, ww, hh, BodyDef.BodyType.StaticBody, BLOCK, null, null, false );
+                            }
+                            break;
+                        case "listener":
+                            if (checkQual( tlcece.getProperties() )) {
+                                newbrick.setupGameObject( world, tlcece, xx,yy, ww, hh, BodyDef.BodyType.StaticBody, LISTENER, null, null, false );
+                            }
+                            break;
+
+
+                    default: //other names, including the old monster
                             TiledMapTile o = cece.getTile();
-                            newbrick.HP = (o.getProperties().containsKey( "HP" )) ? Integer.parseInt( o.getProperties().get( "HP" ).toString() ) : 1;
                             newbrick.speed = (o.getProperties().containsKey( "speed" )) ? Float.parseFloat( o.getProperties().get( "speed" ).toString() ) : 0.5f;
-                            newbrick.chase = (o.getProperties().containsKey( "chase" )) ? Boolean.parseBoolean( o.getProperties().get( "chase" ).toString() ) : false;
+                            newbrick.chase = (o.getProperties().containsKey( "chase" )) ? true : false;
                             newbrick.chaseRadius = (o.getProperties().containsKey( "chaseRadius" )) ? Float.parseFloat( o.getProperties().get( "chaseRadius" ).toString() ) : 100f;
                             if (o.getProperties().containsKey( "path" )) {
                                 String[] ss = o.getProperties().get( "path" ).toString().split( "," );
@@ -874,8 +872,7 @@ public class game {
                                 newbrick.path = null; //new int[]{0,0,2,2,3,3,1,1,2,1};
 
                             }
-                            newbrick.damage = (o.getProperties().containsKey( "damage" )) ? Float.parseFloat( o.getProperties().get( "damage" ).toString() ) : 1f;
-                            newbrick.bird = (o.getProperties().containsKey( "bird" )) ? Boolean.parseBoolean( o.getProperties().get( "bird" ).toString() ) : false;
+                            newbrick.bird = (o.getProperties().containsKey( "bird" )) ? true : false;
                             newbrick.canshoot = (o.getProperties().containsKey( "canshoot" )) ? true : false;
                             newbrick.pcooldown = (o.getProperties().containsKey( "pcooldown" )) ? Float.parseFloat( o.getProperties().get( "pcooldown" ).toString() ) : 1;
                             newbrick.pspeed = (o.getProperties().containsKey( "pspeed" )) ? Float.parseFloat( o.getProperties().get( "pspeed" ).toString() ) : 4;
@@ -885,9 +882,9 @@ public class game {
                             Vector2 pimgsize= new Vector2(16f,16f);
 
                             if (o.getProperties().containsKey( "anim" )) {
-                                String anim = o.getProperties().get( "anim" ).toString();
+                                anim = o.getProperties().get( "anim" ).toString();
                                 Texture txMonster = new Texture( getFile( path + "/" + anim ) );
-                                TextureRegion[][] tmp = TextureRegion.split( txMonster,
+                                tmp = TextureRegion.split( txMonster,
                                         txMonster.getWidth() / 4,
                                         txMonster.getHeight() / 4 );
                                 imgsize=new Vector2(txMonster.getWidth()/4,txMonster.getHeight() / 4);
@@ -903,9 +900,9 @@ public class game {
                             }
 
                             if (o.getProperties().containsKey( "panim" )) {
-                                String anim = o.getProperties().get( "panim" ).toString();
+                                anim = o.getProperties().get( "panim" ).toString();
                                 Texture txMonster = new Texture( getFile( path + "/" + anim ) );
-                                TextureRegion[][] tmp = TextureRegion.split( txMonster,
+                                tmp = TextureRegion.split( txMonster,
                                         txMonster.getWidth() / 4,
                                         txMonster.getHeight() / 4 );
                                 newbrick.pimagesize=new Vector2(txMonster.getWidth()/4,txMonster.getHeight() / 4);
@@ -921,10 +918,10 @@ public class game {
                             }
 
                             newbrick.mygame = this;
-                            if (newbrick.bird) {
-                                newbrick.setupGameObject( world, null, (int) xx, (int) yy, imgsize.x, imgsize.y, BodyDef.BodyType.KinematicBody, gameobject.objecttype.MONSTER, null, null, false );
+                            if (newbrick.bird || newbrick.heavy) {
+                                newbrick.setupGameObject( world, tlcece, (int) xx, (int) yy, imgsize.x, imgsize.y, BodyDef.BodyType.KinematicBody, gameobject.objecttype.MONSTER, null, null, false );
                             } else {
-                                newbrick.setupGameObject( world, null, (int) xx, (int) yy, imgsize.x, imgsize.y, BodyDef.BodyType.DynamicBody, gameobject.objecttype.MONSTER, null, null, false );
+                                newbrick.setupGameObject( world, tlcece, (int) xx, (int) yy, imgsize.x, imgsize.y, BodyDef.BodyType.DynamicBody, gameobject.objecttype.MONSTER, null, null, false );
 
                             }
 
@@ -934,7 +931,7 @@ public class game {
                     if (flip) newbrick.rotate( 180 );
                     if (rota != 0) newbrick.rotate( rota * 90 );
                     if (newbrick.getWidth() > 0) objects.add( newbrick );
-                }
+                
             }else{
                 gameobject newbrick = new gameobject();
                 newbrick.mygame = this;
@@ -951,24 +948,24 @@ public class game {
                 t=((TiledMapTileMapObject) obj).getTextureRegion();
             }
 
-            if (obj.getProperties().containsKey( "item" )) {
-                if (checkQual( obj )) {
+            if (obj.getProperties().get( "name" )=="item") {
+                if (checkQual( obj.getProperties() )) {
                     gameobject newbrick = new gameobject();
                     newbrick.mygame = this;
                     newbrick.setupGameObject( world, null, xx,yy, ww, hh, BodyDef.BodyType.StaticBody, ITEM, obj, t, false );
                     this.objects.add( newbrick );
                 }
             }
-            if (obj.getProperties().containsKey( "block" )) {
-                if (checkQual( obj )) {
+            if (obj.getProperties().get( "name" )=="block") {
+                if (checkQual(  obj.getProperties() )) {
                     gameobject newbrick = new gameobject();
                     newbrick.mygame = this;
                     newbrick.setupGameObject( world, null, xx,yy,ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.BLOCK, obj, t, false );
                     this.objects.add( newbrick );
                 }
             }
-            if (obj.getProperties().containsKey( "enemy" )) {
-                if (checkQual( obj )) {
+            if (obj.getProperties().get( "name" )=="enemy") {
+                if (checkQual(  obj.getProperties() )) {
                     gameobject newbrick = new gameobject();
 
                     newbrick.HP = (obj.getProperties().containsKey( "HP" )) ? Integer.parseInt( obj.getProperties().get( "HP" ).toString() ) : 1;
