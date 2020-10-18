@@ -4,7 +4,18 @@ public class mytemplate
 {
 	public String name;
 	public String template;
-	public String auto;
+	public String extension;
+
+	public String getExtension_name() {
+		return extension_name;
+	}
+
+	public void setExtension_name(String extension_name) {
+		this.extension_name = extension_name;
+	}
+
+	public String extension_name;
+
 	public mytemplate(){}
 	
 	public void setName(String name)
@@ -27,13 +38,11 @@ public class mytemplate
 		return template;
 	}
 
-	public void setAuto(String auto)
-	{
-		this.auto = auto;
+	public String getExtension() {
+		return extension;
 	}
 
-	public String getAuto()
-	{
-		return auto;
+	public void setExtension(String extension) {
+		this.extension = extension;
 	}
 }

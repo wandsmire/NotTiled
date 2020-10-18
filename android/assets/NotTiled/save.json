@@ -1,15 +1,5 @@
 {
-vars: [
-	{
-		key: coin
-		value: 5
-		hud: true
-		iconx: 1
-		hasicon: true
-		icony: 2
-	}
-]
-x: 1.215
-y: 1.5249999
-mapname: Map01.tmx
+x: 1.5100019
+y: 0.9441671
+mapname: Map02.tmx
 }

@@ -39,6 +39,7 @@ allprojects {
         maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
         maven { url "https://oss.sonatype.org/content/repositories/releases/" }
         maven { url "http://repo.clojars.org/" }
+        maven { url "https://maven.sing-group.org/repository/maven/" }
     }
 }
 
@@ -134,6 +135,7 @@ project(":core") {
             exclude group: 'com.esotericsoftware.minlog', module: 'minlog'
         }
         implementation group: 'com.esotericsoftware', name: 'kryo', version: '4.0.1'
+        implementation group: 'jfugue', name: 'jfugue', version: '5.0.9'
     }
 }
 

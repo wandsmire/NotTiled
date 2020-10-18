@@ -3,6 +3,7 @@ package com.mirwanda.nottiled.platformer;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.g2d.Animation;
+import com.badlogic.gdx.graphics.g2d.ParticleEffect;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.MapObject;
@@ -33,7 +34,7 @@ public class gameobject extends Sprite {
     public Sound sfx,sfxdead;
     public enum move {RIGHT,LEFT,UP,DOWN}
     public int dir;
-    public boolean moving;
+    public boolean moving, dirlocked;
     public float damage=0;
     public float HP=1;
     public float maxHP=1;
@@ -50,6 +51,7 @@ public class gameobject extends Sprite {
     java.util.List<Animation<TextureRegion>> anim = new ArrayList<>(); // Must declare frame type (TextureRegion)
     java.util.List<Animation<TextureRegion>> panim = new ArrayList<>(); // Must declare frame type (TextureRegion)
     public Vector2 pimagesize;
+    public ParticleEffect meledak;
 
     ////
     public boolean chase;
@@ -92,6 +94,15 @@ public class gameobject extends Sprite {
         float Tshh=height/2f;
         float Tpx = Tswh;
         float Tpy = Tshh;
+
+
+        ///
+        meledak = new ParticleEffect();
+        meledak.load( mygame.getFile( mygame.path + "/died.p" ), mygame.getFile( mygame.path ) );
+        meledak.getEmitters().first().setPosition( Gdx.graphics.getWidth() / 2, Gdx.graphics.getHeight() / 2);
+        meledak.scaleEffect(0.001f, 0.001f); //kudu disini
+        ///
+
 
         if (tlcece!=null) {
             TextureRegion region = tlcece.getTextureRegion();
@@ -372,7 +383,7 @@ public class gameobject extends Sprite {
 
             case BLOCK:
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
-                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.PLAYERPROJECTILE_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.PLAYERPROJECTILE_BIT | game.ENEMYPROJECTILE_BIT;
                 /////
                 bdef.type = type;
                 bdef.position.set((xx + Tpx) / 100f, (yy + Tpy) / 100f);
@@ -558,6 +569,7 @@ public class gameobject extends Sprite {
     public Vector2 lastPos;
     public boolean rotating;
     public void update(float dt){
+        if (state==states.DEAD) return;
 
 
        if (body!=null) setPosition(body.getPosition().x-getWidth()/2f,body.getPosition().y-getHeight()/2f);
@@ -565,15 +577,17 @@ public class gameobject extends Sprite {
         if (rotating) rotate(5f);
         if (cooldown >=0) cooldown-=dt;
         if (destructible){
+            assert body != null;
+
+
             if (HP<=0 || body.getPosition().y<=-0.5f){
                 setCategoryFilter(game.DESTROYED_BIT);
+                state=states.DEAD;
                 body.setLinearVelocity( 0,0 );
-                mygame.objects.remove(this);
+                bumbum();
+                playSfx( sfxdead );
 
 
-                mygame.meledak.setPosition( body.getPosition().x, body.getPosition().y );
-                mygame.meledak.reset(false);
-                mygame.meledak.start();
 
                 MapProperties o=null;
                 if (obj!=null) o=obj.getProperties();
@@ -635,7 +649,7 @@ public class gameobject extends Sprite {
                 if (distance>maxdistance){
                     setCategoryFilter(game.DESTROYED_BIT);
                     body.setLinearVelocity( 0,0 );
-                    mygame.objects.remove(this);
+                    state=states.DEAD;
 
                 }
                 if (anim!=null) {
@@ -678,7 +692,24 @@ public class gameobject extends Sprite {
 
             case MONSTER:
 
-               if (body.getPosition().dst( mygame.player.body.getPosition()) <chaseRadius/100f) {
+                if (tameif!=""){
+                    String[] ss= tameif.split( "," );
+                    int met=0;
+
+                    for (String s: ss){
+                        String[] sv = s.split( "=" );
+                        if (mygame.getVar(sv[0])==Float.parseFloat( sv[1] )){
+                            met++;
+                        }
+                    }
+                    if (met==ss.length){
+                        tame=true;
+                    }else{
+                        tame=false;
+                    }
+                }
+
+                if (body.getPosition().dst( mygame.player.body.getPosition()) <chaseRadius/100f) {
                    if (mygame.player.state!= states.DEAD) enemyshoot();
                }
 
@@ -695,7 +726,7 @@ public class gameobject extends Sprite {
                 }
 
 
-                if (path==null) {
+                if (path==null && !dirlocked) {
                     if (body.getPosition().dst( mygame.player.body.getPosition() ) < chaseRadius / 100f) {
                         if (chase) moving = true;
 
@@ -806,9 +837,12 @@ public class gameobject extends Sprite {
     public float pmaxdistance =300;
     public int pdamage =1;
     public boolean canshoot=false;
-
+    public boolean tame;
+    public String tameif;
 
     public void enemyshoot(){
+        if (mygame.starting) return;
+        if (tame) return;
         if (cooldown>0||!canshoot) return;
         gameobject newbrick = new gameobject();
         newbrick.mygame = mygame;
@@ -848,6 +882,13 @@ public class gameobject extends Sprite {
 
     public void playSfx(Sound s){
         s.play(1.0f);
+    }
+
+    public void bumbum(){
+        mygame.particles.add( meledak );
+        meledak.setPosition( body.getPosition().x, body.getPosition().y );
+        meledak.reset(false);
+        meledak.start();
     }
 
 }

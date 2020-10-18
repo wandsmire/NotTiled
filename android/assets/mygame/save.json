@@ -1,0 +1,11 @@
+{
+vars: [
+	{
+		key: asu
+		value: 1
+	}
+]
+x: 3.539996
+y: 2.6539683
+mapname: template.tmx
+}

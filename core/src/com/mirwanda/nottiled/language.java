@@ -362,5 +362,11 @@ public class language
 	String runmacro;
 	String macrotiles;
 	String storageaccess;
+	String exporttomidi;
+	String dls;
+	String recordwav;
+	String stop;
+	String recording;
+	String picker;
 
 }

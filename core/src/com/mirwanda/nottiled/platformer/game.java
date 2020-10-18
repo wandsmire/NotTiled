@@ -20,7 +20,6 @@ import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
-import com.badlogic.gdx.maps.objects.TextureMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
@@ -30,6 +29,7 @@ import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.Box2D;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
@@ -38,8 +38,7 @@ import com.badlogic.gdx.utils.Json;
 
 import java.io.StringWriter;
 import java.util.ArrayList;
-
-import javax.xml.soap.Text;
+import java.util.Iterator;
 
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BLOCK;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.CHECKPOINT;
@@ -74,6 +73,7 @@ public class game {
     public gameobject action4;
 
     public java.util.List<gameobject> objects = new ArrayList<gameobject>();
+    public java.util.List<ParticleEffect> particles = new ArrayList<>();
 
     public Texture txBackground;
     public TextureRegion[][] hpbar;
@@ -122,19 +122,14 @@ public class game {
     public int Th;
     public float Tsw;
     public float Tsh;
-    public ParticleEffect meledak;
 
 
     public boolean initialise(String path, String filename){
-
         this.path = path;
         this.file = filename;
         rpg=false;
+        particles.clear();
 
-        meledak = new ParticleEffect();
-        meledak.load( getFile( path + "/died.p" ), getFile( path ) );
-        meledak.getEmitters().first().setPosition( Gdx.graphics.getWidth() / 2, Gdx.graphics.getHeight() / 2);
-        meledak.scaleEffect(0.001f, 0.001f); //kudu disini
 
         Texture tmp = new Texture( getFile( path + "/hpbar.png") );
         hpbar = TextureRegion.split( tmp,
@@ -164,35 +159,6 @@ public class game {
         mycontactlistener = new WorldContactListener(this);
         world.setContactListener(mycontactlistener);
 
-        MapProperties mpa = map.getProperties();
-        if (mpa != null) {
-            String bgms = (String) mpa.get("bgm");
-            if (bgms != null) {
-
-                if (getFile( path + "/" + bgms ).exists()) {
-                    bgm = Gdx.audio.newMusic( getFile( path + "/" + bgms ) );
-                    bgm.setLooping( true );
-                    bgm.play();
-                }
-            }
-
-
-            String bgc = (String) mpa.get("background");
-            if (bgc != null) {
-
-                    if (getFile( path + "/" + bgc ).exists()) {
-                        txBackground = new Texture( getFile( path + "/" + bgc ) );
-                    } else {
-                        txBackground = null;
-                    }
-
-            }
-
-            nextlevel = (String) mpa.get("nextlevel");
-            debriefing = (String) mpa.get("debriefing");
-            died = "GAME OVER";
-
-        }
 
 
         stateTime = 0f;
@@ -241,7 +207,38 @@ public class game {
 
             }
         }
-        checkpoint.set(player.body.getPosition().x,player.body.getPosition().y);
+            checkpoint.set(player.body.getPosition().x,player.body.getPosition().y);
+
+        MapProperties mpa = map.getProperties();
+        if (mpa != null) {
+            String bgms = (String) mpa.get("bgm");
+            if (bgms != null) {
+
+                if (getFile( path + "/" + bgms ).exists()) {
+                    bgm = Gdx.audio.newMusic( getFile( path + "/" + bgms ) );
+                    bgm.setLooping( true );
+                    bgm.play();
+                }
+            }
+
+
+            String bgc = (String) mpa.get("background");
+            if (bgc != null) {
+
+                if (getFile( path + "/" + bgc ).exists()) {
+                    txBackground = new Texture( getFile( path + "/" + bgc ) );
+                } else {
+                    txBackground = null;
+                }
+
+            }
+
+            nextlevel = (String) mpa.get("nextlevel");
+            debriefing = (String) mpa.get("debriefing");
+            died = "GAME OVER";
+
+        }
+
 
         victory=false;
         loadingmap=false;
@@ -288,11 +285,7 @@ public class game {
             if (rq==ss.length) qual=true;
         }
 
-        if (qual)
-        {
-            return true;
-        }
-        return false;
+        return qual;
 
     }
     public enum VAROP{SET,ADD, SUB}
@@ -372,6 +365,16 @@ public class game {
         return 0;
     }
 
+    public String replaceVars(String s){
+        String k=s;
+        for (KV vr: save.vars){
+            k=k.replace( "["+vr.key+"]" ,(int) vr.getValue()+"");
+        }
+
+        //k=k.replace( "[*]" ,"0");
+        return k;
+    }
+
     public float anima;
     public int animet;
     public OrthographicCamera gc;
@@ -381,6 +384,9 @@ public class game {
 
         if (player.HP<=0){
             killPlayer();
+        }
+        if (player.HP>player.maxHP){
+            player.HP=player.maxHP;
         }
 
         checkHUD();
@@ -457,8 +463,7 @@ public class game {
         }
 
 
-        if(touchedladder>0) { ladder=true; }
-        else { ladder=false; }
+        ladder= touchedladder > 0;
 
 
 
@@ -479,7 +484,13 @@ public class game {
 
 
         for (int i = objects.size() - 1; i >= 0; i--){
-            objects.get( i ).update(delta);
+            gameobject go = objects.get( i );
+            go.update(delta);
+            if (go.state==DEAD){
+                if (world.getBodyCount()>0) world.destroyBody( go.body );
+                objects.remove( go );
+            }
+
         }
 
         for (gameobject sboxes:objects)
@@ -515,12 +526,23 @@ public class game {
                 batch.draw( hpbar[1][0], sboxes.getX(), sboxes.getY() + sboxes.getHeight() + 0.01f, sboxes.getWidth(), hpbar[1][0].getRegionHeight() / 100f );
                 batch.draw( hpbar[0][0], sboxes.getX(), sboxes.getY() + sboxes.getHeight() + 0.01f, sboxes.HP / sboxes.maxHP * sboxes.getWidth(), hpbar[0][0].getRegionHeight() / 100f );
             }
+
+            sboxes.meledak.update( Gdx.graphics.getDeltaTime() );
+            sboxes.meledak.draw( batch );
         }
+
+        for (int i = particles.size() - 1; i >= 0; i--){
+            ParticleEffect pe = particles.get(i);
+            pe.update( Gdx.graphics.getDeltaTime() );
+            pe.draw( batch );
+
+            if (pe.isComplete()) {particles.remove( pe );pe.dispose();}
+        }
+
         if (action1!=null) action1.update( delta );
         if (action2!=null) action2.update( delta );
         if (action3!=null) action3.update( delta );
         if (action4!=null) action4.update( delta );
-
 
     }
 
@@ -821,9 +843,7 @@ public class game {
         {
             //playSfx(sfxplayer);
             dead+=1;
-            meledak.setPosition( player.body.getPosition().x, player.body.getPosition().y );
-            meledak.reset(false);
-            meledak.start();
+            player.bumbum();
             player.state= DEAD;
             ///////////////////
 
@@ -870,11 +890,11 @@ public class game {
         gameobject newbrick = new gameobject();
         newbrick.mygame = this;
         newbrick.damage = (o.containsKey( "damage" )) ? Float.parseFloat( o.get( "damage" ).toString() ) : 0f;
-        newbrick.rotating = (o.containsKey( "rotating" )) ? true : false;
-        newbrick.destructible = (o.containsKey( "destructible" )) ? true : false;
+        newbrick.rotating = o.containsKey( "rotating" );
+        newbrick.destructible = o.containsKey( "destructible" );
         newbrick.HP = (o.containsKey( "HP" )) ? Integer.parseInt( o.get( "HP" ).toString() ) : 1;
         newbrick.maxHP=newbrick.HP;
-        newbrick.heavy = (o.containsKey( "heavy" )) ? true : false;
+        newbrick.heavy = o.containsKey( "heavy" );
 
         if (o.containsKey( "sfx" )) {
                 String sfx = o.get("sfx").toString();
@@ -906,6 +926,7 @@ public class game {
         if (o.containsKey( "name" )) {
             switch (o.get( "name" ).toString()) {
                 case "player":
+                    Gdx.app.log( "PP","PP" );
                     String anim = o.get( "anim" ).toString();
                     Texture txPlayer = new Texture( getFile( path + "/" + anim ) );
                     TextureRegion[][] tmp = TextureRegion.split( txPlayer,
@@ -992,8 +1013,11 @@ public class game {
 
 
                 default: //other names, including the old monster
+                    newbrick.dir = (o.containsKey( "dir" )) ? Integer.parseInt( o.get( "dir" ).toString() ) : 1;
+                    newbrick.tameif = (o.containsKey( "tameif" )) ?  o.get( "tameif" ).toString() : "";
+
                     newbrick.speed = (o.containsKey( "speed" )) ? Float.parseFloat( o.get( "speed" ).toString() ) : 0.5f;
-                    newbrick.chase = (o.containsKey( "chase" )) ? true : false;
+                    newbrick.chase = o.containsKey( "chase" );
                     newbrick.chaseRadius = (o.containsKey( "chaseRadius" )) ? Float.parseFloat( o.get( "chaseRadius" ).toString() ) : 100f;
                     if (o.containsKey( "path" )) {
                         String[] ss = o.get( "path" ).toString().split( "," );
@@ -1025,8 +1049,9 @@ public class game {
                         newbrick.path = null; //new int[]{0,0,2,2,3,3,1,1,2,1};
 
                     }
-                    newbrick.bird = (o.containsKey( "bird" )) ? true : false;
-                    newbrick.canshoot = (o.containsKey( "canshoot" )) ? true : false;
+                    newbrick.bird = o.containsKey( "bird" );
+                    newbrick.canshoot = o.containsKey( "canshoot" );
+                    newbrick.dirlocked = o.containsKey( "dirlocked" );
                     newbrick.pcooldown = (o.containsKey( "pcooldown" )) ? Float.parseFloat( o.get( "pcooldown" ).toString() ) : 1;
                     newbrick.pspeed = (o.containsKey( "pspeed" )) ? Float.parseFloat( o.get( "pspeed" ).toString() ) : 4;
                     newbrick.pmaxdistance = (o.containsKey( "pmaxdistance" )) ? Integer.parseInt( o.get( "pmaxdistance" ).toString() ) : 300;

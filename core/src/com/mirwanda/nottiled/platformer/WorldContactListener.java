@@ -107,9 +107,18 @@ public class WorldContactListener implements ContactListener {
 
             if (o.get( "message" ) != null) {
                 mygame.msgindex = 0;
-                mygame.briefing = o.get( "message" ).toString().split( "//" );
+                String mbr = mygame.replaceVars(o.get( "message" ).toString());
+                mygame.briefing = mbr.split( "//" );
                 mygame.starting = true;
                 mygame.player.body.setLinearVelocity( 0, 0 );
+            }
+
+            if (o.get( "restoreHP" ) != null) {
+                mygame.player.HP=mygame.player.maxHP;
+            }
+
+            if (o.get( "increaseMaxHP" ) != null) {
+                mygame.player.maxHP+=Float.parseFloat(o.get( "increaseMaxHP" ).toString());
             }
 
             if (o.get( "transfer" ) != null) {
@@ -158,6 +167,7 @@ public class WorldContactListener implements ContactListener {
                         break;
                     case "shoot":
                         newbrick.action = gameobject.actions.SHOOT;
+
                         newbrick.pcooldown = (o.containsKey( "cooldown" )) ? Float.parseFloat( o.get( "cooldown" ).toString() ) : 1;
                         newbrick.pspeed = (o.containsKey( "pspeed" )) ? Float.parseFloat( o.get( "pspeed" ).toString() ) : 4;
                         newbrick.pmaxdistance = (o.containsKey( "pmaxdistance" )) ? Integer.parseInt( o.get( "pmaxdistance" ).toString() ) : 300;
@@ -222,7 +232,8 @@ public class WorldContactListener implements ContactListener {
         }else{ //!qual
             if (o.get( "premessage" ) != null) {
                 mygame.msgindex = 0;
-                mygame.briefing = o.get( "premessage" ).toString().split( "//" );
+                String mbr = mygame.replaceVars(o.get( "premessage" ).toString());
+                mygame.briefing = mbr.split( "//" );
                 mygame.starting = true;
                 mygame.player.body.setLinearVelocity( 0, 0 );
             }
@@ -245,33 +256,52 @@ public class WorldContactListener implements ContactListener {
         if (check(MONSTER,PLAYERPROJECTILE,o1,o2)){
             gameobject mo = select( MONSTER,o1,o2 );
             gameobject pp = select( PLAYERPROJECTILE,o1,o2 );
-
+            pp.bumbum();
             mo.HP-=pp.damage;
             pp.setCategoryFilter(game.DESTROYED_BIT);
-            mygame.objects.remove(pp);
+            pp.state= gameobject.states.DEAD;
         }
 
         if (check(BLOCK,PLAYERPROJECTILE,o1,o2)){
             gameobject bl = select( BLOCK,o1,o2 );
             gameobject pp = select( PLAYERPROJECTILE,o1,o2 );
             //Gdx.app.log( bl.HP+"",pp.damage+"");
+            pp.bumbum();
             bl.HP-=pp.damage;
+            pp.body.setLinearVelocity( 0,0 );
             pp.setCategoryFilter(game.DESTROYED_BIT);
-            mygame.objects.remove(pp);
+            pp.state= gameobject.states.DEAD;
+
+        }
+
+        if (check(BLOCK,ENEMYPROJECTILE,o1,o2)){
+            gameobject bl = select( BLOCK,o1,o2 );
+            gameobject pp = select( ENEMYPROJECTILE,o1,o2 );
+            //Gdx.app.log( bl.HP+"",pp.damage+"");
+            pp.bumbum();
+            bl.HP-=pp.damage;
+            pp.body.setLinearVelocity( 0,0 );
+            pp.setCategoryFilter(game.DESTROYED_BIT);
+            pp.state= gameobject.states.DEAD;
+
         }
 
         if (check(PLAYER,ENEMYPROJECTILE,o1,o2)){
             gameobject ep = select( ENEMYPROJECTILE,o1,o2 );
             gameobject pl = select( PLAYER,o1,o2 );
+            ep.bumbum();
 
             pl.HP-=ep.damage;
             ep.setCategoryFilter(game.DESTROYED_BIT);
-            mygame.objects.remove(ep);
+            ep.state= gameobject.states.DEAD;
+
         }
 
         if (check(PLAYER,MONSTER,o1,o2)){
             gameobject en = select( MONSTER,o1,o2 );
             gameobject pl = select( PLAYER,o1,o2 );
+            pl.bumbum();
+
             pl.HP-=en.damage;
             eventobject(en);
         }

@@ -42,6 +42,14 @@ import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import org.jfugue.midi.MidiFileManager;
+import org.jfugue.pattern.Pattern;
+import org.jfugue.pattern.PatternProducer;
+import org.jfugue.player.Player;
+import org.jfugue.rhythm.Rhythm;
+import org.jfugue.theory.Chord;
+import org.jfugue.theory.ChordProgression;
+import org.jfugue.theory.Note;
 import org.xmlpull.v1.*;
 
 import com.badlogic.gdx.utils.async.*;
@@ -58,6 +66,7 @@ import com.mirwanda.nottiled.platformer.game;
 import com.mirwanda.nottiled.platformer.gameobject;
 
 import static java.lang.Thread.sleep;
+import static org.jfugue.midi.MidiFileManager.savePatternToMidi;
 
 
 public class MyGdxGame extends ApplicationAdapter implements GestureListener {
@@ -108,7 +117,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     ////////////////////////////////////////////////////////////////
     float delta;
-    boolean movetool =false;
+    public enum selectTool{PICKER,COPY,MOVE,FLIP,CLONE}
+
+    selectTool movetool =selectTool.PICKER;
     String debugMe = " ", debugYou = " ";
     Table lastStage;
     String sender;
@@ -439,7 +450,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private Texture txline,txcircle;
     private Texture txeraser;
     private Texture txfill;
-    private Texture txcopy, txmove;
+    private Texture txcopy, txmove, txflip, txpicker;
     private Texture txbrush;
     private Texture txlock;
     private Texture txunlock;
@@ -995,16 +1006,38 @@ String texta="";
 
                 rotator += delta;
 
-                if (rotator > 0.1f) {
+                if (rotator > 0.15f) {
                     rotator = 0;
-                    if (rotating) {
-                        selLayer+=1;
-                        if (selLayer >= layers.size()) selLayer=0;
-                        for (int i=0; i<layers.size();i++)
-                        {
-                            layers.get(i).setVisible(false);
+                    if (rotating && layers.size()>0) {
+                        viewMode = ViewMode.SINGLE;
+
+                        int lastvis=-1;
+                        int firstvis=-1;
+
+                        for (int i = 0; i < layers.size(); i++) {
+                            if (layers.get( i ).isVisible()) {
+                                if (firstvis==-1){
+                                    firstvis=i;
+                                }
+
+                                lastvis=i;
+                            }
                         }
-                        layers.get(selLayer).setVisible(true);
+                        Gdx.app.log( firstvis+"",lastvis+"" );
+                        if (firstvis!=-1) {
+                            if (selLayer >= lastvis) {
+                                selLayer=firstvis;
+                            } else {
+
+                                for (int i = 0; i < layers.size(); i++) {
+                                    if (layers.get( i ).isVisible() && i > selLayer) {
+                                        selLayer = i;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
                     }
                 }
 
@@ -1020,8 +1053,6 @@ String texta="";
                     }
                 }
 
-
-                musicplaying(delta);
                 checkConnectionStatus();
 
                 if (nofling > 0) nofling -= delta;
@@ -1048,17 +1079,10 @@ String texta="";
 
                             ///
                             mygame.update( batch, delta, gamecam );
-                            mygame.meledak.update( Gdx.graphics.getDeltaTime() );
-
-                            mygame.meledak.draw( batch );
 
                             if (mygame.debugmode)
                                 mygame.b2dr.render( mygame.world, gamecam.combined );
 
-                            // if (mygame.meledak.isComplete())
-
-
-                            ///
 
                             batch.end();
                         }
@@ -1186,7 +1210,7 @@ String texta="";
                         drawObjectsInfo();
                         postProcessor.render();
                         drawWorldUI();
-                        b2dr.render(world,cam.combined);
+                        //b2dr.render(world,cam.combined);
 
                         drawstage(delta);
 
@@ -1608,9 +1632,23 @@ String texta="";
             }
         }
 
-
-        if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
-           eraser=!eraser;
+        if (kartu!="stage") {
+            if (Gdx.input.isKeyJustPressed( Input.Keys.E )) {
+                eraser = !eraser;
+            }
+            if (Gdx.input.isKeyPressed( Input.Keys.W ) || Gdx.input.isKeyPressed( Input.Keys.UP )) {
+                cam.position.add( 0,40f,0 );
+            }
+            if (Gdx.input.isKeyPressed( Input.Keys.A ) || Gdx.input.isKeyPressed( Input.Keys.LEFT )) {
+                cam.position.add( -40f,0,0 );
+            }
+            if (Gdx.input.isKeyPressed( Input.Keys.S ) || Gdx.input.isKeyPressed( Input.Keys.DOWN )) {
+                cam.position.add( 0,-40f,0 );
+            }
+            if (Gdx.input.isKeyPressed( Input.Keys.D ) || Gdx.input.isKeyPressed( Input.Keys.RIGHT )) {
+                cam.position.add( 40f,0,0 );
+            }
+            cam.update();
         }
 
         if (Gdx.input.isKeyPressed(Input.Keys.X)) {
@@ -2475,13 +2513,6 @@ String texta="";
             }
 
 
-            if (musicisplaying){
-                sr.setColor(0, 0, 1, 0.6f);
-//                sr.rectLine((Tsw * currentcolumn), Tsh, (currentcolumn * Tsw), -Tsh * Th + Tsh, Tsw / 16f);
-                sr.rect((Tsw * currentcolumn)-Tsw, Tsh, Tsw, -Tsh * Th + Tsh);
-
-            }
-
             boolean ifmusic=false;
             for (property p : properties)
             {
@@ -2537,10 +2568,6 @@ String texta="";
                 }
             }
 
-            if (ifmusic) {
-                sr.setColor(1, 1, 0, 1f);
-                sr.rectLine((startmarker % Tw)* Tsw, Tsh, (startmarker % Tw)* Tsw, -Tsh * Th + Tsh, Tsw / 16f);
-            }
 
             if (activetool==3){
                 sr.setColor(0, 1, 0, 1f);
@@ -4135,6 +4162,9 @@ String texta="";
                     else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
                         uisrect(gui.play, mouse, vis("play"));//redo
                     }
+                    else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("Pixel Editor")) {
+                        uisrect(gui.play, mouse, vis("play"));//redo
+                    }
                     else if (p.getName().equalsIgnoreCase("tag") && p.getValue().equalsIgnoreCase("RW")) {
                         uisrect(gui.play, mouse, vis("play"));//redo
                     }
@@ -4447,7 +4477,22 @@ String texta="";
                             uidrawbutton(txplay, z.play, gui.play, 2);
                         }
                         else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
-                            uidrawbutton(txplay, z.play, gui.play, 2);
+                            if (midiplaying) {
+                                uidrawbutton( txLeft, z.stop, gui.play, 2 );
+                            }else{
+                                uidrawbutton( txplay, z.play, gui.play, 2 );
+
+                            }
+
+                        }
+                        else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("Pixel Editor")) {
+                            if (rotating) {
+                                uidrawbutton( txLeft, z.stop, gui.play, 2 );
+                            }else{
+                                uidrawbutton( txplay, z.play, gui.play, 2 );
+
+                            }
+
                         }
                         else if (p.getName().equalsIgnoreCase("tag") && p.getValue().equalsIgnoreCase("RW")) {
                             uidrawbutton(txplay, z.play, gui.play, 2);
@@ -4536,12 +4581,22 @@ String texta="";
 
                     uidrawbutton(txeraser, z.eraser, gui.tool2, 3);
                     uidrawbutton(txfill, z.fill, gui.tool3, 3);
-                    if (movetool) {
-                        uidrawbutton(txmove, z.move, gui.tool4, 3);
-                    }
-                    else
-                    {
-                        uidrawbutton(txcopy, z.copy, gui.tool4, 3);
+                    switch (movetool){
+                        case PICKER:
+                            uidrawbutton(txpicker, z.picker, gui.tool4, 3);
+                            break;
+                        case COPY:
+                            uidrawbutton(txcopy, z.copy, gui.tool4, 3);
+                            break;
+                        case MOVE:
+                            uidrawbutton(txmove, z.move, gui.tool4, 3);
+                            break;
+                        case FLIP:
+                            uidrawbutton(txflip, z.flip, gui.tool4, 3);
+                            break;
+                        case CLONE:
+                            uidrawbutton(txClone, z.clone, gui.tool4, 3);
+                            break;
                     }
 
                     uidrawbutton(txbrush, z.brush, gui.tool5, 3);
@@ -4691,6 +4746,8 @@ String texta="";
         txfill = new Texture(Gdx.files.internal("images/fill.png"));
         txcopy = new Texture(Gdx.files.internal("images/copy.png"));
         txmove = new Texture(Gdx.files.internal("images/move.png"));
+        txflip = new Texture(Gdx.files.internal("images/flip96.png"));
+        txpicker = new Texture(Gdx.files.internal("images/picker96.png"));
         txeraser = new Texture(Gdx.files.internal("images/eraser.png"));
         txbrush = new Texture(Gdx.files.internal("images/brush.png"));
         txlock = new Texture(Gdx.files.internal("images/lock.png"));
@@ -5039,7 +5096,7 @@ String texta="";
 
     public void newtmxfileplus(boolean user) {
         loadingfile = true;
-        String faths = "NotTiled/sample/template/" + ltemplate.getSelected() + "/template.tmx";
+        String faths = "NotTiled/sample/template/" + ltemplate.getSelected();
         FileHandle fh = Gdx.files.external(faths);
         if (!fh.exists()) {
             msgbox("Template file not found. Please redownload.");
@@ -5262,13 +5319,14 @@ String texta="";
     public void downloadTemplate() {
         if (lonline.getSelectedIndex() < 0) return;
         final String foldname = templates.getTemplates().get(lonline.getSelectedIndex()).getName();
-        String lonk1 = templates.getTemplates().get(lonline.getSelectedIndex()).getTemplate();
-        String lonk2 = templates.getTemplates().get(lonline.getSelectedIndex()).getAuto();
+        final String lonk1 = templates.getTemplates().get(lonline.getSelectedIndex()).getTemplate();
+        final String lonk2 = templates.getTemplates().get(lonline.getSelectedIndex()).getExtension();
+        final String extName = templates.getTemplates().get(lonline.getSelectedIndex()).getExtension_name();
 
         FileHandle fh = Gdx.files.external("NotTiled/sample/template/" + foldname);
         if (!fh.exists()) fh.mkdirs();
 
-        if (!lonk2.equalsIgnoreCase("")) {
+        if (lonk2!=null) {
             Net.HttpRequest request2 = new Net.HttpRequest(Net.HttpMethods.GET);
             request2.setUrl(lonk2);
             Gdx.net.sendHttpRequest(request2, new com.badlogic.gdx.Net.HttpResponseListener() {
@@ -5280,13 +5338,11 @@ String texta="";
                     Gdx.app.postRunnable(new Runnable() {
                         @Override
                         public void run() {
-                            String sss = tmpFile.readString();
 
                             try {
                                 templates = new Online();
-                                FileHandle fh = Gdx.files.external("NotTiled/sample/template/" + foldname + "/auto.json");
-                                fh.writeString(sss, false);
-
+                                FileHandle fh = Gdx.files.external("NotTiled/sample/template/" + foldname + "/"+extName);
+                                fh.write( tmpFile.read(),false );
                             } catch (Exception e) {
                                 ErrorBung(e, "errorlog.txt");
                             }
@@ -5357,6 +5413,8 @@ String texta="";
         TextButton astileset = new TextButton(z.exportastileset, skin);
         TextButton tolua = new TextButton(z.exporttolua, skin);
         TextButton tojson = new TextButton(z.exporttojson, skin);
+        TextButton tomidi = new TextButton(z.exporttomidi, skin);
+        TextButton towav = new TextButton(z.recordwav, skin);
         TextButton toback = new TextButton(z.back, skin);
         tExport.add(new Label(z.filename, skin)).row();
         tExport.add(fExportFilename).row();
@@ -5364,6 +5422,8 @@ String texta="";
         tExport.add(astileset).row();
         tExport.add(tolua).row();
         tExport.add(tojson).row();
+        tExport.add(tomidi).row();
+        tExport.add(towav).row();
         tExport.add(toback).row();
 
         topng.addListener(new ChangeListener() {
@@ -5398,6 +5458,23 @@ String texta="";
 
         });
 
+        tomidi.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                exporttomidi(fExportFilename.getText());
+            }
+
+
+        });
+        towav.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                recordwav(fExportFilename.getText());
+            }
+
+
+        });
+
         toback.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -5406,10 +5483,10 @@ String texta="";
         });
     }
 
-    public void recordAudio(){
+    public void recordAudio(int wavwidth, final String filenamenya){
         final int samples = 22000;
         boolean isMono = true;
-        final short[] data = new short[samples * (Tw/4)];
+        final short[] data = new short[samples * (wavwidth)];
 
         final AudioRecorder recorder = Gdx.audio.newAudioRecorder(samples, isMono);
         final AudioDevice player = Gdx.audio.newAudioDevice(samples, isMono);
@@ -5423,16 +5500,9 @@ String texta="";
                 recorder.read(data, 0, data.length);
                 recorder.dispose();
                 System.out.println("Record: End");
-                /*
-                System.out.println("Play : Start");
-                player.writeSamples(data, 0, data.length);
-
-                System.out.println("Play : End");
-                player.dispose();
-                */
 
                 System.out.println("Saving File...");
-                FileHandle fh = Gdx.files.external(curdir + "/export.wav");
+                FileHandle fh = Gdx.files.external(curdir + "/"+filenamenya+".wav");
                 try{
                 OutputStream out = new FileOutputStream(fh.file());
                 PCMtoFile(out, data, samples, 1, 16);
@@ -5575,7 +5645,7 @@ String texta="";
     public void loadOnline() {
         bOnlineBack = new TextButton(z.back, skin);
         bOnlineRefresh = new TextButton(z.refresh, skin);
-        bOnlineDownload = new TextButton(z.download, skin);
+        bOnlineDownload = new TextButton(z.dls, skin);
         lonline = new com.badlogic.gdx.scenes.scene2d.ui.List<String>(skin);
         ScrollPane spok = new ScrollPane(lonline);
 
@@ -12066,9 +12136,11 @@ String texta="";
 
     public void buildTMX(String tempPath) {
         FileHandle tempfile = Gdx.files.external(tempPath);
-        autotiles at = new autotiles(autotiles);
-        Json json = new Json();
-        writeThisAbs(curdir + "/auto.json", json.prettyPrint(at));
+        if (autotiles.size()>0) {
+            autotiles at = new autotiles( autotiles );
+            Json json = new Json();
+            writeThisAbs( curdir + "/auto.json", json.prettyPrint( at ) );
+        }
         ////
 
         try {
@@ -12122,6 +12194,7 @@ String texta="";
                         srz.attribute("", "source", t.getTsxfile());
                         srz.attribute("", "firstgid", Integer.toString(t.getFirstgid()));
                         srz.endTag(null, "tileset");
+                        saveTsx(i);
                         continue;
                     }
                     srz.startTag(null, "tileset");
@@ -12633,12 +12706,38 @@ String texta="";
                     @Override
                     public void run() {
                         log("here");
-                        loadmap(filepath);
                         curdir = fNCurdir.getText();
                         curdir = curdir.replace("//", "/");
                         curfile = fNFilename.getText();
                         Tw = Integer.parseInt(fNTw.getText());
                         Th = Integer.parseInt(fNTh.getText());
+
+
+                        FileHandle from = Gdx.files.external( filepath +"/template.tmx");
+                        FileHandle to = Gdx.files.external( curdir+"/"+curfile);
+                        to.write( from.read(),false );
+
+                        ////Copy assets, which might contain macro anyway...
+                        FileHandle check = Gdx.files.external(filepath+"/assets.zip");
+                        if (check.exists()) {
+                            FileHandle check2 = Gdx.files.external(curdir+"/assets.zip");
+                            if (!check2.exists()){
+                                to = Gdx.files.external(curdir);
+                                check.copyTo(to);
+                                check2 = Gdx.files.external( curdir + "/assets.zip" );
+                                unzip(check2, to);
+                            }
+                        }
+
+                        //copy macro
+                        check = Gdx.files.external(filepath+"/auto.json");
+                        if (check.exists()) {
+                            FileHandle check2 = Gdx.files.external(curdir+"/auto.json");
+                            to = Gdx.files.external(curdir);
+                            check.copyTo(to);
+                        }
+
+                        loadmap(curdir+"/"+curfile);
 
                         undolayer.clear();
                         redolayer.clear();
@@ -12674,20 +12773,6 @@ String texta="";
 
 
                         loadingfile = false;
-                        for (property p:properties){
-                            if (p.getName().equalsIgnoreCase( "type" ) && p.getValue().equalsIgnoreCase( "NotTiled platformer" )){
-                                FileHandle check = Gdx.files.external(curdir+"/"+"assets.zip");
-                                if (!check.exists()) {
-                                    FileHandle from = Gdx.files.internal( "platformer/assets.zip" );
-                                    FileHandle to = Gdx.files.external( curdir );
-                                    from.copyTo( to );
-                                    FileHandle zipo = Gdx.files.external( curdir + "/" + "assets.zip" );
-                                    unzip( zipo, to );
-                                }
-
-                                break;
-                            }
-                        }
                         showtsetselection(tilesets);
                         saveMap(curdir + "/" + curfile);
                         cacheTiles();
@@ -14671,6 +14756,7 @@ String texta="";
                 }
                 //delete button
                 if (tapped(touch2, gui.pickertool5)) {
+                    resetMassprops();
                     tilesets.remove(seltset);
                     pickAuto=false;
                     if (tilesets.size() > 0) {
@@ -15273,11 +15359,6 @@ String texta="";
     }
 
     public void updatePointer(float x, float y){
-        if (body!=null) {
-            if (world.getBodyCount()>0) {
-                world.destroyBody( body );
-            }
-        }
         bdef.type = BodyDef.BodyType.DynamicBody;
         bdef.position.set(x,-y);
         body = world.createBody(bdef);
@@ -15301,8 +15382,8 @@ String texta="";
 
     public void showPropBox2D(obj ox){
         selobj=ox;
-            Gdx.app.log( "PP",activeobjtool+"");
-
+           // Gdx.app.log( "PP",activeobjtool+"");
+        //cumi
         if (activeobjtool == 7) {
             obj oc = new obj();
             oc.setGid( ox.getGid() );
@@ -15445,7 +15526,8 @@ String texta="";
                 nyok.setY(-(int) ab + Tsh);
             }
             layers.get(selLayer).getObjects().add(nyok);
-
+            updateObjectCollision();
+            //cumi
             return;
         }
 
@@ -15654,49 +15736,6 @@ String texta="";
                 case 1:
                     oi = 0;
                 case 0:
-
-                    boolean ifmusic=false;
-                    for (property p : properties)
-                    {
-                        if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
-                            ifmusic=true;
-                            break;
-                        }
-
-                    }
-                    if (ifmusic) {
-                        if (layers.get(selLayer).getStr().get(num) != 0) {
-                            oi = 0;
-                        } else {
-                                if (oi==0) return;
-
-                                int musicnote = 89-(num/Tw);
-                                Sound s;
-                                String soundfile="";
-                                tileset t = tilesets.get(0);
-                                for (property p : t.getTiles().get((int) oi - t.getFirstgid()).getProperties())
-                                {
-                                    if (p.getName().equalsIgnoreCase("note"))
-                                    {
-                                        soundfile=curdir+"/"+p.getValue();
-                                        break;
-                                    }
-                                }
-                                FileHandle fh = Gdx.files.external(soundfile);
-
-                                if (!fh.exists()) {
-                                    msgbox("File: "+soundfile+" not found.");
-                                    //musicisplaying=false;
-                                    return;
-                                }
-                                s = Gdx.audio.newSound(fh);
-                                double pitch = Math.pow(2f,((musicnote-49f)/12f));
-                                long id = s.play();
-                                s.setPitch(id,(float) pitch);
-
-                        }
-                    }
-
                     //brush
                 case 4:
                     cue("tileclick");
@@ -15935,6 +15974,13 @@ String texta="";
                     fillthis(num, oi, from, 0);
                     break;
                 case 3: //paste, at last.
+                    if (movetool==selectTool.PICKER){
+                        curspr=layers.get(selLayer).getStr().get(num).intValue();
+                        addRecentTile( curspr );
+                        setTsetFromCurspr();
+                        break;
+                    }
+
                     //status(mapstartSelect+"/"+mapendSelect,5);
                     if (cliplayer==null) return;
                     int widih = mapendSelect % Tw - mapstartSelect % Tw;
@@ -15963,7 +16009,7 @@ String texta="";
                                     from = layers.get(clipsource).getStr().get(orinyum);
                                     tzet = layers.get(clipsource).getTset().get(orinyum);
 
-                                    if (movetool) {
+                                    if (movetool==selectTool.MOVE) {
                                         //if using move tool, then clear the data
 
                                         //clearing should be before.. so new loop?
@@ -15986,13 +16032,16 @@ String texta="";
                     }
                         //followe = false;
                         //loop for drawing
+                    if (movetool!=selectTool.CLONE){
                         for (int yy = 0; yy <= heih; yy++) {
                             for (int xx = 0; xx <= widih; xx++) {
                                 if ((numa + xx + (yy * Tw)) < Th * Tw) {
                                     if ((numa + xx + (yy * Tw)) % Tw >= numa % Tw) {
 
                                         int nyum = num + xx + (yy * Tw); //num is correct, thanks old me
-
+                                        if (movetool==selectTool.FLIP) {
+                                            nyum = num + (widih-xx) + (yy * Tw); //num is correct, thanks old me
+                                        }
                                         //nyum is the tap data remember
                                         //so the original is orinyum...
                                         if (nyum / Tw != (num + (yy * Tw)) / Tw) continue;
@@ -16025,8 +16074,56 @@ String texta="";
 
                             }
                         }
+                    }else{
 
-                    if (movetool) {
+                        //old copy code... should've saved it.... sigh.
+                        for (int yy = 0; yy <= heih; yy++) {
+                            for (int xx = 0; xx <= widih; xx++) {
+                                if ((numa + xx + (yy * Tw)) < Th * Tw) {
+                                    if ((numa + xx + (yy * Tw)) % Tw >= numa % Tw) {
+
+                                        int nyum = num + xx + (yy * Tw); //num is correct, thanks old me
+                                        //nyum is the tap data remember
+                                        //so the original is orinyum...
+                                        if (nyum / Tw != (num + (yy * Tw)) / Tw) continue;
+                                        if (nyum >= Tw * Th) continue;
+                                        int orinyum = mapstartSelect + xx + (yy * Tw);
+
+                                        for (int i=0;i<layers.size();i++){
+
+                                            layer l = layers.get(i);
+                                            if (l.getType()== layer.Type.TILE) {
+                                                //get str from clipboard
+                                                oi = l.getStr().get( orinyum );
+                                                int oritzet = l.getTset().get( orinyum );
+
+                                                //the previous data for undo
+                                                from = l.getStr().get( nyum );
+                                                tzet = l.getTset().get( nyum );
+
+
+                                                lh2 = new layerhistory( followe, from, oi, nyum, i, tzet, oritzet );
+
+                                                //if (from != oi) {
+                                                undolayer.add( lh2 );
+                                                uploaddata( lh2 );
+                                                redolayer.clear();
+                                                layers.get( i ).getStr().set( nyum, oi );
+                                                layers.get( i ).getTset().set( nyum, oritzet );
+                                                followe = true;
+                                            }
+                                        }
+
+
+                                    }
+                                }
+
+                            }
+                        }
+
+                    }
+
+                    if (movetool==selectTool.MOVE) {
                         mapstartSelect =  newmapstartselect;
                         mapendSelect = newmapendselect;
 
@@ -17494,7 +17591,11 @@ String texta="";
                 }
                 else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
                     saveMap(curdir + "/" + curfile);
-                    playmusic();
+                    playmusic(playback.PLAY,"");
+                    return true;
+                }
+                else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("Pixel Editor")) {
+                    rotating=!rotating;
                     return true;
                 }
                 else if (p.getName().equalsIgnoreCase("tag") && p.getValue().equalsIgnoreCase("RW")) {
@@ -18871,7 +18972,6 @@ String texta="";
                             }
 
                             if (dong > 2) {
-                                Gdx.app.log( "AA", dong + "" );
                                 layers.get( am.getSourcelayer() ).getStr().set( k, strs );
 
                                 for (int l = 0; l < tilesets.size(); l++) {
@@ -19426,7 +19526,7 @@ String texta="";
                 }
                 if (tapped(touch2, gui.redo)) {
                     //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
-                    rotating = !rotating;
+                    //rotating = !rotating;
                     return true;
                 }
                 if (sMinimap && tapped(touch2, gui.minimap)) {
@@ -19466,9 +19566,23 @@ String texta="";
 
                 //switch between copy tool and move tool
                 if (tapped(touch2, gui.tool4)) {
-                    movetool = ! movetool;
-                    //readandsaveAudio();
-                    //recordAudio();
+                    switch (movetool){
+                        case PICKER:
+                            movetool=selectTool.COPY;
+                            break;
+                        case COPY:
+                            movetool=selectTool.MOVE;
+                            break;
+                        case MOVE:
+                            movetool=selectTool.FLIP;
+                            break;
+                        case FLIP:
+                            movetool=selectTool.CLONE;
+                            break;
+                        case CLONE:
+                            movetool=selectTool.PICKER;
+                            break;
+                    }
                     activetool=3;
                     return true;
                 }
@@ -19626,18 +19740,6 @@ String texta="";
                     //now I have the clipboard layer, just put it on tap...
                 }
 
-                boolean ifmusic=false;
-                for (property p : properties)
-                {
-                    if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
-                        ifmusic=true;
-                        break;
-                    }
-
-                }
-                if (ifmusic) {
-                    startmarker = mapstartSelect;
-                }
 
 
             } else if (mode == "object") {
@@ -20008,139 +20110,194 @@ String texta="";
         return false;
     }
 
-    float startmarker=0f;
-    float currentmarker=0f;
-    int currentcolumn=0;
-    boolean musicisplaying =false;
+    boolean midiplaying =false;
     int tempo=120;
-    private void playmusic(){
-        if (!musicisplaying) {
-            currentmarker = (startmarker % Tw)/4;
-            currentcolumn = (int) startmarker % Tw;
-            musicisplaying = true;
+    Thread play;
 
-            for (property p : properties)
-            {
-                if (p.getName().equalsIgnoreCase("tempo"))
-                {
-                    try {
-                        tempo = Integer.parseInt(p.getValue());
-                    }catch(Exception e){tempo=120;}
-                    break;
-                }
+    private void exporttomidi(String filenya){
+        boolean ismusic=false;
+        for (property p : properties) {
+            if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
+                ismusic=true;
             }
 
-            recordAudio();
         }
-        else
-        {
-            musicisplaying=false;
+
+        if (ismusic) {
+            playmusic( playback.MIDI, filenya );
+            backToMap();
+            status( z.exportfinished, 3 );
         }
     }
 
-    private void musicplaying(float dt){
-        if (musicisplaying){
-            currentmarker+=dt*tempo/120;
-            if (currentcolumn >=Tw){
-                musicisplaying=false;
+    private void recordwav(String filenya){
+        boolean ismusic=false;
+        for (property p : properties) {
+            if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
+                ismusic=true;
+            }
+
+        }
+
+        if (ismusic) {
+            playmusic( playback.WAV, filenya );
+            backToMap();
+            status( z.recording, 3 );
+        }
+    }
+
+    public enum playback{PLAY,MIDI,WAV}
+
+    private void playmusic(final playback pbt, final String filenya){
+
+        if (pbt==playback.PLAY) {
+            if (play != null) {
+                play.interrupt();
+                new Player().play( "" );
+                play = null;
+                midiplaying = false;
                 return;
             }
-            status(currentmarker+" | " + currentcolumn,1);
-            if (currentmarker*4f > currentcolumn){
-                for (int l=0; l<layers.size();l++){
-                    layer lay = layers.get(l);
-                    if (lay.getType() == layer.Type.TILE)
-                    {
-                        for (int row =0; row < Th; row++)
-                        {
-                            int num = (Tw*row)+currentcolumn;
-                            long tid = lay.getStr().get(num);
-                            if (lay.getStr().get(num) !=0){
-                                int musicnote = 89-row;
-                                Sound s;
-                                String soundfile="";
-                                tileset t = tilesets.get(0);
-                                for (property p : t.getTiles().get((int) tid - t.getFirstgid()).getProperties())
-                                {
-                                    if (p.getName().equalsIgnoreCase("note"))
-                                    {
-                                        soundfile=curdir+"/"+p.getValue();
-                                        break;
+        }
+        if (pbt==playback.WAV) {
+            if (play != null) {
+                play.interrupt();
+            }
+        }
+
+        midiplaying=true;
+        play=new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    int wavwidth=0;
+
+                    int xstart=0;
+                    int xstop=Tw-1;
+                    int ystart=0;
+                    int ystop=Th-1;
+                    if (activetool==3){
+                        xstart=mapstartSelect % Tw;
+                        xstop=mapendSelect % Tw;
+                        ystart=mapstartSelect /Tw;
+                        ystop=mapendSelect / Tw;
+                    }
+
+                    wavwidth = (2+(xstop-xstart))*4;
+                    Pattern seq = new Pattern();
+                    int index=-1; boolean indexup;
+                for (int y=ystart;y<=ystop;y++){
+                    indexup=false;
+                    for (int x=xstart;x<=xstop;x++){
+                        int num = y*Tw+x;
+                        Long spr = layers.get( selLayer ).getStr().get( num );
+                        int tst = layers.get( selLayer ).getTset().get( num );
+                        if (tst==-1) { continue;}
+
+                        Long cspr = spr-tilesets.get(tst).getFirstgid();
+
+                        for (tile t: tilesets.get(tst).getTiles()){
+                            if (t.getTileID()==cspr){
+                                for (property p: t.getProperties()){
+                                    if (p.getName().equalsIgnoreCase( "chords" )){
+                                        if (!indexup) {index++; indexup=true;}
+                                        ChordProgression cp = new ChordProgression(p.getValue());
+                                        Pattern tp = cp.getPattern();
+                                        tp.setVoice( index );
+                                        seq.add( tp );
+                                    }
+                                    if (p.getName().equalsIgnoreCase( "pattern" )){
+                                        if (!indexup) {index++; indexup=true;}
+                                        Pattern tp = new Pattern(p.getValue());
+                                        tp.setVoice( index );
+                                        seq.add( tp );
+                                    }
+                                    if (p.getName().equalsIgnoreCase( "rhythm" )){
+                                        if (!indexup) {index++; indexup=true;}
+                                        String ss[] = p.getValue().split( "\\n" );
+                                        Rhythm r=new Rhythm();
+                                        for (String s:ss){
+                                            r.addLayer( s );
+                                        }
+
+                                        seq.add(r.getPattern());
                                     }
                                 }
-                                FileHandle fh = Gdx.files.external(soundfile);
-
-                                if (!fh.exists()) {
-                                    msgbox("File: "+soundfile+" not found.");
-                                    musicisplaying=false;
-                                    return;
-                                }
-                                s = Gdx.audio.newSound(fh);
-                                double pitch = Math.pow(2f,((musicnote-49f)/12f));
-                                long id = s.play();
-                                s.setPitch(id,(float) pitch);
-
                             }
                         }
                     }
+
                 }
 
-                currentcolumn++;
-            }
+                seq.setTempo( 120 );
+                //Gdx.app.log( "ASD",seq.toString() );
+                switch (pbt){
+                    case MIDI:
+                        MidiFileManager.savePatternToMidi(seq , Gdx.files.external(curdir+"/"+filenya+".midi").file());
+                        break;
+                    case PLAY:
+                        new Player().play(seq);
+                        break;
+                    case WAV:
+                        recordAudio(wavwidth,filenya);
+                        new Player().play(seq);
+                        break;
 
-        }
+                }
+                    midiplaying=false;
+                    play=null;
+                } catch (Exception e) {
+                    msgbox(e.toString());
+                }
+
+                /*
+                        ChordProgression cp = new ChordProgression("I IV V I I IV V III II I II i");
+                        Pattern p3 = new Pattern(cp.getPattern()).setVoice( 3 );
+                        Rhythm rhythm = new Rhythm()
+                                .addLayer("O..oO...O..oOO..")
+                                .addLayer("..S...S...S...S.")
+                                .addLayer("````````````````")
+                                .addLayer("...............+");
+
+                        Pattern p1 = new Pattern("V0 I[Piano] Eq Ch. | Eq Ch. | Dq Eq Dq Cq");
+                        Pattern p2 = new Pattern("V1 I[Flute] Rw     | Rw     | GmajQQQ  CmajQ");
+                        Player player = new Player();
+                        Pattern sequence = new Pattern(p1, p2, p3, rhythm.getPattern().repeat(2));
+
+                        player.play(sequence);
+
+
+                 */
+
+
+
+            }
+        });
+
+        play.start();
+
+
     }
+
+
 
     private com.mirwanda.nottiled.platformer.game mygame;
 
 
     private void playgame(final String filex){
 
-
-        final String curlevel = prefs.getString(filex, filex);
-        if (filex.equalsIgnoreCase(curlevel)){
-            kartu="game";
+        try{
             mygame = new com.mirwanda.nottiled.platformer.game();
-            if (mygame.initialise(curdir, filex)){
-                msgbox("Error, make sure to put your game on the Sample folder.");
-            }
+            mygame.initialise(curdir, filex);
+            kartu="game";
+            Gdx.input.setInputProcessor(gd);
             gamecam.zoom = 0.2f;
             gamecam.position.set(mygame.player.body.getPosition().x,mygame.player.body.getPosition().y,0);
             gamecam.update();
-            //mygame.starting=true;
-
-        }else{
-            Dialog dialog = new Dialog(z.confirmation, skin, "dialog") {
-                public void result(Object obj) {
-                    System.out.println("result " + obj);
-                    String levelnya;
-                    if ((boolean) obj){
-                        levelnya=curlevel;
-                    }
-                    else
-                    {
-                        levelnya=filex;
-                    }
-                    kartu="game";
-                    prefs.putString(curfile, levelnya).flush();
-                    Gdx.input.setInputProcessor(gd);
-                    mygame = new com.mirwanda.nottiled.platformer.game();
-                    if (mygame.initialise(curdir, levelnya)){
-                        msgbox("Error, make sure to put your game on the Sample folder.");
-                    }
-                    gamecam.zoom = 0.2f;
-                    gamecam.position.set(mygame.player.body.getPosition().x,mygame.player.body.getPosition().y,0);
-                    gamecam.update();
-                    //mygame.starting=true;
-                }
-            };
-            Gdx.input.setInputProcessor(stage);
-            asked=true;
-            dialog.text("Do you want to continue or \nstart from the beginning?");
-            dialog.button("Continue", true); //sends "true" as the result
-            dialog.button("Start", false);  //sends "false" as the result
-            dialog.show(stage);
+        }catch(Exception e){
+            msgbox(e.toString().substring( e.toString().indexOf( ":" )+2 ));
         }
+
     }
 
 
