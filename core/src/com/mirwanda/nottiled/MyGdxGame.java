@@ -4,6 +4,7 @@ import com.badlogic.gdx.*;
 import com.badlogic.gdx.ai.pfa.GraphPath;
 import com.badlogic.gdx.audio.AudioDevice;
 import com.badlogic.gdx.audio.AudioRecorder;
+import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.files.*;
 import com.badlogic.gdx.graphics.*;
@@ -39,6 +40,7 @@ import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.*;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -60,6 +62,15 @@ import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
+import com.leff.midi.MidiFile;
+import com.leff.midi.MidiTrack;
+import com.leff.midi.event.MidiEvent;
+import com.leff.midi.event.NoteOn;
+import com.leff.midi.event.ProgramChange;
+import com.leff.midi.event.meta.Tempo;
+import com.leff.midi.event.meta.TimeSignature;
+import com.leff.midi.examples.EventPrinter;
+import com.leff.midi.util.MidiProcessor;
 import com.mirwanda.nottiled.ai.ATGraph;
 import com.mirwanda.nottiled.ai.AutoTile;
 import com.mirwanda.nottiled.platformer.game;
@@ -1058,10 +1069,11 @@ String texta="";
                 if (nofling > 0) nofling -= delta;
                 switch (kartu) {
                     case "game":
+
                         //crt.setEnabled(true);
                         //vignette.setEnabled(true);
                         //curvature.setEnabled(true);
-                        //bloom.setEnabled(true);
+                        bloom.setEnabled(false);
 
                         postProcessor.capture();
                         mygame.keyinput();
@@ -1210,7 +1222,7 @@ String texta="";
                         drawObjectsInfo();
                         postProcessor.render();
                         drawWorldUI();
-                        //b2dr.render(world,cam.combined);
+                        b2dr.render(world,cam.combined);
 
                         drawstage(delta);
 
@@ -1445,13 +1457,13 @@ String texta="";
 
     public void restartgame(){
         if (mygame.bgm.isPlaying()) mygame.bgm.stop();
-        playgame(mygame.file);
+        playgame(curdir, mygame.file);
     }
 
     public void nextlevel(){
         prefs.putString(curfile, mygame.nextlevel).flush();
         if (mygame.bgm.isPlaying()) mygame.bgm.stop();
-        if (mygame.nextlevel!=null) playgame(mygame.nextlevel);
+        if (mygame.nextlevel!=null) playgame(curdir, mygame.nextlevel);
 
     }
     boolean touched, usetool;
@@ -5886,7 +5898,7 @@ String texta="";
         bOpen.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                FileDialog(z.opentmxfile, "open", "file", new String[]{".tmx"}, null);
+                FileDialog(z.opentmxfile, "open", "file", new String[]{".tmx",".ntp"}, null);
             }
         });
 
@@ -5923,8 +5935,20 @@ String texta="";
         bRecentOpen.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                loadtmx(lrecentlist.getSelected());
-                backToMap();
+                FileHandle file = Gdx.files.external(lrecentlist.getSelected());
+                if (file.extension().equalsIgnoreCase( "ntp" )){
+                    backToMap();
+                    String curdir = file.parent().path();
+                    FileHandle tmpfolder=Gdx.files.external("NotTiled/Temp");
+                    unzip(file,tmpfolder);
+                    recents.addrecent( file.path() );
+                    saveRecents();
+                    playgame( "NotTiled/Temp", "index.tmx");
+                }else{
+                    loadtmx(lrecentlist.getSelected());
+                    backToMap();
+                }
+
             }
         });
 
@@ -11811,10 +11835,19 @@ String texta="";
                 fPropVal.setText(asu);
                 break;
             case "open":
-                curdir = file.parent().path();
+                if (file.extension().equalsIgnoreCase( "ntp" )){
+                    backToMap();
+                    String curdir = file.parent().path();
+                    FileHandle tmpfolder=Gdx.files.external("NotTiled/Temp");
+                    unzip(file,tmpfolder);
+                    recents.addrecent( file.path() );
+                    saveRecents();
+                    playgame( "NotTiled/Temp", "index.tmx");
+                }else{
+                    curdir = file.parent().path();
+                    loadtmx(openedfile);
+                }
 
-
-                loadtmx(openedfile);
                 break;
             case "background":
                 background = new Texture(Gdx.files.external(openedfile));
@@ -12709,14 +12742,18 @@ String texta="";
                         curdir = fNCurdir.getText();
                         curdir = curdir.replace("//", "/");
                         curfile = fNFilename.getText();
-                        Tw = Integer.parseInt(fNTw.getText());
-                        Th = Integer.parseInt(fNTh.getText());
 
 
                         FileHandle from = Gdx.files.external( filepath +"/template.tmx");
                         FileHandle to = Gdx.files.external( curdir+"/"+curfile);
-                        to.write( from.read(),false );
-
+                        if (from.exists()) {
+                            to.write( from.read(), false );
+                        }else{
+                            loadingfile=false;
+                            backToMap();
+                            msgbox("Error, template not found!");
+                            return;
+                        }
                         ////Copy assets, which might contain macro anyway...
                         FileHandle check = Gdx.files.external(filepath+"/assets.zip");
                         if (check.exists()) {
@@ -12738,6 +12775,8 @@ String texta="";
                         }
 
                         loadmap(curdir+"/"+curfile);
+                        Tw = Integer.parseInt(fNTw.getText());
+                        Th = Integer.parseInt(fNTh.getText());
 
                         undolayer.clear();
                         redolayer.clear();
@@ -15498,16 +15537,20 @@ String texta="";
 
 
             curid += 1;
-
             if (magnet == 1) {
                 switch (nyok.getShape()) {
+                    case "image":
+                        nyok.setX((ae / Tsw) * Tsw);
+                        nyok.setY(Tsh+((-ab + Tsh) / Tsh) * Tsh);
+                        break;
+
                     case "rectangle":
                     case "ellipse":
                     case "polygon":
                     case "polyline":
                     case "text":
 
-                    case "image":
+
                     default:
                         nyok.setX((ae / Tsw) * Tsw);
                         nyok.setY(((-ab + Tsh) / Tsh) * Tsh);
@@ -15522,9 +15565,41 @@ String texta="";
 
                 }
             }else{
-                nyok.setX((int) ae);
-                nyok.setY(-(int) ab + Tsh);
+                if (nyok.getShape()!="image") {
+                    nyok.setX( (int) ae );
+                    nyok.setY( -(int) ab + Tsh );
+                }else{
+                    nyok.setX( (int) ae );
+                    nyok.setY( -(int) ab + Tsh +Tsh );
+
+                }
             }
+
+            //I don't understand why I need this.. error if removed!
+            switch (nyok.getShape()) {
+                case "image":
+                    nyok.setShape( "image" );
+                    break;
+                case "rectangle":
+                case "ellipse":
+                    nyok.setShape( "ellipse" );
+                    break;
+                case "polygon":
+                    nyok.setShape( "polygon" );
+                    break;
+                case "polyline":
+                    nyok.setShape( "polyline" );
+                    break;
+                case "text":
+                    nyok.setShape( "text" );
+                    break;
+                case "point":
+                    nyok.setShape( "point" );
+                    break;
+
+            }
+
+
             layers.get(selLayer).getObjects().add(nyok);
             updateObjectCollision();
             //cumi
@@ -17586,7 +17661,7 @@ String texta="";
             for (property p : properties) {
                 if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled platformer")) {
                     saveMap(curdir + "/" + curfile);
-                    playgame(curfile);
+                    playgame(curdir, curfile);
                     return true;
                 }
                 else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
@@ -20113,6 +20188,7 @@ String texta="";
     boolean midiplaying =false;
     int tempo=120;
     Thread play;
+//composer c = new composer("V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s [PEDAL_HI_HAT]s Ri L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri");// V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri");
 
     private void exporttomidi(String filenya){
         boolean ismusic=false;
@@ -20128,6 +20204,7 @@ String texta="";
             backToMap();
             status( z.exportfinished, 3 );
         }
+
     }
 
     private void recordwav(String filenya){
@@ -20147,15 +20224,22 @@ String texta="";
     }
 
     public enum playback{PLAY,MIDI,WAV}
+    public Music composerPlayer;
 
     private void playmusic(final playback pbt, final String filenya){
 
         if (pbt==playback.PLAY) {
-            if (play != null) {
-                play.interrupt();
-                new Player().play( "" );
-                play = null;
-                midiplaying = false;
+            try {
+                if (play != null) {
+                    play.interrupt();
+                    new Player().play( "" );
+                    play = null;
+                    midiplaying = false;
+                    return;
+                }
+            }catch(Exception e){}
+            if (composerPlayer!=null){
+                composerPlayer.stop();
                 return;
             }
         }
@@ -20230,17 +20314,53 @@ String texta="";
                 }
 
                 seq.setTempo( 120 );
-                //Gdx.app.log( "ASD",seq.toString() );
+                Gdx.app.log( "ASD",seq.toString() );
                 switch (pbt){
                     case MIDI:
-                        MidiFileManager.savePatternToMidi(seq , Gdx.files.external(curdir+"/"+filenya+".midi").file());
+                        composer c = new composer(seq.toString());
+                        c.save( curdir+"/"+filenya+".mid" );
+                        //MidiFileManager.savePatternToMidi(seq , Gdx.files.external(curdir+"/"+filenya+".midi").file());
                         break;
                     case PLAY:
-                        new Player().play(seq);
+                        switch(Gdx.app.getType()) {
+                            case Android:
+                                c = new composer(seq.toString());
+                                c.save( "NotTiled/Temp/composer.mid" );
+                                composerPlayer = Gdx.audio.newMusic( Gdx.files.external( "NotTiled/Temp/composer.mid" ) );
+                                composerPlayer.play();
+                                break;
+                                // android specific code
+                            case Desktop:
+                                new Player().play( seq );
+                                break;
+                                // desktop specific code
+                            case iOS:
+                                c = new composer(seq.toString());
+                                c.save( "NotTiled/Temp/composer.mid" );
+                                composerPlayer = Gdx.audio.newMusic( Gdx.files.external( "NotTiled/Temp/composer.mid" ) );
+                                composerPlayer.play();
+                                break;
+                                // android specific code
+                        }
                         break;
                     case WAV:
                         recordAudio(wavwidth,filenya);
-                        new Player().play(seq);
+                        switch(Gdx.app.getType()) {
+                            case Android:
+                                Music m = Gdx.audio.newMusic( Gdx.files.external( curdir + "/" + filenya + ".mid" ) );
+                                m.play();
+                                break;
+                            // android specific code
+                            case Desktop:
+                                new Player().play( seq );
+                                break;
+                            // desktop specific code
+                            case iOS:
+                                m = Gdx.audio.newMusic( Gdx.files.external( curdir + "/" + filenya + ".mid" ) );
+                                m.play();
+                                break;
+                            // android specific code
+                        }
                         break;
 
                 }
@@ -20284,7 +20404,7 @@ String texta="";
     private com.mirwanda.nottiled.platformer.game mygame;
 
 
-    private void playgame(final String filex){
+    private void playgame(final String curdir, final String filex){
 
         try{
             mygame = new com.mirwanda.nottiled.platformer.game();

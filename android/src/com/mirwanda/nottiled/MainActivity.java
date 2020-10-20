@@ -16,6 +16,7 @@ import org.solovyev.android.checkout.*;
 import com.mirwanda.nottiled.BuildConfig;//
 
 
+
 public class MainActivity extends AndroidApplication implements Interface
 {
 
@@ -182,6 +183,7 @@ public class MainActivity extends AndroidApplication implements Interface
             }
 		}
 		String intend="";
+
 		if (getPackageName().equalsIgnoreCase("com.mirwanda.nottiled"))
 		{
 		}

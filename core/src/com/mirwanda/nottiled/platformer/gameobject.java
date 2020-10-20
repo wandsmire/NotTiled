@@ -31,7 +31,7 @@ public class gameobject extends Sprite {
     public gameobject(){}
     public gameobject.objecttype objtype;
     public MapObject obj;
-    public Sound sfx,sfxdead;
+    public Sound sfx,sfxdead,psfx;
     public enum move {RIGHT,LEFT,UP,DOWN}
     public int dir;
     public boolean moving, dirlocked;
@@ -39,10 +39,11 @@ public class gameobject extends Sprite {
     public float HP=1;
     public float maxHP=1;
     public float speed;
-    public boolean bird;
+    public boolean stepping;
+    public float pspread=0, spread=0;
     public boolean heavy;
     public actions action;
-    public enum actions{JUMP,DASH,SHOOT}
+    public enum actions{JUMP,DASH,SHOOT,NONE}
     public float impulse;
     public String bindvar;
     public TiledMapTile tlcece;
@@ -572,8 +573,9 @@ public class gameobject extends Sprite {
         if (state==states.DEAD) return;
 
 
-       if (body!=null) setPosition(body.getPosition().x-getWidth()/2f,body.getPosition().y-getHeight()/2f);
 
+       if (body!=null) setPosition(body.getPosition().x-getWidth()/2f,body.getPosition().y-getHeight()/2f);
+        if (HP>maxHP) HP=maxHP;
         if (rotating) rotate(5f);
         if (cooldown >=0) cooldown-=dt;
         if (destructible){
@@ -621,6 +623,7 @@ public class gameobject extends Sprite {
 
         }
 
+        if (objtype==null) return;
         switch (objtype) {
             case PLATFORMH:
 
@@ -633,16 +636,16 @@ public class gameobject extends Sprite {
 
                 switch(dir){
                     case 0://bawah
-                        body.setLinearVelocity(0, -speed);
+                        body.setLinearVelocity(spread, -speed);
                         break;
                     case 1://kanan
-                        body.setLinearVelocity(speed, 0);
+                        body.setLinearVelocity(speed, spread);
                         break;
                     case 2://kiri
-                        body.setLinearVelocity(-speed, 0);
+                        body.setLinearVelocity(-speed, spread);
                         break;
                     case 3://atas
-                        body.setLinearVelocity(0, speed);
+                        body.setLinearVelocity(spread, speed);
                         break;
                 }
                 distance+=speed;
@@ -662,22 +665,25 @@ public class gameobject extends Sprite {
 
                 switch(dir){
                     case 0://bawah
-                        body.setLinearVelocity(0, -speed);
+                        body.setLinearVelocity(spread, -speed);
                         break;
                     case 1://kanan
-                        body.setLinearVelocity(speed, 0);
+                        body.setLinearVelocity(speed, spread);
                         break;
                     case 2://kiri
-                        body.setLinearVelocity(-speed, 0);
+                        body.setLinearVelocity(-speed, spread);
                         break;
                     case 3://atas
-                        body.setLinearVelocity(0, speed);
+                        body.setLinearVelocity(spread, speed);
                         break;
                 }
                 distance+=speed;
                 if (distance>maxdistance){
                     setCategoryFilter(game.DESTROYED_BIT);
-                    mygame.objects.remove(this);
+                    body.setLinearVelocity( 0,0 );
+
+                    state=states.DEAD;
+
 
                 }
 
@@ -715,7 +721,7 @@ public class gameobject extends Sprite {
 
 
                 if (anim.size()>0) {
-                    if (moving || bird) {
+                    if (moving || stepping) {
                         TextureRegion currentFrame = anim.get( dir ).getKeyFrame( mygame.stateTime, true );
                         setRegion( currentFrame );
                     } else {
@@ -728,7 +734,7 @@ public class gameobject extends Sprite {
 
                 if (path==null && !dirlocked) {
                     if (body.getPosition().dst( mygame.player.body.getPosition() ) < chaseRadius / 100f) {
-                        if (chase) moving = true;
+                        if (chase &&!tame) moving = true;
 
                         if (Math.abs( body.getPosition().x - mygame.player.body.getPosition().x ) >= speed * 10 / 100f) {
 
@@ -778,7 +784,7 @@ public class gameobject extends Sprite {
                 if (mygame.player.state == states.DEAD) moving=false;
 
                 if (moving) {
-                    if (mygame.rpg||bird) {
+                    if (mygame.rpg||heavy) {
                         switch (dir) {
                             case 0://bawah
                                 body.setLinearVelocity( 0, -speed );
@@ -810,7 +816,7 @@ public class gameobject extends Sprite {
 
                     }
                 }else{
-                    if (mygame.rpg || bird)  body.setLinearVelocity( 0, 0 );
+                    if (mygame.rpg || stepping)  body.setLinearVelocity( 0, 0 );
                     body.setLinearVelocity(body.getLinearVelocity().x, body.getLinearVelocity().y);
                 }
 
@@ -844,8 +850,10 @@ public class gameobject extends Sprite {
         if (mygame.starting) return;
         if (tame) return;
         if (cooldown>0||!canshoot) return;
+        playSfx( psfx );
         gameobject newbrick = new gameobject();
         newbrick.mygame = mygame;
+        newbrick.spread=pspread-(2*(float)Math.random()*pspread);
         newbrick.speed=pspeed;
         newbrick.maxdistance=pmaxdistance;
         newbrick.damage=pdamage;
@@ -881,7 +889,11 @@ public class gameobject extends Sprite {
     }
 
     public void playSfx(Sound s){
-        s.play(1.0f);
+       try{
+           s.play(1.0f);
+       }catch(Exception e){
+
+       }
     }
 
     public void bumbum(){

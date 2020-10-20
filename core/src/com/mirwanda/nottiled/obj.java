@@ -88,8 +88,6 @@ public class obj implements Cloneable
 
 	public void updateVertices(World world, int Tsh){
 		bdef.type = BodyDef.BodyType.StaticBody;
-		bdef.position.set(x,-y+Tsh);
-		body = world.createBody(bdef);
 		fdef.filter.categoryBits = DEFAULT_BIT;
 		fdef.filter.maskBits = PLAYER_BIT;
 
@@ -97,6 +95,9 @@ public class obj implements Cloneable
 
 		Vector2[] vertices = new Vector2[4];
 		if (shape=="image") {
+			bdef.position.set(x,-y+Tsh);
+			body = world.createBody(bdef);
+
 			vertices[0] = new Vector2( 0f, 0f );
 			vertices[1] = new Vector2( 0, h );
 			vertices[2] = new Vector2( w, h );
@@ -109,6 +110,9 @@ public class obj implements Cloneable
 
 
 		}else if (shape=="polygon"){
+			bdef.position.set(x,-y+Tsh);
+			body = world.createBody(bdef);
+
 			if (points.size()>2 & points.size()<9) {
 				vertices = new Vector2[points.size()];
 				for(int i=0;i<points.size();i++){
@@ -129,7 +133,10 @@ public class obj implements Cloneable
 
 
 		}else if (shape=="polyline"){
-				for(int i=0;i<points.size()-1;i++){
+			bdef.position.set(x,-y+Tsh);
+			body = world.createBody(bdef);
+
+			for(int i=0;i<points.size()-1;i++){
 					eshape = new EdgeShape();
 					eshape.set(points.get( i ).x,-points.get( i ).y,points.get( i+1 ).x,-points.get( i+1 ).y);
 					fdef.shape = eshape;
@@ -139,6 +146,9 @@ public class obj implements Cloneable
 				}
 
 		}else if (shape=="point"){
+			bdef.position.set(x,-y+Tsh);
+			body = world.createBody(bdef);
+
 			vertices[0] = new Vector2( -Tsh/4f, -Tsh/4f );
 			vertices[1] = new Vector2( Tsh/4, -Tsh/4 );
 			vertices[2] = new Vector2( -Tsh/4, Tsh/4 );
@@ -149,6 +159,9 @@ public class obj implements Cloneable
 			fixture = body.createFixture(fdef);
 			fixture.setUserData(this);
 		}else{
+			bdef.position.set(x,-y+Tsh);
+			body = world.createBody(bdef);
+
 			vertices[0] = new Vector2( 0f, 0f );
 			vertices[1] = new Vector2( 0, -h );
 			vertices[2] = new Vector2( w, -h );

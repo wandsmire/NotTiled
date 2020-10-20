@@ -49,7 +49,7 @@ import static com.mirwanda.nottiled.platformer.gameobject.states.DEAD;
 
 
 public class game {
-    public boolean debugmode = true;
+    public boolean debugmode = false;
     public boolean playtest=true;
     public boolean uitest=false;
 
@@ -138,16 +138,20 @@ public class game {
 
         tmp = new Texture( getFile( path + "/icons.png") );
         icons = TextureRegion.split( tmp,
-                tmp.getWidth() / 6,
+                tmp.getWidth() / 5,
                 tmp.getHeight() / 5 );
 
         objects = new ArrayList<gameobject>();
 
-        if (playtest) {
-            map = new TmxMapLoader( new ExternalFileHandleResolver() ).load( path + "/" + filename );
-        }else{
-            map = new TmxMapLoader( new InternalFileHandleResolver() ).load( path + "/" + filename );
+        try {
+            if (playtest) {
+                map = new TmxMapLoader( new ExternalFileHandleResolver() ).load( path + "/" + filename );
+            } else {
+                map = new TmxMapLoader( new InternalFileHandleResolver() ).load( path + "/" + filename );
 
+            }
+        }catch(Exception e){
+            return false;
         }
         renderer = new OrthogonalTiledMapRenderer(map);
 
@@ -207,11 +211,12 @@ public class game {
 
             }
         }
-            checkpoint.set(player.body.getPosition().x,player.body.getPosition().y);
+
+        if (player!=null){
 
         MapProperties mpa = map.getProperties();
         if (mpa != null) {
-            String bgms = (String) mpa.get("bgm");
+            String bgms = (String) mpa.get( "bgm" );
             if (bgms != null) {
 
                 if (getFile( path + "/" + bgms ).exists()) {
@@ -222,7 +227,7 @@ public class game {
             }
 
 
-            String bgc = (String) mpa.get("background");
+            String bgc = (String) mpa.get( "background" );
             if (bgc != null) {
 
                 if (getFile( path + "/" + bgc ).exists()) {
@@ -233,15 +238,16 @@ public class game {
 
             }
 
-            nextlevel = (String) mpa.get("nextlevel");
-            debriefing = (String) mpa.get("debriefing");
+            nextlevel = (String) mpa.get( "nextlevel" );
+            debriefing = (String) mpa.get( "debriefing" );
             died = "GAME OVER";
-
+        }
         }
 
 
         victory=false;
         loadingmap=false;
+        //save();
         return false;
 
 
@@ -262,12 +268,12 @@ public class game {
                 recheck=false;
                 for (int i = 0; i < ss.length; i++) {
                     String[] sv = ss[i].split( "=" );
-                    Gdx.app.log( sv[0]+"",sv[1]+"" );
+                    //Gdx.app.log( sv[0]+"",sv[1]+"" );
                     boolean ada = false;
                     for (KV var : save.vars) {
                         if (sv[0].equalsIgnoreCase( var.key )) {
                             ada = true;
-                            Gdx.app.log( sv[1]+"",var.value+"" );
+                            //Gdx.app.log( sv[1]+"",var.value+"" );
                             //var.value
                             if (sv[1].equalsIgnoreCase(var.value+"")) {
                                 rq += 1;
@@ -380,7 +386,7 @@ public class game {
     public OrthographicCamera gc;
     public void update(SpriteBatch batch, float delta, OrthographicCamera gamecam) {
         gc=gamecam;
-        if (!starting) world.step(1/60f,6,2);
+        if (!starting && player.state!=DEAD) world.step(1/60f,6,2);
 
         if (player.HP<=0){
             killPlayer();
@@ -527,8 +533,8 @@ public class game {
                 batch.draw( hpbar[0][0], sboxes.getX(), sboxes.getY() + sboxes.getHeight() + 0.01f, sboxes.HP / sboxes.maxHP * sboxes.getWidth(), hpbar[0][0].getRegionHeight() / 100f );
             }
 
-            sboxes.meledak.update( Gdx.graphics.getDeltaTime() );
-            sboxes.meledak.draw( batch );
+           // sboxes.meledak.update( Gdx.graphics.getDeltaTime() );
+           // sboxes.meledak.draw( batch );
         }
 
         for (int i = particles.size() - 1; i >= 0; i--){
@@ -733,6 +739,7 @@ public class game {
 //        Gdx.app.log(go.pcooldown+"", go.cooldown+"");
         if (go==null) return;
         if (go.cooldown>0) return;
+
         //Gdx.app.log(go.bindvar, getVar( go.bindvar )+"");
         if (go.bindvar!=null){
             if (getVar( go.bindvar )<=0) {return;}else{
@@ -740,7 +747,11 @@ public class game {
             }
 
         }
+        playSfx( go.sfx );
+
         switch (go.action){
+            case NONE:
+                break;
             case JUMP:
                 player.body.applyLinearImpulse( 0f, go.impulse, player.getX(), player.getY(), true );
                 jumping = true;
@@ -772,6 +783,7 @@ public class game {
                 newbrick.mygame = this;
                 newbrick.speed=go.pspeed;
                 newbrick.maxdistance=go.pmaxdistance;
+                newbrick.spread=go.pspread-(2*(float)Math.random()*go.pspread);
                 newbrick.damage=go.pdamage;
                 newbrick.dir=player.dir;
                 newbrick.anim=go.panim;
@@ -794,11 +806,9 @@ public class game {
 
                         break;
                 }
-                Gdx.app.log( newbrick.pimagesize.x+"",newbrick.pimagesize.y+""  );
                 newbrick.setupGameObject( world, null,posx, posy, newbrick.pimagesize.x/2f, newbrick.pimagesize.y/2f, BodyDef.BodyType.DynamicBody, PLAYERPROJECTILE, null ,null ,false);
                 this.objects.add( newbrick );
                 go.cooldown=go.pcooldown;
-
                 break;
         }
 
@@ -817,31 +827,35 @@ public class game {
     }
 
     public void load(){
-        savegame at = new savegame();
-        Json json = new Json();
-        FileHandle f = Gdx.files.local(path + "/save.json");
-        at = json.fromJson(savegame.class, f);
-        save = at;
+        try {
+            savegame at = new savegame();
+            Json json = new Json();
+            FileHandle f = Gdx.files.local( path + "/save.json" );
+            at = json.fromJson( savegame.class, f );
+            save = at;
 
-        bgm.stop();
-        loadingmap=true;
-        initialise(path, at.mapname);
+            bgm.stop();
+            loadingmap = true;
+            initialise( path, at.mapname );
 
-        Gdx.app.postRunnable( new Runnable() {
+            Gdx.app.postRunnable( new Runnable() {
 
-            @Override
-            public void run () {
-                player.body.setTransform(save.x, save.y,0);
-                player.body.setLinearVelocity( 0,0 );
-            }
-        });
+                @Override
+                public void run() {
+                    player.body.setTransform( save.x, save.y, 0 );
+                    player.body.setLinearVelocity( 0, 0 );
+                }
+            } );
+        }catch(Exception e){
+
+        }
 
     }
 
     public void killPlayer(){
         if (player.state!= DEAD && !victory && !starting)
         {
-            //playSfx(sfxplayer);
+            playSfx(player.sfxdead);
             dead+=1;
             player.bumbum();
             player.state= DEAD;
@@ -902,6 +916,12 @@ public class game {
                     newbrick.sfx = Gdx.audio.newSound( getFile( path + "/" + sfx ) );
             }
 
+        if (o.containsKey( "psfx" )) {
+            String sfx = o.get("psfx").toString();
+            if (getFile( path + "/" + sfx ).exists())
+                newbrick.psfx = Gdx.audio.newSound( getFile( path + "/" + sfx ) );
+        }
+
         if (o.containsKey( "sfxdead" )) {
             String sfx = o.get("sfxdead").toString();
             if (getFile( path + "/" + sfx ).exists())
@@ -926,7 +946,6 @@ public class game {
         if (o.containsKey( "name" )) {
             switch (o.get( "name" ).toString()) {
                 case "player":
-                    Gdx.app.log( "PP","PP" );
                     String anim = o.get( "anim" ).toString();
                     Texture txPlayer = new Texture( getFile( path + "/" + anim ) );
                     TextureRegion[][] tmp = TextureRegion.split( txPlayer,
@@ -1049,9 +1068,10 @@ public class game {
                         newbrick.path = null; //new int[]{0,0,2,2,3,3,1,1,2,1};
 
                     }
-                    newbrick.bird = o.containsKey( "bird" );
+                    newbrick.stepping = o.containsKey( "stepping" );
                     newbrick.canshoot = o.containsKey( "canshoot" );
                     newbrick.dirlocked = o.containsKey( "dirlocked" );
+                    newbrick.pspread = (o.containsKey( "pspread" )) ? Float.parseFloat( o.get( "pspread" ).toString() ) : 0;
                     newbrick.pcooldown = (o.containsKey( "pcooldown" )) ? Float.parseFloat( o.get( "pcooldown" ).toString() ) : 1;
                     newbrick.pspeed = (o.containsKey( "pspeed" )) ? Float.parseFloat( o.get( "pspeed" ).toString() ) : 4;
                     newbrick.pmaxdistance = (o.containsKey( "pmaxdistance" )) ? Integer.parseInt( o.get( "pmaxdistance" ).toString() ) : 300;
@@ -1096,7 +1116,7 @@ public class game {
                     }
 
                     newbrick.mygame = this;
-                    if (newbrick.bird || newbrick.heavy) {
+                    if (newbrick.heavy) {
                         newbrick.setupGameObject( world, tlcece, (int) xx, (int) yy, imgsize.x, imgsize.y, BodyDef.BodyType.KinematicBody, gameobject.objecttype.MONSTER, objx, t, over );
                     } else {
                         newbrick.setupGameObject( world, tlcece, (int) xx, (int) yy, imgsize.x, imgsize.y, BodyDef.BodyType.DynamicBody, gameobject.objecttype.MONSTER, objx, t, over );

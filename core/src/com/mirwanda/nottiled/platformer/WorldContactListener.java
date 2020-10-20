@@ -104,6 +104,9 @@ public class WorldContactListener implements ContactListener {
             if (o.get( "load" ) != null) {
                 mygame.load();
             }
+            if (o.get( "save" ) != null) {
+                mygame.save();
+            }
 
             if (o.get( "message" ) != null) {
                 mygame.msgindex = 0;
@@ -149,20 +152,29 @@ public class WorldContactListener implements ContactListener {
                 newbrick.mygame = mygame;
                 newbrick.objtype= ACTION;
                 newbrick.bindvar = (o.containsKey( "bindvar" )) ?  o.get( "bindvar" ).toString() : null;
-                newbrick.name = (o.containsKey( "label" )) ?  o.get( "label" ).toString() : null;
+                newbrick.name = (o.containsKey( "label" )) ?  o.get( "label" ).toString() : "";
+
+                if (o.containsKey( "asfx" )) {
+                    String sfx = o.get("asfx").toString();
+                    if (mygame.getFile( mygame.path + "/" + sfx ).exists())
+                        newbrick.sfx = Gdx.audio.newSound( mygame.getFile( mygame.path + "/" + sfx ) );
+                }
 
 
                 switch (o.get( "action" ).toString()){
                     case "jump":
                         newbrick.action = gameobject.actions.JUMP;
-                        newbrick.impulse = (o.containsKey( "impulse" )) ? Float.parseFloat( o.get( "impulse" ).toString() ) : 1;
-                        newbrick.pcooldown = (o.containsKey( "cooldown" )) ? Float.parseFloat( o.get( "cooldown" ).toString() ) : 1;
+                        newbrick.impulse = (o.containsKey( "impulse" )) ? Float.parseFloat( o.get( "impulse" ).toString() ) : 3f;
+                        newbrick.pcooldown = (o.containsKey( "cooldown" )) ? Float.parseFloat( o.get( "cooldown" ).toString() ) : 0.8f;
 
                         break;
                     case "dash":
                         newbrick.action = gameobject.actions.DASH;
                         newbrick.impulse = (o.containsKey( "impulse" )) ? Float.parseFloat( o.get( "impulse" ).toString() ) : 1;
                         newbrick.pcooldown = (o.containsKey( "cooldown" )) ? Float.parseFloat( o.get( "cooldown" ).toString() ) : 1;
+                        break;
+                    case "none":
+                        newbrick.action = gameobject.actions.NONE;
 
                         break;
                     case "shoot":
@@ -257,6 +269,7 @@ public class WorldContactListener implements ContactListener {
             gameobject mo = select( MONSTER,o1,o2 );
             gameobject pp = select( PLAYERPROJECTILE,o1,o2 );
             pp.bumbum();
+            mo.playSfx( mo.sfx );
             mo.HP-=pp.damage;
             pp.setCategoryFilter(game.DESTROYED_BIT);
             pp.state= gameobject.states.DEAD;
@@ -279,6 +292,7 @@ public class WorldContactListener implements ContactListener {
             gameobject pp = select( ENEMYPROJECTILE,o1,o2 );
             //Gdx.app.log( bl.HP+"",pp.damage+"");
             pp.bumbum();
+
             bl.HP-=pp.damage;
             pp.body.setLinearVelocity( 0,0 );
             pp.setCategoryFilter(game.DESTROYED_BIT);
@@ -290,7 +304,7 @@ public class WorldContactListener implements ContactListener {
             gameobject ep = select( ENEMYPROJECTILE,o1,o2 );
             gameobject pl = select( PLAYER,o1,o2 );
             ep.bumbum();
-
+            pl.playSfx( pl.sfx );
             pl.HP-=ep.damage;
             ep.setCategoryFilter(game.DESTROYED_BIT);
             ep.state= gameobject.states.DEAD;
@@ -301,7 +315,6 @@ public class WorldContactListener implements ContactListener {
             gameobject en = select( MONSTER,o1,o2 );
             gameobject pl = select( PLAYER,o1,o2 );
             pl.bumbum();
-
             pl.HP-=en.damage;
             eventobject(en);
         }

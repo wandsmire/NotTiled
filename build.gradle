@@ -60,7 +60,9 @@ project(":desktop") {
             exclude group: 'com.esotericsoftware.minlog', module: 'minlog'
         }
         implementation group: 'com.esotericsoftware', name: 'kryo', version: '4.0.1'
-        
+        implementation group: 'jfugue', name: 'jfugue', version: '5.0.9'
+
+
     }
 }
 
@@ -96,7 +98,8 @@ project(":android") {
             exclude group: 'com.esotericsoftware.minlog', module: 'minlog'
         }
         implementation group: 'com.esotericsoftware', name: 'kryo', version: '4.0.1'
-        
+        implementation group: 'jfugue', name: 'jfugue', version: '5.0.9'
+
     }
 }
 
@@ -118,6 +121,8 @@ project(":ios") {
             exclude group: 'com.esotericsoftware.minlog', module: 'minlog'
         }
         implementation group: 'com.esotericsoftware', name: 'kryo', version: '4.0.1'
+        implementation group: 'jfugue', name: 'jfugue', version: '5.0.9'
+
     }
 }
 
