@@ -20367,7 +20367,8 @@ String texta="";
                     midiplaying=false;
                     play=null;
                 } catch (Exception e) {
-                    msgbox(e.toString());
+                    e.printStackTrace();
+                    //msgbox(e.printStackTrace(););
                 }
 
                 /*
