@@ -8,7 +8,7 @@ vars: [
 	}
 	{
 		key: defuse
-		value: 1
+		value: 5
 		hud: true
 		iconx: 1
 		hasicon: true
@@ -29,15 +29,19 @@ vars: [
 	}
 	{
 		key: cave2
+		value: 1
 	}
 	{
 		key: cave3
+		value: 1
 	}
 	{
 		key: cave4
+		value: 1
 	}
 	{
 		key: cave5
+		value: 1
 	}
 	{
 		key: welcome
@@ -46,8 +50,14 @@ vars: [
 	{
 		key: nothing
 	}
+	{
+		key: killcave3
+		iconx: 2
+		hasicon: true
+		icony: 1
+	}
 ]
-x: 2.286411
-y: 2.1649997
-mapname: cave2.tmx
+x: 0.41666293
+y: 1.3699999
+mapname: lair.tmx
 }

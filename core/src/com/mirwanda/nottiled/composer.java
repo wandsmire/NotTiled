@@ -214,13 +214,22 @@ public class composer {
             case "[HELICOPTER]": changeProgram(125); break;
             case "[APPLAUSE]": changeProgram(126); break;
             case "[GUNSHOT]": changeProgram(127); break;
-            default: changeProgram(Integer.parseInt( instrument ) ); break;
+            default:
+
+                try{
+                    changeProgram(Integer.parseInt( instrument ) );
+                } catch(Exception e){
+
+                    changeProgram(0 );
+
+                }break;
         }
 
     }
 
+    int cdur=480;
+
     public void addChord(String chord){
-        Gdx.app.log("1",chord);
         String command = new String( "" );
         String tnote = ""; int toctave = 5; String tkey="maj";
         String sequence = chord.toLowerCase();
@@ -241,7 +250,8 @@ public class composer {
                 command += c;
             }
         }
-        toctave = (command.equalsIgnoreCase( "" )) ? 5 : Integer.parseInt( command );
+        String ttoctave = (command.equalsIgnoreCase( "" )) ? "" : command;
+        toctave = (command.equalsIgnoreCase( "" )) ? 4 : Integer.parseInt( command );
 
         int inote = 0;
         switch (tnote) {
@@ -283,32 +293,171 @@ public class composer {
                 break;
         }
         cnote = toctave * 12 + inote;
-        Gdx.app.log("1.5",tnote+"-"+toctave);
-        tkey = sequence.substring( tnote.length()+Integer.toString( toctave).length());
-        Gdx.app.log("2",tkey);
-        int idur=480;
+
+        command = new String( "" );
+        for (int i = 0; i < sequence.length(); i++) {
+            String c = sequence.substring( i, i + 1 );
+            if ("whq.".contains( c )) {
+                command += c;
+            }
+        }
+        String tlength = (command.equalsIgnoreCase( "" )) ? "q" : command;
+        String ttlength = (command.equalsIgnoreCase( "" )) ? "" : command;
+
+        command = "";
+        int idur=0;
+        for (int i = tlength.length() - 1; i >= 0; i--) {
+            command += tlength.substring( i, i + 1 );
+            switch (command) {
+                case ".w":
+                    idur += 1920 + 960;
+                    command = "";
+                    break;
+                case ".h":
+                    idur += 960 + 480;
+                    command = "";
+                    break;
+                case ".q":
+                    idur += 480 + 240;
+                    command = "";
+                    break;
+                case ".i":
+                    idur += 240 + 120;
+                    command = "";
+                    break;
+                case ".s":
+                    idur += 120 + 60;
+                    command = "";
+                    break;
+                case ".t":
+                    idur += 60 + 30;
+                    command = "";
+                    break;
+                case ".x":
+                    idur += 30 + 15;
+                    command = "";
+                    break;
+                case ".o":
+                    idur += 15 + 7;
+                    command = "";
+                    break;
+                case "w":
+                    idur += 1920;
+                    command = "";
+                    break;
+                case "h":
+                    idur += 960;
+                    command = "";
+                    break;
+                case "q":
+                    idur += 480;
+                    command = "";
+                    break;
+                case "i":
+                    idur += 240;
+                    command = "";
+                    break;
+                case "s":
+                    idur += 120;
+                    command = "";
+                    break;
+                case "t":
+                    idur += 60;
+                    command = "";
+                    break;
+                case "x":
+                    idur += 30;
+                    command = "";
+                    break;
+                case "o":
+                    idur += 15;
+                    command = "";
+                    break;
+            }
+        }
+        cdur=idur;
+        tkey = sequence.substring( tnote.length()+ttoctave.length(), sequence.length()-ttlength.length()).toUpperCase();
 
         switch (tkey){
-            case "maj":
-                noteTrack.insertNote(cvoice, cnote, 100, ctick, idur);
-                noteTrack.insertNote(cvoice, cnote+4, 100, ctick, idur);
-                noteTrack.insertNote(cvoice, cnote+7, 100, ctick, idur);
-                break;
-            case "min":
-                noteTrack.insertNote(cvoice, cnote, 100, ctick, idur);
-                noteTrack.insertNote(cvoice, cnote+3, 100, ctick, idur);
-                noteTrack.insertNote(cvoice, cnote+7, 100, ctick, idur);
 
-                break;
-        }
+            case"MAJ": buildChord("1 3 5"); break;
+            case"MAJ6": buildChord("1 3 5 6"); break;
+            case"MAJ7": buildChord("1 3 5 7"); break;
+            case"MAJ9": buildChord("1 3 5 7 9"); break;
+            case"ADD9": buildChord("1 3 5 9"); break;
+            case"MAJ6%9": buildChord("1 3 5 6 9"); break;
+            case"MAJ7%6": buildChord("1 3 5 6 7"); break;
+            case"MAJ13": buildChord("1 3 5 7 9 13"); break;
+            case"MIN": buildChord("1 b3 5"); break;
+            case"MIN6": buildChord("1 b3 5 6"); break;
+            case"MIN7": buildChord("1 b3 5 b7"); break;
+            case"MIN9": buildChord("1 b3 5 b7 9"); break;
+            case"MIN11": buildChord("1 b3 5 b7 9 11"); break;
+            case"MIN7%11": buildChord("1 b3 5 b7 11"); break;
+            case"MINADD9": buildChord("1 b3 5 9"); break;
+            case"MIN6%9": buildChord("1 b3 5 6"); break;
+            case"MINMAJ7": buildChord("1 b3 5 7"); break;
+            case"MINMAJ9": buildChord("1 b3 5 7 9"); break;
+            case"DOM7": buildChord("1 3 5 b7"); break;
+            case"DOM7%6": buildChord("1 3 5 6 b7"); break;
+            case"DOM7%11": buildChord("1 3 5 b7 11"); break;
+            case"DOM7SUS": buildChord("1 4 5 b7"); break;
+            case"DOM7%6SUS": buildChord("1 4 5 6 b7"); break;
+            case"DOM9": buildChord("1 3 5 b7 9"); break;
+            case"DOM11": buildChord("1 3 5 b7 9 11"); break;
+            case"DOM13": buildChord("1 3 5 b7 9 13"); break;
+            case"DOM13SUS": buildChord("1 3 5 b7 11 13"); break;
+            case"DOM7%6%11": buildChord("1 3 5 b7 9 11 13"); break;
+            case"AUG": buildChord("1 3 #5"); break;
+            case"AUG7": buildChord("1 3 #5 b7"); break;
+            case"DIM": buildChord("1 b3 b5"); break;
+            case"DIM7": buildChord("1 b3 b5 6"); break;
+            case"SUS2": buildChord("1 2 5"); break;
+            case"SUS4": buildChord("1 4 5"); break;        }
 
-        ctick += idur; //why not longest? ask the one who made jfugue...
+        ctick += cdur; //why not longest? ask the one who made jfugue...
 
 
     }
 
+    public void buildChord(String notes){
+        int tnote=-1;
+        String[] note = notes.trim().split( " " );
+        for (int i=0;i<note.length;i++){
+            String n=note[i];
+            tnote=-1;
+            switch (n){
+                case "1": tnote=0; break;
+                case "#1": case "b2": tnote=1; break;
+                case "2": tnote=2; break;
+                case "#2": case "b3": tnote=3; break;
+                case "3": tnote=4; break;
+                case "4": tnote=5; break;
+                case "#4": case "b5": tnote=6; break;
+                case "5": tnote=7; break;
+                case "#5": case "b6": tnote=8; break;
+                case "6": tnote=9; break;
+                case "#6": case "b7": tnote=10; break;
+                case "7": tnote=11; break;
+                case "8": tnote=12; break;
+                case "#8": case "b9": tnote=13; break;
+                case "9": tnote=14; break;
+                case "#9": case "b10": tnote=15; break;
+                case "10": tnote=16; break;
+                case "11": tnote=17; break;
+                case "#11": case "b12": tnote=18; break;
+                case "12": tnote=19; break;
+                case "#12": case "b13": tnote=20; break;
+                case "13": tnote=21; break;
+            }
+
+            if (tnote!=-1) noteTrack.insertNote(cvoice, cnote+tnote, 100, ctick+i*10, cdur);
+
+
+        }
+    }
+
     public void addNote(String note) {
-        Gdx.app.log("AX",note);
         String[] notes = note.split( "\\+" );
         long longest=0;            long idur = 0;
 
@@ -467,7 +616,7 @@ public class composer {
             }
         }
         ctick += idur; //why not longest? ask the one who made jfugue...
-        Gdx.app.log("AA",ctick+"");
+
     }
 
     public void addDrum(String note) {

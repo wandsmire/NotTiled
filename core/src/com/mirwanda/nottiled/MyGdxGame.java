@@ -4642,13 +4642,13 @@ String texta="";
                 if (mode == "tile" || mode == "object"|| mode == "image") {
                  //   str1drawlabel(ui, z.activelayer, gui.layer);
                     if (mode=="tile"){
-                        str1drawlabel(ui, z.tilelayer, gui.layer);
+                       // str1drawbuttonlabel(ui, z.tilelayer, gui.layer);
                     }
                     else if (mode =="object"){
-                        str1drawlabel(ui, z.objectgroup, gui.layer);
+                      //  str1drawbuttonlabel(ui, z.objectgroup, gui.layer);
                     }
                     else if (mode =="image"){
-                        str1drawlabel(ui, z.imagelayer, gui.layer);
+                    //    str1drawbuttonlabel(ui, z.imagelayer, gui.layer);
                     }
                 }
 
@@ -4664,7 +4664,7 @@ String texta="";
                 }
 
                 if (mode == "object") {
-                    str1drawlabel(ui, z.activeobjecttool, gui.objectpickermid);
+                   // str1drawbuttonlabel(ui, z.activeobjecttool, gui.objectpickermid);
 
                 }
 
@@ -20287,13 +20287,13 @@ String texta="";
                                         if (!indexup) {index++; indexup=true;}
                                         ChordProgression cp = new ChordProgression(p.getValue());
                                         Pattern tp = cp.getPattern();
-                                        tp.setVoice( index );
                                         seq.add( tp );
                                     }
                                     if (p.getName().equalsIgnoreCase( "pattern" )){
                                         if (!indexup) {index++; indexup=true;}
                                         Pattern tp = new Pattern(p.getValue());
-                                        tp.setVoice( index );
+                                        if (!tp.toString().contains( "[" )) tp.setVoice( index );
+
                                         seq.add( tp );
                                     }
                                     if (p.getName().equalsIgnoreCase( "rhythm" )){
