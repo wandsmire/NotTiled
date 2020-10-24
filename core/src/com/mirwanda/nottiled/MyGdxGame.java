@@ -1222,7 +1222,7 @@ String texta="";
                         drawObjectsInfo();
                         postProcessor.render();
                         drawWorldUI();
-                        b2dr.render(world,cam.combined);
+                        //b2dr.render(world,cam.combined);
 
                         drawstage(delta);
 

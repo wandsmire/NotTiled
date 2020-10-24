@@ -12,10 +12,10 @@ public class DesktopLauncher {
 	public static void main (String[] arg) {
 
 		LwjglApplicationConfiguration cfg = new LwjglApplicationConfiguration();
-		cfg.title = "my-gdx-game";
+		cfg.title = "NotTiled";
 		cfg.useGL30 = false;
-		cfg.width = 1920;
-		cfg.height = 1080;
+		cfg.width = LwjglApplicationConfiguration.getDesktopDisplayMode().width;
+		cfg.height = LwjglApplicationConfiguration.getDesktopDisplayMode().height;
 		cfg.x=-1;cfg.y=-1;
 		com.mirwanda.nottiled.nullInterface ni= new com.mirwanda.nottiled.nullInterface();
 		new LwjglApplication(new MyGdxGame("",ni), cfg);

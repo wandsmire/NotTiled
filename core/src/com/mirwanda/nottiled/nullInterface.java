@@ -23,7 +23,7 @@ public class nullInterface implements Interface {
 
     @Override
     public String getVersione() {
-        return "1.6.1";
+        return "1.6.1b";
     }
 
     @Override

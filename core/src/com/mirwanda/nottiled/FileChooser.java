@@ -132,23 +132,20 @@ public class FileChooser extends Dialog
 			@Override
 			public void clicked(InputEvent event, float x, float y)
 			{
-				Label target = (Label) event.getTarget();
-				if (target.getName().equals(".."))
-				{
-					setDirectory(directory.parent());
+				if (event.getTarget() instanceof  Label) {
+					Label target = (Label) event.getTarget();
+
+					if (target.getName().equals( ".." )) {
+						setDirectory( directory.parent() );
+					} else {
+						FileHandle handle = directory.child( target.getName() );
+						if (handle.isDirectory()) {
+							setDirectory( handle );
+						} else {
+							setFile( handle );
+						}
+					}
 				}
-				else
-				{
-					FileHandle handle = directory.child(target.getName());
-					if (handle.isDirectory())
-					{
-						setDirectory(handle);
-					}
-					else
-					{
-						setFile(handle);
-					}
-				}            
 			}
 		};
 		Label label;

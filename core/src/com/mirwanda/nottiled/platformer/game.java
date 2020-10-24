@@ -242,6 +242,15 @@ public class game {
             debriefing = (String) mpa.get( "debriefing" );
             died = "GAME OVER";
         }
+        } else {
+            RectangleMapObject o = new RectangleMapObject(  );
+            o.getProperties().put( "name","player" );
+            o.getProperties().put( "anim",": \nPlease add one player object" );
+            RectangleMapObject obj = (RectangleMapObject) o;
+            Rectangle rect = obj.getRectangle();
+            setGameObject(true,null,rect.x,rect.y,rect.width,rect.height,false,o);
+
+            return true;
         }
 
 
