@@ -76,6 +76,8 @@ import com.mirwanda.nottiled.ai.AutoTile;
 import com.mirwanda.nottiled.platformer.game;
 import com.mirwanda.nottiled.platformer.gameobject;
 
+import box2dLight.RayHandler;
+
 import static java.lang.Thread.sleep;
 import static org.jfugue.midi.MidiFileManager.savePatternToMidi;
 
@@ -119,6 +121,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private java.util.List<Integer> swatchValue = new ArrayList<Integer>();
     Pixmap pmMinimap;
     Texture txMinimap;
+
     //////////////////////////////////////////////////////
 //            VARIABLES
 //////////////////////////////////////////////////////
@@ -1090,6 +1093,8 @@ String texta="";
                             batch.begin();
 
                             ///
+                            if (mygame.night) mygame.rayHandler.setCombinedMatrix(gamecam);
+
                             mygame.update( batch, delta, gamecam );
 
                             if (mygame.debugmode)
@@ -1099,6 +1104,7 @@ String texta="";
                             batch.end();
                         }
                         postProcessor.render();
+
 
                         Vector3 mouse = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
                         uicam.unproject(mouse); // mousePos is now in world coordinates
@@ -20191,6 +20197,14 @@ String texta="";
 //composer c = new composer("V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s [PEDAL_HI_HAT]s Ri L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri");// V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri");
 
     private void exporttomidi(String filenya){
+
+        try {
+            Pattern pattern = MidiFileManager.loadPatternFromMidi( Gdx.files.external( "Music/"+fExportFilename.getText() ).file() );
+            System.out.println( pattern );
+        }catch(Exception e){}
+
+
+        /*
         boolean ismusic=false;
         for (property p : properties) {
             if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
@@ -20204,6 +20218,8 @@ String texta="";
             backToMap();
             status( z.exportfinished, 3 );
         }
+
+         */
 
     }
 
@@ -20291,9 +20307,9 @@ String texta="";
                                     }
                                     if (p.getName().equalsIgnoreCase( "pattern" )){
                                         if (!indexup) {index++; indexup=true;}
-                                        Pattern tp = new Pattern(p.getValue());
-                                        if (!tp.toString().contains( "[" )) tp.setVoice( index );
-
+                                        Pattern tp = new Pattern(p.getValue().replace( "!",""+x ));
+                                        //if (!tp.toString().contains( "[" )) tp.setVoice( index );
+                                        //voice setting sendiri -_-!
                                         seq.add( tp );
                                     }
                                     if (p.getName().equalsIgnoreCase( "rhythm" )){
@@ -20313,7 +20329,7 @@ String texta="";
 
                 }
 
-                seq.setTempo( 120 );
+                seq.setTempo( 80 );
                 Gdx.app.log( "ASD",seq.toString() );
                 switch (pbt){
                     case MIDI:
@@ -20331,6 +20347,7 @@ String texta="";
                                 break;
                                 // android specific code
                             case Desktop:
+                                Gdx.app.log("SEQ", seq.toString());
                                 new Player().play( seq );
                                 break;
                                 // desktop specific code

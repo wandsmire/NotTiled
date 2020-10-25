@@ -12,10 +12,6 @@ vars: [
 	{
 		key: energy
 		value: 100
-		hud: true
-		iconx: 3
-		hasicon: true
-		keephud: true
 	}
 	{
 		key: cave1
@@ -40,7 +36,7 @@ vars: [
 		key: nothing
 	}
 ]
-x: 4.081667
-y: 3.748313
+x: 3.9933274
+y: 4.0983276
 mapname: map.tmx
 }

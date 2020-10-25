@@ -2,6 +2,7 @@ package com.mirwanda.nottiled.platformer;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.ParticleEffect;
 import com.badlogic.gdx.graphics.g2d.Sprite;
@@ -21,6 +22,8 @@ import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
 
 import java.util.ArrayList;
+
+import box2dLight.PointLight;
 
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ENEMYPROJECTILE;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.MONSTER;
@@ -53,6 +56,10 @@ public class gameobject extends Sprite {
     java.util.List<Animation<TextureRegion>> panim = new ArrayList<>(); // Must declare frame type (TextureRegion)
     public Vector2 pimagesize;
     public ParticleEffect meledak;
+    public PointLight myLight;
+    public float light;
+    public Color lightColor = Color.WHITE;
+
 
     ////
     public boolean chase;
@@ -561,6 +568,11 @@ public class gameobject extends Sprite {
         //setSize( width/ 100f, height / 100f );
         //setOrigin( width / 100f, height / 100f );
 
+        if (light>0 && mygame.night) {
+            myLight = new PointLight( mygame.rayHandler, 100, lightColor, light, 0, 0 );
+            myLight.setSoftnessLength( 0.3f );
+            myLight.attachToBody( body );
+        }
 
 
 

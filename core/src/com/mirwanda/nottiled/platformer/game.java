@@ -8,6 +8,7 @@ import com.badlogic.gdx.assets.loaders.resolvers.InternalFileHandleResolver;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
@@ -40,6 +41,9 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import box2dLight.PointLight;
+import box2dLight.RayHandler;
+
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BLOCK;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.CHECKPOINT;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ITEM;
@@ -53,7 +57,7 @@ public class game {
     public boolean playtest=true;
     public boolean uitest=false;
 
-
+    public boolean night=false;
     public TiledMap map;
     public OrthogonalTiledMapRenderer renderer;
     public Box2DDebugRenderer b2dr;
@@ -122,7 +126,7 @@ public class game {
     public int Th;
     public float Tsw;
     public float Tsh;
-
+    public RayHandler rayHandler;
 
     public boolean initialise(String path, String filename){
         this.path = path;
@@ -396,7 +400,6 @@ public class game {
     public void update(SpriteBatch batch, float delta, OrthographicCamera gamecam) {
         gc=gamecam;
         if (!starting && player.state!=DEAD) world.step(1/60f,6,2);
-
         if (player.HP<=0){
             killPlayer();
         }
@@ -502,8 +505,10 @@ public class game {
             gameobject go = objects.get( i );
             go.update(delta);
             if (go.state==DEAD){
+                //go.myLight.remove( true );
                 if (world.getBodyCount()>0) world.destroyBody( go.body );
                 objects.remove( go );
+
             }
 
         }
@@ -558,6 +563,8 @@ public class game {
         if (action2!=null) action2.update( delta );
         if (action3!=null) action3.update( delta );
         if (action4!=null) action4.update( delta );
+
+        if (night) rayHandler.updateAndRender();
 
     }
 
@@ -915,6 +922,18 @@ public class game {
         newbrick.damage = (o.containsKey( "damage" )) ? Float.parseFloat( o.get( "damage" ).toString() ) : 0f;
         newbrick.rotating = o.containsKey( "rotating" );
         newbrick.destructible = o.containsKey( "destructible" );
+        newbrick.light = (o.containsKey( "light" )) ? Float.parseFloat( o.get( "light" ).toString() ) : 0;
+
+        if (o.containsKey( "lightcolor" )){
+            String cs = o.get( "lightcolor" ).toString();
+            float bgr = (float) Integer.parseInt(cs.substring(0, 2), 16) / 256;
+            float bgg = (float) Integer.parseInt(cs.substring(2, 4), 16) / 256;
+            float bgb = (float) Integer.parseInt(cs.substring(4, 6), 16) / 256;
+            newbrick.lightColor = new Color(bgr,bgg,bgb,1f);
+
+        }
+
+
         newbrick.HP = (o.containsKey( "HP" )) ? Integer.parseInt( o.get( "HP" ).toString() ) : 1;
         newbrick.maxHP=newbrick.HP;
         newbrick.heavy = o.containsKey( "heavy" );
@@ -948,8 +967,13 @@ public class game {
                 world.setGravity( new Vector2( 0f, 0f ) );
                 jumping = false;
                 rpg = true;
-                return;
             }
+        }
+        if (o.containsKey( "night" )) {
+            night=true;
+            rayHandler=new RayHandler( world );
+            rayHandler.setAmbientLight( .5f );
+
         }
 
         if (o.containsKey( "name" )) {
