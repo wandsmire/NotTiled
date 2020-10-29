@@ -20197,14 +20197,20 @@ String texta="";
 //composer c = new composer("V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s [PEDAL_HI_HAT]s Ri L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri");// V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs [PEDAL_HI_HAT]s Rs L1 Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri V9 L0 [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri [BASS_DRUM]i Ri [ACOUSTIC_SNARE]i [BASS_DRUM]i Ri [BASS_DRUM]i [ACOUSTIC_SNARE]i Ri L1 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri");
 
     private void exporttomidi(String filenya){
+        // importing midi code, do not delete.
+        Gdx.app.log("ASU",filenya);
+        if (filenya.startsWith( "[i]" )) {
+            try {
+                Pattern pattern = MidiFileManager.loadPatternFromMidi( Gdx.files.external( "Pictures/" + filenya.substring( 3 )).file() );
+                System.out.println( pattern );
+                return;
+            } catch (Exception e) {
+                e.printStackTrace();
+                return;
+            }
+        }
+        /**/
 
-        try {
-            Pattern pattern = MidiFileManager.loadPatternFromMidi( Gdx.files.external( "Music/"+fExportFilename.getText() ).file() );
-            System.out.println( pattern );
-        }catch(Exception e){}
-
-
-        /*
         boolean ismusic=false;
         for (property p : properties) {
             if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
@@ -20219,7 +20225,7 @@ String texta="";
             status( z.exportfinished, 3 );
         }
 
-         */
+
 
     }
 
@@ -20307,7 +20313,7 @@ String texta="";
                                     }
                                     if (p.getName().equalsIgnoreCase( "pattern" )){
                                         if (!indexup) {index++; indexup=true;}
-                                        Pattern tp = new Pattern(p.getValue().replace( "!",""+x ));
+                                        Pattern tp = new Pattern(p.getValue().replace( "!",""+(x-xstart) ));
                                         //if (!tp.toString().contains( "[" )) tp.setVoice( index );
                                         //voice setting sendiri -_-!
                                         seq.add( tp );
@@ -20329,13 +20335,20 @@ String texta="";
 
                 }
 
-                seq.setTempo( 80 );
-                Gdx.app.log( "ASD",seq.toString() );
+                int tempo=120;
+                for (property p : properties){
+                    if (p.getName().equalsIgnoreCase( "tempo" )){
+                        tempo=Integer.parseInt( p.getValue() );
+                    }
+                }
+                seq.setTempo(tempo);
+
+                //Gdx.app.log( "ASD",seq.toString() );
                 switch (pbt){
                     case MIDI:
                         composer c = new composer(seq.toString());
                         c.save( curdir+"/"+filenya+".mid" );
-                        //MidiFileManager.savePatternToMidi(seq , Gdx.files.external(curdir+"/"+filenya+".midi").file());
+                        MidiFileManager.savePatternToMidi(seq , Gdx.files.external(curdir+"/"+filenya+"v2.midi").file());
                         break;
                     case PLAY:
                         switch(Gdx.app.getType()) {
@@ -20347,7 +20360,7 @@ String texta="";
                                 break;
                                 // android specific code
                             case Desktop:
-                                Gdx.app.log("SEQ", seq.toString());
+                                //Gdx.app.log("SEQ", seq.toString());
                                 new Player().play( seq );
                                 break;
                                 // desktop specific code
@@ -20417,6 +20430,187 @@ String texta="";
 
     }
 
+    private void previewpattern(final playback pbt, final String filenya){
+
+        if (pbt==playback.PLAY) {
+            try {
+                if (play != null) {
+                    play.interrupt();
+                    new Player().play( "" );
+                    play = null;
+                    midiplaying = false;
+                    return;
+                }
+            }catch(Exception e){}
+            if (composerPlayer!=null){
+                composerPlayer.stop();
+                return;
+            }
+        }
+        if (pbt==playback.WAV) {
+            if (play != null) {
+                play.interrupt();
+            }
+        }
+
+        midiplaying=true;
+        play=new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    int wavwidth=0;
+
+                    int xstart=0;
+                    int xstop=Tw-1;
+                    int ystart=0;
+                    int ystop=Th-1;
+                    if (activetool==3){
+                        xstart=mapstartSelect % Tw;
+                        xstop=mapendSelect % Tw;
+                        ystart=mapstartSelect /Tw;
+                        ystop=mapendSelect / Tw;
+                    }
+
+                    wavwidth = (2+(xstop-xstart))*4;
+                    Pattern seq = new Pattern();
+                    int index=-1; boolean indexup;
+                    for (int y=ystart;y<=ystop;y++){
+                        indexup=false;
+                        for (int x=xstart;x<=xstop;x++){
+                            int num = y*Tw+x;
+                            Long spr = layers.get( selLayer ).getStr().get( num );
+                            int tst = layers.get( selLayer ).getTset().get( num );
+                            if (tst==-1) { continue;}
+
+                            Long cspr = spr-tilesets.get(tst).getFirstgid();
+
+                            for (tile t: tilesets.get(tst).getTiles()){
+                                if (t.getTileID()==cspr){
+                                    for (property p: t.getProperties()){
+                                        if (p.getName().equalsIgnoreCase( "chords" )){
+                                            if (!indexup) {index++; indexup=true;}
+                                            ChordProgression cp = new ChordProgression(p.getValue());
+                                            Pattern tp = cp.getPattern();
+                                            seq.add( tp );
+                                        }
+                                        if (p.getName().equalsIgnoreCase( "pattern" )){
+                                            if (!indexup) {index++; indexup=true;}
+                                            Pattern tp = new Pattern(p.getValue().replace( "!",""+(x-xstart) ));
+                                            //if (!tp.toString().contains( "[" )) tp.setVoice( index );
+                                            //voice setting sendiri -_-!
+                                            seq.add( tp );
+                                        }
+                                        if (p.getName().equalsIgnoreCase( "rhythm" )){
+                                            if (!indexup) {index++; indexup=true;}
+                                            String ss[] = p.getValue().split( "\\n" );
+                                            Rhythm r=new Rhythm();
+                                            for (String s:ss){
+                                                r.addLayer( s );
+                                            }
+
+                                            seq.add(r.getPattern());
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                    }
+
+                    int tempo=120;
+                    for (property p : properties){
+                        if (p.getName().equalsIgnoreCase( "tempo" )){
+                            tempo=Integer.parseInt( p.getValue() );
+                        }
+                    }
+                    seq.setTempo(tempo);
+
+                    //Gdx.app.log( "ASD",seq.toString() );
+                    switch (pbt){
+                        case MIDI:
+                            composer c = new composer(seq.toString());
+                            c.save( curdir+"/"+filenya+".mid" );
+                            MidiFileManager.savePatternToMidi(seq , Gdx.files.external(curdir+"/"+filenya+"v2.midi").file());
+                            break;
+                        case PLAY:
+                            switch(Gdx.app.getType()) {
+                                case Android:
+                                    c = new composer(seq.toString());
+                                    c.save( "NotTiled/Temp/composer.mid" );
+                                    composerPlayer = Gdx.audio.newMusic( Gdx.files.external( "NotTiled/Temp/composer.mid" ) );
+                                    composerPlayer.play();
+                                    break;
+                                // android specific code
+                                case Desktop:
+                                    //Gdx.app.log("SEQ", seq.toString());
+                                    new Player().play( seq );
+                                    break;
+                                // desktop specific code
+                                case iOS:
+                                    c = new composer(seq.toString());
+                                    c.save( "NotTiled/Temp/composer.mid" );
+                                    composerPlayer = Gdx.audio.newMusic( Gdx.files.external( "NotTiled/Temp/composer.mid" ) );
+                                    composerPlayer.play();
+                                    break;
+                                // android specific code
+                            }
+                            break;
+                        case WAV:
+                            recordAudio(wavwidth,filenya);
+                            switch(Gdx.app.getType()) {
+                                case Android:
+                                    Music m = Gdx.audio.newMusic( Gdx.files.external( curdir + "/" + filenya + ".mid" ) );
+                                    m.play();
+                                    break;
+                                // android specific code
+                                case Desktop:
+                                    new Player().play( seq );
+                                    break;
+                                // desktop specific code
+                                case iOS:
+                                    m = Gdx.audio.newMusic( Gdx.files.external( curdir + "/" + filenya + ".mid" ) );
+                                    m.play();
+                                    break;
+                                // android specific code
+                            }
+                            break;
+
+                    }
+                    midiplaying=false;
+                    play=null;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    //msgbox(e.printStackTrace(););
+                }
+
+                /*
+                        ChordProgression cp = new ChordProgression("I IV V I I IV V III II I II i");
+                        Pattern p3 = new Pattern(cp.getPattern()).setVoice( 3 );
+                        Rhythm rhythm = new Rhythm()
+                                .addLayer("O..oO...O..oOO..")
+                                .addLayer("..S...S...S...S.")
+                                .addLayer("````````````````")
+                                .addLayer("...............+");
+
+                        Pattern p1 = new Pattern("V0 I[Piano] Eq Ch. | Eq Ch. | Dq Eq Dq Cq");
+                        Pattern p2 = new Pattern("V1 I[Flute] Rw     | Rw     | GmajQQQ  CmajQ");
+                        Player player = new Player();
+                        Pattern sequence = new Pattern(p1, p2, p3, rhythm.getPattern().repeat(2));
+
+                        player.play(sequence);
+
+
+                 */
+
+
+
+            }
+        });
+
+        play.start();
+
+
+    }
 
 
     private com.mirwanda.nottiled.platformer.game mygame;

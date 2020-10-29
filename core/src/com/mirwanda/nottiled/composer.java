@@ -4,7 +4,9 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.leff.midi.MidiFile;
 import com.leff.midi.MidiTrack;
+import com.leff.midi.event.Controller;
 import com.leff.midi.event.MidiEvent;
+import com.leff.midi.event.PitchBend;
 import com.leff.midi.event.ProgramChange;
 import com.leff.midi.event.meta.Tempo;
 import com.leff.midi.event.meta.TimeSignature;
@@ -40,6 +42,9 @@ public class composer {
         if (voice!=cvoice) {
             cvoice = voice;
             ctick = 0;
+            changeProgramRequest=false;
+            PWRequest=false;
+            CERequest=false;
         }
     }
 
@@ -51,12 +56,64 @@ public class composer {
         clayertick=ctick;
     }
 
-    public void changeProgram(int Program){
-        if (cinstrument!=Program) {
-            ProgramChange pc = new ProgramChange( ctick, cvoice, Program );
+    boolean changeProgramRequest = false;
+    int programRequested =0;
+
+    boolean CERequest = false;
+    int CERequested =0;
+    int CERequestedValue =0;
+
+    public void controllerEvent(int Val1, int Val2){
+        CERequested=Val1;
+        CERequestedValue=Val2;
+        CERequest=true;
+    }
+
+    public void executeControllerEvent(){
+        if (CERequest) {
+            Controller pc = new Controller( ctick, cvoice, CERequested,CERequestedValue );
             noteTrack.insertEvent( pc );
+            CERequest=false;
         }
     }
+
+    boolean PWRequest = false;
+    int PWRequested =0;
+    int PWRequestedValue =0;
+
+    public void PitchWheel(int Val1, int Val2){
+        PWRequested=Val1;
+        PWRequestedValue=Val2;
+        PWRequest=true;
+    }
+
+    public void executePitchWheel(){
+        if (CERequest) {
+            PitchBend pc = new PitchBend( ctick, cvoice, PWRequested,PWRequestedValue );
+            noteTrack.insertEvent( pc );
+            PWRequest=false;
+        }
+    }
+
+    public void changeProgram(int Program){
+        programRequested=Program;
+        changeProgramRequest=true;
+        Gdx.app.log( "CP","cprequested="+Program );
+    }
+
+    public void executeChangeProgram(){
+        if (changeProgramRequest) {
+            if (cinstrument != programRequested) {
+                ProgramChange pc = new ProgramChange( ctick, cvoice, programRequested );
+                noteTrack.insertEvent( pc );
+                cinstrument = programRequested;
+                Gdx.app.log( "CPX","cprequestexecuted="+cinstrument );
+            }
+            changeProgramRequest=false;
+        }
+    }
+
+
     public void setInstrument(String instrument){
         switch (instrument.toUpperCase()){
             case "[PIANO]": changeProgram(0); break;
@@ -219,7 +276,7 @@ public class composer {
                 try{
                     changeProgram(Integer.parseInt( instrument ) );
                 } catch(Exception e){
-
+                    Gdx.app.log( "CATCH",e.toString() );
                     changeProgram(0 );
 
                 }break;
@@ -451,7 +508,7 @@ public class composer {
                 case "13": tnote=21; break;
             }
 
-            if (tnote!=-1) noteTrack.insertNote(cvoice, cnote+tnote, 100, ctick+i*10, cdur);
+            if (tnote!=-1) noteTrack.insertNote(cvoice, cnote+tnote, 100, 0,ctick+i*10, cdur);
 
 
         }
@@ -459,6 +516,9 @@ public class composer {
 
     public void addNote(String note) {
         String[] notes = note.split( "\\+" );
+        int attack=64;
+        int decay=0;
+
         long longest=0;            long idur = 0;
 
         //C#123+C#5q+Dq
@@ -469,16 +529,21 @@ public class composer {
             String command = new String( "" );
             String sequence = n.toLowerCase();
 
+
             for (int i = 0; i < sequence.length(); i++) {
+                if (i>=3) break; //don't read weird things...
+                if (command.length()>=2) break; //2 karakter saja.
                 String c = sequence.substring( i, i + 1 );
                 if ("abcdefgr#".contains( c )) {
                     command += c;
                 }
             }
             tnote = command;
+            Gdx.app.log( "NOTE",command );
 
             command = new String( "" );
             for (int i = 0; i < sequence.length(); i++) {
+                if (command.length()>=1) break; //1 karakter saja.
                 String c = sequence.substring( i, i + 1 );
                 if ("0123456789".contains( c )) {
                     command += c;
@@ -493,20 +558,75 @@ public class composer {
                     command += c;
                 }
             }
-            tlength = (command.equalsIgnoreCase( "" )) ? "q" : command;
 
-            int inote = 0;
+            tlength = (command.equalsIgnoreCase( "" )) ? "q" : command;
+            float flength=0;
+            if (sequence.indexOf( "/" )!=-1){
+                command="";
+                tlength="fractal";
+                for (int i = sequence.indexOf( "/" ); i < sequence.length(); i++) {
+                    String c = sequence.substring( i, i + 1 );
+                    if ("0123456789.".contains( c )) {
+                        command += c;
+                    }
+                    if ("a".contains( c )) {
+                        break;
+                    }
+                }
+
+                flength=Float.parseFloat( command );
+                Gdx.app.log( "COM",tnote+"="+command );
+
+            }
+
+            if (sequence.length()>5) {
+                String cutseq = sequence.substring( 3 );
+                if (cutseq.indexOf( "a" )!=-1){
+                    command="";
+                    for (int i = cutseq.indexOf( "a" ); i < cutseq.length(); i++) {
+                        String c = cutseq.substring( i, i + 1 );
+                        if ("0123456789.".contains( c )) {
+                            command += c;
+                        }
+                        if ("d".contains( c )) {
+                            break;
+                        }
+                    }
+                    attack=(int) ( Float.parseFloat( command ));
+                    Gdx.app.log( "ASU",command );
+                }
+
+            }
+
+            if (sequence.length()>5) {
+                String cutseq = sequence.substring( 3 );
+                if (cutseq.indexOf( "d" )!=-1){
+                    command="";
+                    for (int i = cutseq.indexOf( "d" ); i < cutseq.length(); i++) {
+                        String c = cutseq.substring( i, i + 1 );
+                        if ("0123456789.".contains( c )) {
+                            command += c;
+                        }
+                    }
+                    decay=(int) ( Float.parseFloat( command ));
+                    Gdx.app.log( "Decay",command );
+                }
+
+            }
+
+
+                int inote = 0;
             switch (tnote) {
                 case "c":
                     inote = 0;
                     break;
-                case "c#":
+                case "c#": case "db":
                     inote = 1;
                     break;
                 case "d":
                     inote = 2;
                     break;
-                case "d#":
+                case "d#": case "eb":
                     inote = 3;
                     break;
                 case "e":
@@ -515,25 +635,26 @@ public class composer {
                 case "f":
                     inote = 5;
                     break;
-                case "f#":
+                case "f#": case "gb":
                     inote = 6;
                     break;
                 case "g":
                     inote = 7;
                     break;
-                case "g#":
+                case "g#": case "ab":
                     inote = 8;
                     break;
                 case "a":
                     inote = 9;
                     break;
-                case "a#":
+                case "a#": case "bb":
                     inote = 10;
                     break;
                 case "b":
                     inote = 11;
                     break;
             }
+            //not dealing with micro notes for now.
             cnote = toctave * 12 + inote;
 
             idur=0;
@@ -611,8 +732,18 @@ public class composer {
 
             longest = (idur>longest) ? idur : longest;
 
+
+            if (tlength.equalsIgnoreCase( "fractal" )){
+                idur = (long) (1920*flength);
+                Gdx.app.log( "IDUR",idur+"=="+flength );
+            }
+
             if (!tnote.toLowerCase().equalsIgnoreCase( "r" )) {
-                noteTrack.insertNote( cvoice, cnote, 100, ctick, idur );
+                executeChangeProgram();
+                executeControllerEvent();
+                executePitchWheel();
+                noteTrack.insertNote( cvoice, cnote, attack, decay, ctick, idur );
+                Gdx.app.log( "INSERTNOTE", "V="+cvoice+",N="+cnote+",A="+attack+",D="+decay+",C="+ctick+",I="+cinstrument);
             }
         }
         ctick += idur; //why not longest? ask the one who made jfugue...
@@ -623,6 +754,7 @@ public class composer {
         //C#123+C#5q+Dq
         String tnote=""; int toctave=5; String tlength="";
         String command= new String("");
+        int attack=64; int decay=0;
         String sequence = note.toUpperCase();
 
 
@@ -705,10 +837,73 @@ public class composer {
             }
         }
 
+        float flength=0;
+        if (sequence.indexOf( "/" )!=-1){
+            command="";
+            tlength="fractal";
+            for (int i = sequence.indexOf( "/" ); i < sequence.length(); i++) {
+                String c = sequence.substring( i, i + 1 );
+                if ("0123456789.".contains( c )) {
+                    command += c;
+                }
+                if ("A".contains( c )) {
+                    break;
+                }
+            }
+
+            flength=Float.parseFloat( command );
+            Gdx.app.log( "COM",tnote+"="+command );
+
+        }
+
+        if (sequence.length()>5) {
+            String cutseq = sequence.substring( sequence.indexOf( "]" ) );
+            if (cutseq.indexOf( "A" )!=-1){
+                command="";
+                for (int i = cutseq.indexOf( "A" ); i < cutseq.length(); i++) {
+                    String c = cutseq.substring( i, i + 1 );
+                    if ("0123456789.".contains( c )) {
+                        command += c;
+                    }
+                    if ("D".contains( c )) {
+                        break;
+                    }
+                }
+                attack=(int) ( Float.parseFloat( command ));
+                Gdx.app.log( "ASU",command );
+            }
+
+        }
+
+        if (sequence.length()>5) {
+            String cutseq = sequence.substring( sequence.indexOf( "]" ) );
+            if (cutseq.indexOf( "D" )!=-1){
+                command="";
+                for (int i = cutseq.indexOf( "D" ); i < cutseq.length(); i++) {
+                    String c = cutseq.substring( i, i + 1 );
+                    if ("0123456789.".contains( c )) {
+                        command += c;
+                    }
+                }
+                decay=(int) ( Float.parseFloat( command ));
+                Gdx.app.log( "Decay",command );
+            }
+
+        }
+
+        if (tlength.equalsIgnoreCase( "fractal" )){
+            idur = (long) (1920*flength);
+            Gdx.app.log( "IDUR",idur+"=="+flength );
+        }
+
+
         if (tnote.toLowerCase().equalsIgnoreCase( "r" )){
             ctick+=idur;
         }else{
-            noteTrack.insertNote(cvoice, cnote, 100, ctick, idur);
+            executeChangeProgram();
+            executeControllerEvent();
+            executePitchWheel();
+            noteTrack.insertNote(cvoice, cnote, attack, decay, ctick, idur);
             if (!note.contains( "+" )) ctick+=idur;
 
         }
@@ -727,12 +922,9 @@ public class composer {
         //set the value for now. don't overcomplicate.
         TimeSignature ts = new TimeSignature();
         ts.setTimeSignature(4, 4, TimeSignature.DEFAULT_METER, TimeSignature.DEFAULT_DIVISION);
-
-        Tempo tempo = new Tempo();
-        tempo.setBpm(120);
-
         tempoTrack.insertEvent(ts);
-        tempoTrack.insertEvent(tempo);
+
+
 
 // Track 1 will have some notes in it
         String[] commands; boolean block=false, blocked=false;
@@ -741,8 +933,32 @@ public class composer {
 
 
         for (String com : commands) {
+            Gdx.app.log( "COM",com );
             if (com.length()==0) continue;
             switch (com.substring( 0, 1 )) {
+                case "T":
+                    Tempo tempo = new Tempo();
+                    tempo.setBpm(Integer.parseInt( com.substring( 1 )));
+                    tempoTrack.insertEvent(tempo);
+                    break;
+                case "@":
+                    ctick= (int) (1920*Float.parseFloat( com.substring( 1 )));//ini kalo yang 120... kalo 80?
+                    break;
+                case ":":
+                    if (com.substring( 1,3 ).equalsIgnoreCase( "ce" )) {
+                        com = com.replaceAll( "[:CE()]", "" );
+                        String[] come = com.split( "," );
+                        controllerEvent( Integer.parseInt( come[0] ), Integer.parseInt( come[1] ) );
+                        Gdx.app.log( "CE", com );
+                    }
+                    if (com.substring( 1,3 ).equalsIgnoreCase( "pw" )) {
+                        com = com.replaceAll( "[:PW()]", "" );
+                        String[] come = com.split( "," );
+                        PitchWheel( Integer.parseInt( come[0] ), Integer.parseInt( come[1] ) );
+                        Gdx.app.log( "PW", com );
+                    }
+
+                    break;
                 case "V":
                     setVoice( Integer.parseInt( com.substring( 1 ) ) );
                     break;

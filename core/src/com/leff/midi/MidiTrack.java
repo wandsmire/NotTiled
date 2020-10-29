@@ -162,11 +162,11 @@ public class MidiTrack
         mEndOfTrackDelta = delta;
     }
 
-    public void insertNote(int channel, int pitch, int velocity, long tick, long duration)
+    public void insertNote(int channel, int pitch, int velocity, int decay, long tick, long duration)
     {
 
         insertEvent(new NoteOn(tick, channel, pitch, velocity));
-        insertEvent(new NoteOff(tick + duration, channel, pitch, 0));
+        insertEvent(new NoteOff(tick + duration, channel, pitch, decay));
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })

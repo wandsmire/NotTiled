@@ -42,7 +42,7 @@ public class MidiFileFromScratch
 
             // There is also a utility function for notes that you should use
             // instead of the above.
-            noteTrack.insertNote(channel, pitch + 2, velocity, i * 480, 120);
+            noteTrack.insertNote(channel, pitch + 2, velocity, 0,i * 480, 120);
         }
 
         // It's best not to manually insert EndOfTrack events; MidiTrack will
