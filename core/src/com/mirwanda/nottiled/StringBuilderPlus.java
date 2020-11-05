@@ -1,5 +1,8 @@
 package com.mirwanda.nottiled;
 
+import com.badlogic.gdx.utils.JsonValue;
+import com.badlogic.gdx.utils.JsonValue.ValueType;
+import com.badlogic.gdx.utils.JsonWriter;
 import com.badlogic.gdx.utils.StringBuilder;
 
 public class StringBuilderPlus extends com.badlogic.gdx.utils.StringBuilder
@@ -43,48 +46,27 @@ public class StringBuilderPlus extends com.badlogic.gdx.utils.StringBuilder
 	}
 	
 	public void wpropj(java.util.List<property> pr){
+		JsonValue properties = new JsonValue(ValueType.array);
 		if (pr.size()>0){
-			wlo("\"properties\":[");
 			for(int i=0;i<pr.size();i++)
 			{
-				wlo("{");
+				JsonValue property = new JsonValue(ValueType.object);
+				properties.addChild(property);
+
 				property p=pr.get(i);
-				wl("\"name\":\""+p.getName()+"\",");
-				if (p.getType()=="")
+				property.addChild("name",new JsonValue(p.getName()));
+
+				if (p.getType().equals(""))
 				{
-					wl("\"type\":\"string\",");
-					
+					property.addChild("type", new JsonValue("string"));
 				}else
 				{
-					wl("\"type\":\""+p.getType()+"\",");
-					
+					property.addChild("type", new JsonValue(p.getType()));
 				}
-				if (p.getType().equalsIgnoreCase("string") || p.getType().equalsIgnoreCase("") )
-				{
-					wl("\"value\":\""+p.getValue()+"\"");
-					
-				}else
-				{
-					wl("\"value\":"+p.getValue()+"");
-					
-				}
-				
-				if (i!=pr.size()-1) 
-				{
-					wlc("},");
-				}else
-				{
-					wlc("}");
-				}
-				
+				property.addChild("type", new JsonValue(p.getValue()));
 			}
-			wlc("]");
-			
 		}
-	else
-	{
-		wl("\"properties\":[]");
-	}
+		wl("\"properties\":"+properties.toJson(JsonWriter.OutputType.json));
 	}
 	
 	public void wl(String s){
