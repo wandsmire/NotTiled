@@ -685,6 +685,7 @@ public class game {
 
             if (victory||starting) return;
 
+
             if (player.state == DEAD) return;
 
             if (Gdx.input.isKeyPressed( Input.Keys.X )) {

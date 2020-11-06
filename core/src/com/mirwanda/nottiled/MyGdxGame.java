@@ -294,7 +294,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     com.badlogic.gdx.Input.TextInputListener pEditLayer;
     com.badlogic.gdx.Input.TextInputListener pSetOpacity;
     TextButton bAddLayer, bRemoveLayer, bMoveLayer, bEditLayer, bBackLayer, bSetOpacity;
-    TextButton bLayerDuplicate;
+    TextButton bLayerDuplicate, bLayerProperties;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> lproplist;
     com.badlogic.gdx.Input.TextInputListener pNewProp;
     String tempNameNew;
@@ -1219,6 +1219,14 @@ String texta="";
                             }
                         }
 
+                        if (midiplaying){
+                            if (composerPlayer!=null){
+                                if (!composerPlayer.isPlaying()){
+                                    composerPlayer=null;
+                                    midiplaying=false;
+                                }
+                            }
+                        }
 
                         resetMinimap();
 
@@ -6529,6 +6537,8 @@ String texta="";
     }
 
     private void replacetiles(long p1, int p2, long p3, int p4) {
+        if (layers.get(selLayer).getType() != layer.Type.TILE) return;
+
         for (int i = 0; i < layers.get(selLayer).getStr().size(); i++) {
             long prev = layers.get(selLayer).getStr().get(i);
             if (prev == p1) {
@@ -7590,6 +7600,8 @@ String texta="";
 
 
     private void rundomize(float firstgeneration, int generationcount, int birthlimit, int deathlimit, long livestr, int livetset, long deadstr, int deadtset) {
+        if (layers.get(selLayer).getType() != layer.Type.TILE) return;
+
         float chanceToStartAlive = firstgeneration;
         snapWholeMapPhase1(selLayer);
         for (int x = 0; x < Tw * Th; x++) {
@@ -7654,6 +7666,7 @@ String texta="";
 
     private void runhmirror() {
         if (layers.size()==0) return;
+        if (layers.get(selLayer).getType() != layer.Type.TILE) return;
         redolayer.clear();
         for (int i = 0; i < Tw * Th; i++) {
             boolean follower = true;
@@ -7708,6 +7721,8 @@ String texta="";
 
     private void runvmirror() {
         if (layers.size()==0) return;
+        if (layers.get(selLayer).getType() != layer.Type.TILE) return;
+
         redolayer.clear();
         for (int i = 0; i < Tw * Th; i++) {
             boolean follower = true;
@@ -7763,6 +7778,8 @@ String texta="";
 
     private void runhvmirror() {
         if (layers.size()==0) return;
+        if (layers.get(selLayer).getType() != layer.Type.TILE) return;
+
         runhmirror();
         runvmirror();
         backToMap();
@@ -7773,6 +7790,8 @@ String texta="";
 
     private void runhvmirrorrev() {
         if (layers.size()==0) return;
+        if (layers.get(selLayer).getType() != layer.Type.TILE) return;
+
         redolayer.clear();
         for (int i = 0; i < Tw * Th; i++) {
             boolean follower = true;
@@ -8127,6 +8146,9 @@ String texta="";
                         break;
                     case "tilesettings":
                         pp = tilesets.get(seltset).getTiles().get(selTileID).getProperties();
+                        break;
+                    case "layer":
+                        pp = layers.get(selLayer).getProperties();
                         break;
                     case "tset":
                         pp = tilesets.get(selTsetID).getProperties();
@@ -8980,10 +9002,11 @@ String texta="";
     }
 
     public void loadLayerManagement() {
-        bAddLayer = new TextButton(z.addnew + " " + z.layer, skin);
-        bRemoveLayer = new TextButton(z.remove + " " + z.layer, skin);
+        bAddLayer = new TextButton(z.addnew, skin);
+        bRemoveLayer = new TextButton(z.remove, skin);
         bMoveLayer = new TextButton(z.moveup, skin);
-        bEditLayer = new TextButton(z.rename + " " + z.layer, skin);
+        bLayerProperties = new TextButton(z.properties, skin);
+        bEditLayer = new TextButton(z.rename, skin);
         bLayerDuplicate = new TextButton(z.duplicate, skin);
         bSetOpacity = new TextButton(z.setopacity, skin);
 
@@ -9253,6 +9276,7 @@ String texta="";
         tLayerMgmt.add(scrollPane).height(btny * 4).padBottom(5).row();
         tLayerMgmt.add(bAddLayer).padBottom(5).row();
         tLayerMgmt.add(bEditLayer).padBottom(5).row();
+        tLayerMgmt.add(bLayerProperties).padBottom(5).row();
         tLayerMgmt.add(bLayerDuplicate).padBottom(5).row();
         tLayerMgmt.add(bSetOpacity).padBottom(5).row();
         tLayerMgmt.add(bMoveLayer).padBottom(5).row();
@@ -9313,6 +9337,9 @@ String texta="";
                     case "tilesettings":
                         onToPicker();
                         break;
+                    case "layer":
+                        gotoStage(tLayerMgmt);
+                        break;
                     case "tset":
                         gotoStage(tTsProp);
                         break;
@@ -9342,6 +9369,9 @@ String texta="";
                         break;
                     case "tset":
                         pp = tilesets.get(selTsetID).getProperties();
+                        break;
+                    case "layer":
+                        pp = layers.get(selLayer).getProperties();
                         break;
                     case "map":
                         pp = properties;
@@ -9381,7 +9411,9 @@ String texta="";
                             break;
                         case "tset":
                             tilesets.get(selTsetID).setProperties(at.getProperties());
-
+                            break;
+                        case "layer":
+                            layers.get(selLayer).setProperties(at.getProperties());
                             break;
                         case "map":
                             properties = at.getProperties();
@@ -9509,6 +9541,18 @@ String texta="";
             }
         });
 
+        bLayerProperties.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (layers.size()==0) return;
+                selLayer=llayerlist.getSelectedIndex();
+                refreshProperties(layers.get(selLayer).getProperties());
+                lPropID.setText(z.customproperties + " ("+z.layer+")");
+                sender = "layer";
+                gotoStage(tPropsMgmt);
+            }
+        });
+
         bTsPropCustomProp.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -9567,6 +9611,9 @@ String texta="";
                         break;
                     case "tset":
                         pp = tilesets.get(selTsetID).getProperties();
+                        break;
+                    case "layer":
+                        pp = layers.get(selLayer).getProperties();
                         break;
                     case "tile":
                         pp = tilesets.get(selTsetID).getTiles().get(selTileID).getProperties();
@@ -9653,6 +9700,9 @@ String texta="";
                     case "tset":
                         pp = tilesets.get(selTsetID).getProperties();
                         break;
+                    case "layer":
+                        pp = layers.get(selLayer).getProperties();
+                        break;
                     case "map":
                         pp = properties;
                         break;
@@ -9687,6 +9737,9 @@ String texta="";
                         break;
                     case "tset":
                         pp = tilesets.get(selTsetID).getProperties();
+                        break;
+                    case "layer":
+                        pp = layers.get(selLayer).getProperties();
                         break;
                     case "map":
                         pp = properties;
@@ -12395,6 +12448,34 @@ String texta="";
                             break;
                     }
                     srz.endTag(null, "data");
+                    ///
+                    if (lay.getProperties().size() > 0) {
+                        srz.startTag(null, "properties");
+                        for (int m = 0; m < lay.getProperties().size(); m++) {
+                            srz.startTag(null, "property");
+                            if (lay.getProperties().get(m).getName() != null)
+                                srz.attribute("", "name", lay.getProperties().get(m).getName());
+                            if (lay.getProperties().get(m).getType() != null & lay.getProperties().get(m).getType() != "") {
+                                if (!lay.getProperties().get(m).getType().equalsIgnoreCase("string")) {
+                                    srz.attribute("", "type", lay.getProperties().get(m).getType().toLowerCase());
+
+                                }
+                            }
+
+                            String txx = lay.getProperties().get(m).getValue();
+                            if (txx != null) {
+                                if (txx.contains("\n")) {
+                                    srz.text("\n" + txx + "\n");
+                                } else {
+                                    srz.attribute("", "value", txx);
+                                }
+                            }
+                            srz.endTag(null, "property");
+                        }
+                        srz.endTag(null, "properties");
+                    }
+
+                    ///
                     srz.endTag(null, "layer");
                 }else if (lay.getType() == layer.Type.IMAGE) {
 
@@ -13402,6 +13483,9 @@ String texta="";
                                     break;
                                 case "tileset":
                                     tempTset.getProperties().add(tempe);
+                                    break;
+                                case "layer":
+                                    tempLayer.getProperties().add(tempe);
                                     break;
                                 case "tile":
                                     tempTile.getProperties().add(tempe);
@@ -20250,26 +20334,50 @@ String texta="";
 
     private void playmusic(final playback pbt, final String filenya){
 
-        if (pbt==playback.PLAY) {
-            try {
-                if (play != null) {
-                    play.interrupt();
-                    new Player().play( "" );
-                    play = null;
+        switch(Gdx.app.getType()) {
+            case Android:
+                if (composerPlayer!=null){
+                    composerPlayer.stop();
+                    composerPlayer=null;
                     midiplaying = false;
                     return;
                 }
-            }catch(Exception e){}
-            if (composerPlayer!=null){
-                composerPlayer.stop();
-                return;
-            }
+                break;
+            // android specific code
+            case Desktop:
+                if (pbt==playback.PLAY) {
+                    try {
+                        if (play != null) {
+                            play.interrupt();
+                            new Player().play( "" );
+                            play = null;
+                            midiplaying = false;
+                            return;
+                        }
+                    }catch(Exception e){}
+                    if (composerPlayer!=null){
+                        composerPlayer.stop();
+                        return;
+                    }
+                }
+                if (pbt==playback.WAV) {
+                    if (play != null) {
+                        play.interrupt();
+                    }
+                }
+
+                //Gdx.app.log("SEQ", seq.toString());
+                break;
+            // desktop specific code
+            case iOS:
+                if (composerPlayer!=null){
+                    composerPlayer.stop();
+                }
+
+                break;
+            // android specific code
         }
-        if (pbt==playback.WAV) {
-            if (play != null) {
-                play.interrupt();
-            }
-        }
+
 
         midiplaying=true;
         play=new Thread(new Runnable() {
@@ -20383,6 +20491,8 @@ String texta="";
                             // android specific code
                             case Desktop:
                                 new Player().play( seq );
+                                midiplaying=false;
+                                play=null;
                                 break;
                             // desktop specific code
                             case iOS:
@@ -20394,8 +20504,6 @@ String texta="";
                         break;
 
                 }
-                    midiplaying=false;
-                    play=null;
                 } catch (Exception e) {
                     e.printStackTrace();
                     //msgbox(e.printStackTrace(););

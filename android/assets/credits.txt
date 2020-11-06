@@ -18,16 +18,11 @@ s>WandsMire (English & Bahasa)
 s>Paon (Japanese)
 s>PasteK (French)
 s>Reik-RTS Youtube (Spanish)
-s>Tstis (Russian & Ukraine)
+s>Tstis (Russian & Ukrainian)
 s>General Airon (Tagalog)
 s>RT1_JMJS (Chinese)
 s>Mustafa Hilmi Pehlivanlı (Turkish)
 s>REDGRAUN (Belarusian)
-m>Credits for Ruby & Kitty
-s>Music by www.bensound.com
-s>Background by RavenTale
-m>Credits for Music Composer
-s>Samples adapted from LMMS
 m>Special thanks to
 s>Thorbjorn Lindeijer
 s>Luke
