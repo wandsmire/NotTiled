@@ -322,7 +322,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     Image iFrameView;
     Label lFrameID;
     Table tTsProp;
-    TextButton bTsPropOK, bTsPropCancel, bTsPropSaveAsTsx, bTsPropChangeSource;
+    TextButton bTsPropOK, bTsPropCancel, bTsPropSaveAsTsx, bTsPropChangeSource, bTsPropSaveAsPNG;
     TextField fTsPropName, fTsPropSource, fTsPropTrans;
     TextField fTsPropSpacing, fTsPropMargin, fTsPropTsxFile;
     TextField fTsPropTsw, fTsPropTsh, fTsPropTc, fTsPropCols;
@@ -4295,7 +4295,7 @@ String texta="";
                 }
                 uis.end();
             }
-            /////////////// minimap /////////////////
+            /////////////// old minimap /////////////////
             /*
             if (sMinimap) {
                 if (txMinimap!=null) ui.draw(txMinimap,0,0);
@@ -7426,6 +7426,33 @@ String texta="";
             PixmapIO.writePNG(fh, pm2);
             backToMap();
             status(z.exportfinished,3);
+        } catch (Exception e) {
+            msgbox(z.error);
+            ErrorBung(e, "errorlog.txt");
+        }
+    }
+
+    private void saveTsetAsPNG(int dep) {
+        try {
+            tileset t = tilesets.get(dep);
+            String filenamenya = t.getName();
+            Gdx.gl.glEnable(GL20.GL_BLEND);
+            int w = t.getOriginalwidth();
+            int h = t.getOriginalheight();
+
+            Pixmap pm2 = new Pixmap(w, h, Pixmap.Format.RGBA8888);
+
+            for (int x = 0;x<w;x++){
+                for (int y=0;y<h;y++){
+                    Color c= new Color(t.getPixmap().getPixel(x,y));
+                    pm2.drawPixel((int)x,(int)y,Color.rgba8888(c));
+                }
+            }
+
+            FileHandle fh = Gdx.files.external(curdir + "/" + filenamenya + ".png");
+            PixmapIO.writePNG(fh, pm2);
+
+            msgbox(z.exportfinished);
         } catch (Exception e) {
             msgbox(z.error);
             ErrorBung(e, "errorlog.txt");
@@ -10669,6 +10696,7 @@ String texta="";
         bPropTset = new TextButton(z.properties, skin);
         bUseTsx = new TextButton(z.importtsxfile, skin);
         bImportFolder = new TextButton(z.importfolder, skin);
+        int aaa=1;
 
         bTsPropSaveAsTsx = new TextButton(z.saveastsx, skin);
         bTsPropSaveAsTsx.addListener(new ChangeListener() {
@@ -10682,6 +10710,19 @@ String texta="";
                     t.setTsxfile(t.getName() + ".tsx");
                     saveTsx(dep);
                     msgbox(z.filesaved);
+                }
+
+            }
+        });
+
+        bTsPropSaveAsPNG = new TextButton(z.exporttopng, skin);
+        bTsPropSaveAsPNG.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+
+                int dep = ltsetlist.getSelectedIndex();
+                if (dep > -1) {
+                    saveTsetAsPNG(dep);
                 }
 
             }
@@ -10863,6 +10904,7 @@ String texta="";
         tTsetMgmt.add(bPropTset).padBottom(2).row();
         tTsetMgmt.add(bTileSettingsMgmt).padBottom(2).row();
         tTsetMgmt.add(bTsPropSaveAsTsx).padBottom(2).row();
+        tTsetMgmt.add(bTsPropSaveAsPNG).padBottom(2).row();
         tTsetMgmt.add(bMoveTset).padBottom(2).row();
         tTsetMgmt.add(bRemoveTset).padBottom(2).row();
         tTsetMgmt.add(bBackTset).padBottom(2);
