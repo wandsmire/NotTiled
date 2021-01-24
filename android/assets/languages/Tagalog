@@ -376,4 +376,5 @@ dls: "Download"
 recordwav: "Record WAV"
 recording: "Nagre-record. silent mangyaring ..."
 picker: "tagapitas"
+showcoords: "Ipakita ang mga Coordinate"
 }

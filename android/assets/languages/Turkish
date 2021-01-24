@@ -376,4 +376,5 @@ dls: "İndir"
 recordwav: "Kayıt WAV"
 recording: "Kayıt. sessizlik lütfen..."
 picker: "toplayıcı"
+showcoords: "göster Koordinatlar"
 }

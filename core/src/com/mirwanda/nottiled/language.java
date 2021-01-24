@@ -368,5 +368,6 @@ public class language
 	String stop;
 	String recording;
 	String picker;
+	String showcoords;
 
 }

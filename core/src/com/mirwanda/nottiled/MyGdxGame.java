@@ -153,6 +153,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     String info;
     obj copyobj = null;
     boolean sShowGrid = true, sShowFPS, sAutoSave, sSaveTsx = false, sShowGID = false, sMinimap;
+    boolean sShowCoords;
     String sCustomFont = "";
     boolean sCustomUI;
     boolean sShowCustomGrid = false;
@@ -220,7 +221,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     layer tempLayer;
     tileset tempTset;
     float initialZoom;
-    CheckBox cbShowGrid, cbShowFPS, cbShowGid, cbAutoSave, cbShowGidmap, cbResize, cbMinimap;
+    CheckBox cbShowGrid, cbShowFPS, cbShowGid, cbShowCoords, cbAutoSave, cbShowGidmap, cbResize, cbMinimap;
     CheckBox cbCustomUI;
     TextField tfCustomFont;
     TextButton bBack3;
@@ -1367,6 +1368,19 @@ String texta="";
             //newtmxfile(false);
         }
 
+    }
+
+    void drawCoordinates(){
+        if (sShowCoords) {
+            str1.getData().setScale(0.01f + Tsw / 160f);
+            for (int yy=0;yy<Th;yy++){
+                for (int xx=0;xx<Tw;xx++){
+                    str1.draw(batch,xx+","+yy,xx*Tsw+Tsw/8f,-yy*Tsh+Tsh/3f);
+                }
+
+            }
+            str1.getData().setScale(1f);
+        }
     }
 
     void initializePostProcessor() { //I DONT EVEN KNOW WHAT THESE MEANS LOL
@@ -2872,11 +2886,12 @@ String texta="";
                             if (sShowGIDmap) {
                                 //str1.getData().setScale(.1f);
                                 str1.getData().setScale(0.0025f + Tsw / 160f);
-                                drawer.write(str1, batch);
+                                drawer.writeGID(str1, batch);
                                 str1.getData().setScale(1f);
                             }
-
                         }
+
+                        drawCoordinates();
 
                         if (layers.get(jo).getOpacity() != 0 && sEnableBlending) {
                             Gdx.gl.glDisable(GL20.GL_BLEND);
@@ -8550,6 +8565,7 @@ String texta="";
         sAutoSave = prefs.getBoolean("autosave", false);
         sShowGID = prefs.getBoolean("gid", false);
         sShowGIDmap = prefs.getBoolean("gidmap", false);
+        sShowCoords = prefs.getBoolean("coords", false);
         sSaveTsx = prefs.getBoolean("tsx", false);
         scrollspeed = prefs.getInteger("ss", 3);
         sShowCustomGrid = prefs.getBoolean("customgrid", false);
@@ -8600,6 +8616,7 @@ String texta="";
                 sdGridOpacity.setValue(gridOpacity);
                 fAutoSaveInterval.setText(Integer.toString(autosaveInterval));
                 cbShowGid.setChecked(sShowGID);
+                cbShowCoords.setChecked(sShowCoords);
                 fBgcolor.setText(sBgcolor);
                 fFontsize.setText(Integer.toString(fontsize));
                 tfCustomFont.setText(sCustomFont);
@@ -8621,6 +8638,7 @@ String texta="";
         cbMinimap = new CheckBox(z.minimap, skin);
         cbCustomUI = new CheckBox(z.customui, skin);
         cbShowGrid = new CheckBox(z.showgrid, skin);
+        cbShowCoords = new CheckBox(z.showcoords, skin);
         cbShowFPS = new CheckBox(z.showfps, skin);
         cbEnableBlending = new CheckBox(z.enableblending, skin);
         sdScrollSpeed = new Slider(1, 5, 1, false, skin);
@@ -8683,6 +8701,10 @@ String texta="";
                 prefs.putBoolean("customui", sCustomUI).flush();
                 sShowGID = cbShowGid.isChecked();
                 prefs.putBoolean("gid", sShowGID).flush();
+
+                sShowCoords = cbShowCoords.isChecked();
+                prefs.putBoolean("coords", sShowCoords).flush();
+
                 sShowGIDmap = cbShowGidmap.isChecked();
                 prefs.putBoolean("gidmap", sShowGIDmap).flush();
                 fontsize = Integer.parseInt(fFontsize.getText());
@@ -8787,6 +8809,7 @@ String texta="";
         tPreference2.add(cbResize).colspan(2).left().row();
 
         tPreference2.add(cbShowFPS).colspan(2).left().row();
+        tPreference2.add(cbShowCoords).colspan(2).left().row();
         tPreference2.add(cbShowGid).colspan(2).left().row();
         tPreference2.add(cbShowGidmap).colspan(2).left().row();
         tPreference2.add(new Label(z.scrollspeed, skin)).align(Align.left).width(btnx).colspan(2).left().row();

@@ -376,4 +376,5 @@ dls: "下载"
 recordwav: "录制WAV"
 recording: "记录。请安静..."
 picker: "选择器"
+showcoords: "显示坐标"
 }

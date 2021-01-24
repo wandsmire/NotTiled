@@ -376,4 +376,5 @@ dls: "Download"
 recordwav: "Rekam WAV"
 recording: "Merekam. Jangan berisik..."
 picker: "Pemetik"
+showcoords: "Tampilkan Koordinat"
 }

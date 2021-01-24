@@ -227,14 +227,14 @@ public class drawer implements Comparable
 		}
 	}
 	
-	public void write(BitmapFont str1, SpriteBatch batch)
+	public void writeGID(BitmapFont str1, SpriteBatch batch)
 	{
 		//batch.draw(tilesets.get(initset).getTexture(), x, y, originX, originY, width, height, scaleX, scaleY, rotation, srcX, srcY, srcWidth, srcHeight, flipX, flipY);
 		//str1.getData().setScale(0.2f);
 		str1.draw(batch, mm+"", x+2,y+height-2);
 		//str1.getData().setScale(1f);
 	}
-	
+
 	public void add(SpriteCache batch,java.util.List<tileset> tilesets)
 	{
 		if (tilesets.get(initset).getTexture()!=null){

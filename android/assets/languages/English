@@ -376,4 +376,5 @@ dls: "Download"
 recordwav: "Record WAV"
 recording: "Recording. silent please..."
 picker: "Picker"
+showcoords: "Show Coordinates"
 }

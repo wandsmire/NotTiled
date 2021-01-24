@@ -376,4 +376,5 @@ dls: "Télécharger"
 recordwav: "enregistrement WAV"
 recording: "Enregistrement. silence s'il vous plaît..."
 picker: "Cueilleur"
+showcoords: "Afficher les coordonnées"
 }

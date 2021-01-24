@@ -376,4 +376,5 @@ dls: "ダウンロード"
 recordwav: "録音WAV"
 recording: "録音。静かにしてください..."
 picker: "ピッカー"
+showcoords: "座標を示し、"
 }
