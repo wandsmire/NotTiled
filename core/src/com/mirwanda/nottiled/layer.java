@@ -1,4 +1,5 @@
 package com.mirwanda.nottiled;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 
@@ -8,6 +9,7 @@ public class layer
 {
 	private List<Long> gid = new ArrayList<Long>();
 	private List<Integer> tset = new ArrayList<Integer>();
+	private List<Color> color = new ArrayList<Color>();
 	private List<property> properties = new ArrayList<property>();
 	private String name;
 	private boolean visible;

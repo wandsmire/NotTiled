@@ -7,6 +7,7 @@ public class tileset
 	private java.util.List<tile>tiles = new ArrayList<tile>();
 	private java.util.List<terrain> terrains = new ArrayList<terrain>();
 	private java.util.List<property> properties = new java.util.ArrayList<property>();
+	private java.util.List<Color> colors = new java.util.ArrayList<Color>();
 	
 	private String name;
 	private String source;

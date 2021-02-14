@@ -1473,8 +1473,8 @@ String texta="";
 
     public void updateMinimap(){
         if (sMinimap) {
-            pmMinimap = createRWthumbnail( "XOXXO" );
-            txMinimap = new Texture( pmMinimap );
+            //pmMinimap = createRWthumbnail( "XOXXO" );
+           // txMinimap = new Texture( pmMinimap );
         }
     }
 
@@ -4182,14 +4182,17 @@ String texta="";
                 uisrect(gui.map, mouse, vis("map"));//map props. button
                 uisrect(gui.save, mouse, vis("quicksave"));//main menu button
                 uisrect(gui.layerpick, mouse, vis("layerpick"));//layerpicker
+                /* draw filled rectangle for the whole minimap.
                 if (sMinimap){
                 if (!landscape) {
                     uis.rect( gui.minimap.x/100f*ssx, gui.minimap.y/100f*ssy, (gui.minimap.w-gui.minimap.x)/100f*ssx,(gui.minimap.h-gui.minimap.y)/100f*ssy) ;
                 }else {
                     uis.rect( gui.minimap.xl / 100f * ssy, gui.minimap.yl / 100f * ssx, (gui.minimap.wl - gui.minimap.xl) / 100f * ssy, (gui.minimap.hl - gui.minimap.yl) / 100f * ssx );
                 }
-                }
 
+
+                }
+*/
 
 
 
@@ -4298,6 +4301,7 @@ String texta="";
 
             uis.end();
 
+            /* Draw rectangle on minimap UI position.
             if (sMinimap) {
                 uis.setProjectionMatrix( uicam.combined );
                 uis.begin( ShapeRenderer.ShapeType.Line );
@@ -4310,10 +4314,11 @@ String texta="";
                 }
                 uis.end();
             }
+             */
             /////////////// old minimap /////////////////
-            /*
+
             if (sMinimap) {
-                if (txMinimap!=null) ui.draw(txMinimap,0,0);
+                //if (txMinimap!=null) ui.draw(txMinimap,0,0);
 
                 if (!caching & caches.size() > 0) {
                     for (int i = 0; i < caches.size(); i++) {
@@ -4326,7 +4331,7 @@ String texta="";
 
                         cache.begin();
 
-                        //cache.draw(myid); //call our cache with cache ID and draw it
+                        cache.draw(myid); //call our cache with cache ID and draw it
                         cache.end();
 
 
@@ -4337,13 +4342,7 @@ String texta="";
                 uis.setProjectionMatrix(minicam.combined);
                 uis.begin(ShapeRenderer.ShapeType.Line);
                 uis.setColor(0f, 0f, 0f, 0.7f);
-                                if (!landscape) {
-                    uis.rect( gui.minimap.x/100f*ssx, gui.minimap.y/100f*ssy, (gui.minimap.w-gui.minimap.x)/100f*ssx,(gui.minimap.h-gui.minimap.y)/100f*ssy) ;
-                }else{
-                    uis.rect(  gui.minimap.xl/100f*ssy, gui.minimap.yl/100f*ssx, (gui.minimap.wl-gui.minimap.xl)/100f*ssy,(gui.minimap.hl-gui.minimap.yl)/100f*ssx) ;
 
-                }
-                uis.end();
                 int onset=0;
                 if (orientation.equalsIgnoreCase("isometric")){
                     onset=Tsw*Tw/2;
@@ -4360,7 +4359,7 @@ String texta="";
                 }
                 uis.end();
             }
-            */
+
             /////////////// tile view /////////////////
 
             ui.setProjectionMatrix(uicam.combined);
@@ -17838,16 +17837,28 @@ String texta="";
 
         if (tapped(touch2, gui.minimap) && sMinimap) {
             if (mode == "tile" || mode == "object" || mode == "image") {
-                //cacheTiles();
-                updateMinimap();
+                cacheTiles();
+                //updateMinimap(); new minimap, worse.
                 Vector3 ve = new Vector3();
-                uicam.unproject(ve.set(Gdx.input.getX(), Gdx.input.getY(), 0));
+                minicam.unproject(ve.set(Gdx.input.getX(), Gdx.input.getY(), 0));
+                //Direct designation
                 //cam.position.set(ve.x,ve.y,ve.z);
                 //cam.update();
+
+                if (orientation.equalsIgnoreCase("isometric")) {
+                    if (!(ve.x>=-Tsw * Tw / 2 && ve.x<=Tsw * Tw / 2)) return true;
+                    if (!(ve.y<=0 && ve.y>=-Tsh * Th)) return true;
+                }else{
+                    if (!(ve.x>=0 && ve.x<=Tsw * Tw)) return true;
+                    if (!(ve.y<=0 && ve.y>=-Tsh * Th)) return true;
+                }
+                panTo(ve.x,ve.y, cam.zoom, .5f);
+
+                /*stupid new minimap
                 int onset = 0;
-                //if (orientation.equalsIgnoreCase("isometric")) {
-                  //  onset = Tsw * Tw / 2;
-                //}
+                if (orientation.equalsIgnoreCase("isometric")) {
+                    onset = Tsw * Tw / 2;
+                }
                 if (!landscape){
                     float eiys = (ve.y-gui.minimap.getY()/100f*ssy)/((gui.minimap.getH()-gui.minimap.getY())/100f*ssy);
                     float eiks = (ve.x-gui.minimap.getX()/100f*ssx)/((gui.minimap.getW()-gui.minimap.getX())/100f*ssx);
@@ -17859,6 +17870,8 @@ String texta="";
                     panTo((eiks)*Tw*Tsw, eiys*Th*Tsh-(Th*Tsh), cam.zoom, .5f);
 
                 }
+
+                 */
                 return true;
             }
         }
