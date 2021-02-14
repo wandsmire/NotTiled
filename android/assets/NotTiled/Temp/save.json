@@ -1,0 +1,63 @@
+{
+vars: [
+	{
+		key: cave
+	}
+	{
+		key: win
+	}
+	{
+		key: defuse
+		value: 5
+		hud: true
+		iconx: 1
+		hasicon: true
+		keephud: true
+		icony: 4
+	}
+	{
+		key: energy
+		value: 100
+		hud: true
+		iconx: 3
+		hasicon: true
+		keephud: true
+	}
+	{
+		key: cave1
+		value: 1
+	}
+	{
+		key: cave2
+		value: 1
+	}
+	{
+		key: cave3
+		value: 1
+	}
+	{
+		key: cave4
+		value: 1
+	}
+	{
+		key: cave5
+		value: 1
+	}
+	{
+		key: welcome
+		value: 1
+	}
+	{
+		key: nothing
+	}
+	{
+		key: killcave3
+		iconx: 2
+		hasicon: true
+		icony: 1
+	}
+]
+x: 0.385
+y: 1.338333
+mapname: lair.tmx
+}

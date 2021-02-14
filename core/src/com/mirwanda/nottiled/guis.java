@@ -135,7 +135,7 @@ public class guis
 		center.setp(85,100,81,90);
 		save.setp(0,15,19,28);
 		play.setp(0,15,28,37);
-		minimap.setp(0,30,70,90);
+		minimap.setp(0,30,70,89);
 
 		canceltutorial.setp(30,70,20,30);
 
@@ -217,7 +217,7 @@ public class guis
 		tilesetsright.setl(90,100,0,10);
 		tilemode.setl(40,60,10,20);
 
-		minimap.setl(0,17,60,90);
+		minimap.setl(0,17,60,89);
 		lock.setl(90,100,15,25);
 
 		pickerback.setl(0,10,10,20);
