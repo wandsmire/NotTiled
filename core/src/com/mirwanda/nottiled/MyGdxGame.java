@@ -1237,7 +1237,8 @@ String texta="";
                         drawObjectsInfo();
                         postProcessor.render();
                         drawWorldUI();
-                        //b2dr.render(world,cam.combined);
+                        //draw debug for collision detection
+                        b2dr.render(world,cam.combined);
 
                         drawstage(delta);
 
@@ -1375,7 +1376,14 @@ String texta="";
             str1.getData().setScale(0.01f + Tsw / 160f);
             for (int yy=0;yy<Th;yy++){
                 for (int xx=0;xx<Tw;xx++){
-                    str1.draw(batch,xx+","+yy,xx*Tsw+Tsw/8f,-yy*Tsh+Tsh/3f);
+                    if (orientation.equalsIgnoreCase( "isometric" )){
+                        float offsetx = (xx * Tsw / 2) + (yy * Tsw / 2);
+                        float offsety = (xx * Tsh / 2) - (yy * Tsh / 2);
+
+                        str1.draw( batch, xx + "," + yy, (xx * Tsw + Tsw / 8f) - offsetx, (-yy * Tsh + Tsh / 3f) -offsety);
+                    }else {
+                        str1.draw( batch, xx + "," + yy, xx * Tsw + Tsw / 8f, -yy * Tsh + Tsh / 3f );
+                    }
                 }
 
             }
@@ -2521,7 +2529,7 @@ String texta="";
             {
 
                 if (orientation.equalsIgnoreCase("isometric")) {
-                    if (sShowGrid) sr.rectLine(Tsw / 2 + i * Tsw / 2, -i * Tsh / 2 + Tsh, Tsw / 2 + i * Tsw / 2 - Tsw * Th / 2, -i * Tsh / 2 - Tsh * Th / 2 + Tsh, Tsw / 16f);
+                    if (sShowGrid) sr.rectLine(Tsw / 2 + i * Tsw / 2, -i * Tsh / 2 + Tsh, Tsw / 2 + i * Tsw / 2 - Tsw * Th / 2, -i * Tsh / 2 - Tsh * Th / 2 + Tsh, Tsw / 32f);
                     //sr.rectLine(Tsw / 2 + i * Tsw / 2, -i * Tsh / 2 + Tsh, Tsw / 2 + i * Tsw / 2 - Tsw * Tw / 2, -i * Tsh / 2 - Tsh * Th / 2 + Tsh, Tsw / 16f);
                 } else {
                     if (!landscape) {
@@ -2540,7 +2548,7 @@ String texta="";
             {
 
                 if (orientation.equalsIgnoreCase("isometric")) {
-                    if (sShowGrid) sr.rectLine(0 - j * Tsw / 2, Tsh / 2 - (Tsh * j / 2), (0 - j * Tsw / 2) + Tsw * Tw / 2, Tsh / 2 - (Tsh * j / 2) - Tsh * Tw / 2, Tsw / 16f);
+                    if (sShowGrid) sr.rectLine(0 - j * Tsw / 2, Tsh / 2 - (Tsh * j / 2), (0 - j * Tsw / 2) + Tsw * Tw / 2, Tsh / 2 - (Tsh * j / 2) - Tsh * Tw / 2, Tsw / 32f);
                 } else {
 
                     if (-Tsh * j + Tsh < cam.position.y - reduy * cam.zoom) continue;
@@ -2848,6 +2856,13 @@ String texta="";
                                 }
                                 float ttx = - (Tswad/2) + (Tsw/2);
                                 float tty = - (Tshad/2) + (Tsh/2);
+
+                                if (orientation.equalsIgnoreCase( "isometric" )){
+                                    tty =  0;
+                                    ttx = 0;
+                                }
+
+
                                 switch (flag) {
                                     case "20"://diagonal flip 'THIS ONE"
                                         tempdrawer.setdrawer(initset, xpos * Tsw  + ttx - offsetx, -ypos * Tsh + tty  - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
@@ -2878,7 +2893,7 @@ String texta="";
                             } //for  b
                         }//for a
 
-                        java.util.Collections.sort(drawers);//fps hogger
+                        if (!orientation.equalsIgnoreCase( "isometric" )) java.util.Collections.sort(drawers);//fps hogger
 
                         for (drawer drawer : drawers) {
                             drawer.draw(batch, tilesets);
@@ -3277,6 +3292,8 @@ String texta="";
 
     private void drawObjects() {
         sr.setProjectionMatrix(cam.combined);
+
+        //Part one of 2, filled.
         sr.begin(ShapeRenderer.ShapeType.Filled); //Edit it with filled to make it looks gorgeous.
         Gdx.gl.glEnable(GL20.GL_BLEND);
 
@@ -3373,28 +3390,9 @@ String texta="";
                                     }
                                     else if (orientation.equalsIgnoreCase("isometric"))
                                     {
-                                        int offsetx = 0, offsety = 0;
-                                        xpos = mapstartSelect % Tw;
-                                        ypos = mapstartSelect / Tw;
-                                        offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
-                                        offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
-                                        int xpos2 = mapendSelect % Tw;
-                                        int ypos2 = mapendSelect / Tw;
-                                        int offsetx2 = (xpos2 * Tsw / 2) + (ypos2 * Tsw / 2);
-                                        int offsety2 = (xpos2 * Tsh / 2) - (ypos2 * Tsh / 2);
-                                        int offsetx3 = (xpos2 * Tsw / 2) + (ypos * Tsw / 2);
-                                        int offsety3 = (xpos2 * Tsh / 2) - (ypos * Tsh / 2);
-                                        int offsetx4 = (xpos * Tsw / 2) + (ypos2 * Tsw / 2);
-                                        int offsety4 = (xpos * Tsh / 2) - (ypos2 * Tsh / 2);
-
                                         //anchor
                                         float offx= (ox.getX()/Tsh*Tsw/2) - (ox.getY()/Tsh*Tsw/2);//-ox.getY();
                                         float offy= (-ox.getX()/Tsh*Tsh/2) - (ox.getY()/Tsh*Tsh/2); //-ox.getY()*Tsh/2;
-
-                                        //width & height
-                                        float wid= 0;//(ox.getW()/Tsh*Tsw/2);//-ox.getY();
-                                        float hei= 0;//(-ox.getW()/Tsh*Tsh/2); //-ox.getY()*Tsh/2;
-
 
                                         float op1 = Tsw/2; //'0'
                                         float op2 = Tsh; //0
@@ -3414,10 +3412,8 @@ String texta="";
                                         float p7 = offx + op1 + op7;
                                         float p8 = offy + op2 + op8;
 
-                                        sr.rectLine(p1,p2,p3,p4,Tsw/16f);
-                                        sr.rectLine(p3,p4,p5,p6,Tsw/16f);
-                                        sr.rectLine(p5,p6,p7,p8,Tsw/16f);
-                                        sr.rectLine(p7,p8,p1,p2,Tsw/16f);
+                                        sr.polygon(new float[]{p1, p2,p3,p4,p5,p6,p7,p8});
+
 
                                     }
                                     //str1.draw(batch, j+"", 0, -j);
@@ -3440,6 +3436,7 @@ String texta="";
 
         sr.end();
 
+        //part 2 of 2, outline.
         sr.begin(ShapeRenderer.ShapeType.Line); //Edit it with filled to make it looks gorgeous.
         Gdx.gl.glEnable(GL20.GL_BLEND);
 
@@ -3541,28 +3538,10 @@ String texta="";
                                     }
                                     else if (orientation.equalsIgnoreCase("isometric"))
                                     {
-                                        int offsetx = 0, offsety = 0;
-                                        xpos = mapstartSelect % Tw;
-                                        ypos = mapstartSelect / Tw;
-                                        offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
-                                        offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
-                                        int xpos2 = mapendSelect % Tw;
-                                        int ypos2 = mapendSelect / Tw;
-                                        int offsetx2 = (xpos2 * Tsw / 2) + (ypos2 * Tsw / 2);
-                                        int offsety2 = (xpos2 * Tsh / 2) - (ypos2 * Tsh / 2);
-                                        int offsetx3 = (xpos2 * Tsw / 2) + (ypos * Tsw / 2);
-                                        int offsety3 = (xpos2 * Tsh / 2) - (ypos * Tsh / 2);
-                                        int offsetx4 = (xpos * Tsw / 2) + (ypos2 * Tsw / 2);
-                                        int offsety4 = (xpos * Tsh / 2) - (ypos2 * Tsh / 2);
 
                                         //anchor
                                         float offx= (ox.getX()/Tsh*Tsw/2) - (ox.getY()/Tsh*Tsw/2);//-ox.getY();
                                         float offy= (-ox.getX()/Tsh*Tsh/2) - (ox.getY()/Tsh*Tsh/2); //-ox.getY()*Tsh/2;
-
-                                        //width & height
-                                        float wid= 0;//(ox.getW()/Tsh*Tsw/2);//-ox.getY();
-                                        float hei= 0;//(-ox.getW()/Tsh*Tsh/2); //-ox.getY()*Tsh/2;
-
 
                                         float op1 = Tsw/2; //'0'
                                         float op2 = Tsh; //0
@@ -3582,10 +3561,8 @@ String texta="";
                                         float p7 = offx + op1 + op7;
                                         float p8 = offy + op2 + op8;
 
-                                        sr.rectLine(p1,p2,p3,p4,Tsw/16f);
-                                        sr.rectLine(p3,p4,p5,p6,Tsw/16f);
-                                        sr.rectLine(p5,p6,p7,p8,Tsw/16f);
-                                        sr.rectLine(p7,p8,p1,p2,Tsw/16f);
+                                        sr.polygon(new float[]{p1, p2,p3,p4,p5,p6,p7,p8});
+
 
                                     }
                                     //str1.draw(batch, j+"", 0, -j);
@@ -3667,17 +3644,28 @@ String texta="";
                         String kucing = "";
                         if (ox.getName() != null) kucing = ox.getName();
                         str1.getData().setScale(0.2f + Tsw / 160f);
+                        float offx=0,offy=0;
 
-                        str1.draw(batch, kucing, ox.getX()+1, ox.getYantingelag(Tsh));
+                        if (orientation.equalsIgnoreCase( "isometric" )) {
+                            offx = (ox.getX() + (ox.getY()));//-ox.getY();
+                            offy = (ox.getX() / 2f) + (-ox.getY() / 2f); //-ox.getY()*Tsh/2;
+
+                        }
+                        //draw object label
+                        str1.getData().setScale(0.1f + Tsw / 160f);
+                        str1.draw(batch, kucing, ox.getX()*2-offx, ox.getYantingelag(Tsh)+2-offy);
+
                         if (ox.getShape() != null) {
                             switch (ox.getShape()) {
                                 case "text":
+
+
                                     str1.getData().setScale(0.2f + Tsw / 160f);
                                     if (ox.getText() != null) {
                                         if (ox.isWrap()) {
-                                            str1.draw(batch, ox.getText(), ox.getX(), ox.getYantingelag(Tsh), ox.getW(), com.badlogic.gdx.utils.Align.left, false);
+                                            str1.draw(batch, ox.getText(), ox.getX()*2-offx, ox.getYantingelag(Tsh)-offy, ox.getW(), com.badlogic.gdx.utils.Align.left, false);
                                         } else {
-                                            str1.draw(batch, ox.getText(), ox.getX(), ox.getYantingelag(Tsh));
+                                            str1.draw(batch, ox.getText(), ox.getX()*2-offx, ox.getYantingelag(Tsh)-offy);
                                         }
                                     }
                                     str1.getData().setScale(0.2f + Tsw / 160f);
@@ -14548,6 +14536,8 @@ String texta="";
 
                     Vector3 touch = new Vector3();
                     cam.unproject(touch.set(p1, p2, 0));
+
+
                     int ae = (int) touch.x;
                     int ab = (int) touch.y;
 
@@ -14570,6 +14560,17 @@ String texta="";
 
                             num = (Tw * ((-ab + Tsh) / Tsh) + (ae / Tsw));
                         } else if (orientation.equalsIgnoreCase("isometric")) {
+
+                            //cool way to convert isometric to orthogonal, new iso tap detection
+                            int newae = ae - ((Tsw/Tsh) * ab) + Tsw/2;
+                            int newab = (ae / (Tsw/Tsh)) + ab -Tsh/2;
+                            num = (Tw * ((-newab + Tsh) / Tsh) + (newae / Tsw));
+                            status(""+newae/2f+"|"+(newab-Tsh)+" num:"+num,1);
+                            if (num<0 || num >Tw*Th) return true;
+                            ae =  (int) (newae/2f);
+                            ab = newab;
+                            // check by the closest to a point, old iso tap detection.
+                            /*
                             float closest = 9999;
                             for (int i = 0; i < Tw * Th; i++) {
                                 int offsetx = 0, offsety = 0;
@@ -14590,16 +14591,18 @@ String texta="";
                                     closest = dx / Tsws + dy / Tshs;
                                 }
                             }
+
+                             */
                         }
 
                         if (mode == "tile") {
 
                             tapTile(num, false, true);
                         } else if (mode == "object") {
-                            tapObject(num, touch, ae, ab);
+                            tapObject(num, ae, ab);
 
                         } else if (mode == "newpoly") {
-                            tapNewPoly(num, touch, ae, ab);
+                            tapNewPoly(num, ae, ab);
                         }
                     }
                     break;
@@ -14617,7 +14620,7 @@ String texta="";
 
     }
 
-    private boolean tapNewPoly(Integer num, Vector3 touch, int ae, int ab) {
+    private boolean tapNewPoly(Integer num, int ae, int ab) {
         obj nyok = newobject;
         if (magnet == 1) {
             switch (nyok.getShape()) {
@@ -14635,7 +14638,7 @@ String texta="";
 
             }
         } else {
-            nyok.addPoint((int) touch.x - nyok.getX(), -(int) touch.y + Tsh - nyok.getY());
+            nyok.addPoint((int) ae - nyok.getX(), -(int) ab + Tsh - nyok.getY());
 
         }
         return false;
@@ -15632,12 +15635,22 @@ String texta="";
 
     java.util.List<obj> tempObjx = new ArrayList<obj>();
 
-    private boolean tapObject(Integer num, Vector3 touch, int ae, int ab) {
-        tempObjx.clear();
-        updatePointer(touch.x,-touch.y);
-        return true;
-        /*
+    public static double roundToHalf(double d) {
+        return Math.round(d * 2) / 2.0;
+    }
+
+    private boolean tapObject(Integer num, int ae, int ab) {
+
+        /* experiment
+        int xx = num % Tw;
+        int yy = num / Tw;
+        float newab = (ab * Tsw / 2) + (ae * Tsw / 2);
+        float newae = (ab * Tsh / 2) - (ae * Tsh / 2);
         */
+        tempObjx.clear();
+        updatePointer(ae,-ab);
+        return true;
+
         //return false;
     }
 
@@ -15706,8 +15719,36 @@ String texta="";
 
 
                     default:
-                        nyok.setX((ae / Tsw) * Tsw);
-                        nyok.setY(((-ab + Tsh) / Tsh) * Tsh);
+                        if (orientation.equalsIgnoreCase( "isometric" )) {
+                            //huft
+                            ///
+                            int newae = (int) (ae - ((Tsw / Tsh) * ab) );
+                            int newab = (int) ((ae / (Tsw / Tsh)) + ab - Tsh/2f);
+                            ae = newae/2;
+                            ab = newab;
+
+                            nyok.setX((float) (roundToHalf((float) ae/Tsw))*Tsw);
+                            nyok.setY((( -ab + Tsh) / Tsh) * Tsh);
+                            status(nyok.getX()+"+"+nyok.getY(),1);
+                            //code for unlocked
+                            /*
+                            int newae = (ae - ((Tsw / Tsh) * ab) + Tsw/2);
+                            int newab = ((ae / (Tsw / Tsh)) + ab - Tsh/2);
+                            ae = newae/2;
+                            ab = newab;
+
+                            nyok.setX(((float) ae / Tsw ) * Tsw);
+                            nyok.setY((((float) -ab + Tsh) / Tsh) * Tsh);
+
+                             */
+
+
+                        }else{
+                            nyok.setX((ae / Tsw) * Tsw);
+                            nyok.setY(((-ab + Tsh) / Tsh) * Tsh);
+
+                        }
+
                         break;
                     case "point":
                         nyok.setX((ae / Tsw) * Tsw + (Tsw / 2));
@@ -15767,35 +15808,22 @@ String texta="";
                 case 6:
                 case 5:
                     if (orientation.equalsIgnoreCase("isometric")) {
-                        int numa =-1;
-                        float closest = 9999;
-                        for (int i = 0; i < Tw * Th; i++) {
-                            int offsetx = 0, offsety = 0;
-                            xpos = i % Tw;
-                            ypos = i / Tw;
-                            offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
-                            offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
-                            int drawx = xpos * Tsw - offsetx;
-                            int drawy = -ypos * Tsh - offsety;
-                            float x = ae - drawx;
-                            float y = ab - drawy;
-                            int Tsws = Tsw / 2;
-                            int Tshs = Tsh / 2;
-                            float dx = Math.abs(x - Tsws);
-                            float dy = Math.abs(y - Tshs);
-                            if (dx / Tsws + dy / Tshs < closest) {
-                                numa = i;
-                                closest = dx / Tsws + dy / Tshs;
-                            }
-
-                        }
+                        //cool way to convert isometric to orthogonal, new iso tap detection
+                        int newae = (int) (ae - ((Tsw/Tsh) * ab) + Tsw/2);
+                        int newab = (int) ((ae / (Tsw/Tsh)) + ab -Tsh/2);
+                        int numa = (Tw * ((-newab + Tsh) / Tsh) + (newae / Tsw));
+                        //status(""+newae/2f+"|"+(newab-Tsh)+" num:"+numa,1);
+                        if (numa<0 || numa >Tw*Th) return;
+                        ae =  (int) (newae/2f);
+                        ab = newab;
 
                         if (numa!=-1)
                         {
                             nyok.setX((int) (numa % Tw)*Tsh );
                             nyok.setY((int) (numa / Tw)*Tsh);
 
-                                nyok = new obj(curid, (int) (numa % Tw)*Tsh , (int) (numa / Tw)*Tsh, Tsh, Tsh, "", "",world);
+                            //create new obj.
+                            nyok = new obj(curid, (int) (numa % Tw)*Tsh , (int) (numa / Tw)*Tsh, Tsh, Tsh, "", "",world);
                             nyok.setShape(shapeNameX);
                             nyok.updateVertices( world , Tsh);
                         }
@@ -18185,11 +18213,6 @@ String texta="";
         //object tool selector
         if (tapped(touch2, gui.objectpickerleft)) {
             if (mode == "object") {
-                if (orientation.equalsIgnoreCase("isometric"))
-                {
-                    msgbox("Only rectangle is available for isometric map at the moment. Sorry.");
-                    return true;
-                }
                 activeobjtool -= 1;
                 if (activeobjtool < 0) activeobjtool = 8;
                 String nfo = "";
@@ -18232,11 +18255,6 @@ String texta="";
 
                 if (touch2.x > 240 - 30) activeobjtool += 1;
                 if (activeobjtool >= 9) activeobjtool = 0;
-                if (orientation.equalsIgnoreCase("isometric"))
-                {
-                    msgbox("Only rectangle is available for isometric map at the moment. Sorry.");
-                    return true;
-                }
                 String nfo = "";
                 switch (activeobjtool) {
                     case 0:
@@ -19916,6 +19934,16 @@ String texta="";
                         mapstartSelect = (Tw * ((-ab + Tsh) / Tsh) + (ae / Tsw));
                     }
                 } else if (orientation.equalsIgnoreCase("isometric")) {
+
+
+                    //cool way to convert isometric to orthogonal, new iso tap detection
+                    int newae = ae - ((Tsw/Tsh) * ab) + Tsw/2;
+                    int newab = (ae / (Tsw/Tsh)) + ab -Tsh/2;
+                    mapstartSelect = (Tw * ((-newab + Tsh) / Tsh) + (newae / Tsw));
+
+                    if (mapstartSelect<0 || mapstartSelect >Tw*Th) return true;
+
+                    /* old way
                     float closest = 9999;
                     for (int i = 0; i < Tw * Th; i++) {
                         int offsetx = 0, offsety = 0;
@@ -19936,6 +19964,8 @@ String texta="";
                             closest = dx / Tsws + dy / Tshs;
                         }
                     }
+
+                     */
                 }
                 //mapstartSelect = (Tw * ((-ab + Tsh) / Tsh) + (ae / Tsw));
 
@@ -21002,6 +21032,15 @@ String texta="";
                     num = (Tw * ((-ab + Tsh) / Tsh) + (ae / Tsw));
                 }
             } else if (orientation.equalsIgnoreCase("isometric")) {
+
+                //cool way to convert isometric to orthogonal, new iso tap detection
+                int newae = ae - ((Tsw/Tsh) * ab) + Tsw/2;
+                int newab = (ae / (Tsw/Tsh)) + ab -Tsh/2;
+                num = (Tw * ((-newab + Tsh) / Tsh) + (newae / Tsw));
+                if (num<0 || num >Tw*Th) return true;
+
+                    /* old way
+
                 float closest = 9999;
                 for (int i = 0; i < Tw * Th; i++) {
                     int offsetx = 0, offsety = 0;
@@ -21022,6 +21061,8 @@ String texta="";
                         closest = dx / Tsws + dy / Tshs;
                     }
                 }
+
+                     */
             }
 
             //if the tile ID cannot be found, just return.
