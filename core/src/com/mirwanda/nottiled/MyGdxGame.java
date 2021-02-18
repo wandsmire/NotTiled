@@ -206,6 +206,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     BitmapFont str1;
     decoder decoder = new decoder();
     Skin skin;
+    java.util.List<Boolean> changed = new ArrayList<Boolean>();
     java.util.List<property> properties = new ArrayList<property>();
     java.util.List<layer> layers = new ArrayList<layer>();
     layer cliplayer = new layer();
@@ -2893,7 +2894,7 @@ String texta="";
                             } //for  b
                         }//for a
 
-                        if (!orientation.equalsIgnoreCase( "isometric" )) java.util.Collections.sort(drawers);//fps hogger
+                       // if (!orientation.equalsIgnoreCase( "isometric" )) java.util.Collections.sort(drawers);//fps hogger
 
                         for (drawer drawer : drawers) {
                             drawer.draw(batch, tilesets);
@@ -3100,6 +3101,205 @@ String texta="";
 
     private int mod(int i, int len) {
         return ((i < len) ? i : 0);
+    }
+
+    private void cacheTilesEx() {
+
+        caching = true;
+        //caches.clear();
+        //cacheIDs.clear();
+
+        tilesetsize = tilesets.size();
+        if (tilesetsize > 0) {
+            int offsetx = 0, offsety = 0;
+            int jon = 0, joni = 0;
+            long ini;
+            int total = Tw * Th;
+
+
+            int startx = 0, stopx = Tw;
+            int starty = 0, stopy = Th;
+            int aa = 0, bb = 0, cc = 0, dd = 0;
+            switch (renderorder) {
+                case "right-down":
+                    aa = starty;
+                    bb = stopy;
+                    cc = startx;
+                    dd = stopx;
+                    break;
+                case "left-down":
+                    aa = starty;
+                    bb = stopy;
+                    cc = -stopx + 1;
+                    dd = -startx + 1;
+                    break;
+                case "right-up":
+                    aa = -stopy + 1;
+                    bb = -starty + 1;
+                    cc = startx;
+                    dd = stopx;
+                    break;
+                case "left-up":
+                    aa = -stopy + 1;
+                    bb = -starty + 1;
+                    cc = -stopx + 1;
+                    dd = -startx + 1;
+                    break;
+            }
+
+            String flag;
+            Long mm = null;
+            flag = "00";
+
+            for (int ch =0; ch<Tw*Th;ch++){
+                if (changed.get( ch )){
+                    //find which block this tile is belong to
+                    //int block =
+
+                    //cache the block
+                    //clear changed flag for the block
+                    //continue.
+                }
+            }
+
+            for (int jo = 0; jo < layers.size(); jo++) {
+                if (layers.get(jo).getType() == layer.Type.TILE && layers.get(jo).isVisible()) {
+                    if (layers.get(jo).getOpacity() != 0 && sEnableBlending) {
+                        Gdx.gl.glEnable(GL20.GL_BLEND);
+                        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+                        batch.setColor(1, 1, 1, layers.get(jo).getOpacity());
+                    }
+                    java.util.List<drawer> drawers = new ArrayList<drawer>();
+                    drawers.clear();
+                    for (int a = aa; a < bb; a++) {
+                        for (int b = cc; b < dd; b++) {
+                            //position=(Math.abs(a)*Tw)+Math.abs(b);
+
+                            int position = (abs(a) * Tw) + abs(b);
+                            ini = layers.get(jo).getStr().get(position);
+                            int initset = layers.get(jo).getTset().get(position);
+                            if (initset == -1) continue;
+                            if (ini == 0) continue;//dont draw empty, amazing performance boost
+                            int xpos = position % Tw;
+                            int ypos = position / Tw;
+                            if (orientation.equalsIgnoreCase("isometric")) {
+                                offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
+                                offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
+                            }
+
+                            mm = ini;
+                            flag = "00";
+                            if (ini > total) {
+                                hex = Long.toHexString(ini);
+                                trailer = "00000000" + hex;
+                                hex = trailer.substring(trailer.length() - 8);
+                                flag = hex.substring(0, 2);
+                                mm = Long.decode("#00" + hex.substring(2, 8));
+                            }
+                            tiles = tilesets.get(initset).getTiles();
+                            tilesize = tiles.size();
+
+                            if (tilesize > 0) {
+                                for (int n = 0; n < tilesize; n++) {
+                                    if (tiles.get(n).getAnimation().size() > 0) {
+                                        if (mm == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
+                                            mm = (long) tiles.get(n).getActiveFrameID() + tilesets.get(initset).getFirstgid();
+                                        }
+                                    }
+                                }
+                            }
+
+                            sprX = (int) (mm - tilesets.get(initset).getFirstgid()) % (tilesets.get(initset).getWidth());
+                            sprY = (int) (mm - tilesets.get(initset).getFirstgid()) / (tilesets.get(initset).getWidth());
+                            margin = tilesets.get(initset).getMargin();
+                            spacing = tilesets.get(initset).getSpacing();
+                            Tswa = tilesets.get(initset).getTilewidth();
+                            Tsha = tilesets.get(initset).getTileheight();
+                            int Tswad = 0;
+                            int Tshad = 0;
+                            if (sResizeTiles) {
+                                Tswad = Tsw;
+                                Tshad = Tsh;
+                            } else {
+                                Tswad = Tswa;
+                                Tshad = Tsha;
+                            }
+                            drawer tempdrawer = new drawer();
+                            switch (flag) {
+                                case "20"://diagonal flip 'THIS ONE"
+                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                    break;
+                                case "40"://flipy nd
+                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
+                                    break;
+                                case "60"://270 degrees clockwise nd
+                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                    break;
+                                case "80"://flipx nd
+                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                    break;
+                                case "a0"://90 degress cw
+                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                    break;
+                                case "c0"://180 degrees cw nd
+                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                    break;
+                                case "e0"://180 degrees ccw "AND THIS ONE"
+                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                    break;
+                                case "00":
+                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                    break;
+
+                            }
+
+
+
+
+                            drawers.add(tempdrawer);
+
+
+                        } //for  b
+                    }//for a
+
+                    java.util.Collections.sort(drawers);//fps hogger
+                    int counting = 0;
+                    SpriteCache cache = new SpriteCache(8000, true);
+                    cache.beginCache();
+                    for (drawer drawer : drawers) {
+
+
+                        counting += 1;
+
+                        drawer.add(cache, tilesets);
+
+                        if (counting == 8000) {
+                            int id = cache.endCache();
+                            cacheIDs.add(id);
+                            caches.add(cache);
+
+                            cache = new SpriteCache(8000, true);
+
+                            cache.beginCache();
+                            counting = 0;
+                        }
+                    }
+                    int id = cache.endCache();
+                    cacheIDs.add(id);
+                    caches.add(cache);
+
+                    if (layers.get(jo).getOpacity() != 0 && sEnableBlending) {
+                        Gdx.gl.glDisable(GL20.GL_BLEND);
+                    }
+
+                }//for jo
+            }
+
+
+        }//no tileswt
+        caching = false;
+
+
     }
 
     private void cacheTiles() {
