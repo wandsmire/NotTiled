@@ -206,7 +206,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     BitmapFont str1;
     decoder decoder = new decoder();
     Skin skin;
-    java.util.List<Boolean> changed = new ArrayList<Boolean>();
     java.util.List<property> properties = new ArrayList<property>();
     java.util.List<layer> layers = new ArrayList<layer>();
     layer cliplayer = new layer();
@@ -219,6 +218,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     java.util.List<Label> tla = new ArrayList<Label>();
     java.util.List<layerhistory> undolayer = new ArrayList<layerhistory>();
     java.util.List<layerhistory> redolayer = new ArrayList<layerhistory>();
+    java.util.List<TileCache> tcaches = new ArrayList<TileCache>();
+
     layer tempLayer;
     tileset tempTset;
     float initialZoom;
@@ -375,8 +376,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private Slider sdScrollSpeed, sdGridOpacity;
     private SelectBox sbLanguage;
     private Online templates = new Online();
-    private java.util.List<SpriteCache> caches = new ArrayList<SpriteCache>();
-    private java.util.List<Integer> cacheIDs = new ArrayList<Integer>();
     private java.util.List<Boolean> autoed = new ArrayList<Boolean>();
     private java.util.List<String> recentfiles = new ArrayList<String>();
     private int position;
@@ -438,6 +437,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private Table bigman;
     private boolean zooming;
     private float autosave = 0f;
+    private float redraw = 0f;
     private float rotator = 0f;
     private float undohistory = 0f;
     private Table trandomgen, treplacetiles;
@@ -1005,6 +1005,13 @@ String texta="";
                         saveMap(curdir + "/" + curfile);
                         status(z.autosaving, 1);
                     }
+                }
+
+                redraw += delta;
+
+                if (redraw > 0.2f) {
+                    redraw = 0;
+                    cacheTiles();
                 }
 
                 undohistory += delta;
@@ -2682,6 +2689,7 @@ String texta="";
     private void drawTiles() {
         redux = ssx / 2;
         reduy = ssy / 2;
+        /*
         if (cam.zoom < zoomTreshold) {
             //Gdx.gl.glDisable(GL20.GL_BLEND);
             batch.setColor(1, 1, 1, 1);
@@ -2937,7 +2945,9 @@ String texta="";
             }//no tileswt
 
             batch.end();
+
         } else {
+         */
             //fbo.begin();
             batch.begin();
             try {
@@ -2947,9 +2957,10 @@ String texta="";
             }
             batch.end();
             if (!caching) {
-                for (int i = 0; i < caches.size(); i++) {
-                    SpriteCache cache = caches.get(i);
-                    int myid = cacheIDs.get(i);
+                for (int i = 0; i < tcaches.size(); i++) {
+                    TileCache tc = tcaches.get(i);
+                    SpriteCache cache = tc.getCache();
+                    int myid = tc.getCacheID();
                     cache.setProjectionMatrix(cam.combined);
                     Gdx.gl.glEnable(GL20.GL_BLEND);
                     Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
@@ -3092,7 +3103,7 @@ String texta="";
             batch.end();
             //fbo.end();
 
-        }
+        //}
     }
 
     private int abs(int i) {
@@ -3103,210 +3114,52 @@ String texta="";
         return ((i < len) ? i : 0);
     }
 
-    private void cacheTilesEx() {
 
-        caching = true;
-        //caches.clear();
-        //cacheIDs.clear();
+    int widd=25;
+    int heii=25;
 
-        tilesetsize = tilesets.size();
-        if (tilesetsize > 0) {
-            int offsetx = 0, offsety = 0;
-            int jon = 0, joni = 0;
-            long ini;
-            int total = Tw * Th;
-
-
-            int startx = 0, stopx = Tw;
-            int starty = 0, stopy = Th;
-            int aa = 0, bb = 0, cc = 0, dd = 0;
-            switch (renderorder) {
-                case "right-down":
-                    aa = starty;
-                    bb = stopy;
-                    cc = startx;
-                    dd = stopx;
-                    break;
-                case "left-down":
-                    aa = starty;
-                    bb = stopy;
-                    cc = -stopx + 1;
-                    dd = -startx + 1;
-                    break;
-                case "right-up":
-                    aa = -stopy + 1;
-                    bb = -starty + 1;
-                    cc = startx;
-                    dd = stopx;
-                    break;
-                case "left-up":
-                    aa = -stopy + 1;
-                    bb = -starty + 1;
-                    cc = -stopx + 1;
-                    dd = -startx + 1;
-                    break;
+    private void resetCaches() {
+        tcaches.clear();
+        int maxx = Tw/widd;
+        if (Tw % widd !=0) maxx++;
+        //maxx=1;
+        int maxy = Th/heii;
+        if (Th % heii !=0) maxy++;
+        //maxy=1;
+        for (int y=0;y<maxy;y++){
+            for (int x=0;x<maxx;x++){
+                //enough for 12 layers.
+                SpriteCache cache = new SpriteCache(8000, true);
+                int cid=cacheTilesOn(cache, x,y );
+                TileCache tcache = new TileCache(cache,cid,x,y);
+                tcaches.add( tcache );
             }
-
-            String flag;
-            Long mm = null;
-            flag = "00";
-
-            for (int ch =0; ch<Tw*Th;ch++){
-                if (changed.get( ch )){
-                    //find which block this tile is belong to
-                    //int block =
-
-                    //cache the block
-                    //clear changed flag for the block
-                    //continue.
-                }
-            }
-
-            for (int jo = 0; jo < layers.size(); jo++) {
-                if (layers.get(jo).getType() == layer.Type.TILE && layers.get(jo).isVisible()) {
-                    if (layers.get(jo).getOpacity() != 0 && sEnableBlending) {
-                        Gdx.gl.glEnable(GL20.GL_BLEND);
-                        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-                        batch.setColor(1, 1, 1, layers.get(jo).getOpacity());
-                    }
-                    java.util.List<drawer> drawers = new ArrayList<drawer>();
-                    drawers.clear();
-                    for (int a = aa; a < bb; a++) {
-                        for (int b = cc; b < dd; b++) {
-                            //position=(Math.abs(a)*Tw)+Math.abs(b);
-
-                            int position = (abs(a) * Tw) + abs(b);
-                            ini = layers.get(jo).getStr().get(position);
-                            int initset = layers.get(jo).getTset().get(position);
-                            if (initset == -1) continue;
-                            if (ini == 0) continue;//dont draw empty, amazing performance boost
-                            int xpos = position % Tw;
-                            int ypos = position / Tw;
-                            if (orientation.equalsIgnoreCase("isometric")) {
-                                offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
-                                offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
-                            }
-
-                            mm = ini;
-                            flag = "00";
-                            if (ini > total) {
-                                hex = Long.toHexString(ini);
-                                trailer = "00000000" + hex;
-                                hex = trailer.substring(trailer.length() - 8);
-                                flag = hex.substring(0, 2);
-                                mm = Long.decode("#00" + hex.substring(2, 8));
-                            }
-                            tiles = tilesets.get(initset).getTiles();
-                            tilesize = tiles.size();
-
-                            if (tilesize > 0) {
-                                for (int n = 0; n < tilesize; n++) {
-                                    if (tiles.get(n).getAnimation().size() > 0) {
-                                        if (mm == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
-                                            mm = (long) tiles.get(n).getActiveFrameID() + tilesets.get(initset).getFirstgid();
-                                        }
-                                    }
-                                }
-                            }
-
-                            sprX = (int) (mm - tilesets.get(initset).getFirstgid()) % (tilesets.get(initset).getWidth());
-                            sprY = (int) (mm - tilesets.get(initset).getFirstgid()) / (tilesets.get(initset).getWidth());
-                            margin = tilesets.get(initset).getMargin();
-                            spacing = tilesets.get(initset).getSpacing();
-                            Tswa = tilesets.get(initset).getTilewidth();
-                            Tsha = tilesets.get(initset).getTileheight();
-                            int Tswad = 0;
-                            int Tshad = 0;
-                            if (sResizeTiles) {
-                                Tswad = Tsw;
-                                Tshad = Tsh;
-                            } else {
-                                Tswad = Tswa;
-                                Tshad = Tsha;
-                            }
-                            drawer tempdrawer = new drawer();
-                            switch (flag) {
-                                case "20"://diagonal flip 'THIS ONE"
-                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
-                                    break;
-                                case "40"://flipy nd
-                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
-                                    break;
-                                case "60"://270 degrees clockwise nd
-                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
-                                    break;
-                                case "80"://flipx nd
-                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
-                                    break;
-                                case "a0"://90 degress cw
-                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
-                                    break;
-                                case "c0"://180 degrees cw nd
-                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
-                                    break;
-                                case "e0"://180 degrees ccw "AND THIS ONE"
-                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
-                                    break;
-                                case "00":
-                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
-                                    break;
-
-                            }
-
-
-
-
-                            drawers.add(tempdrawer);
-
-
-                        } //for  b
-                    }//for a
-
-                    java.util.Collections.sort(drawers);//fps hogger
-                    int counting = 0;
-                    SpriteCache cache = new SpriteCache(8000, true);
-                    cache.beginCache();
-                    for (drawer drawer : drawers) {
-
-
-                        counting += 1;
-
-                        drawer.add(cache, tilesets);
-
-                        if (counting == 8000) {
-                            int id = cache.endCache();
-                            cacheIDs.add(id);
-                            caches.add(cache);
-
-                            cache = new SpriteCache(8000, true);
-
-                            cache.beginCache();
-                            counting = 0;
-                        }
-                    }
-                    int id = cache.endCache();
-                    cacheIDs.add(id);
-                    caches.add(cache);
-
-                    if (layers.get(jo).getOpacity() != 0 && sEnableBlending) {
-                        Gdx.gl.glDisable(GL20.GL_BLEND);
-                    }
-
-                }//for jo
-            }
-
-
-        }//no tileswt
-        caching = false;
-
-
+        }
     }
 
+
     private void cacheTiles() {
+        //debug code
+        //tcaches.get(0).setChanged( true );
+        //tcaches.get(1).setChanged( true );
+        //
 
         caching = true;
-        caches.clear();
-        cacheIDs.clear();
+
+         for (int i=0;i<tcaches.size();i++){
+            if (tcaches.get(i).isChanged()){
+                TileCache tc = tcaches.get(i);
+                SpriteCache cache = new SpriteCache(8000, true);
+                int cid=cacheTilesOn(cache, tc.getIntex(),tc.getIntey());
+                tc.setCache( cache );
+                tc.setCacheID( cid );
+                tc.setChanged( false );
+            }
+        }
+        caching = false;
+    }
+
+    private int cacheTilesOn(SpriteCache cache, int intex, int intey) {
 
         tilesetsize = tilesets.size();
         if (tilesetsize > 0) {
@@ -3315,9 +3168,10 @@ String texta="";
             long ini;
             int total = Tw * Th;
 
-
-            int startx = 0, stopx = Tw;
-            int starty = 0, stopy = Th;
+            int startx = intex*widd, stopx = intex*widd+widd;
+            if (stopx >Tw) stopx = intex*widd + (Tw % widd);
+            int starty = intey*heii, stopy = intey*heii+heii;
+            if (stopy >Th) stopy = intey*heii + (Th % heii);
             int aa = 0, bb = 0, cc = 0, dd = 0;
             switch (renderorder) {
                 case "right-down":
@@ -3349,6 +3203,8 @@ String texta="";
             String flag;
             Long mm = null;
             flag = "00";
+
+            cache.beginCache();
 
             for (int jo = 0; jo < layers.size(); jo++) {
                 if (layers.get(jo).getType() == layer.Type.TILE && layers.get(jo).isVisible()) {
@@ -3452,15 +3308,12 @@ String texta="";
 
                     java.util.Collections.sort(drawers);//fps hogger
                     int counting = 0;
-                    SpriteCache cache = new SpriteCache(8000, true);
-                    cache.beginCache();
                     for (drawer drawer : drawers) {
 
-
                         counting += 1;
-
                         drawer.add(cache, tilesets);
 
+                        /* cache should be prevented to reach 8000.
                         if (counting == 8000) {
                             int id = cache.endCache();
                             cacheIDs.add(id);
@@ -3471,10 +3324,8 @@ String texta="";
                             cache.beginCache();
                             counting = 0;
                         }
+                         */
                     }
-                    int id = cache.endCache();
-                    cacheIDs.add(id);
-                    caches.add(cache);
 
                     if (layers.get(jo).getOpacity() != 0 && sEnableBlending) {
                         Gdx.gl.glDisable(GL20.GL_BLEND);
@@ -3482,12 +3333,10 @@ String texta="";
 
                 }//for jo
             }
-
-
+            int id = cache.endCache();
+            return id;
         }//no tileswt
-        caching = false;
-
-
+        return 0;
     }
 
     private void drawObjects() {
@@ -4508,11 +4357,11 @@ String texta="";
             if (sMinimap) {
                 //if (txMinimap!=null) ui.draw(txMinimap,0,0);
 
-                if (!caching & caches.size() > 0) {
-                    for (int i = 0; i < caches.size(); i++) {
+                if (!caching & tcaches.size() > 0) {
+                    for (int i = 0; i < tcaches.size(); i++) {
 
-                        SpriteCache cache = caches.get(i);
-                        int myid = cacheIDs.get(i);
+                        SpriteCache cache = tcaches.get(i).getCache();
+                        int myid = tcaches.get(i).getCacheID();
                         cache.setProjectionMatrix(minicam.combined);
                         Gdx.gl.glEnable(GL20.GL_BLEND);
                         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
@@ -13819,10 +13668,11 @@ String texta="";
             ErrorBung(e, "/maknyus.txt");
         }
         CacheAllTset();
-        cacheTiles();
         resetSwatches();
-        updateMinimap();
         updateObjectCollision();
+        resetCaches();
+        updateMinimap();
+
 
 
         selLayer=0;
@@ -13846,7 +13696,6 @@ String texta="";
         //resize(ssx,ssy);
         //recenterUI();
         firstload = loadtime;
-        updateMinimap();
 
 
         if (isCreateRoom) {
@@ -16202,6 +16051,14 @@ String texta="";
 
                     layerhistory lh2 = new layerhistory(follower, from, oi, num, selLayer, tzet, seltset);
 
+                    //// magic
+                    int posx = (num % Tw) / widd;
+                    int posy = (num / Tw) / heii;
+                    int maxx = Tw/widd;
+                    if (Tw % widd !=0) maxx++;
+                    int tci = (posy * maxx) + posx;
+                    tcaches.get(tci).setChanged( true );
+                    ////
 
                     if (from != oi) {
                         undolayer.add(lh2);
