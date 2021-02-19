@@ -1009,7 +1009,7 @@ String texta="";
 
                 redraw += delta;
 
-                if (redraw > 0.2f) {
+                if (redraw > 0.1f) {
                     redraw = 0;
                     cacheTiles();
                 }
@@ -1246,7 +1246,7 @@ String texta="";
                         postProcessor.render();
                         drawWorldUI();
                         //draw debug for collision detection
-                        b2dr.render(world,cam.combined);
+                        //b2dr.render(world,cam.combined);
 
                         drawstage(delta);
 
@@ -2687,8 +2687,13 @@ String texta="";
     }
 
     private void drawTiles() {
-        redux = ssx / 2;
-        reduy = ssy / 2;
+        if (landscape) {
+            redux = ssy / 2;
+            reduy = ssx / 2;
+        }else{
+            redux = ssx / 2;
+            reduy = ssy / 2;
+        }
         /*
         if (cam.zoom < zoomTreshold) {
             //Gdx.gl.glDisable(GL20.GL_BLEND);
@@ -2959,6 +2964,26 @@ String texta="";
             if (!caching) {
                 for (int i = 0; i < tcaches.size(); i++) {
                     TileCache tc = tcaches.get(i);
+
+                    if (orientation!="isometric") {
+
+
+                        if ((tc.getIntex() ) * widd * Tsw < cam.position.x - redux * cam.zoom - widd * Tsw)
+                            continue;
+
+                        if ((tc.getIntex() ) * widd * Tsw > cam.position.x + redux * cam.zoom + widd * Tsw)
+                            continue;
+
+                        if ((tc.getIntey() ) * heii * -Tsh +Tsh < cam.position.y - reduy * cam.zoom - heii * Tsh)
+                            continue;
+
+                        if ((tc.getIntey() ) * heii * -Tsh +Tsh > cam.position.y + reduy * cam.zoom + heii * Tsh)
+                            continue;
+                    }
+
+
+
+
                     SpriteCache cache = tc.getCache();
                     int myid = tc.getCacheID();
                     cache.setProjectionMatrix(cam.combined);
@@ -3115,8 +3140,8 @@ String texta="";
     }
 
 
-    int widd=25;
-    int heii=25;
+    int widd=20;
+    int heii=20;
 
     private void resetCaches() {
         tcaches.clear();
@@ -3129,14 +3154,25 @@ String texta="";
         for (int y=0;y<maxy;y++){
             for (int x=0;x<maxx;x++){
                 //enough for 12 layers.
-                SpriteCache cache = new SpriteCache(8000, true);
+                SpriteCache cache = new SpriteCache(2000, false);
                 int cid=cacheTilesOn(cache, x,y );
                 TileCache tcache = new TileCache(cache,cid,x,y);
                 tcaches.add( tcache );
             }
         }
+        //status("Cache reset.",2);
     }
 
+    private void updateCache(int num){
+        //// magic
+        int posx = (num % Tw) / widd;
+        int posy = (num / Tw) / heii;
+        int maxx = Tw/widd;
+        if (Tw % widd !=0) maxx++;
+        int tci = (posy * maxx) + posx;
+        tcaches.get(tci).setChanged( true );
+        ////
+    }
 
     private void cacheTiles() {
         //debug code
@@ -3148,8 +3184,9 @@ String texta="";
 
          for (int i=0;i<tcaches.size();i++){
             if (tcaches.get(i).isChanged()){
+                tcaches.get(i).getCache().dispose();
                 TileCache tc = tcaches.get(i);
-                SpriteCache cache = new SpriteCache(8000, true);
+                SpriteCache cache = new SpriteCache(2000, false);
                 int cid=cacheTilesOn(cache, tc.getIntex(),tc.getIntey());
                 tc.setCache( cache );
                 tc.setCacheID( cid );
@@ -3162,7 +3199,7 @@ String texta="";
     private int cacheTilesOn(SpriteCache cache, int intex, int intey) {
 
         tilesetsize = tilesets.size();
-        if (tilesetsize > 0) {
+//        if (tilesetsize > 0) {
             int offsetx = 0, offsety = 0;
             int jon = 0, joni = 0;
             long ini;
@@ -3207,7 +3244,20 @@ String texta="";
             cache.beginCache();
 
             for (int jo = 0; jo < layers.size(); jo++) {
-                if (layers.get(jo).getType() == layer.Type.TILE && layers.get(jo).isVisible()) {
+                //check visibility
+                boolean vis=false;
+                switch (viewMode){
+                    case STACK:
+                        if (jo <=selLayer) vis=true; break;
+                    case ALL:
+                        vis=true;break;
+                    case SINGLE:
+                        if (selLayer==jo) vis=true;break;
+                    case CUSTOM:
+                        vis=layers.get(jo).isVisible();break;
+                }
+
+                if (layers.get(jo).getType() == layer.Type.TILE && vis) {
                     if (layers.get(jo).getOpacity() != 0 && sEnableBlending) {
                         Gdx.gl.glEnable(GL20.GL_BLEND);
                         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
@@ -3306,7 +3356,7 @@ String texta="";
                         } //for  b
                     }//for a
 
-                    java.util.Collections.sort(drawers);//fps hogger
+                    //java.util.Collections.sort(drawers);//fps hogger
                     int counting = 0;
                     for (drawer drawer : drawers) {
 
@@ -3335,8 +3385,6 @@ String texta="";
             }
             int id = cache.endCache();
             return id;
-        }//no tileswt
-        return 0;
     }
 
     private void drawObjects() {
@@ -5160,7 +5208,7 @@ String texta="";
 
 
         //loadautotiles();
-        cacheTiles();
+        resetCaches();
         resetSwatches();
         //uicam.zoom=0.5f;
         //uicam.update();
@@ -9278,6 +9326,7 @@ String texta="";
                 }
                 try {
                     layers.get(llayerlist.getSelectedIndex()).setOpacity(Float.parseFloat(input));
+
                 } catch (Exception e) {
                 }
 
@@ -9349,6 +9398,8 @@ String texta="";
                     if (dex < 1) dex = 1;
                     llayerlist.setSelectedIndex(dex - 1);
                     updateObjectCollision();
+                    resetCaches();
+
                 }
             }
         });
@@ -10072,6 +10123,7 @@ String texta="";
                             int dex = Integer.parseInt(actor.getName());
                             if (dex < layers.size()-1) {
                                 java.util.Collections.swap(layers, dex, dex + 1);
+                                resetCaches();
                             }
                             //////
                             loadList( "layer" );
@@ -10095,6 +10147,7 @@ String texta="";
                             int dex = Integer.parseInt(actor.getName());
                             if (dex > 0) {
                                 java.util.Collections.swap(layers, dex, dex - 1);
+                                resetCaches();
                             }
                             //////
                             loadList( "layer" );
@@ -10166,6 +10219,7 @@ String texta="";
                             layers.get(Integer.parseInt(actor.getName())).setVisible(!layers.get(Integer.parseInt(actor.getName())).isVisible());
                             viewMode=ViewMode.CUSTOM;
                             saveViewMode();
+                            resetCaches();
 
                             if (layers.get(Integer.parseInt(actor.getName())).isVisible())
                             {
@@ -11162,8 +11216,8 @@ String texta="";
                     mapFormat = sbMapFormat.getSelected().toString();
                     renderorder = sbMapRenderOrder.getSelected().toString();
                     orientation = sbMapOrientation.getSelected().toString();
+                    resetCaches();
                     resetMinimap();
-                    cacheTiles();
                     backToMap();
 
                 } catch (Exception e) {
@@ -13002,7 +13056,7 @@ String texta="";
                         loadingfile = false;
                         showtsetselection(tilesets);
                         saveMap(curdir + "/" + curfile);
-                        cacheTiles();
+                        resetCaches();
                         uicam.zoom = 0.5f;
                         uicam.update();
                         firstload = loadtime;
@@ -16050,15 +16104,7 @@ String texta="";
                     int tzet = layers.get(selLayer).getTset().get(num);
 
                     layerhistory lh2 = new layerhistory(follower, from, oi, num, selLayer, tzet, seltset);
-
-                    //// magic
-                    int posx = (num % Tw) / widd;
-                    int posy = (num / Tw) / heii;
-                    int maxx = Tw/widd;
-                    if (Tw % widd !=0) maxx++;
-                    int tci = (posy * maxx) + posx;
-                    tcaches.get(tci).setChanged( true );
-                    ////
+                    updateCache(num);
 
                     if (from != oi) {
                         undolayer.add(lh2);
@@ -16627,7 +16673,6 @@ String texta="";
                     tzet = layers.get(selLayer).getTset().get(gogo);
                     lh2 = new layerhistory(true, from, (long) y.getTileID() + tilesets.get(seltset).getFirstgid(), gogo, selLayer, tzet, seltset);
 
-
                     if (from != (long) y.getTileID() + tilesets.get(seltset).getFirstgid()) {
                         undolayer.add(lh2);
                         uploaddata(lh2);
@@ -16635,6 +16680,7 @@ String texta="";
                     }
 
                     layers.get(selLayer).getStr().set(gogo, (long) y.getTileID() + tilesets.get(seltset).getFirstgid());
+                    updateCache(gogo);
                     layers.get(selLayer).getTset().set(gogo, seltset);
 
                     if ((cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3]).equalsIgnoreCase( "-1,-1,-1,-1")){
@@ -16683,12 +16729,16 @@ String texta="";
                             }
 
                             layers.get( selLayer ).getStr().set( gogo, (long) y.getTileID() + tilesets.get( seltset ).getFirstgid() );
-                            layers.get( selLayer ).getTset().set( gogo, seltset );
+                        updateCache(gogo);
+
+                        layers.get( selLayer ).getTset().set( gogo, seltset );
                             if (!fill) requestReterrain=true;
 
                             if (y.getTerrainString().equalsIgnoreCase( "-1.-1.-1.-1" )){
                                 layers.get( selLayer ).getStr().set( gogo, (long) 0 );
                                 layers.get( selLayer ).getTset().set( gogo, -1 );
+                                updateCache(gogo);
+
                                 //requestReterrain=false;
                             }
 
@@ -17878,8 +17928,14 @@ String texta="";
                 mode = "image";
             }
 
+            switch (viewMode){
+                case STACK: case SINGLE:
+                    resetCaches(); break;
+            }
+
             updateObjectCollision();
             adjustTileset();
+
             return true;
         }
 
@@ -18147,7 +18203,7 @@ String texta="";
                             lh = undolayer.get(n);
                             layers.get(lh.getLayer()).getStr().set(lh.getLocation(), lh.getFrom());
                             layers.get(lh.getLayer()).getTset().set(lh.getLocation(), lh.getoldTset());
-
+                            updateCache(lh.getLocation());
                             redolayer.add(lh);
                             lh.undo=true;
                             uploaddata(lh);
@@ -18210,6 +18266,8 @@ String texta="";
                         pertamax = false;
                         layers.get(lh.getLayer()).getStr().set(lh.getLocation(), lh.getTo());
                         layers.get(lh.getLayer()).getTset().set(lh.getLocation(), lh.getNewtset());
+                        updateCache(lh.getLocation());
+
                         //status(lh.getTset()+"",5);
                         undolayer.add(lh);
                         uploaddata(lh);
@@ -18240,6 +18298,7 @@ String texta="";
                     viewMode=ViewMode.STACK;
                     break;
             }
+            resetCaches();
             saveViewMode();
             return true;
         }
@@ -19630,6 +19689,7 @@ String texta="";
 
             layers.get(selLayer).getStr().set(num, oi);
             layers.get(selLayer).getTset().set(num, seltset);
+            updateCache(num);
 
             q.add(new floodfill(num - Tw, oi, from, 1));
             q.add(new floodfill(num + Tw, oi, from, 2));
@@ -19825,6 +19885,7 @@ String texta="";
 
                 if (tapped(touch2, gui.viewmode)) {
                     layers.get(selLayer).setVisible(!layers.get(selLayer).isVisible());
+                    resetCaches();
                     return true;
                 }
                 if (tapped(touch2, gui.tool2) || tapped(touch2, gui.tool3)) {
