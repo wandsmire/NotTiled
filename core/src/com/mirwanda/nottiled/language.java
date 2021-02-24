@@ -369,5 +369,6 @@ public class language
 	String recording;
 	String picker;
 	String showcoords;
-
+	String exportastemplate;
+	String selectionastileset;
 }

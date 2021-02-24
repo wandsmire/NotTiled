@@ -32,6 +32,10 @@ import com.bitfire.postprocessing.effects.*;
 import com.bitfire.postprocessing.filters.*;
 import com.bitfire.utils.*;
 
+import java.awt.Component;
+import java.awt.HeadlessException;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -76,6 +80,10 @@ import com.mirwanda.nottiled.ai.AutoTile;
 import com.mirwanda.nottiled.platformer.game;
 import com.mirwanda.nottiled.platformer.gameobject;
 
+import javax.swing.JDialog;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+
 import box2dLight.RayHandler;
 
 import static java.lang.Thread.sleep;
@@ -87,12 +95,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     final com.badlogic.gdx.scenes.scene2d.ui.TextField.TextFieldFilter tffint = new com.badlogic.gdx.scenes.scene2d.ui.TextField.TextFieldFilter.DigitsOnlyFilter();
     final com.badlogic.gdx.scenes.scene2d.ui.TextField.TextFieldFilter tfffloat = new com.badlogic.gdx.scenes.scene2d.ui.TextField.TextFieldFilter() {
         public boolean acceptChar(TextField p1, char c) {
-            return Character.toString(c).matches("[0-9.-]+");
+            return Character.toString( c ).matches( "[0-9.-]+" );
         }
     };
     final com.badlogic.gdx.scenes.scene2d.ui.TextField.TextFieldFilter tffcolor = new com.badlogic.gdx.scenes.scene2d.ui.TextField.TextFieldFilter() {
         public boolean acceptChar(TextField p1, char c) {
-            return Character.toString(c).matches("[a-fA-F0-9#]+");
+            return Character.toString( c ).matches( "[a-fA-F0-9#]+" );
         }
     };
     public Tutorials tutor = new Tutorials();
@@ -127,13 +135,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 //////////////////////////////////////////////////////
 
 
-
-
     ////////////////////////////////////////////////////////////////
     float delta;
-    public enum selectTool{PICKER,COPY,MOVE,FLIP,CLONE}
 
-    selectTool movetool =selectTool.PICKER;
+    public enum selectTool {PICKER, COPY, MOVE, FLIP, CLONE}
+
+    selectTool movetool = selectTool.PICKER;
     String debugMe = " ", debugYou = " ";
     Table lastStage;
     String sender;
@@ -145,7 +152,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     boolean backing;
     String shapeName = "rectangle", rotationName = "0", toolName = "Tile", viewModeName = "Stack", objViewModeName = "All";
     int magnet = 1;
-    boolean eraser=false;
+    boolean eraser = false;
     String magnetName = "lock";
     int activetool = 0, activeobjtool = 0;
     float blink = 0;
@@ -164,9 +171,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     String renderorder = "right-down";
     String orientation = "orthogonal";
     java.util.List<Long> spr;
+
     enum ViewMode {STACK, SINGLE, ALL, CUSTOM}
+
     ViewMode viewMode = ViewMode.CUSTOM;
-    boolean issettingtile=false;
+    boolean issettingtile = false;
     int objviewMode;
     int selTileID = -1;
     int tempframeid;
@@ -182,13 +191,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     int jon, joni;
     int selat;
     int startSelect, endSelect, initialSelect;
-    boolean rising=false;
+    boolean rising = false;
     boolean tutoring = false;
     int activetutor = 0;
     String mapFormat = "csv", tsxFile = "", activeFilename;
     String kartu = "", mode, lastpath, openedfile, tilePicker = "", saveasdir, rwpath;
-    int autosaveInterval=1;
-    int gridOpacity=5;
+    int autosaveInterval = 1;
+    int gridOpacity = 5;
     boolean isSampleReloaded;
     int curspr, curid;
     obj curobj;
@@ -209,7 +218,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     java.util.List<property> properties = new ArrayList<property>();
     java.util.List<layer> layers = new ArrayList<layer>();
     layer cliplayer = new layer();
-    int clipsource =0;
+    int clipsource = 0;
     java.util.List<tileset> tilesets = new ArrayList<tileset>();
     java.util.List<tileset> tilesets2 = new ArrayList<tileset>();
     java.util.List<drawer> drawers = new ArrayList<drawer>();
@@ -340,9 +349,26 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     int xpos, ypos;
     float camA, camB, camC, camD;
     String hex, trailer;
-    AsyncExecutor asyncExecutor = new AsyncExecutor(10);
+    AsyncExecutor asyncExecutor = new AsyncExecutor( 10 );
     AsyncResult<Void> task;
     obj newobject = new obj();
+    com.badlogic.gdx.Input.TextInputListener psaveproptemplate = new com.badlogic.gdx.Input.TextInputListener() {
+
+        @Override
+        public void input(String input) {
+            if (input == "") {
+                return;
+            }
+            writeThis("NotTiled/sample/json/"+input+".json",clipProp);
+            msgbox(z.filesaved);
+        }
+
+        @Override
+        public void canceled() {
+        }
+
+    };
+
     com.badlogic.gdx.Input.TextInputListener pnewtextobject = new com.badlogic.gdx.Input.TextInputListener() {
 
         @Override
@@ -350,7 +376,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (input == "") {
                 return;
             }
-            newobject.setText(input);
+            newobject.setText( input );
 
         }
 
@@ -362,7 +388,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     AssetManager manager = new AssetManager();
     String vers;
     boolean startup = false;
-    enum ShapeTool { RECTANGLE,CIRCLE, LINE }
+
+    enum ShapeTool {RECTANGLE, CIRCLE, LINE}
+
     ShapeTool currentShape = ShapeTool.RECTANGLE;
     float timeToPan, panTargetX, panTargetY, panTargetZoom, panOriginX, panOriginY, panOriginZoom, panDuration;
     float timeToPan2, panTargetZoom2, panOriginZoom2, panDuration2;
@@ -400,7 +428,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private String errors;
     private boolean sShowGIDmap;
     private boolean caching;
-    private TextButton bPropTemplate;
+    private TextButton bPropTemplate,bPropExportAsTemplate;
     private TextButton bPropParse;
     private Table tpt;
     private int brushsize = 1;
@@ -463,7 +491,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private float nofling;
     private Stage stage;
     private Texture txpencil;
-    private Texture txline,txcircle;
+    private Texture txline, txcircle;
     private Texture txeraser;
     private Texture txfill;
     private Texture txcopy, txmove, txflip, txpicker;
@@ -505,10 +533,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public static java.util.List<String> splitEqually(String text, int size) {
         // Give the list the right capacity to start with. You could use an array
         // instead if you wanted.
-        java.util.List<String> ret = new ArrayList<String>((text.length() + size - 1) / size);
+        java.util.List<String> ret = new ArrayList<String>( (text.length() + size - 1) / size );
 
         for (int start = 0; start < text.length(); start += size) {
-            ret.add(text.substring(start, Math.min(text.length(), start + size)));
+            ret.add( text.substring( start, Math.min( text.length(), start + size ) ) );
         }
         return ret;
     }
@@ -517,7 +545,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (n <= 0) {
             return false;
         }
-        return Integer.bitCount(n) == 1;
+        return Integer.bitCount( n ) == 1;
     }
 
     @Override
@@ -534,21 +562,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void create() {
         nullTable = new Table();
         vers = face.getVersione();
-        prefs = Gdx.app.getPreferences("My Preferences");
-        language = prefs.getString("language", "English");
-        fontsize = prefs.getInteger("fontsize", 0);
-        sCustomFont = prefs.getString("customfont","");
+        prefs = Gdx.app.getPreferences( "My Preferences" );
+        language = prefs.getString( "language", "English" );
+        fontsize = prefs.getInteger( "fontsize", 0 );
+        sCustomFont = prefs.getString( "customfont", "" );
 
         try {
             reloadLanguage();
 
         } catch (Exception e) {
-            ErrorBung(e, "langeror.txt");
+            ErrorBung( e, "langeror.txt" );
             language = "English";
-            prefs.putString("language", "English");
+            prefs.putString( "language", "English" );
             reloadLanguage();
         }
-        gd = new GestureDetector(this);
+        gd = new GestureDetector( this );
         initSD();
         initBox2D();
         loadGdxStuff();
@@ -580,7 +608,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         loadKryonet();
         initializePostProcessor();
         createSwatches();
-        activetool=4;
+        activetool = 4;
 
 
         //animation = GifDecoder.loadGIFAnimation(2, Gdx.files.external("loading.gif").read());
@@ -597,35 +625,62 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public World world;
     public myContactListener mycontactlistener;
 
-    private void initBox2D(){
+    private void initBox2D() {
         Box2D.init();
-        world = new World(new Vector2(0, 0), true);
+        world = new World( new Vector2( 0, 0 ), true );
         b2dr = new Box2DDebugRenderer();
 
-        mycontactlistener = new myContactListener(this);
-        world.setContactListener(mycontactlistener);
+        mycontactlistener = new myContactListener( this );
+        world.setContactListener( mycontactlistener );
     }
-    private void createSwatches(){
+
+    private void createSwatches() {
         Integer sw = 0;
-        for (int ii=0;ii<6;ii++) {
+        for (int ii = 0; ii < 6; ii++) {
             swatchValue.add( sw );
         }
     }
 
-    private void resetSwatches(){
+    private void testDialog() {
+        new Thread( new Runnable() {
+            @Override
+            public void run() {
+                String pet = "";
+                face.openDialog();
+                while (pet.equalsIgnoreCase( "" )){
+                    pet = face.opet();
+                }
+                status("PET:"+pet,10);
+            }
+        } ).start();
+    }
+
+    private void resetSwatches() {
         Integer sw = 0;
-        for (int ii=0;ii<6;ii++) {
-            swatchValue.set(ii,0);
+        for (int ii = 0; ii < 6; ii++) {
+            swatchValue.set( ii, 0 );
         }
 
 
-        for (property p: properties){
-            if (p.getName().equalsIgnoreCase( "sw1" )) {swatchValue.set( 0, Integer.parseInt(p.getValue()));}
-            if (p.getName().equalsIgnoreCase( "sw2" )) {swatchValue.set( 1, Integer.parseInt(p.getValue()));}
-            if (p.getName().equalsIgnoreCase( "sw3" )) {swatchValue.set( 2, Integer.parseInt(p.getValue()));}
-            if (p.getName().equalsIgnoreCase( "sw4" )) {swatchValue.set( 3, Integer.parseInt(p.getValue()));}
-            if (p.getName().equalsIgnoreCase( "sw5" )) {swatchValue.set( 4, Integer.parseInt(p.getValue()));}
-            if (p.getName().equalsIgnoreCase( "sw6" )) {swatchValue.set( 5, Integer.parseInt(p.getValue()));}
+        for (property p : properties) {
+            if (p.getName().equalsIgnoreCase( "sw1" )) {
+                swatchValue.set( 0, Integer.parseInt( p.getValue() ) );
+            }
+            if (p.getName().equalsIgnoreCase( "sw2" )) {
+                swatchValue.set( 1, Integer.parseInt( p.getValue() ) );
+            }
+            if (p.getName().equalsIgnoreCase( "sw3" )) {
+                swatchValue.set( 2, Integer.parseInt( p.getValue() ) );
+            }
+            if (p.getName().equalsIgnoreCase( "sw4" )) {
+                swatchValue.set( 3, Integer.parseInt( p.getValue() ) );
+            }
+            if (p.getName().equalsIgnoreCase( "sw5" )) {
+                swatchValue.set( 4, Integer.parseInt( p.getValue() ) );
+            }
+            if (p.getName().equalsIgnoreCase( "sw6" )) {
+                swatchValue.set( 5, Integer.parseInt( p.getValue() ) );
+            }
         }
 
     }
@@ -636,12 +691,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         //manager.load(new AssetDescriptor<TmxMap>( "data/colors.txt", TmxMap.class, new mapLoader.mapParameter()));
 
 
-        task = asyncExecutor.submit(new com.badlogic.gdx.utils.async.AsyncTask<Void>() {
+        task = asyncExecutor.submit( new com.badlogic.gdx.utils.async.AsyncTask<Void>() {
             public Void call() {
                 initallthings();
                 return null;
             }
-        });
+        } );
 
     }
 
@@ -682,7 +737,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 			*/
 
         } catch (Exception e) {
-            ErrorBung(e, "errorloginit.txt");
+            ErrorBung( e, "errorloginit.txt" );
         }
     }
 
@@ -690,54 +745,54 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Table boss = new Table();
         Table table = new Table();
         table.center();
-        table.defaults().height(btny);
-        boss.setWidth(btnx);
-        boss.setFillParent(true);
-        ScrollPane spp = new ScrollPane(table);
+        table.defaults().height( btny );
+        boss.setWidth( btnx );
+        boss.setFillParent( true );
+        ScrollPane spp = new ScrollPane( table );
 
 
-        FileHandle handle = Gdx.files.internal("credits.txt");
+        FileHandle handle = Gdx.files.internal( "credits.txt" );
 
         String text = handle.readString();
-        String[] wordsArray = text.replace("\r\n", "\n").replace("\r", "\n").split("\n", -1);
+        String[] wordsArray = text.replace( "\r\n", "\n" ).replace( "\r", "\n" ).split( "\n", -1 );
 
         for (int i = 0; i < wordsArray.length; i++) {
-            String[] h = wordsArray[i].split(">");
+            String[] h = wordsArray[i].split( ">" );
             switch (h[0]) {
                 case "l":
-                    Label lbl = new Label(h[1], skin);
-                    lbl.setWrap(true);
-                    lbl.setColor(1, 1, 0, 1);
-                    lbl.setAlignment(Align.center);
-                    table.add(lbl).width(btnx).padBottom(10).row();
+                    Label lbl = new Label( h[1], skin );
+                    lbl.setWrap( true );
+                    lbl.setColor( 1, 1, 0, 1 );
+                    lbl.setAlignment( Align.center );
+                    table.add( lbl ).width( btnx ).padBottom( 10 ).row();
                     break;
                 case "m":
-                    lbl = new Label(h[1], skin);
-                    lbl.setWrap(true);
-                    lbl.setColor(1, 1, 0, 1);
-                    lbl.setAlignment(Align.center);
-                    table.add(lbl).width(btnx).padTop(5).row();
+                    lbl = new Label( h[1], skin );
+                    lbl.setWrap( true );
+                    lbl.setColor( 1, 1, 0, 1 );
+                    lbl.setAlignment( Align.center );
+                    table.add( lbl ).width( btnx ).padTop( 5 ).row();
                     break;
                 case "s":
-                    lbl = new Label(h[1], skin);
-                    lbl.setWrap(true);
-                    lbl.setAlignment(Align.center);
-                    table.add(lbl).width(btnx).row();
+                    lbl = new Label( h[1], skin );
+                    lbl.setWrap( true );
+                    lbl.setAlignment( Align.center );
+                    table.add( lbl ).width( btnx ).row();
                     break;
             }
         }
 
-        TextButton back = new TextButton(z.back, skin);
-        back.addListener(new ChangeListener() {
+        TextButton back = new TextButton( z.back, skin );
+        back.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 backToMap();
 
             }
-        });
-        table.add(back).width(btnx).padTop(10).row();
-        boss.add(spp);
-        gotoStage(boss);
+        } );
+        table.add( back ).width( btnx ).padTop( 10 ).row();
+        boss.add( spp );
+        gotoStage( boss );
     }
 
     public void defaultlang(language lang) {
@@ -897,42 +952,43 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
 
-
     public void uiAnim() {
         panOriginZoom2 = 1f;
         panTargetZoom2 = 1;
         timeToPan2 = panDuration2 = 1f;
     }
-String texta="";
+
+    String texta = "";
+
     public void drawLoadingScreen() {
         //if(!task.isDone()) {
-        Gdx.gl.glEnable(GL20.GL_BLEND);
-        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        Gdx.gl.glEnable( GL20.GL_BLEND );
+        Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
 
-        Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        Gdx.gl.glClearColor( 0f, 0f, 0f, 1f );
+        Gdx.gl.glClear( GL20.GL_COLOR_BUFFER_BIT );
 
-        ui.setProjectionMatrix(uicam.combined);
+        ui.setProjectionMatrix( uicam.combined );
         ui.begin();
 
         texta = z.storageaccess;// "Make sure to give NotTiled access to your storage, \notherwise you will stuck on this screen...";
 
         if (landscape) {
-            ui.draw(txlauncher, (ssy / 2) - (156 / 2), (ssx / 2) - (156 / 2) + 50, 156, 156);
-            str1.draw(ui, z.loadingfiles, 0, (ssx / 2) - 80 + 50, ssy, Align.center, true);
-            str1.draw(ui, vers, 0, (ssx / 2) - 280 + 50, ssy, Align.center, true);
-            str1.getData().setScale(.7f);
-            str1.draw(ui, texta, 0, (ssx / 2) - 480 + 50, ssy, Align.center, true);
-            str1.getData().setScale(1f);
+            ui.draw( txlauncher, (ssy / 2) - (156 / 2), (ssx / 2) - (156 / 2) + 50, 156, 156 );
+            str1.draw( ui, z.loadingfiles, 0, (ssx / 2) - 80 + 50, ssy, Align.center, true );
+            str1.draw( ui, vers, 0, (ssx / 2) - 280 + 50, ssy, Align.center, true );
+            str1.getData().setScale( .7f );
+            str1.draw( ui, texta, 0, (ssx / 2) - 480 + 50, ssy, Align.center, true );
+            str1.getData().setScale( 1f );
 
         } else {
 
-            ui.draw(txlauncher, (ssx / 2) - (156 / 2), (ssy / 2) - (156 / 2) + 50, 156, 156);
-            str1.draw(ui, z.loadingfiles, 0, (ssy / 2) - 80 + 50, ssx, Align.center, true);
-            str1.draw(ui, vers, 0, (ssy / 2) - 280 + 50, ssx, Align.center, true);
-            str1.getData().setScale(.7f);
-            str1.draw(ui, texta, 0, (ssy / 2) - 480 + 50, ssx, Align.center, true);
-            str1.getData().setScale(1f);
+            ui.draw( txlauncher, (ssx / 2) - (156 / 2), (ssy / 2) - (156 / 2) + 50, 156, 156 );
+            str1.draw( ui, z.loadingfiles, 0, (ssy / 2) - 80 + 50, ssx, Align.center, true );
+            str1.draw( ui, vers, 0, (ssy / 2) - 280 + 50, ssx, Align.center, true );
+            str1.getData().setScale( .7f );
+            str1.draw( ui, texta, 0, (ssy / 2) - 480 + 50, ssx, Align.center, true );
+            str1.getData().setScale( 1f );
 
         }
 
@@ -940,7 +996,8 @@ String texta="";
     }
 
 
-    float loadingtime=0;
+    float loadingtime = 0;
+
     @Override
     public void render() {
         try {
@@ -949,18 +1006,18 @@ String texta="";
                 firstrun = false;
             }
             if (loadingfile) {
-                loadingtime+=delta;
+                loadingtime += delta;
                 drawLoadingScreen();
 
             } else {
-                world.step(1/60f,6,2);
+                world.step( 1 / 60f, 6, 2 );
 
-                Gdx.gl.glClearColor(bgr, bgg, bgb, 1f);
+                Gdx.gl.glClearColor( bgr, bgg, bgb, 1f );
                 clsEnter();
                 if (firstload > 0) {
                     firstload -= 1;
-                    Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
-                    Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+                    Gdx.gl.glClearColor( 0f, 0f, 0f, 1f );
+                    Gdx.gl.glClear( GL20.GL_COLOR_BUFFER_BIT );
 
                     return;
                 }
@@ -986,9 +1043,9 @@ String texta="";
                         default:
                             cammy = cam;
                     }
-                    cammy.position.x = Interpolation.fade.apply(panOriginX, panTargetX, progress);
-                    cammy.position.y = Interpolation.fade.apply(panOriginY, panTargetY, progress);
-                    cammy.zoom = Interpolation.fade.apply(panOriginZoom, panTargetZoom, progress);
+                    cammy.position.x = Interpolation.fade.apply( panOriginX, panTargetX, progress );
+                    cammy.position.y = Interpolation.fade.apply( panOriginY, panTargetY, progress );
+                    cammy.zoom = Interpolation.fade.apply( panOriginZoom, panTargetZoom, progress );
                     //cammy.position.x = (float) Math.round(cammy.position.x * 100f) / 100f;
                     //cammy.position.y = (float) Math.round(cammy.position.y * 100f) / 100f;
 
@@ -996,14 +1053,13 @@ String texta="";
                 }
 
 
-
                 autosave += delta;
 
                 if (autosave > 60f * autosaveInterval) {
                     autosave = 0;
                     if (sAutoSave) {
-                        saveMap(curdir + "/" + curfile);
-                        status(z.autosaving, 1);
+                        saveMap( curdir + "/" + curfile );
+                        status( z.autosaving, 1 );
                     }
                 }
 
@@ -1018,38 +1074,37 @@ String texta="";
 
                 if (undohistory > 5f) {
                     undohistory = 0;
-                  //  Gdx.app.log("Cache","Clearing...");
-                        if (undolayer.size()>Tw*Th*2){
-                            undolayer.subList(0,undolayer.size()-(Tw*Th*2)).clear();
-                        }
-                   // Gdx.app.log("Cache","Cleared");
+                    //  Gdx.app.log("Cache","Clearing...");
+                    if (undolayer.size() > Tw * Th * 2) {
+                        undolayer.subList( 0, undolayer.size() - (Tw * Th * 2) ).clear();
+                    }
+                    // Gdx.app.log("Cache","Cleared");
                 }
-
 
 
                 rotator += delta;
 
                 if (rotator > 0.15f) {
                     rotator = 0;
-                    if (rotating && layers.size()>0) {
+                    if (rotating && layers.size() > 0) {
                         viewMode = ViewMode.SINGLE;
 
-                        int lastvis=-1;
-                        int firstvis=-1;
+                        int lastvis = -1;
+                        int firstvis = -1;
 
                         for (int i = 0; i < layers.size(); i++) {
                             if (layers.get( i ).isVisible()) {
-                                if (firstvis==-1){
-                                    firstvis=i;
+                                if (firstvis == -1) {
+                                    firstvis = i;
                                 }
 
-                                lastvis=i;
+                                lastvis = i;
                             }
                         }
-                        Gdx.app.log( firstvis+"",lastvis+"" );
-                        if (firstvis!=-1) {
+                        Gdx.app.log( firstvis + "", lastvis + "" );
+                        if (firstvis != -1) {
                             if (selLayer >= lastvis) {
-                                selLayer=firstvis;
+                                selLayer = firstvis;
                             } else {
 
                                 for (int i = 0; i < layers.size(); i++) {
@@ -1064,15 +1119,15 @@ String texta="";
                     }
                 }
 
-                animate(delta);
+                animate( delta );
 
                 autosave += delta;
 
                 if (autosave > 60f) {
                     autosave = 0;
                     if (sAutoSave) {
-                        saveMap(curdir + "/" + curfile);
-                        status(z.autosaving, 1);
+                        saveMap( curdir + "/" + curfile );
+                        status( z.autosaving, 1 );
                     }
                 }
 
@@ -1085,24 +1140,25 @@ String texta="";
                         //crt.setEnabled(true);
                         //vignette.setEnabled(true);
                         //curvature.setEnabled(true);
-                        bloom.setEnabled(false);
+                        bloom.setEnabled( false );
 
                         postProcessor.capture();
                         mygame.keyinput();
-                        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-                        batch.setProjectionMatrix(gamecam.combined);
+                        Gdx.gl.glClear( GL20.GL_COLOR_BUFFER_BIT );
+                        batch.setProjectionMatrix( gamecam.combined );
                         batch.begin();
-                        if (mygame.txBackground!=null) batch.draw(mygame.txBackground, gamecam.position.x-2f,gamecam.position.y-2f,4,4);
+                        if (mygame.txBackground != null)
+                            batch.draw( mygame.txBackground, gamecam.position.x - 2f, gamecam.position.y - 2f, 4, 4 );
                         batch.end();
 
-                        mygame.renderer.setView(gamecam);
+                        mygame.renderer.setView( gamecam );
                         if (!mygame.loadingmap) {
                             mygame.renderer.render();
                             batch.setProjectionMatrix( gamecam.combined );
                             batch.begin();
 
                             ///
-                            if (mygame.night) mygame.rayHandler.setCombinedMatrix(gamecam);
+                            if (mygame.night) mygame.rayHandler.setCombinedMatrix( gamecam );
 
                             mygame.update( batch, delta, gamecam );
 
@@ -1115,15 +1171,15 @@ String texta="";
                         postProcessor.render();
 
 
-                        Vector3 mouse = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
-                        uicam.unproject(mouse); // mousePos is now in world coordinates
+                        Vector3 mouse = new Vector3( Gdx.input.getX(), Gdx.input.getY(), 0 );
+                        uicam.unproject( mouse ); // mousePos is now in world coordinates
 
                         //background tombol
-                        Gdx.gl.glEnable(GL20.GL_BLEND);
-                        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-                        uis.setProjectionMatrix(uicam.combined);
-                        uis.begin(ShapeRenderer.ShapeType.Filled);
-                        uis.setColor(0f, 0f, 0, 0.6f);
+                        Gdx.gl.glEnable( GL20.GL_BLEND );
+                        Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
+                        uis.setProjectionMatrix( uicam.combined );
+                        uis.begin( ShapeRenderer.ShapeType.Filled );
+                        uis.setColor( 0f, 0f, 0, 0.6f );
                         if (Gdx.app.getType() != Application.ApplicationType.Desktop || mygame.uitest) {
                             if (!mygame.starting && mygame.player.state != gameobject.states.DEAD) {
 
@@ -1131,52 +1187,48 @@ String texta="";
                                 uisrect( gui.right, mouse, null );
                                 uisrect( gui.up, mouse, null );
                                 uisrect( gui.down, mouse, null );
-                                if (mygame.action1!=null) uisrect( gui.action1, mouse, null );
-                                if (mygame.action2!=null) uisrect( gui.action2, mouse, null );
-                                if (mygame.action3!=null) uisrect( gui.action3, mouse, null );
-                                if (mygame.action4!=null) uisrect( gui.action4, mouse, null );
+                                if (mygame.action1 != null) uisrect( gui.action1, mouse, null );
+                                if (mygame.action2 != null) uisrect( gui.action2, mouse, null );
+                                if (mygame.action3 != null) uisrect( gui.action3, mouse, null );
+                                if (mygame.action4 != null) uisrect( gui.action4, mouse, null );
                             }
                         }
                         //uisrect(gui.restart,mouse,null);
-                        if (mygame.player.state == gameobject.states.DEAD ||(mygame.victory && mygame.nextlevel!=null)||mygame.starting) uisrect(gui.respawn,mouse,new Color(0,1f,0,1f));
-                        if (mygame.playtest) uisrect(gui.exit,mouse,null);
-                        if (mygame.victory || mygame.player.state == gameobject.states.DEAD || mygame.starting) uisrect(gui.gamestatus,mouse,null);
+                        if (mygame.player.state == gameobject.states.DEAD || (mygame.victory && mygame.nextlevel != null) || mygame.starting)
+                            uisrect( gui.respawn, mouse, new Color( 0, 1f, 0, 1f ) );
+                        if (mygame.playtest) uisrect( gui.exit, mouse, null );
+                        if (mygame.victory || mygame.player.state == gameobject.states.DEAD || mygame.starting)
+                            uisrect( gui.gamestatus, mouse, null );
                         uis.end();
 
-                        ui.setProjectionMatrix(uicam.combined);
+                        ui.setProjectionMatrix( uicam.combined );
                         ui.begin();
-                        str1.getData().setScale(0.8f);
+                        str1.getData().setScale( 0.8f );
                         if (landscape) {
                             mygame.drawHUD( ui, str1, ssy, ssx );
-                        }else{
+                        } else {
                             mygame.drawHUD( ui, str1, ssx, ssy );
 
                         }
-                        str1.getData().setScale(4f);
+                        str1.getData().setScale( 4f );
 
-                        if (mygame.victory)
-                        {
+                        if (mygame.victory) {
                             String msg = mygame.debriefing;
-                            if (msg==null) msg = "You Win!";
-                            str1draw(ui,msg, gui.gamestatus);
+                            if (msg == null) msg = "You Win!";
+                            str1draw( ui, msg, gui.gamestatus );
 
-                        }
-                        else if (mygame.starting)
-                        {
+                        } else if (mygame.starting) {
 
-                            String msg = mygame.briefing[mygame.msgindex].replace( "\\n","\n" );
-                            if (msg==null) msg = "Ready?";
-                            str1draw(ui,msg, gui.gamestatus);
+                            String msg = mygame.briefing[mygame.msgindex].replace( "\\n", "\n" );
+                            if (msg == null) msg = "Ready?";
+                            str1draw( ui, msg, gui.gamestatus );
 
 
-                        }
-                        else if (mygame.player.state == gameobject.states.DEAD)
-                        {
+                        } else if (mygame.player.state == gameobject.states.DEAD) {
                             String msg = mygame.died;
-                            if (msg==null) msg = "Oops... try again?";
-                            str1draw(ui,msg, gui.gamestatus);
+                            if (msg == null) msg = "Oops... try again?";
+                            str1draw( ui, msg, gui.gamestatus );
                         }
-
 
 
                         //str1draw(ui,"Keys : "+mygame.key+" | Items Left : "+mygame.coin , gui.layer);
@@ -1186,53 +1238,56 @@ String texta="";
                                 uidrawbutton( txDown, "Down", gui.down, 3 );
                                 uidrawbutton( txRight, "Right", gui.right, 3 );
                                 uidrawbutton( txUp, "Up", gui.up, 3 );
-                                if (mygame.action1!=null) uidrawbutton( txRight, mygame.action1.name, gui.action1, 3 );
-                                if (mygame.action2!=null) uidrawbutton( txDown, mygame.action2.name, gui.action2, 3 );
-                                if (mygame.action3!=null) uidrawbutton( txLeft, mygame.action3.name, gui.action3, 3 );
-                                if (mygame.action4!=null) uidrawbutton( txUp, mygame.action4.name, gui.action4, 3 );
+                                if (mygame.action1 != null)
+                                    uidrawbutton( txRight, mygame.action1.name, gui.action1, 3 );
+                                if (mygame.action2 != null)
+                                    uidrawbutton( txDown, mygame.action2.name, gui.action2, 3 );
+                                if (mygame.action3 != null)
+                                    uidrawbutton( txLeft, mygame.action3.name, gui.action3, 3 );
+                                if (mygame.action4 != null)
+                                    uidrawbutton( txUp, mygame.action4.name, gui.action4, 3 );
                             }
 
                         }
                         //str1draw(ui,"Restart", gui.restart);
-                        if (mygame.player.state == gameobject.states.DEAD) str1draw(ui,"Respawn", gui.respawn);
-                        if (mygame.victory && mygame.nextlevel!=null) str1draw(ui,"Next Level", gui.respawn);
-                        if (mygame.starting) str1draw(ui,"OK", gui.respawn);
-                        if (mygame.playtest) str1draw(ui,"Exit", gui.exit);
+                        if (mygame.player.state == gameobject.states.DEAD)
+                            str1draw( ui, "Respawn", gui.respawn );
+                        if (mygame.victory && mygame.nextlevel != null)
+                            str1draw( ui, "Next Level", gui.respawn );
+                        if (mygame.starting) str1draw( ui, "OK", gui.respawn );
+                        if (mygame.playtest) str1draw( ui, "Exit", gui.exit );
                         ui.end();
-
-
 
 
                         break;
                     case "world":
-                        bloom.setEnabled(false);
-                        vignette.setEnabled(false);
-                        Gdx.gl.glEnable(GL20.GL_BLEND);
-                        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+                        bloom.setEnabled( false );
+                        vignette.setEnabled( false );
+                        Gdx.gl.glEnable( GL20.GL_BLEND );
+                        Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
 
                         postProcessor.capture();
-                        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+                        Gdx.gl.glClear( GL20.GL_COLOR_BUFFER_BIT );
 
                         batch.totalRenderCalls = 0;
 
 
-
-                        if (layers.size() > 0 && mode !="newpoly") {
+                        if (layers.size() > 0 && mode != "newpoly") {
                             if (selLayer >= layers.size()) selLayer = 0;
-                            if (layers.get(selLayer).getType() == layer.Type.TILE) {
+                            if (layers.get( selLayer ).getType() == layer.Type.TILE) {
                                 mode = "tile";
-                            } else if (layers.get(selLayer).getType() == layer.Type.OBJECT) {
+                            } else if (layers.get( selLayer ).getType() == layer.Type.OBJECT) {
                                 mode = "object";
-                            } else if (layers.get(selLayer).getType() == layer.Type.IMAGE) {
+                            } else if (layers.get( selLayer ).getType() == layer.Type.IMAGE) {
                                 mode = "image";
                             }
                         }
 
-                        if (midiplaying){
-                            if (composerPlayer!=null){
-                                if (!composerPlayer.isPlaying()){
-                                    composerPlayer=null;
-                                    midiplaying=false;
+                        if (midiplaying) {
+                            if (composerPlayer != null) {
+                                if (!composerPlayer.isPlaying()) {
+                                    composerPlayer = null;
+                                    midiplaying = false;
                                 }
                             }
                         }
@@ -1248,18 +1303,18 @@ String texta="";
                         //draw debug for collision detection
                         //b2dr.render(world,cam.combined);
 
-                        drawstage(delta);
+                        drawstage( delta );
 
                         break;
                     case "stage":
                         //crt.setEnabled(true);
-                        bloom.setEnabled(true);
+                        bloom.setEnabled( true );
 
-                        Gdx.gl.glEnable(GL20.GL_BLEND);
-                        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+                        Gdx.gl.glEnable( GL20.GL_BLEND );
+                        Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
 
                         postProcessor.capture();
-                        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+                        Gdx.gl.glClear( GL20.GL_COLOR_BUFFER_BIT );
 
                         batch.totalRenderCalls = 0;
                         drawTiles();
@@ -1268,34 +1323,32 @@ String texta="";
                         //drawObjects();
                         //drawObjectsInfo();
                         //drawWorldUI();
-                        drawstage(delta);
+                        drawstage( delta );
 
                         break;
                     case "tile":
                     case "pickanim":
                     case "pick":
-                        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+                        Gdx.gl.glClear( GL20.GL_COLOR_BUFFER_BIT );
 
                         drawpicker();
-                        drawstage(delta);
+                        drawstage( delta );
 
                         break;
                     case "editor":
-                        switch (mode){
-                            case "tile": case "object": case "image":
-                                bloom.setEnabled(false);
-                                vignette.setEnabled(false);
-                                Gdx.gl.glEnable(GL20.GL_BLEND);
-                                Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+                        switch (mode) {
+                            case "tile":
+                            case "object":
+                            case "image":
+                                bloom.setEnabled( false );
+                                vignette.setEnabled( false );
+                                Gdx.gl.glEnable( GL20.GL_BLEND );
+                                Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
 
                                 postProcessor.capture();
-                                Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+                                Gdx.gl.glClear( GL20.GL_COLOR_BUFFER_BIT );
 
                                 batch.totalRenderCalls = 0;
-
-
-
-
 
 
                                 resetMinimap();
@@ -1307,13 +1360,13 @@ String texta="";
                                 postProcessor.render();
                                 drawWorldUI();
 
-                                drawstage(delta);
+                                drawstage( delta );
                                 break;
                             case "pick":
-                                Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+                                Gdx.gl.glClear( GL20.GL_COLOR_BUFFER_BIT );
 
                                 drawpicker();
-                                drawstage(delta);
+                                drawstage( delta );
 
                                 break;
 
@@ -1327,37 +1380,37 @@ String texta="";
                     //break;
                 }
 
-                keyinput(delta);
+                keyinput( delta );
                 if (timeToPan2 >= 0) {
                     timeToPan2 -= delta;
                     float progress = timeToPan2 < 0 ? 1 : 1f - timeToPan2 / panDuration2;
-                    uicam.zoom = Interpolation.fade.apply(panOriginZoom2, panTargetZoom2, progress);
+                    uicam.zoom = Interpolation.fade.apply( panOriginZoom2, panTargetZoom2, progress );
 
                     uicam.update();
-                    uis.setProjectionMatrix(uicam.combined);
-                    uis.begin(ShapeRenderer.ShapeType.Filled);
-                    Gdx.gl.glEnable(GL20.GL_BLEND);
-                    Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+                    uis.setProjectionMatrix( uicam.combined );
+                    uis.begin( ShapeRenderer.ShapeType.Filled );
+                    Gdx.gl.glEnable( GL20.GL_BLEND );
+                    Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
 
                     float alfa = timeToPan2;
-                    Color cc = new Color(0, 0, 0, alfa);
+                    Color cc = new Color( 0, 0, 0, alfa );
                     if (!landscape) {
-                        uis.rect(0f, 0f, (float) ssx, (float) ssy, cc, cc, cc, cc);
+                        uis.rect( 0f, 0f, (float) ssx, (float) ssy, cc, cc, cc, cc );
                     } else {
-                        uis.rect(0f, 0f, (float) ssy, (float) ssx, cc, cc, cc, cc);
+                        uis.rect( 0f, 0f, (float) ssy, (float) ssx, cc, cc, cc, cc );
                     }
                     uis.end();
 
                 }
 
                 if (firstload > 0) {
-                    uis.setProjectionMatrix(uicam.combined);
-                    uis.begin(ShapeRenderer.ShapeType.Filled);
-                    Gdx.gl.glEnable(GL20.GL_BLEND);
-                    Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+                    uis.setProjectionMatrix( uicam.combined );
+                    uis.begin( ShapeRenderer.ShapeType.Filled );
+                    Gdx.gl.glEnable( GL20.GL_BLEND );
+                    Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
 
-                    Color cc = new Color(0, 0, 0, 1);
-                    uis.rect(0f, 0f, (float) ssx, (float) ssy, cc, cc, cc, cc);
+                    Color cc = new Color( 0, 0, 0, 1 );
+                    uis.rect( 0f, 0f, (float) ssx, (float) ssy, cc, cc, cc, cc );
                     uis.end();
                     firstload -= 1;
                 }
@@ -1365,7 +1418,7 @@ String texta="";
 
             }
         } catch (Exception e) {
-            ErrorBung(e, "errorlog2.txt");
+            ErrorBung( e, "errorlog2.txt" );
             //status("Error in render", 5);
             if (batch.isDrawing()) batch.end();
             if (ui.isDrawing()) ui.end();
@@ -1373,74 +1426,73 @@ String texta="";
             if (uis.isDrawing()) uis.end();
 
 
-
             //newtmxfile(false);
         }
 
     }
 
-    void drawCoordinates(){
+    void drawCoordinates() {
         if (sShowCoords) {
-            str1.getData().setScale(0.01f + Tsw / 160f);
-            for (int yy=0;yy<Th;yy++){
-                for (int xx=0;xx<Tw;xx++){
-                    if (orientation.equalsIgnoreCase( "isometric" )){
+            str1.getData().setScale( 0.01f + Tsw / 160f );
+            for (int yy = 0; yy < Th; yy++) {
+                for (int xx = 0; xx < Tw; xx++) {
+                    if (orientation.equalsIgnoreCase( "isometric" )) {
                         float offsetx = (xx * Tsw / 2) + (yy * Tsw / 2);
                         float offsety = (xx * Tsh / 2) - (yy * Tsh / 2);
 
-                        str1.draw( batch, xx + "," + yy, (xx * Tsw + Tsw / 8f) - offsetx, (-yy * Tsh + Tsh / 3f) -offsety);
-                    }else {
+                        str1.draw( batch, xx + "," + yy, (xx * Tsw + Tsw / 8f) - offsetx, (-yy * Tsh + Tsh / 3f) - offsety );
+                    } else {
                         str1.draw( batch, xx + "," + yy, xx * Tsw + Tsw / 8f, -yy * Tsh + Tsh / 3f );
                     }
                 }
 
             }
-            str1.getData().setScale(1f);
+            str1.getData().setScale( 1f );
         }
     }
 
     void initializePostProcessor() { //I DONT EVEN KNOW WHAT THESE MEANS LOL
         ShaderLoader.BasePath = "data/shaders/";
-        postProcessor = new PostProcessor(false, true, isDesktop);
+        postProcessor = new PostProcessor( false, true, isDesktop );
 
-        postProcessor.setClearColor(.5f, .5f, .5f, 1);
+        postProcessor.setClearColor( .5f, .5f, .5f, 1 );
         int vpW = Gdx.graphics.getWidth();
         int vpH = Gdx.graphics.getHeight();
         // create the effects you want
-        bloom = new Bloom((int) (Gdx.graphics.getWidth() * 0.25f), (int) (Gdx.graphics.getHeight() * 0.25f));
+        bloom = new Bloom( (int) (Gdx.graphics.getWidth() * 0.25f), (int) (Gdx.graphics.getHeight() * 0.25f) );
         curvature = new Curvature();
-        zoomer = new Zoomer(vpW, vpH, isDesktop ? RadialBlur.Quality.VeryHigh : RadialBlur.Quality.Low);
+        zoomer = new Zoomer( vpW, vpH, isDesktop ? RadialBlur.Quality.VeryHigh : RadialBlur.Quality.Low );
         int effects = CrtScreen.Effect.TweakContrast.v | CrtScreen.Effect.PhosphorVibrance.v | CrtScreen.Effect.Scanlines.v | CrtScreen.Effect.Tint.v;
-        crt = new CrtMonitor(vpW, vpH, false, false, CrtScreen.RgbMode.ChromaticAberrations, effects);
-        crt.setTint(0.8f, 0.8f, .8f);
+        crt = new CrtMonitor( vpW, vpH, false, false, CrtScreen.RgbMode.ChromaticAberrations, effects );
+        crt.setTint( 0.8f, 0.8f, .8f );
         Combine combine = crt.getCombinePass();
-        combine.setSource1Intensity(0f);
-        combine.setSource2Intensity(1f);
-        combine.setSource1Saturation(0f);
-        combine.setSource2Saturation(1f);
-        vignette = new Vignette(vpW, vpH, false);
+        combine.setSource1Intensity( 0f );
+        combine.setSource2Intensity( 1f );
+        combine.setSource1Saturation( 0f );
+        combine.setSource2Saturation( 1f );
+        vignette = new Vignette( vpW, vpH, false );
         // add them to the postprocessor
-        postProcessor.addEffect(curvature);
-        postProcessor.addEffect(zoomer);
-        postProcessor.addEffect(vignette);
-        postProcessor.addEffect(crt);
-        postProcessor.addEffect(bloom);
-        bloom.setBaseIntesity(0.0f);
-        bloom.setBlurAmount(1);//5
-        zoomer.setBlurStrength(-0.1f);
-        zoomer.setOrigin(Gdx.graphics.getWidth() / 2, Gdx.graphics.getHeight() / 2);
-        curvature.setZoom(1f);
-        vignette.setIntensity(1f);
-        bloom.setEnabled(false);
-        crt.setEnabled(false);
-        vignette.setEnabled(false);
-        curvature.setEnabled(false);
-        zoomer.setEnabled(false);
+        postProcessor.addEffect( curvature );
+        postProcessor.addEffect( zoomer );
+        postProcessor.addEffect( vignette );
+        postProcessor.addEffect( crt );
+        postProcessor.addEffect( bloom );
+        bloom.setBaseIntesity( 0.0f );
+        bloom.setBlurAmount( 1 );//5
+        zoomer.setBlurStrength( -0.1f );
+        zoomer.setOrigin( Gdx.graphics.getWidth() / 2, Gdx.graphics.getHeight() / 2 );
+        curvature.setZoom( 1f );
+        vignette.setIntensity( 1f );
+        bloom.setEnabled( false );
+        crt.setEnabled( false );
+        vignette.setEnabled( false );
+        curvature.setEnabled( false );
+        zoomer.setEnabled( false );
     }
 
     private void clsEnter() {
         delta = Gdx.graphics.getDeltaTime();
-        fps = Integer.toString(Gdx.graphics.getFramesPerSecond());
+        fps = Integer.toString( Gdx.graphics.getFramesPerSecond() );
 
     }
 
@@ -1461,23 +1513,23 @@ String texta="";
 
         if (tilesets.size() > 0 && !deletinganim) {
             for (int g = 0; g < tilesets.size(); g++) {
-                tiles = tilesets.get(g).getTiles();
+                tiles = tilesets.get( g ).getTiles();
                 if (tiles.size() > 0) {
                     for (int i = 0; i < tiles.size(); i++) {
-                        if (tiles.get(i).getAnimation().size() > 0) {
-                            tiles.get(i).addTimer(delta);
-                            int actFrame = tiles.get(i).getActiveFrameIndex();
-                            if (tiles.get(i).getTimer() >= (float) tiles.get(i).getActiveFrameDuration() / 1000) {
-                                tiles.get(i).setTimer(0);
-                                tiles.get(i).setActiveFrameIndex(tiles.get(i).getActiveFrameIndex() + 1);
-                                if (tiles.get(i).getActiveFrameIndex() >= tiles.get(i).getAnimation().size()) {
-                                    tiles.get(i).setActiveFrameIndex(0);
+                        if (tiles.get( i ).getAnimation().size() > 0) {
+                            tiles.get( i ).addTimer( delta );
+                            int actFrame = tiles.get( i ).getActiveFrameIndex();
+                            if (tiles.get( i ).getTimer() >= (float) tiles.get( i ).getActiveFrameDuration() / 1000) {
+                                tiles.get( i ).setTimer( 0 );
+                                tiles.get( i ).setActiveFrameIndex( tiles.get( i ).getActiveFrameIndex() + 1 );
+                                if (tiles.get( i ).getActiveFrameIndex() >= tiles.get( i ).getAnimation().size()) {
+                                    tiles.get( i ).setActiveFrameIndex( 0 );
                                 }
-                                int newActframe = tiles.get(i).getActiveFrameIndex();
+                                int newActframe = tiles.get( i ).getActiveFrameIndex();
                                 if (!deletinganim)
-                                    tiles.get(i).setActiveFrameID(tiles.get(i).getAnimation().get(newActframe).getTileID());
+                                    tiles.get( i ).setActiveFrameID( tiles.get( i ).getAnimation().get( newActframe ).getTileID() );
                                 if (!deletinganim)
-                                    tiles.get(i).setActiveFrameDuration(tiles.get(i).getAnimation().get(newActframe).getDuration());
+                                    tiles.get( i ).setActiveFrameDuration( tiles.get( i ).getAnimation().get( newActframe ).getDuration() );
 
                             }
                         }
@@ -1487,42 +1539,44 @@ String texta="";
         }//if
     }
 
-    public void updateMinimap(){
+    public void updateMinimap() {
         if (sMinimap) {
             //pmMinimap = createRWthumbnail( "XOXXO" );
-           // txMinimap = new Texture( pmMinimap );
+            // txMinimap = new Texture( pmMinimap );
         }
     }
 
-    public void escapegame(){
-        kartu="world";
+    public void escapegame() {
+        kartu = "world";
         if (mygame.bgm.isPlaying()) mygame.bgm.stop();
     }
 
-    public void restartgame(){
+    public void restartgame() {
         if (mygame.bgm.isPlaying()) mygame.bgm.stop();
-        playgame(curdir, mygame.file);
+        playgame( curdir, mygame.file );
     }
 
-    public void nextlevel(){
-        prefs.putString(curfile, mygame.nextlevel).flush();
+    public void nextlevel() {
+        prefs.putString( curfile, mygame.nextlevel ).flush();
         if (mygame.bgm.isPlaying()) mygame.bgm.stop();
-        if (mygame.nextlevel!=null) playgame(curdir, mygame.nextlevel);
+        if (mygame.nextlevel != null) playgame( curdir, mygame.nextlevel );
 
     }
+
     boolean touched, usetool;
-    boolean touchable=true;
+    boolean touchable = true;
+
     void keyinput(float delta) {
         if (!Gdx.input.isTouched() && iseditGUI) {
-            iseditGUI=false;
+            iseditGUI = false;
         }
 
         if (Gdx.input.isTouched()) {
-            touched=true;
+            touched = true;
         }
         if (touched & usetool & !Gdx.input.isTouched()) {
-            touched=false;
-            usetool=false;
+            touched = false;
+            usetool = false;
             //updateMinimap();
         }
 
@@ -1533,96 +1587,91 @@ String texta="";
                 }
             }
 
-            float pex,pey;
+            float pex, pey;
             pex = (float) Gdx.input.getX() / nssx;
             pey = (float) Gdx.input.getY() / nssy;
 
 
             //Gdx.app.log("pexpey", ""+ Gdx.input.getX() + " | "+ nssx  + " | "+ Gdx.input.getY() + " | "+  nssy);
-            if (pex > 0.90f) cam.translate( 5,0 );
-            if (pex < 0.10f) cam.translate( -5,0 );
-            if (pey > 0.90f) cam.translate( 0,-5 );
-            if (pey < 0.10f) cam.translate( 0,5 );
-            int onset=0;
-            if (orientation.equalsIgnoreCase("isometric")){
-                onset=Tsw*Tw/2;
+            if (pex > 0.90f) cam.translate( 5, 0 );
+            if (pex < 0.10f) cam.translate( -5, 0 );
+            if (pey > 0.90f) cam.translate( 0, -5 );
+            if (pey < 0.10f) cam.translate( 0, 5 );
+            int onset = 0;
+            if (orientation.equalsIgnoreCase( "isometric" )) {
+                onset = Tsw * Tw / 2;
             }
-            if (!orientation.equalsIgnoreCase("isometric")){
-                if (cam.position.x < 0-onset) cam.position.x = 0-onset;
-                if (cam.position.x > Tsw * Tw -onset) cam.position.x = Tsw * Tw -onset;
+            if (!orientation.equalsIgnoreCase( "isometric" )) {
+                if (cam.position.x < 0 - onset) cam.position.x = 0 - onset;
+                if (cam.position.x > Tsw * Tw - onset) cam.position.x = Tsw * Tw - onset;
                 if (cam.position.y < -Tsh * Th) cam.position.y = -Tsh * Th;
                 if (cam.position.y > 0) cam.position.y = 0;
             }
 
             cam.update();
-                        // cam.translate( -x, y );
+            // cam.translate( -x, y );
 
-                        //if (p1>500) cam.position.x-=10;
-                        //    if (cam.position.x > Tsw * Tw - onset) cam.position.x = Tsw * Tw - onset;
-                        //   if (cam.position.y < -Tsh * Th) cam.position.y = -Tsh * Th;
-                        //   if (cam.position.y > 0) cam.position.y = 0;
+            //if (p1>500) cam.position.x-=10;
+            //    if (cam.position.x > Tsw * Tw - onset) cam.position.x = Tsw * Tw - onset;
+            //   if (cam.position.y < -Tsh * Th) cam.position.y = -Tsh * Th;
+            //   if (cam.position.y > 0) cam.position.y = 0;
 
 
         }
 
-        if (kartu=="game")
-        {
+        if (kartu == "game") {
 
-            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) escapegame();
-            if (Gdx.input.isKeyJustPressed(Input.Keys.R)) restartgame();
+            if (Gdx.input.isKeyJustPressed( Input.Keys.ESCAPE )) escapegame();
+            if (Gdx.input.isKeyJustPressed( Input.Keys.R )) restartgame();
 
-            if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE))
-            {
+            if (Gdx.input.isKeyJustPressed( Input.Keys.SPACE )) {
                 if (mygame.victory) {
                     nextlevel();
-                }
-                else if (mygame.starting) {
-                    if (mygame.msgindex < mygame.briefing.length-1){
-                        mygame.msgindex+=1;
-                    }else{
-                        mygame.starting=false;
+                } else if (mygame.starting) {
+                    if (mygame.msgindex < mygame.briefing.length - 1) {
+                        mygame.msgindex += 1;
+                    } else {
+                        mygame.starting = false;
                     }
 
-                }
-                else if(mygame.player.state== gameobject.states.DEAD){
+                } else if (mygame.player.state == gameobject.states.DEAD) {
                     mygame.respawn();
                 }
             }
 
-            if (touchable==false && !Gdx.input.isTouched()){
-                touchable=true;
+            if (touchable == false && !Gdx.input.isTouched()) {
+                touchable = true;
             }
-            boolean pressed=false;
+            boolean pressed = false;
             for (int i = 0; i < 5; i++) { // 20 is max number of touch points
-                if (Gdx.input.isTouched(i)){
+                if (Gdx.input.isTouched( i )) {
                     Vector3 touch2 = new Vector3();
-                    uicam.unproject(touch2.set(Gdx.input.getX(i), Gdx.input.getY(i), 0));
+                    uicam.unproject( touch2.set( Gdx.input.getX( i ), Gdx.input.getY( i ), 0 ) );
 
                     //no limitation
                     //if (tapped(touch2, gui.restart)) restartgame();
-                    if (tapped(touch2, gui.exit) && mygame.playtest) escapegame();
+                    if (tapped( touch2, gui.exit ) && mygame.playtest) escapegame();
 
                     //no press when victory
 
 
-
-                        if (tapped(touch2, gui.gamestatus) && touchable) {
-                            touchable=false;
-                            if (mygame.player.state == gameobject.states.DEAD) {
-                                mygame.respawn();
-                            }
-                            if (mygame.victory && mygame.nextlevel!=null) {
-                                nextlevel();
-                            }
-                            if (mygame.starting) {
-                                if (mygame.msgindex < mygame.briefing.length-1){
-                                    mygame.msgindex+=1;
-                                }else{
-                                    mygame.starting=false;
-                                }
-
-                            }
+                    if (tapped( touch2, gui.gamestatus ) && touchable) {
+                        touchable = false;
+                        if (mygame.player.state == gameobject.states.DEAD) {
+                            mygame.respawn();
                         }
+                        if (mygame.victory && mygame.nextlevel != null) {
+                            nextlevel();
+                        }
+                        if (mygame.starting) {
+                            if (mygame.msgindex < mygame.briefing.length - 1) {
+                                mygame.msgindex += 1;
+                            } else {
+                                mygame.starting = false;
+                            }
+
+                        }
+                    }
 
                     if (mygame.victory || mygame.starting) return;
                     //no press when dead, no press when desktop
@@ -1634,25 +1683,30 @@ String texta="";
                         if (tapped( touch2, gui.left )) mygame.pressleft();
                         if (tapped( touch2, gui.down )) mygame.pressdown();
                         if (tapped( touch2, gui.right )) mygame.pressright();
-                        if (mygame.action1!=null && tapped( touch2, gui.action1 )) mygame.act( mygame.action1 );
-                        if (mygame.action2!=null && tapped( touch2, gui.action2 )) mygame.act( mygame.action2 );
-                        if (mygame.action3!=null && tapped( touch2, gui.action3 )) mygame.act( mygame.action3 );
-                        if (mygame.action4!=null && tapped( touch2, gui.action4 )) mygame.act( mygame.action4 );
+                        if (mygame.action1 != null && tapped( touch2, gui.action1 ))
+                            mygame.act( mygame.action1 );
+                        if (mygame.action2 != null && tapped( touch2, gui.action2 ))
+                            mygame.act( mygame.action2 );
+                        if (mygame.action3 != null && tapped( touch2, gui.action3 ))
+                            mygame.act( mygame.action3 );
+                        if (mygame.action4 != null && tapped( touch2, gui.action4 ))
+                            mygame.act( mygame.action4 );
                     }
 
                 }
 
             }
-            if (Gdx.app.getType() == Application.ApplicationType.Desktop && !mygame.uitest) return ;
+            if (Gdx.app.getType() == Application.ApplicationType.Desktop && !mygame.uitest) return;
 
-            if (!pressed) {mygame.stand();}
+            if (!pressed) {
+                mygame.stand();
+            }
             return;
 
         }
 
 
-        if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT)  && Gdx.input.isKeyJustPressed(Input.Keys.Z))
-        {
+        if (Gdx.input.isKeyPressed( Input.Keys.CONTROL_LEFT ) && Gdx.input.isKeyJustPressed( Input.Keys.Z )) {
             if (mode == "tile") {
                 try {
 
@@ -1661,16 +1715,16 @@ String texta="";
                         long histcount = 0;
                         for (int n = undolayer.size() - 1; n >= 0; n--) {
 
-                            lh = undolayer.get(n);
-                            layers.get(lh.getLayer()).getStr().set(lh.getLocation(), lh.getFrom());
-                            layers.get(lh.getLayer()).getTset().set(lh.getLocation(), lh.getoldTset());
-                            redolayer.add(lh);
+                            lh = undolayer.get( n );
+                            layers.get( lh.getLayer() ).getStr().set( lh.getLocation(), lh.getFrom() );
+                            layers.get( lh.getLayer() ).getTset().set( lh.getLocation(), lh.getoldTset() );
+                            redolayer.add( lh );
                             histcount++;
                             if (!lh.isFollower()) {
                                 java.util.List<layerhistory> templist = new ArrayList<layerhistory>();
 
                                 for (int t = 0; t < undolayer.size() - histcount; t++) {
-                                    templist.add(undolayer.get(t));
+                                    templist.add( undolayer.get( t ) );
                                 }
                                 undolayer = new ArrayList<layerhistory>();
                                 undolayer = templist;
@@ -1679,7 +1733,7 @@ String texta="";
                         }
                     }
                 } catch (Exception e) {
-                    ErrorBung(e, "undo.txt");
+                    ErrorBung( e, "undo.txt" );
                 }
             }
             if (mode == "newpoly") {
@@ -1688,26 +1742,26 @@ String texta="";
             }
         }
 
-        if (kartu!="stage") {
+        if (kartu != "stage") {
             if (Gdx.input.isKeyJustPressed( Input.Keys.E )) {
                 eraser = !eraser;
             }
             if (Gdx.input.isKeyPressed( Input.Keys.W ) || Gdx.input.isKeyPressed( Input.Keys.UP )) {
-                cam.position.add( 0,40f,0 );
+                cam.position.add( 0, 40f, 0 );
             }
             if (Gdx.input.isKeyPressed( Input.Keys.A ) || Gdx.input.isKeyPressed( Input.Keys.LEFT )) {
-                cam.position.add( -40f,0,0 );
+                cam.position.add( -40f, 0, 0 );
             }
             if (Gdx.input.isKeyPressed( Input.Keys.S ) || Gdx.input.isKeyPressed( Input.Keys.DOWN )) {
-                cam.position.add( 0,-40f,0 );
+                cam.position.add( 0, -40f, 0 );
             }
             if (Gdx.input.isKeyPressed( Input.Keys.D ) || Gdx.input.isKeyPressed( Input.Keys.RIGHT )) {
-                cam.position.add( 40f,0,0 );
+                cam.position.add( 40f, 0, 0 );
             }
             cam.update();
         }
 
-        if (Gdx.input.isKeyPressed(Input.Keys.X)) {
+        if (Gdx.input.isKeyPressed( Input.Keys.X )) {
             if (cammode == "View only") {
                 if (cam.zoom < zoomTreshold) {
                     cammode = "";
@@ -1730,7 +1784,7 @@ String texta="";
                 }
             }
         }
-        if (Gdx.input.isKeyPressed(Input.Keys.C)) {
+        if (Gdx.input.isKeyPressed( Input.Keys.C )) {
             if (cammode == "View only") {
                 if (cam.zoom < zoomTreshold) {
                     cammode = "";
@@ -1755,7 +1809,7 @@ String texta="";
         }
         //{tilecam.zoom = Tsw/320f;}
 
-    getbacknow();
+        getbacknow();
         if (velx > 10) velx = velx / 1.2f;
         if (velx < -10) velx = velx / 1.2f;
         if (vely > 10) vely = vely / 1.2f;
@@ -1763,56 +1817,58 @@ String texta="";
         if (velx <= 10 && velx >= -10) velx = 0;
         if (vely <= 10 && vely >= -10) vely = 0;
         if (!(velx == 0 && vely == 0)) {
-            pan(0, 0, velx / 50, vely / 50);
+            pan( 0, 0, velx / 50, vely / 50 );
         } else {
             drag = false;
         }
 
 
     }
-    boolean asked=false;
-    public void getbacknow(){
-        if (Gdx.input.isKeyJustPressed(Input.Keys.BACK) || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+
+    boolean asked = false;
+
+    public void getbacknow() {
+        if (Gdx.input.isKeyJustPressed( Input.Keys.BACK ) || Gdx.input.isKeyJustPressed( Input.Keys.ESCAPE )) {
             //all the damn backs should stays here....
 
-            switch (kartu){
+            switch (kartu) {
                 case "world":
-                switch (mode) {
-                    case "tile":
-                    case "object":
-                        if (!stamp & !asked) {
-                            Dialog dialog = new Dialog(z.confirmation, skin, "dialog") {
-                                public void result(Object obj) {
-                                    System.out.println("result " + obj);
-                                    if ((boolean) obj) Gdx.app.exit();
-                                    Gdx.input.setInputProcessor(gd);
-                                    asked=false;
-                                }
-                            };
-                            Gdx.input.setInputProcessor(stage);
-                            asked=true;
-                            dialog.text(z.quit);
-                            dialog.button(z.yes, true); //sends "true" as the result
-                            dialog.button(z.no, false);  //sends "false" as the result
-                            dialog.show(stage);
-                        }
+                    switch (mode) {
+                        case "tile":
+                        case "object":
+                            if (!stamp & !asked) {
+                                Dialog dialog = new Dialog( z.confirmation, skin, "dialog" ) {
+                                    public void result(Object obj) {
+                                        System.out.println( "result " + obj );
+                                        if ((boolean) obj) Gdx.app.exit();
+                                        Gdx.input.setInputProcessor( gd );
+                                        asked = false;
+                                    }
+                                };
+                                Gdx.input.setInputProcessor( stage );
+                                asked = true;
+                                dialog.text( z.quit );
+                                dialog.button( z.yes, true ); //sends "true" as the result
+                                dialog.button( z.no, false );  //sends "false" as the result
+                                dialog.show( stage );
+                            }
 
-                        roll = false;
-                        stamp = false;
-                        rotating=false;
-                        break;
-                    case "newpoly":
-                        if (newobject.getPointsSize() == 1) {
-                            newobject.setShape("point");
-                        }
-                        if (newobject.getPointsSize() == 2) {
-                            newobject.setShape("polyline");
-                        }
-                        mode = "object";
-                        break;
-                }
-                    case "stage":
-                        if (lastStage == tFrameMgmt) {
+                            roll = false;
+                            stamp = false;
+                            rotating = false;
+                            break;
+                        case "newpoly":
+                            if (newobject.getPointsSize() == 1) {
+                                newobject.setShape( "point" );
+                            }
+                            if (newobject.getPointsSize() == 2) {
+                                newobject.setShape( "polyline" );
+                            }
+                            mode = "object";
+                            break;
+                    }
+                case "stage":
+                    if (lastStage == tFrameMgmt) {
 				/*
 				if (tilesets.size()>0){
 					for (int g=0;g<tilesets.size();g++){
@@ -1826,78 +1882,77 @@ String texta="";
 						}
 					}}
 				*/
-                            selTileID = -1;
-                            anime = false;
-                            gotoStage(tTileMgmt);
+                        selTileID = -1;
+                        anime = false;
+                        gotoStage( tTileMgmt );
 
-                        } else if (lastStage == tPropsMgmt) {
-                            switch (sender) {
-                                case "object":
-                                    gotoStage(tObjProp);
-                                    break;
-                                case "tile":
-                                    gotoStage(tTileMgmt);
-                                    break;
-                                case "tset":
-                                    gotoStage(tTsProp);
-                                    break;
-                                case "map":
-                                    gotoStage(tProperties);
-                                    break;
-                                case "auto":
-                                    gotoStage(tAutoMgmt);
-                                    break;
-                            }
-
-                        } else if (lastStage == tTsProp) {
-                            int dexo = ltsetlist.getSelectedIndex();
-                            int saiz = tilesets.size();
-                            String[] srr = new String[saiz];
-                            for (int i = 0; i < saiz; i++) {
-                                srr[i] = tilesets.get(i).getName();
-                            }
-                            ltsetlist.setItems(srr);
-                            ltsetlist.setSelectedIndex(dexo);
-                            if (frompick) {
-                                onToPicker();
-                                //lastStage=nullTable;
-                            } else {
-                                gotoStage(tTsetMgmt);
-                            }
-                            //gotoStage(tTsetMgmt);
-                        } else if (lastStage == tTileMgmt) {
-
-                            //fuck this bug
-                            /**/
-                            if (frompick)
-                            {
-                                onToPicker();
-                                frompick=false;
-                                lastStage=null;
-                                //gotoStage(tTsetMgmt);
-                            }else{
-                                gotoStage(tTsetMgmt);
-                            }
-                            backing = false;
-                            return;
-
-                            /**/
-                        } else if (lastStage == trandomgen) {
-                            gotoStage(ttools);
-                        } else if (lastStage == tpt) {
-                            gotoStage(tPropsMgmt);
+                    } else if (lastStage == tPropsMgmt) {
+                        switch (sender) {
+                            case "object":
+                                gotoStage( tObjProp );
+                                break;
+                            case "tile":
+                                gotoStage( tTileMgmt );
+                                break;
+                            case "tset":
+                                gotoStage( tTsProp );
+                                break;
+                            case "map":
+                                gotoStage( tProperties );
+                                break;
+                            case "auto":
+                                gotoStage( tAutoMgmt );
+                                break;
                         }
 
-                        break;
+                    } else if (lastStage == tTsProp) {
+                        int dexo = ltsetlist.getSelectedIndex();
+                        int saiz = tilesets.size();
+                        String[] srr = new String[saiz];
+                        for (int i = 0; i < saiz; i++) {
+                            srr[i] = tilesets.get( i ).getName();
+                        }
+                        ltsetlist.setItems( srr );
+                        ltsetlist.setSelectedIndex( dexo );
+                        if (frompick) {
+                            onToPicker();
+                            //lastStage=nullTable;
+                        } else {
+                            gotoStage( tTsetMgmt );
+                        }
+                        //gotoStage(tTsetMgmt);
+                    } else if (lastStage == tTileMgmt) {
+
+                        //fuck this bug
+                        /**/
+                        if (frompick) {
+                            onToPicker();
+                            frompick = false;
+                            lastStage = null;
+                            //gotoStage(tTsetMgmt);
+                        } else {
+                            gotoStage( tTsetMgmt );
+                        }
+                        backing = false;
+                        return;
+
+                        /**/
+                    } else if (lastStage == trandomgen) {
+                        gotoStage( ttools );
+                    } else if (lastStage == tpt) {
+                        gotoStage( tPropsMgmt );
+                    }
+
+                    break;
 
 
                 case "tile":
                     backToMap();
                     break;
                 case "pickanim":
-                    if (tilePicker == "terraineditor"){
-                        lastStage=null;
-                        gotoStage(tTileMgmt);
+                    if (tilePicker == "terraineditor") {
+                        lastStage = null;
+                        gotoStage( tTileMgmt );
                     }
                     break;
             }
@@ -1910,27 +1965,28 @@ String texta="";
         }
 
     }
+
     private void drawstage(float delta) {
-        stage.act(delta);
+        stage.act( delta );
         stage.draw();
-        ui.setProjectionMatrix(uicam.combined);
+        ui.setProjectionMatrix( uicam.combined );
         ui.begin();
         long ini = selTileID;
 
         if (selTileID != -1 && tilesets.size() > 0 && anime) {
             if (tilesets.size() > 0) {
-                tileset ts = tilesets.get(selTsetID);
-                tiles = tilesets.get(selTsetID).getTiles();
-                if (tiles.get(selTileID).getAnimation().size() > 0) {
+                tileset ts = tilesets.get( selTsetID );
+                tiles = tilesets.get( selTsetID ).getTiles();
+                if (tiles.get( selTileID ).getAnimation().size() > 0) {
 
-                    ini = tiles.get(selTileID).getActiveFrameID();
+                    ini = tiles.get( selTileID ).getActiveFrameID();
 
                     int xpos = 160;
                     int ypos = -100;
                     int xpos2 = (int) ini % ts.getWidth();
                     int ypos2 = (int) ini / ts.getWidth();
 
-                    ui.draw(ts.getTexture(), xpos, ypos, xpos2 * ts.getTilewidth(), ypos2 * ts.getTileheight(), ts.getTilewidth(), ts.getTileheight());
+                    ui.draw( ts.getTexture(), xpos, ypos, xpos2 * ts.getTilewidth(), ypos2 * ts.getTileheight(), ts.getTilewidth(), ts.getTileheight() );
 
                 } else {
                     //ini = layers.get(selAnim).getStr() .get(animations.get(selAnim).getActiveFrameID());
@@ -1942,19 +1998,19 @@ String texta="";
 
     private void drawpicker() {
         if (sEnableBlending) {
-            Gdx.gl.glEnable(GL20.GL_BLEND);
-            Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-            batch.setColor(1, 1, 1, 1);
+            Gdx.gl.glEnable( GL20.GL_BLEND );
+            Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
+            batch.setColor( 1, 1, 1, 1 );
         }
 
         int seltset = 0;
-        batch.setProjectionMatrix(tilecam.combined);
+        batch.setProjectionMatrix( tilecam.combined );
 
         if (tilesets.size() > 0) {
             batch.begin();
             tileset ts = null;
             //tile, pick, pickanim
-            if (kartu == "tile" || kartu=="editor") {
+            if (kartu == "tile" || kartu == "editor") {
                 seltset = this.seltset;
             } else {
                 switch (tilePicker) {
@@ -1980,15 +2036,15 @@ String texta="";
                 }
             }
 
-            ts = tilesets.get(seltset);
+            ts = tilesets.get( seltset );
 
-            java.util.List<terrain> tr = tilesets.get(seltset).getTerrains();
+            java.util.List<terrain> tr = tilesets.get( seltset ).getTerrains();
 
 
-            if (pickAuto){ //auto list
+            if (pickAuto) { //auto list
                 for (int n = 0; n < tr.size(); n++) {
                     //tile t =tilesets.get( seltset ).getTiles().get( tr.get( n ).getTile());
-                    long ist = tr.get(n).getTile();//t.getTileID();//-tilesets.get(seltset).getFirstgid();
+                    long ist = tr.get( n ).getTile();//t.getTileID();//-tilesets.get(seltset).getFirstgid();
                     int wd = ts.getWidth();
                     int xpos2 = (int) (ist) % wd;
                     int ypos2 = (int) (ist) / wd;
@@ -1997,11 +2053,11 @@ String texta="";
 
                     batch.draw( ts.getTexture(), 0, -n * ts.getTileheight(), (xpos2 * (ts.getTilewidth() + spacing)) + margin, (ypos2 * (ts.getTileheight() + spacing)) + margin, ts.getTilewidth(), ts.getTileheight() );
                     str1.getData().setScale( .2f );
-                    str1.draw( batch, tr.get( n ).getName(), 24, 14+ -n * ts.getTileheight(), ts.getTilewidth(), Align.left, false );
+                    str1.draw( batch, tr.get( n ).getName(), 24, 14 + -n * ts.getTileheight(), ts.getTilewidth(), Align.left, false );
                     str1.getData().setScale( 1f );
 
                 }
-            }else { //manual
+            } else { //manual
                 for (int i = 0; i < ts.getTilecount(); i++) { //manual drawing
 
                     long ini = i;//+tilesets.get(seltset.getFirstgid();
@@ -2077,17 +2133,17 @@ String texta="";
 
 
             //GRID FOR TILES SELECTOR
-            sr.setProjectionMatrix(tilecam.combined);
-            Gdx.gl.glEnable(GL20.GL_BLEND);
-            Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+            sr.setProjectionMatrix( tilecam.combined );
+            Gdx.gl.glEnable( GL20.GL_BLEND );
+            Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
 
-            sr.begin(ShapeRenderer.ShapeType.Filled);
+            sr.begin( ShapeRenderer.ShapeType.Filled );
 
-            sr.setColor(0, 0, 0, 0.5f);
+            sr.setColor( 0, 0, 0, 0.5f );
             int weight = 1, cool = 1;
             if (Tsw >= 64) weight = 2;
-            int Tswa = tilesets.get(seltset).getTilewidth();
-            int Tsha = tilesets.get(seltset).getTileheight();
+            int Tswa = tilesets.get( seltset ).getTilewidth();
+            int Tsha = tilesets.get( seltset ).getTileheight();
 
             if (!pickAuto) {
                 for (int i = 0; i <= tilesets.get( seltset ).getWidth(); i++) {
@@ -2099,11 +2155,12 @@ String texta="";
                     //if ((j+1)%5==0){cool=2;}else{cool=1;}
                     sr.rectLine( 0, -(Tsha * j), Tswa * tilesets.get( seltset ).getWidth(), -(j * Tsha), Tsha / 16f );
                 }
-            }else{
+            } else {
                 for (int i = 0; i <= 6; i++) {
                     //if (i%5==0){cool=2;}else{cool=1;}
 
-                  if (i==0 || i==6)  sr.rectLine( (Tswa * i), Tsha, (i * Tswa), -Tsha * tilesets.get( seltset ).getTerrains().size() + Tsha, Tswa / 16f );
+                    if (i == 0 || i == 6)
+                        sr.rectLine( (Tswa * i), Tsha, (i * Tswa), -Tsha * tilesets.get( seltset ).getTerrains().size() + Tsha, Tswa / 16f );
                 }
                 for (int j = -1; j < tilesets.get( seltset ).getTerrains().size(); j++) {
                     //if ((j+1)%5==0){cool=2;}else{cool=1;}
@@ -2113,11 +2170,11 @@ String texta="";
             //debugMe=tilesets.get(seltset).getWidth() + "-" + tilesets.get(seltset).getHeight();
             if (kartu == "tile" || tilePicker == "massprops") {
                 if (stamp) {
-                    sr.setColor(1, 0, 0, 0.5f);
-                    int SprW = tilesets.get(seltset).getWidth();
+                    sr.setColor( 1, 0, 0, 0.5f );
+                    int SprW = tilesets.get( seltset ).getWidth();
 
-                    sr.rect((startSelect % SprW) * Tswa, -(startSelect / SprW) * Tsha + Tsha, ((endSelect % SprW) * Tswa + Tswa) - (startSelect % SprW) * Tswa, -(endSelect / SprW) * Tsha + (startSelect / SprW) * Tsha - Tsha);
-                    sr.setColor(0, 0, 0, 1);
+                    sr.rect( (startSelect % SprW) * Tswa, -(startSelect / SprW) * Tsha + Tsha, ((endSelect % SprW) * Tswa + Tswa) - (startSelect % SprW) * Tswa, -(endSelect / SprW) * Tsha + (startSelect / SprW) * Tsha - Tsha );
+                    sr.setColor( 0, 0, 0, 1 );
                 }
             }
             if (kartu == "tile" && issettingtile) {
@@ -2125,22 +2182,22 @@ String texta="";
                     int wd = ts.getWidth();
                     int xpos = (i) % wd;
                     int ypos = (i) / wd;
-                    if (massprops.get(i)) {
-                        sr.setColor(1, 0, 0, 0.5f);
-                        sr.rect(xpos * ts.getTilewidth(), -ypos * ts.getTileheight(), ts.getTilewidth(), ts.getTileheight());
-                        sr.setColor(0, 0, 0, 1);
+                    if (massprops.get( i )) {
+                        sr.setColor( 1, 0, 0, 0.5f );
+                        sr.rect( xpos * ts.getTilewidth(), -ypos * ts.getTileheight(), ts.getTilewidth(), ts.getTileheight() );
+                        sr.setColor( 0, 0, 0, 1 );
                     }
                 }
             }
 
             if (kartu == "pickanim" && tilePicker == "massprops") {
-                sr.setColor(0, 1, 0, .5f);
+                sr.setColor( 0, 1, 0, .5f );
                 for (int i = 0; i < ts.getTilecount(); i++) {
                     int wd = ts.getWidth();
                     int xpos = (i) % wd;
                     int ypos = (i) / wd;
-                    if (massprops.get(i)) {
-                        sr.rect(xpos * ts.getTilewidth(), -ypos * ts.getTileheight(), ts.getTilewidth(), ts.getTileheight());
+                    if (massprops.get( i )) {
+                        sr.rect( xpos * ts.getTilewidth(), -ypos * ts.getTileheight(), ts.getTilewidth(), ts.getTileheight() );
                     }
                 }
             }
@@ -2154,15 +2211,15 @@ String texta="";
                     tiles = ts.getTiles();
                     if (tiles.size() > 0) {
                         for (int n = 0; n < tiles.size(); n++) {
-                            if (ini == tiles.get(n).getTileID()) {
+                            if (ini == tiles.get( n ).getTileID()) {
 
-                                if (tiles.get(n).isTerrainForEditor()) {
+                                if (tiles.get( n ).isTerrainForEditor()) {
                                     terrain = true;
-                                    curNodes = tiles.get(n).getTerrain();
+                                    curNodes = tiles.get( n ).getTerrain();
                                 }
 
-                                if (tiles.get(n).getAnimation().size() > 0) {
-                                    ini = tiles.get(n).getActiveFrameID();
+                                if (tiles.get( n ).getAnimation().size() > 0) {
+                                    ini = tiles.get( n ).getActiveFrameID();
                                 }
 
                             }
@@ -2178,17 +2235,17 @@ String texta="";
                     int margin = ts.getMargin();
                     int spacing = ts.getSpacing();
 
-                    sr.setColor(1, 0, 0, .5f);
+                    sr.setColor( 1, 0, 0, .5f );
                     if (terrain) {
-                        curTerrain = tilesets.get(selTsetID).getSelTerrain();
+                        curTerrain = tilesets.get( selTsetID ).getSelTerrain();
                         if (curNodes[0] == curTerrain)
-                            sr.rect(xpos * ts.getTilewidth(), -ypos * ts.getTileheight() + ts.getTileheight() / 2, ts.getTilewidth() / 2, ts.getTileheight() / 2);
+                            sr.rect( xpos * ts.getTilewidth(), -ypos * ts.getTileheight() + ts.getTileheight() / 2, ts.getTilewidth() / 2, ts.getTileheight() / 2 );
                         if (curNodes[1] == curTerrain)
-                            sr.rect(xpos * ts.getTilewidth() + ts.getTilewidth() / 2, -ypos * ts.getTileheight() + ts.getTileheight() / 2, ts.getTilewidth() / 2, ts.getTileheight() / 2);
+                            sr.rect( xpos * ts.getTilewidth() + ts.getTilewidth() / 2, -ypos * ts.getTileheight() + ts.getTileheight() / 2, ts.getTilewidth() / 2, ts.getTileheight() / 2 );
                         if (curNodes[2] == curTerrain)
-                            sr.rect(xpos * ts.getTilewidth(), -ypos * ts.getTileheight(), ts.getTilewidth() / 2, ts.getTileheight() / 2);
+                            sr.rect( xpos * ts.getTilewidth(), -ypos * ts.getTileheight(), ts.getTilewidth() / 2, ts.getTileheight() / 2 );
                         if (curNodes[3] == curTerrain)
-                            sr.rect(xpos * ts.getTilewidth() + ts.getTilewidth() / 2, -ypos * ts.getTileheight(), ts.getTilewidth() / 2, ts.getTileheight() / 2);
+                            sr.rect( xpos * ts.getTilewidth() + ts.getTilewidth() / 2, -ypos * ts.getTileheight(), ts.getTilewidth() / 2, ts.getTileheight() / 2 );
 
 
                     }
@@ -2198,42 +2255,42 @@ String texta="";
             }
             sr.end();
             if (sEnableBlending) {
-                Gdx.gl.glDisable(GL20.GL_BLEND);
+                Gdx.gl.glDisable( GL20.GL_BLEND );
             }
         }
         //nothing should apper if tileset is empty.
 
         //BACKGROUND FOR UI
-        Gdx.gl.glEnable(GL20.GL_BLEND);
-        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        Gdx.gl.glEnable( GL20.GL_BLEND );
+        Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
 
-        uis.setProjectionMatrix(uicam.combined);
-        uis.begin(ShapeRenderer.ShapeType.Filled);
-        uis.setColor(0f, 0f, 0, 0.4f);
-        Vector3 mouse = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
-        uicam.unproject(mouse); // mousePos is now in world coordinates
+        uis.setProjectionMatrix( uicam.combined );
+        uis.begin( ShapeRenderer.ShapeType.Filled );
+        uis.setColor( 0f, 0f, 0, 0.4f );
+        Vector3 mouse = new Vector3( Gdx.input.getX(), Gdx.input.getY(), 0 );
+        uicam.unproject( mouse ); // mousePos is now in world coordinates
 
 
         if (tilesets.size() == 0) {
             //uisrect(0, 100,50,60);
-            uisrect(gui.pickerback, mouse, null);//tool switch
+            uisrect( gui.pickerback, mouse, null );//tool switch
 
         } else {
             if (kartu == "pickanim") {
-                uisrect(gui.pickerback, mouse, null);//tool switch
+                uisrect( gui.pickerback, mouse, null );//tool switch
                 if (tilePicker == "terraineditor") {
-                    uisrect(gui.newterrain, mouse, null);//tool switch
+                    uisrect( gui.newterrain, mouse, null );//tool switch
                 } else if (tilePicker == "massprops") {
-                    uisrect(gui.newterrain, mouse, null);
+                    uisrect( gui.newterrain, mouse, null );
                 }
             }
 
         }
 /////
-        if (kartu=="editor") uisrect( gui.tilemode, mouse, null );
-        if (kartu == "tile" || kartu=="editor") {
-            uisrect(gui.tilesetsmid, mouse, null);
-            if (tilesets.size()>0) {
+        if (kartu == "editor") uisrect( gui.tilemode, mouse, null );
+        if (kartu == "tile" || kartu == "editor") {
+            uisrect( gui.tilesetsmid, mouse, null );
+            if (tilesets.size() > 0) {
                 uisrect( gui.tilesetsleft, mouse, null );
                 uisrect( gui.tilesetsright, mouse, null );
                 if (tilesets.get( seltset ).getTerrains().size() > 0) {
@@ -2241,76 +2298,75 @@ String texta="";
                 }
             }
 
-        }else{
+        } else {
 
 
             switch (tilePicker) {
-            case "props":
-            case "rnda":
-            case "rndb":
-            case "repa":
-            case "repb":
-            case "sw1":
-            case "sw2":
-            case "sw3":
-            case "sw4":
-            case "sw5":
-            case "sw6":
-            case "newimgobj":
+                case "props":
+                case "rnda":
+                case "rndb":
+                case "repa":
+                case "repb":
+                case "sw1":
+                case "sw2":
+                case "sw3":
+                case "sw4":
+                case "sw5":
+                case "sw6":
+                case "newimgobj":
 
-                uisrect(gui.tilesetsmid, mouse, null);
-                uisrect(gui.tilesetsleft, mouse, null);
-                uisrect(gui.tilesetsright, mouse, null);
+                    uisrect( gui.tilesetsmid, mouse, null );
+                    uisrect( gui.tilesetsleft, mouse, null );
+                    uisrect( gui.tilesetsright, mouse, null );
 
-                break;
+                    break;
 
-            default:
-                uisrect(gui.tilesetsmid, mouse, null);
+                default:
+                    uisrect( gui.tilesetsmid, mouse, null );
 
-                break;
-             }
+                    break;
+            }
         }
 
         ////
 
 
-        if (kartu=="editor"){
-            uisrect(gui.editormode, mouse, null);
-            uisrect(gui.editorcancel, mouse, null);
-            uisrect(gui.editorsave, mouse, null);
-            uisrect(gui.editorleft, mouse, vis("editorleft"));//tile/obj switch
-            uisrect(gui.editorright, mouse, vis("editorright"));//layer switch
-            uisrect(gui.editorup, mouse, vis("editorup"));//viewmode switch
-            uisrect(gui.editordown, mouse, vis("editordown"));//tile/obj switch
+        if (kartu == "editor") {
+            uisrect( gui.editormode, mouse, null );
+            uisrect( gui.editorcancel, mouse, null );
+            uisrect( gui.editorsave, mouse, null );
+            uisrect( gui.editorleft, mouse, vis( "editorleft" ) );//tile/obj switch
+            uisrect( gui.editorright, mouse, vis( "editorright" ) );//layer switch
+            uisrect( gui.editorup, mouse, vis( "editorup" ) );//viewmode switch
+            uisrect( gui.editordown, mouse, vis( "editordown" ) );//tile/obj switch
 
 
         }
-        if (tilesets.size() != 0 && (kartu == "tile" || kartu=="editor")) {
-            uisrect(gui.pickertool1, mouse, null);
-            uisrect(gui.pickertool2, mouse, null);
-            uisrect(gui.pickertool3, mouse, null);
-            uisrect(gui.pickertool5, mouse, null);
-            uisrect(gui.pickerback, mouse, null);//tool switch
+        if (tilesets.size() != 0 && (kartu == "tile" || kartu == "editor")) {
+            uisrect( gui.pickertool1, mouse, null );
+            uisrect( gui.pickertool2, mouse, null );
+            uisrect( gui.pickertool3, mouse, null );
+            uisrect( gui.pickertool5, mouse, null );
+            uisrect( gui.pickerback, mouse, null );//tool switch
 
 
-            if (issettingtile || kartu=="editor") {
-                uisrect(gui.tilewrite, mouse, null);
-                uisrect(gui.tilesettings, mouse, new Color(1f, 1f, 0f, .4f));
-                if (somethingisselected() || kartu=="editor") {
-                    uisrect(gui.tileproperties, mouse, null);
-                    uisrect(gui.tileremove, mouse, null);
-                    uisrect(gui.tileadd, mouse, null);//tool switch
-                    uisrect(gui.tileoverlay, mouse, null);
+            if (issettingtile || kartu == "editor") {
+                uisrect( gui.tilewrite, mouse, null );
+                uisrect( gui.tilesettings, mouse, new Color( 1f, 1f, 0f, .4f ) );
+                if (somethingisselected() || kartu == "editor") {
+                    uisrect( gui.tileproperties, mouse, null );
+                    uisrect( gui.tileremove, mouse, null );
+                    uisrect( gui.tileadd, mouse, null );//tool switch
+                    uisrect( gui.tileoverlay, mouse, null );
                 }
-            }else
-            {
-                uisrect(gui.tilewrite, mouse, new Color(1f, 1f, 0f, .4f));
-                uisrect(gui.tilesettings, mouse, null);
+            } else {
+                uisrect( gui.tilewrite, mouse, new Color( 1f, 1f, 0f, .4f ) );
+                uisrect( gui.tilesettings, mouse, null );
             }
 
         }
         uis.end();
-        ui.setProjectionMatrix(uicam.combined);
+        ui.setProjectionMatrix( uicam.combined );
         ui.begin();
         //str1.draw(ui, debugYou, 15, -50);
 		/*
@@ -2325,69 +2381,71 @@ String texta="";
 
         if (tilesets.size() == 0) {
             //str1draw(ui, "Tileset is empty.",0,100,50);
-            str1draw(ui, z.addnew + " " + z.tileset, gui.tilesetsmid);
-            uidrawbutton(txundo, z.back, gui.pickerback,3);
+            str1draw( ui, z.addnew + " " + z.tileset, gui.tilesetsmid );
+            uidrawbutton( txundo, z.back, gui.pickerback, 3 );
 
         } else {
 
-            if (kartu == "tile" || kartu=="editor") {
+            if (kartu == "tile" || kartu == "editor") {
 
 
                 if (landscape) {
-                    str1.getData().setScale(.7f);
+                    str1.getData().setScale( .7f );
                 } else {
-                    str1.getData().setScale(1f);
+                    str1.getData().setScale( 1f );
                 }
 
-                if (kartu=="editor"){
-                    uidrawbutton(txmap, z.edit, gui.editormode,1);
-                    uidrawbutton(txundo, z.cancel, gui.editorcancel,1);
-                    uidrawbutton(txsave, z.save, gui.editorsave,1);
-                    uidrawbutton(txLeft, "-", gui.editorleft, 1);
-                    uidrawbutton(txRight, "+", gui.editorright, 1);
-                    uidrawbutton(txDown, "+", gui.editorup, 1);
-                    uidrawbutton(txUp, "-", gui.editordown, 1);
-                    uidrawbutton(txTypeImage, z.autotile, gui.tilemode,3);
-
+                if (kartu == "editor") {
+                    uidrawbutton( txmap, z.edit, gui.editormode, 1 );
+                    uidrawbutton( txundo, z.cancel, gui.editorcancel, 1 );
+                    uidrawbutton( txsave, z.save, gui.editorsave, 1 );
+                    uidrawbutton( txLeft, "-", gui.editorleft, 1 );
+                    uidrawbutton( txRight, "+", gui.editorright, 1 );
+                    uidrawbutton( txDown, "+", gui.editorup, 1 );
+                    uidrawbutton( txUp, "-", gui.editordown, 1 );
+                    uidrawbutton( txTypeImage, z.autotile, gui.tilemode, 3 );
 
 
                 }
-                uidrawbutton(txundo, z.back, gui.pickerback,3);
+                uidrawbutton( txundo, z.back, gui.pickerback, 3 );
                 //modeltekwan
 
-                if (tilesets.get( seltset ).getTerrains().size()>0) {
-                    if (pickAuto) {uidrawbutton(txTypeImage, z.tiles, gui.tilemode,3);}
-                    else{uidrawbutton(txTypeImage, z.autotile, gui.tilemode,3);}
+                if (tilesets.get( seltset ).getTerrains().size() > 0) {
+                    if (pickAuto) {
+                        uidrawbutton( txTypeImage, z.tiles, gui.tilemode, 3 );
+                    } else {
+                        uidrawbutton( txTypeImage, z.autotile, gui.tilemode, 3 );
+                    }
                 }
 
-                uidrawbutton(txLeft, "", gui.tilesetsleft,1);
-                str1draw(ui, tilesets.get(seltset).getName(), gui.tilesetsmid);
-                uidrawbutton(txRight, "", gui.tilesetsright,1);
+                uidrawbutton( txLeft, "", gui.tilesetsleft, 1 );
+                str1draw( ui, tilesets.get( seltset ).getName(), gui.tilesetsmid );
+                uidrawbutton( txRight, "", gui.tilesetsright, 1 );
 
-                uidrawbutton(txadd, z.tileset, gui.pickertool1, 2);
-                uidrawbutton(txinfo, z.properties, gui.pickertool2, 2);
-                uidrawbutton(txtiles, z.tiles, gui.pickertool3, 2);
-                uidrawbutton(txdelete, z.remove, gui.pickertool5, 2);
+                uidrawbutton( txadd, z.tileset, gui.pickertool1, 2 );
+                uidrawbutton( txinfo, z.properties, gui.pickertool2, 2 );
+                uidrawbutton( txtiles, z.tiles, gui.pickertool3, 2 );
+                uidrawbutton( txdelete, z.remove, gui.pickertool5, 2 );
 
-                uidrawbutton(txpencil, z.tilepicker, gui.tilewrite, 2);
-                uidrawbutton(txtiles, z.edit, gui.tilesettings, 2);
-                if (issettingtile || kartu=="editor") {
-                    if (somethingisselected() || kartu=="editor") {
-                        uidrawbutton(txinfo, z.info, gui.tileproperties, 2);
-                        uidrawbutton(txeraser, z.remove, gui.tileremove, 2);
-                        uidrawbutton(txadd, z.addnew, gui.tileadd, 2);
-                        String txt=""; int totalview=0;
-                        for (tile tt : tilesets.get(seltset).getTiles())
-                        {
-                            if (tt.getTileID()== curspr - tilesets.get(seltset).getFirstgid()){
-                                if (tt.getProperties()==null) continue;
-                                for(property pp : tt.getProperties()){
-                                    if (totalview<5) {
+                uidrawbutton( txpencil, z.tilepicker, gui.tilewrite, 2 );
+                uidrawbutton( txtiles, z.edit, gui.tilesettings, 2 );
+                if (issettingtile || kartu == "editor") {
+                    if (somethingisselected() || kartu == "editor") {
+                        uidrawbutton( txinfo, z.info, gui.tileproperties, 2 );
+                        uidrawbutton( txeraser, z.remove, gui.tileremove, 2 );
+                        uidrawbutton( txadd, z.addnew, gui.tileadd, 2 );
+                        String txt = "";
+                        int totalview = 0;
+                        for (tile tt : tilesets.get( seltset ).getTiles()) {
+                            if (tt.getTileID() == curspr - tilesets.get( seltset ).getFirstgid()) {
+                                if (tt.getProperties() == null) continue;
+                                for (property pp : tt.getProperties()) {
+                                    if (totalview < 5) {
                                         txt += pp.getName() + " : " + pp.getValue() + "\n";
                                         totalview += 1;
                                     }
                                 }
-                                str1draw(ui,txt,gui.tileoverlay,26);
+                                str1draw( ui, txt, gui.tileoverlay, 26 );
                             }
                         }
 
@@ -2395,8 +2453,8 @@ String texta="";
                 }
 
 
-            } else if (kartu =="pickanim"){
-                uidrawbutton(txundo, z.back, gui.pickerback,3);
+            } else if (kartu == "pickanim") {
+                uidrawbutton( txundo, z.back, gui.pickerback, 3 );
                 switch (tilePicker) {
                     case "props":
                     case "rnda":
@@ -2410,60 +2468,61 @@ String texta="";
                     case "sw5":
                     case "sw6":
 
-                        uidrawbutton(txundo, "", gui.tilesetsleft,1);
-                        str1draw(ui, tilesets.get(seltset).getName(), gui.tilesetsmid);
-                        uidrawbutton(txredo, "", gui.tilesetsright,1);
+                        uidrawbutton( txundo, "", gui.tilesetsleft, 1 );
+                        str1draw( ui, tilesets.get( seltset ).getName(), gui.tilesetsmid );
+                        uidrawbutton( txredo, "", gui.tilesetsright, 1 );
 
 
                         break;
                     case "newimgobj":
-                        uidrawbutton(txundo, "", gui.tilesetsleft,1);
-                        str1draw(ui, tilesets.get(seltset).getName(), gui.tilesetsmid);
-                        uidrawbutton(txredo, "", gui.tilesetsright,1);
+                        uidrawbutton( txundo, "", gui.tilesetsleft, 1 );
+                        str1draw( ui, tilesets.get( seltset ).getName(), gui.tilesetsmid );
+                        uidrawbutton( txredo, "", gui.tilesetsright, 1 );
 
 
                         break;
                     case "terraineditor":
-                        if (tilesets.get(seltset).getTerrains().size() > 0)
-                            str1draw(ui, "Terrain: " + tilesets.get(seltset).getTerrains().get(tilesets.get(seltset).getSelTerrain()).getName(), gui.tilesetsmid);
-                        uidrawbutton(txadd, z.addnew, gui.newterrain,3);
+                        if (tilesets.get( seltset ).getTerrains().size() > 0)
+                            str1draw( ui, "Terrain: " + tilesets.get( seltset ).getTerrains().get( tilesets.get( seltset ).getSelTerrain() ).getName(), gui.tilesetsmid );
+                        uidrawbutton( txadd, z.addnew, gui.newterrain, 3 );
 
                         break;
                     case "massprops":
-                        str1draw(ui, z.tileset + ": " + tilesets.get(selTsetID).getName(), gui.tilesetsmid);
+                        str1draw( ui, z.tileset + ": " + tilesets.get( selTsetID ).getName(), gui.tilesetsmid );
                         //str1draw(ui, z.ok, gui.newterrain);
-                        uidrawbutton(txsave, z.ok, gui.newterrain,3);
+                        uidrawbutton( txsave, z.ok, gui.newterrain, 3 );
                         break;
 
                     default:
-                        str1draw(ui, z.tileset + ": " + tilesets.get(selTsetID).getName(), gui.tilesetsmid);
+                        str1draw( ui, z.tileset + ": " + tilesets.get( selTsetID ).getName(), gui.tilesetsmid );
 
                         break;
                 }
             }
         }
-        str1.setColor(1, 1, 1, 1);
+        str1.setColor( 1, 1, 1, 1 );
         ui.end();
-        Gdx.gl.glDisable(GL20.GL_BLEND);
+        Gdx.gl.glDisable( GL20.GL_BLEND );
     }
+
     boolean pickAuto = false;
 
     private void drawGrid() {
         if (cammode != "View only") {
             //GRID IN MAIN VIEW
             if (sEnableBlending) {
-                Gdx.gl.glEnable(GL20.GL_BLEND);
-                Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+                Gdx.gl.glEnable( GL20.GL_BLEND );
+                Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
 
             }
-            sr.setProjectionMatrix(cam.combined);
-            sr.begin(ShapeRenderer.ShapeType.Filled);
+            sr.setProjectionMatrix( cam.combined );
+            sr.begin( ShapeRenderer.ShapeType.Filled );
 
             //red box
             if (roll && activetool != 4) {
-                sr.setColor(1, 0, 0, 0.5f);
+                sr.setColor( 1, 0, 0, 0.5f );
                 int SprW = Tw;
-                if (orientation.equalsIgnoreCase("isometric")) {
+                if (orientation.equalsIgnoreCase( "isometric" )) {
                     int offsetx = 0, offsety = 0;
                     xpos = mapstartSelect % Tw;
                     ypos = mapstartSelect / Tw;
@@ -2477,16 +2536,14 @@ String texta="";
                     int offsety3 = (xpos2 * Tsh / 2) - (ypos * Tsh / 2);
                     int offsetx4 = (xpos * Tsw / 2) + (ypos2 * Tsw / 2);
                     int offsety4 = (xpos * Tsh / 2) - (ypos2 * Tsh / 2);
-                    sr.polygon(new float[]{xpos * Tsw + (Tsw / 2) - offsetx, -ypos * Tsh + Tsh - offsety, xpos2 * Tsw + Tsw - offsetx3, -ypos * Tsh + (Tsh / 2) - offsety3, (xpos2 * Tsw) + (Tsw / 2) - offsetx2, -ypos2 * Tsh - offsety2, xpos * Tsw - offsetx4, -ypos2 * Tsh + (Tsh / 2) - offsety4});
+                    sr.polygon( new float[]{xpos * Tsw + (Tsw / 2) - offsetx, -ypos * Tsh + Tsh - offsety, xpos2 * Tsw + Tsw - offsetx3, -ypos * Tsh + (Tsh / 2) - offsety3, (xpos2 * Tsw) + (Tsw / 2) - offsetx2, -ypos2 * Tsh - offsety2, xpos * Tsw - offsetx4, -ypos2 * Tsh + (Tsh / 2) - offsety4} );
                     //sr.rect((mapstartSelect % SprW) * Tsw, -(mapstartSelect / SprW) * Tsh + Tsh, ((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw, -(mapendSelect / SprW) * Tsh + (mapstartSelect / SprW) * Tsh - Tsh);
 
-                } else if (orientation.equalsIgnoreCase("orthogonal")) {
-                    if (activetool==0)
-                    {
-                        switch (currentShape)
-                        {
+                } else if (orientation.equalsIgnoreCase( "orthogonal" )) {
+                    if (activetool == 0) {
+                        switch (currentShape) {
                             case RECTANGLE:
-                                sr.rect((mapstartSelect % SprW) * Tsw, -(mapstartSelect / SprW) * Tsh + Tsh, ((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw, -(mapendSelect / SprW) * Tsh + (mapstartSelect / SprW) * Tsh - Tsh);
+                                sr.rect( (mapstartSelect % SprW) * Tsw, -(mapstartSelect / SprW) * Tsh + Tsh, ((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw, -(mapendSelect / SprW) * Tsh + (mapstartSelect / SprW) * Tsh - Tsh );
                                 break;
                             case CIRCLE:
                                 xpos = mapstartSelect % Tw;
@@ -2496,39 +2553,37 @@ String texta="";
                                 int widih = xpos2 - xpos;
                                 int heih = ypos2 - ypos;
                                 float radi = widih > heih ? heih : widih;
-                                radi = radi * Tsw/2f;
-                                if (widih > heih){
-                                    sr.circle((xpos * Tsw)+radi - radi/2f + widih*Tsw/2f - Tsw, -ypos * Tsh + Tsh-radi, radi);
-                                }else
-                                {
-                                    sr.circle((xpos* Tsw)+radi, -ypos* Tsh + Tsh-radi +radi/2f - heih*Tsh/2f + Tsh, radi);
+                                radi = radi * Tsw / 2f;
+                                if (widih > heih) {
+                                    sr.circle( (xpos * Tsw) + radi - radi / 2f + widih * Tsw / 2f - Tsw, -ypos * Tsh + Tsh - radi, radi );
+                                } else {
+                                    sr.circle( (xpos * Tsw) + radi, -ypos * Tsh + Tsh - radi + radi / 2f - heih * Tsh / 2f + Tsh, radi );
                                 }
-                               // float widihh = (((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw)/2f;
+                                // float widihh = (((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw)/2f;
                                 //sr.circle((mapstartSelect % SprW * Tsw)+radi, -(mapstartSelect / SprW) * Tsh + Tsh-radi, radi);
                                 break;
                             case LINE:
-                                if (rising){
-                                    sr.rectLine((mapstartSelect % SprW) * Tsw + Tsw/2f, -(mapendSelect / SprW) * Tsh + Tsh/2f, ((mapendSelect % SprW) * Tsw + Tsw/2f), -(mapstartSelect / SprW) * Tsh + Tsh/2f,Tsw/2f);
-                                }else{
-                                    sr.rectLine((mapstartSelect % SprW) * Tsw + Tsw/2f, -(mapstartSelect / SprW) * Tsh + Tsh/2f, ((mapendSelect % SprW) * Tsw + Tsw/2f), -(mapendSelect / SprW) * Tsh + Tsh/2f,Tsw/2f);
+                                if (rising) {
+                                    sr.rectLine( (mapstartSelect % SprW) * Tsw + Tsw / 2f, -(mapendSelect / SprW) * Tsh + Tsh / 2f, ((mapendSelect % SprW) * Tsw + Tsw / 2f), -(mapstartSelect / SprW) * Tsh + Tsh / 2f, Tsw / 2f );
+                                } else {
+                                    sr.rectLine( (mapstartSelect % SprW) * Tsw + Tsw / 2f, -(mapstartSelect / SprW) * Tsh + Tsh / 2f, ((mapendSelect % SprW) * Tsw + Tsw / 2f), -(mapendSelect / SprW) * Tsh + Tsh / 2f, Tsw / 2f );
                                 }
                                 break;
                         }
 
 
-
-                    }else{
-                    sr.rect((mapstartSelect % SprW) * Tsw, -(mapstartSelect / SprW) * Tsh + Tsh, ((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw, -(mapendSelect / SprW) * Tsh + (mapstartSelect / SprW) * Tsh - Tsh);
+                    } else {
+                        sr.rect( (mapstartSelect % SprW) * Tsw, -(mapstartSelect / SprW) * Tsh + Tsh, ((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw, -(mapendSelect / SprW) * Tsh + (mapstartSelect / SprW) * Tsh - Tsh );
                     }
                 }
-                sr.setColor(0, 0, 0, 1);
+                sr.setColor( 0, 0, 0, 1 );
             }
 
-            Gdx.gl20.glLineWidth(1);//average
-            sr.setColor(0, 0, 0, gridOpacity / 10f);
+            Gdx.gl20.glLineWidth( 1 );//average
+            sr.setColor( 0, 0, 0, gridOpacity / 10f );
 
             int offsetx = 0, offsety = 0;
-            if (orientation.equalsIgnoreCase("isometric")) {
+            if (orientation.equalsIgnoreCase( "isometric" )) {
                 offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
                 offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
             }
@@ -2536,8 +2591,9 @@ String texta="";
             for (int i = 0; i <= Tw; i++)//vertical
             {
 
-                if (orientation.equalsIgnoreCase("isometric")) {
-                    if (sShowGrid) sr.rectLine(Tsw / 2 + i * Tsw / 2, -i * Tsh / 2 + Tsh, Tsw / 2 + i * Tsw / 2 - Tsw * Th / 2, -i * Tsh / 2 - Tsh * Th / 2 + Tsh, Tsw / 32f);
+                if (orientation.equalsIgnoreCase( "isometric" )) {
+                    if (sShowGrid)
+                        sr.rectLine( Tsw / 2 + i * Tsw / 2, -i * Tsh / 2 + Tsh, Tsw / 2 + i * Tsw / 2 - Tsw * Th / 2, -i * Tsh / 2 - Tsh * Th / 2 + Tsh, Tsw / 32f );
                     //sr.rectLine(Tsw / 2 + i * Tsw / 2, -i * Tsh / 2 + Tsh, Tsw / 2 + i * Tsw / 2 - Tsw * Tw / 2, -i * Tsh / 2 - Tsh * Th / 2 + Tsh, Tsw / 16f);
                 } else {
                     if (!landscape) {
@@ -2546,7 +2602,7 @@ String texta="";
                     }
 
                     if (sShowGrid || i == 0 || i == Tw) {
-                        sr.rectLine((Tsw * i), Tsh, (i * Tsw), -Tsh * Th + Tsh, Tsw / 16f);
+                        sr.rectLine( (Tsw * i), Tsh, (i * Tsw), -Tsh * Th + Tsh, Tsw / 16f );
                     }
 
 
@@ -2555,25 +2611,25 @@ String texta="";
             for (int j = -1; j < Th; j++)//horizontal
             {
 
-                if (orientation.equalsIgnoreCase("isometric")) {
-                    if (sShowGrid) sr.rectLine(0 - j * Tsw / 2, Tsh / 2 - (Tsh * j / 2), (0 - j * Tsw / 2) + Tsw * Tw / 2, Tsh / 2 - (Tsh * j / 2) - Tsh * Tw / 2, Tsw / 32f);
+                if (orientation.equalsIgnoreCase( "isometric" )) {
+                    if (sShowGrid)
+                        sr.rectLine( 0 - j * Tsw / 2, Tsh / 2 - (Tsh * j / 2), (0 - j * Tsw / 2) + Tsw * Tw / 2, Tsh / 2 - (Tsh * j / 2) - Tsh * Tw / 2, Tsw / 32f );
                 } else {
 
                     if (-Tsh * j + Tsh < cam.position.y - reduy * cam.zoom) continue;
                     if ((-Tsh * j) - 2 * Tsh > cam.position.y + (reduy + Tsh) * cam.zoom) continue;
 
                     if (sShowGrid || j == -1 || j == Th - 1) {
-                        sr.rectLine(0, -(Tsh * j), Tsw * Tw, -(j * Tsh), Tsw / 16f);
+                        sr.rectLine( 0, -(Tsh * j), Tsw * Tw, -(j * Tsh), Tsw / 16f );
                     }
                 }
             }
 
 
-            boolean ifmusic=false;
-            for (property p : properties)
-            {
-                if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
-                    ifmusic=true;
+            boolean ifmusic = false;
+            for (property p : properties) {
+                if (p.getName().equalsIgnoreCase( "type" ) && p.getValue().equalsIgnoreCase( "NotTiled music" )) {
+                    ifmusic = true;
                     break;
                 }
 
@@ -2581,10 +2637,10 @@ String texta="";
 
 
             if (sShowCustomGrid) {
-                sr.setColor(1, 0, 0, 0.5f);
+                sr.setColor( 1, 0, 0, 0.5f );
                 offsetx = 0;
                 offsety = 0;
-                if (orientation.equalsIgnoreCase("isometric")) {
+                if (orientation.equalsIgnoreCase( "isometric" )) {
                     offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
                     offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
                 }
@@ -2595,13 +2651,13 @@ String texta="";
 
                     if (i % sGridX == 0) {
 
-                        if (orientation.equalsIgnoreCase("isometric")) {
-                            sr.rectLine(Tsw / 2 + i * Tsw / 2, -i * Tsh / 2 + Tsh, Tsw / 2 + i * Tsw / 2 - Tsw * Th / 2, -i * Tsh / 2 - Tsh * Th / 2 + Tsh, Tsw / 16f);
+                        if (orientation.equalsIgnoreCase( "isometric" )) {
+                            sr.rectLine( Tsw / 2 + i * Tsw / 2, -i * Tsh / 2 + Tsh, Tsw / 2 + i * Tsw / 2 - Tsw * Th / 2, -i * Tsh / 2 - Tsh * Th / 2 + Tsh, Tsw / 16f );
                         } else {
                             if (i * Tsw + Tsw < cam.position.x - ssx * cam.zoom) continue;
                             if (i * Tsw > cam.position.x + ssx * cam.zoom) continue;
 
-                            sr.rectLine((Tsw * i), Tsh, (i * Tsw), -Tsh * Th + Tsh, Tsw / 8f);
+                            sr.rectLine( (Tsw * i), Tsh, (i * Tsw), -Tsh * Th + Tsh, Tsw / 8f );
 
 
                         }
@@ -2612,25 +2668,26 @@ String texta="";
 
                     if ((j + 1) % sGridY == 0) {
 
-                        if (orientation.equalsIgnoreCase("isometric")) {
-                            sr.rectLine(0 - j * Tsw / 2, Tsh / 2 - (Tsh * j / 2), (0 - j * Tsw / 2) + Tsw * Tw / 2, Tsh / 2 - (Tsh * j / 2) - Tsh * Tw / 2, Tsw / 16f);
+                        if (orientation.equalsIgnoreCase( "isometric" )) {
+                            sr.rectLine( 0 - j * Tsw / 2, Tsh / 2 - (Tsh * j / 2), (0 - j * Tsw / 2) + Tsw * Tw / 2, Tsh / 2 - (Tsh * j / 2) - Tsh * Tw / 2, Tsw / 16f );
                         } else {
                             if (-Tsh * j + Tsh < cam.position.y - ssy * cam.zoom) continue;
                             if (-Tsh * j > cam.position.y + ssy * cam.zoom) continue;
 
-                            sr.rectLine(0, -(Tsh * j), Tsw * Tw, -(j * Tsh), Tsw / 8f);
+                            sr.rectLine( 0, -(Tsh * j), Tsw * Tw, -(j * Tsh), Tsw / 8f );
                         }
                     }
                 }
             }
 
 
-            if (activetool==3){
-                sr.setColor(0, 1, 0, 1f);
+            if (activetool == 3) {
+                sr.setColor( 0, 1, 0, 1f );
 
 
-                if (orientation.equalsIgnoreCase("isometric")) {
-                    offsetx = 0; offsety = 0;
+                if (orientation.equalsIgnoreCase( "isometric" )) {
+                    offsetx = 0;
+                    offsety = 0;
                     xpos = mapstartSelect % Tw;
                     ypos = mapstartSelect / Tw;
                     offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
@@ -2653,35 +2710,32 @@ String texta="";
                     float p8 = -ypos2 * Tsh + (Tsh / 2) - offsety4;
 
 
-
-                    sr.rectLine(p1,p2,p3,p4,Tsw/16f);
-                    sr.rectLine(p3,p4,p5,p6,Tsw/16f);
-                    sr.rectLine(p5,p6,p7,p8,Tsw/16f);
-                    sr.rectLine(p7,p8,p1,p2,Tsw/16f);
+                    sr.rectLine( p1, p2, p3, p4, Tsw / 16f );
+                    sr.rectLine( p3, p4, p5, p6, Tsw / 16f );
+                    sr.rectLine( p5, p6, p7, p8, Tsw / 16f );
+                    sr.rectLine( p7, p8, p1, p2, Tsw / 16f );
 
                     //sr.rect((mapstartSelect % SprW) * Tsw, -(mapstartSelect / SprW) * Tsh + Tsh, ((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw, -(mapendSelect / SprW) * Tsh + (mapstartSelect / SprW) * Tsh - Tsh);
 
-                } else if (orientation.equalsIgnoreCase("orthogonal")) {
-                    int eiks = (mapstartSelect % Tw)*Tsw ;
-                    int yeh = -(mapstartSelect / Tw)*Tsh + Tsh;
-                    int widih = (mapendSelect % Tw)*Tsw + Tsw;
-                    int heih = -(mapendSelect / Tw)*Tsh;
-                    sr.rectLine(eiks,yeh,eiks,heih,Tsw/16f);
-                    sr.rectLine(widih,yeh,widih,heih,Tsw/16f);
-                    sr.rectLine(eiks,heih,widih,heih,Tsw/16f);
-                    sr.rectLine(eiks,yeh,widih,yeh,Tsw/16f);
+                } else if (orientation.equalsIgnoreCase( "orthogonal" )) {
+                    int eiks = (mapstartSelect % Tw) * Tsw;
+                    int yeh = -(mapstartSelect / Tw) * Tsh + Tsh;
+                    int widih = (mapendSelect % Tw) * Tsw + Tsw;
+                    int heih = -(mapendSelect / Tw) * Tsh;
+                    sr.rectLine( eiks, yeh, eiks, heih, Tsw / 16f );
+                    sr.rectLine( widih, yeh, widih, heih, Tsw / 16f );
+                    sr.rectLine( eiks, heih, widih, heih, Tsw / 16f );
+                    sr.rectLine( eiks, yeh, widih, yeh, Tsw / 16f );
                     //sr.rect(eiks,yeh,widih,heih);
                 }
 
 
-
-
             }
-            sr.setColor(0, 0, 0, 0.5f);
+            sr.setColor( 0, 0, 0, 0.5f );
 
             sr.end();
             if (sEnableBlending) {
-                Gdx.gl.glDisable(GL20.GL_BLEND);
+                Gdx.gl.glDisable( GL20.GL_BLEND );
             }
         }
     }
@@ -2690,18 +2744,18 @@ String texta="";
         if (landscape) {
             redux = ssy / 2;
             reduy = ssx / 2;
-        }else{
+        } else {
             redux = ssx / 2;
             reduy = ssy / 2;
         }
-        /*
-        if (cam.zoom < zoomTreshold) {
+
+        if (orientation.equalsIgnoreCase( "isometric" )) {
             //Gdx.gl.glDisable(GL20.GL_BLEND);
-            batch.setColor(1, 1, 1, 1);
-            batch.setProjectionMatrix(cam.combined);
+            batch.setColor( 1, 1, 1, 1 );
+            batch.setProjectionMatrix( cam.combined );
             batch.begin();
             try {
-                batch.draw(background, 0, -Tsh * Th + Tsh, Tsw * Tw, Tsh * Th, 0, 0, background.getWidth(), background.getHeight(), false, false);
+                batch.draw( background, 0, -Tsh * Th + Tsh, Tsw * Tw, Tsh * Th, 0, 0, background.getWidth(), background.getHeight(), false, false );
             } catch (Exception e) {
             }
             camA = cam.position.x - ssx * cam.zoom;
@@ -2718,7 +2772,7 @@ String texta="";
                 int startx = 0, stopx = Tw;
                 int starty = 0, stopy = Th;
                 //no optimization for iso map yet
-                if (orientation.equalsIgnoreCase("orthogonal")) {
+                if (orientation.equalsIgnoreCase( "orthogonal" )) {
 
 
                     if (landscape) {
@@ -2790,40 +2844,39 @@ String texta="";
 
                 for (int jo = 0; jo < layers.size(); jo++) {
                     boolean isShown = false;
-                    switch (viewMode)
-                    {
+                    switch (viewMode) {
                         case ALL:
-                            isShown=true;
+                            isShown = true;
                             break;
                         case STACK:
-                            if (jo<=selLayer) isShown=true;
+                            if (jo <= selLayer) isShown = true;
                             break;
                         case SINGLE:
-                            if (jo==selLayer) isShown=true;
+                            if (jo == selLayer) isShown = true;
                             break;
                         case CUSTOM:
-                            if (layers.get(jo).isVisible()) isShown=true;
+                            if (layers.get( jo ).isVisible()) isShown = true;
                             break;
                     }
-                    if (layers.get(jo).getType() == layer.Type.TILE && isShown) {
-                        if (layers.get(jo).getOpacity() != 0 && sEnableBlending) {
-                            Gdx.gl.glEnable(GL20.GL_BLEND);
-                            Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-                            batch.setColor(1, 1, 1, layers.get(jo).getOpacity());
+                    if (layers.get( jo ).getType() == layer.Type.TILE && isShown) {
+                        if (layers.get( jo ).getOpacity() != 0 && sEnableBlending) {
+                            Gdx.gl.glEnable( GL20.GL_BLEND );
+                            Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
+                            batch.setColor( 1, 1, 1, layers.get( jo ).getOpacity() );
                         }
                         drawers.clear();
                         for (int a = aa; a < bb; a++) {
                             for (int b = cc; b < dd; b++) {
                                 //position=(Math.abs(a)*Tw)+Math.abs(b);
 
-                                position = (abs(a) * Tw) + abs(b);
-                                ini = layers.get(jo).getStr().get(position);
-                                initset = layers.get(jo).getTset().get(position);
+                                position = (abs( a ) * Tw) + abs( b );
+                                ini = layers.get( jo ).getStr().get( position );
+                                initset = layers.get( jo ).getTset().get( position );
                                 if (initset == -1) continue;
                                 if (ini == 0) continue;//dont draw empty, amazing performance boost
                                 xpos = position % Tw;
                                 ypos = position / Tw;
-                                if (orientation.equalsIgnoreCase("isometric")) {
+                                if (orientation.equalsIgnoreCase( "isometric" )) {
                                     offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
                                     offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
                                 }
@@ -2831,31 +2884,31 @@ String texta="";
                                 mm = ini;
                                 flag = "00";
                                 if (ini > total) {
-                                    hex = Long.toHexString(ini);
+                                    hex = Long.toHexString( ini );
                                     trailer = "00000000" + hex;
-                                    hex = trailer.substring(trailer.length() - 8);
-                                    flag = hex.substring(0, 2);
-                                    mm = Long.decode("#00" + hex.substring(2, 8));
+                                    hex = trailer.substring( trailer.length() - 8 );
+                                    flag = hex.substring( 0, 2 );
+                                    mm = Long.decode( "#00" + hex.substring( 2, 8 ) );
                                 }
-                                tiles = tilesets.get(initset).getTiles();
+                                tiles = tilesets.get( initset ).getTiles();
                                 tilesize = tiles.size();
 
                                 if (tilesize > 0) {
                                     for (int n = 0; n < tilesize; n++) {
-                                        if (tiles.get(n).getAnimation().size() > 0) {
-                                            if (mm == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
-                                                mm = (long) tiles.get(n).getActiveFrameID() + tilesets.get(initset).getFirstgid();
+                                        if (tiles.get( n ).getAnimation().size() > 0) {
+                                            if (mm == tiles.get( n ).getTileID() + tilesets.get( initset ).getFirstgid()) {
+                                                mm = (long) tiles.get( n ).getActiveFrameID() + tilesets.get( initset ).getFirstgid();
                                             }
                                         }
                                     }
                                 }
 
-                                sprX = (int) (mm - tilesets.get(initset).getFirstgid()) % (tilesets.get(initset).getWidth());
-                                sprY = (int) (mm - tilesets.get(initset).getFirstgid()) / (tilesets.get(initset).getWidth());
-                                margin = tilesets.get(initset).getMargin();
-                                spacing = tilesets.get(initset).getSpacing();
-                                Tswa = tilesets.get(initset).getTilewidth();
-                                Tsha = tilesets.get(initset).getTileheight();
+                                sprX = (int) (mm - tilesets.get( initset ).getFirstgid()) % (tilesets.get( initset ).getWidth());
+                                sprY = (int) (mm - tilesets.get( initset ).getFirstgid()) / (tilesets.get( initset ).getWidth());
+                                margin = tilesets.get( initset ).getMargin();
+                                spacing = tilesets.get( initset ).getSpacing();
+                                Tswa = tilesets.get( initset ).getTilewidth();
+                                Tsha = tilesets.get( initset ).getTileheight();
 
                                 tempdrawer = new drawer();
                                 tempdrawer.mm = mm;
@@ -2868,80 +2921,79 @@ String texta="";
                                     Tswad = Tswa;
                                     Tshad = Tsha;
                                 }
-                                float ttx = - (Tswad/2) + (Tsw/2);
-                                float tty = - (Tshad/2) + (Tsh/2);
+                                float ttx = -(Tswad / 2) + (Tsw / 2);
+                                float tty = -(Tshad / 2) + (Tsh / 2);
 
-                                if (orientation.equalsIgnoreCase( "isometric" )){
-                                    tty =  0;
+                                if (orientation.equalsIgnoreCase( "isometric" )) {
+                                    tty = 0;
                                     ttx = 0;
                                 }
 
 
                                 switch (flag) {
                                     case "20"://diagonal flip 'THIS ONE"
-                                        tempdrawer.setdrawer(initset, xpos * Tsw  + ttx - offsetx, -ypos * Tsh + tty  - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                        tempdrawer.setdrawer( initset, xpos * Tsw + ttx - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false );
                                         break;
                                     case "40"://flipy nd
-                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
+                                        tempdrawer.setdrawer( initset, xpos * Tsw + ttx - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true );
                                         break;
                                     case "60"://270 degrees clockwise nd
-                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        tempdrawer.setdrawer( initset, xpos * Tsw + ttx - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false );
                                         break;
                                     case "80"://flipx nd
-                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                        tempdrawer.setdrawer( initset, xpos * Tsw + ttx - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false );
                                         break;
                                     case "a0"://90 degress cw
-                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx   - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        tempdrawer.setdrawer( initset, xpos * Tsw + ttx - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false );
                                         break;
                                     case "c0"://180 degrees cw nd
-                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx   - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        tempdrawer.setdrawer( initset, xpos * Tsw + ttx - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false );
                                         break;
                                     case "e0"://180 degrees ccw "AND THIS ONE"
-                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                        tempdrawer.setdrawer( initset, xpos * Tsw + ttx - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false );
                                         break;
                                     case "00":
-                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx   - offsetx, -ypos * Tsh +tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        tempdrawer.setdrawer( initset, xpos * Tsw + ttx - offsetx, -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false );
                                         break;
                                 }
-                                drawers.add(tempdrawer);
+                                drawers.add( tempdrawer );
                             } //for  b
                         }//for a
 
-                       // if (!orientation.equalsIgnoreCase( "isometric" )) java.util.Collections.sort(drawers);//fps hogger
+                        // if (!orientation.equalsIgnoreCase( "isometric" )) java.util.Collections.sort(drawers);//fps hogger
 
                         for (drawer drawer : drawers) {
-                            drawer.draw(batch, tilesets);
+                            drawer.draw( batch, tilesets );
 
                             if (sShowGIDmap) {
                                 //str1.getData().setScale(.1f);
-                                str1.getData().setScale(0.0025f + Tsw / 160f);
-                                drawer.writeGID(str1, batch);
-                                str1.getData().setScale(1f);
+                                str1.getData().setScale( 0.0025f + Tsw / 160f );
+                                drawer.writeGID( str1, batch );
+                                str1.getData().setScale( 1f );
                             }
                         }
 
                         drawCoordinates();
 
-                        if (layers.get(jo).getOpacity() != 0 && sEnableBlending) {
-                            Gdx.gl.glDisable(GL20.GL_BLEND);
-                            batch.setColor(1, 1, 1, 1);
+                        if (layers.get( jo ).getOpacity() != 0 && sEnableBlending) {
+                            Gdx.gl.glDisable( GL20.GL_BLEND );
+                            batch.setColor( 1, 1, 1, 1 );
                         }
-                    }
-                    else if (layers.get(jo).getType() == layer.Type.IMAGE && isShown) {
-                        layer lay = layers.get(jo);
-                        if (lay.getTexture()!=null)
-                        {
+                    } else if (layers.get( jo ).getType() == layer.Type.IMAGE && isShown) {
+                        layer lay = layers.get( jo );
+                        if (lay.getTexture() != null) {
                             try {
-                                if (lay.getOpacity() != 0f){
-                                    batch.setColor(1f, 1f, 1f, lay.getOpacity());
-                                    batch.draw(lay.getTexture(), lay.getOffsetX(), -lay.getImageheight() - lay.getOffsetY() + Tsh);
-                                    batch.setColor(1f, 1f, 1f, 1);
+                                if (lay.getOpacity() != 0f) {
+                                    batch.setColor( 1f, 1f, 1f, lay.getOpacity() );
+                                    batch.draw( lay.getTexture(), lay.getOffsetX(), -lay.getImageheight() - lay.getOffsetY() + Tsh );
+                                    batch.setColor( 1f, 1f, 1f, 1 );
 
-                                }else {
-                                    batch.draw(lay.getTexture(), lay.getOffsetX(), -lay.getImageheight() - lay.getOffsetY() + Tsh);
+                                } else {
+                                    batch.draw( lay.getTexture(), lay.getOffsetX(), -lay.getImageheight() - lay.getOffsetY() + Tsh );
 
                                 }
-                            }catch(Exception e){}
+                            } catch (Exception e) {
+                            }
                         }
                     }
                 }//for jo
@@ -2952,84 +3004,84 @@ String texta="";
             batch.end();
 
         } else {
-         */
+
             //fbo.begin();
             batch.begin();
             try {
 
-                batch.draw(background, 0, -Tsh * Th + Tsh, Tsw * Tw, Tsh * Th, 0, 0, background.getWidth(), background.getHeight(), false, false);
+                batch.draw( background, 0, -Tsh * Th + Tsh, Tsw * Tw, Tsh * Th, 0, 0, background.getWidth(), background.getHeight(), false, false );
             } catch (Exception e) {
             }
             batch.end();
             if (!caching) {
                 for (int i = 0; i < tcaches.size(); i++) {
-                    TileCache tc = tcaches.get(i);
+                    TileCache tc = tcaches.get( i );
 
-                    if (orientation!="isometric") {
+                    if (!orientation.equalsIgnoreCase( "isometric" )) {
 
 
-                        if ((tc.getIntex() ) * widd * Tsw < cam.position.x - redux * cam.zoom - widd * Tsw)
+                        if ((tc.getIntex()) * widd * Tsw < cam.position.x - redux * cam.zoom - widd * Tsw)
                             continue;
 
-                        if ((tc.getIntex() ) * widd * Tsw > cam.position.x + redux * cam.zoom + widd * Tsw)
+                        if ((tc.getIntex()) * widd * Tsw > cam.position.x + redux * cam.zoom + widd * Tsw)
                             continue;
 
-                        if ((tc.getIntey() ) * heii * -Tsh +Tsh < cam.position.y - reduy * cam.zoom - heii * Tsh)
+                        if ((tc.getIntey()) * heii * -Tsh + Tsh < cam.position.y - reduy * cam.zoom - heii * Tsh)
                             continue;
 
-                        if ((tc.getIntey() ) * heii * -Tsh +Tsh > cam.position.y + reduy * cam.zoom + heii * Tsh)
+                        if ((tc.getIntey()) * heii * -Tsh + Tsh > cam.position.y + reduy * cam.zoom + heii * Tsh)
                             continue;
                     }
 
 
-
-
                     SpriteCache cache = tc.getCache();
                     int myid = tc.getCacheID();
-                    cache.setProjectionMatrix(cam.combined);
-                    Gdx.gl.glEnable(GL20.GL_BLEND);
-                    Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+                    cache.setProjectionMatrix( cam.combined );
+                    Gdx.gl.glEnable( GL20.GL_BLEND );
+                    Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
 
                     cache.begin();
-                    cache.draw(myid); //call our cache with cache ID and draw it
+                    cache.draw( myid ); //call our cache with cache ID and draw it
                     cache.end();
                 }
             }
 
 
             //Drawing of RW thingy
-            batch.setProjectionMatrix(cam.combined);
+            batch.setProjectionMatrix( cam.combined );
             batch.begin();
 
+            drawCoordinates();
+
             if (layers.size() > 2 && tilesets.size() > 0) {
-                if (layers.get(2).getName().equalsIgnoreCase("Units")) {
+                if (layers.get( 2 ).getName().equalsIgnoreCase( "Units" )) {
 
                     for (int aa = 0; aa < Tw * Th; aa++) {
 
-                        long mm = layers.get(2).getStr().get(aa);
-                        int mmo = layers.get(2).getTset().get(aa);
-                        if (mmo==-1) continue;
+                        long mm = layers.get( 2 ).getStr().get( aa );
+                        int mmo = layers.get( 2 ).getTset().get( aa );
+                        if (mmo == -1) continue;
                         int xpos = aa % Tw;
                         int ypos = aa / Tw;
                         int maex = -1, maye = -1;
-                        for (tile t:tilesets.get(mmo).getTiles()){
+                        for (tile t : tilesets.get( mmo ).getTiles()) {
                             //log(mm+"P");
 
-                            if (t.getTileID()+tilesets.get(mmo).getFirstgid()==mm){
-                                boolean isCC=false;
-                                int team=-1;
-                                for (property p: t.getProperties()){
-                                    if (p.getName().equalsIgnoreCase( "unit" ) && p.getValue().equalsIgnoreCase( "commandCenter" ) ){
-                                        isCC=true;
+                            if (t.getTileID() + tilesets.get( mmo ).getFirstgid() == mm) {
+                                boolean isCC = false;
+                                int team = -1;
+                                for (property p : t.getProperties()) {
+                                    if (p.getName().equalsIgnoreCase( "unit" ) && p.getValue().equalsIgnoreCase( "commandCenter" )) {
+                                        isCC = true;
                                         //log(isCC+"P");
                                     }
-                                    if (p.getName().equalsIgnoreCase( "team" )){
-                                       team=Integer.parseInt( p.getValue()  );
+                                    if (p.getName().equalsIgnoreCase( "team" )) {
+                                        team = Integer.parseInt( p.getValue() );
                                     }
                                 }
                                 if (!isCC) continue;
                                 //log(isCC+"");
-                                switch (team){
+                                switch (team) {
                                     case 0:
                                         maex = 0;
                                         maye = 0;
@@ -3078,37 +3130,37 @@ String texta="";
                         if (maex != -1) {
                             drawer tempdrawer2 = new drawer();
                             int widthy = (int) (cam.zoom * 60);
-                            tempdrawer2.setdrawer(0, xpos * Tsw - widthy / 2, -ypos * Tsh - widthy / 2, Tsw / 2, Tsh / 2, widthy, widthy, 1f, 1f, 0f, maex, maye, 55, 55, false, false);
-                            tempdrawer2.draw(batch, txnumbers);
+                            tempdrawer2.setdrawer( 0, xpos * Tsw - widthy / 2, -ypos * Tsh - widthy / 2, Tsw / 2, Tsh / 2, widthy, widthy, 1f, 1f, 0f, maex, maye, 55, 55, false, false );
+                            tempdrawer2.draw( batch, txnumbers );
                         }
 
-                        mm = layers.get(1).getStr().get(aa);
+                        mm = layers.get( 1 ).getStr().get( aa );
                         if (mm == 284) {
                             drawer tempdrawer2 = new drawer();
                             int widthy = (int) (cam.zoom * 30);
-                            tempdrawer2.setdrawer(0, xpos * Tsw - widthy / 2, -ypos * Tsh - widthy / 2, Tsw / 2, Tsh / 2, widthy, widthy, 1f, 1f, 0f, 0, 0, 32, 32, false, false);
-                            tempdrawer2.draw(batch, txresources);
+                            tempdrawer2.setdrawer( 0, xpos * Tsw - widthy / 2, -ypos * Tsh - widthy / 2, Tsw / 2, Tsh / 2, widthy, widthy, 1f, 1f, 0f, 0, 0, 32, 32, false, false );
+                            tempdrawer2.draw( batch, txresources );
                         }
                     }//for
 
                 }//if
-                if (layers.get(1).getName().equalsIgnoreCase("Items")) {
+                if (layers.get( 1 ).getName().equalsIgnoreCase( "Items" )) {
 
                     for (int aa = 0; aa < Tw * Th; aa++) {
 
-                        long mm = layers.get(1).getStr().get(aa);
-                        int mmo = layers.get(1).getTset().get(aa);
-                        if (mmo==-1) continue;
+                        long mm = layers.get( 1 ).getStr().get( aa );
+                        int mmo = layers.get( 1 ).getTset().get( aa );
+                        if (mmo == -1) continue;
                         int xpos = aa % Tw;
                         int ypos = aa / Tw;
-                        boolean isPool=false;
-                        for (tile t:tilesets.get(mmo).getTiles()){
+                        boolean isPool = false;
+                        for (tile t : tilesets.get( mmo ).getTiles()) {
 
-                            if (t.getTileID()+tilesets.get(mmo).getFirstgid()==mm){
+                            if (t.getTileID() + tilesets.get( mmo ).getFirstgid() == mm) {
 
-                                for (property p: t.getProperties()){
-                                    if (p.getName().equalsIgnoreCase( "res_pool" )){
-                                        isPool=true;
+                                for (property p : t.getProperties()) {
+                                    if (p.getName().equalsIgnoreCase( "res_pool" )) {
+                                        isPool = true;
                                     }
                                 }
                                 if (!isPool) continue;
@@ -3128,7 +3180,7 @@ String texta="";
             batch.end();
             //fbo.end();
 
-        //}
+        }
     }
 
     private int abs(int i) {
@@ -3140,37 +3192,38 @@ String texta="";
     }
 
 
-    int widd=20;
-    int heii=20;
+    int widd = 20;
+    int heii = 20;
 
     private void resetCaches() {
+
         tcaches.clear();
-        int maxx = Tw/widd;
-        if (Tw % widd !=0) maxx++;
+        int maxx = Tw / widd;
+        if (Tw % widd != 0) maxx++;
         //maxx=1;
-        int maxy = Th/heii;
-        if (Th % heii !=0) maxy++;
+        int maxy = Th / heii;
+        if (Th % heii != 0) maxy++;
         //maxy=1;
-        for (int y=0;y<maxy;y++){
-            for (int x=0;x<maxx;x++){
+        for (int y = 0; y < maxy; y++) {
+            for (int x = 0; x < maxx; x++) {
                 //enough for 12 layers.
-                SpriteCache cache = new SpriteCache(2000, false);
-                int cid=cacheTilesOn(cache, x,y );
-                TileCache tcache = new TileCache(cache,cid,x,y);
+                SpriteCache cache = new SpriteCache( 2000, false );
+                int cid = cacheTilesOn( cache, x, y );
+                TileCache tcache = new TileCache( cache, cid, x, y );
                 tcaches.add( tcache );
             }
         }
         //status("Cache reset.",2);
     }
 
-    private void updateCache(int num){
+    private void updateCache(int num) {
         //// magic
         int posx = (num % Tw) / widd;
         int posy = (num / Tw) / heii;
-        int maxx = Tw/widd;
-        if (Tw % widd !=0) maxx++;
+        int maxx = Tw / widd;
+        if (Tw % widd != 0) maxx++;
         int tci = (posy * maxx) + posx;
-        tcaches.get(tci).setChanged( true );
+        tcaches.get( tci ).setChanged( true );
         ////
     }
 
@@ -3182,12 +3235,12 @@ String texta="";
 
         caching = true;
 
-         for (int i=0;i<tcaches.size();i++){
-            if (tcaches.get(i).isChanged()){
-                tcaches.get(i).getCache().dispose();
-                TileCache tc = tcaches.get(i);
-                SpriteCache cache = new SpriteCache(2000, false);
-                int cid=cacheTilesOn(cache, tc.getIntex(),tc.getIntey());
+        for (int i = 0; i < tcaches.size(); i++) {
+            if (tcaches.get( i ).isChanged()) {
+                tcaches.get( i ).getCache().dispose();
+                TileCache tc = tcaches.get( i );
+                SpriteCache cache = new SpriteCache( 2000, false );
+                int cid = cacheTilesOn( cache, tc.getIntex(), tc.getIntey() );
                 tc.setCache( cache );
                 tc.setCacheID( cid );
                 tc.setChanged( false );
@@ -3200,168 +3253,172 @@ String texta="";
 
         tilesetsize = tilesets.size();
 //        if (tilesetsize > 0) {
-            int offsetx = 0, offsety = 0;
-            int jon = 0, joni = 0;
-            long ini;
-            int total = Tw * Th;
+        int offsetx = 0, offsety = 0;
+        int jon = 0, joni = 0;
+        long ini;
+        int total = Tw * Th;
 
-            int startx = intex*widd, stopx = intex*widd+widd;
-            if (stopx >Tw) stopx = intex*widd + (Tw % widd);
-            int starty = intey*heii, stopy = intey*heii+heii;
-            if (stopy >Th) stopy = intey*heii + (Th % heii);
-            int aa = 0, bb = 0, cc = 0, dd = 0;
-            switch (renderorder) {
-                case "right-down":
-                    aa = starty;
-                    bb = stopy;
-                    cc = startx;
-                    dd = stopx;
+        int startx = intex * widd, stopx = intex * widd + widd;
+        if (stopx > Tw) stopx = intex * widd + (Tw % widd);
+        int starty = intey * heii, stopy = intey * heii + heii;
+        if (stopy > Th) stopy = intey * heii + (Th % heii);
+        int aa = 0, bb = 0, cc = 0, dd = 0;
+        switch (renderorder) {
+            case "right-down":
+                aa = starty;
+                bb = stopy;
+                cc = startx;
+                dd = stopx;
+                break;
+            case "left-down":
+                aa = starty;
+                bb = stopy;
+                cc = -stopx + 1;
+                dd = -startx + 1;
+                break;
+            case "right-up":
+                aa = -stopy + 1;
+                bb = -starty + 1;
+                cc = startx;
+                dd = stopx;
+                break;
+            case "left-up":
+                aa = -stopy + 1;
+                bb = -starty + 1;
+                cc = -stopx + 1;
+                dd = -startx + 1;
+                break;
+        }
+
+        String flag;
+        Long mm = null;
+        flag = "00";
+
+        cache.beginCache();
+
+        for (int jo = 0; jo < layers.size(); jo++) {
+            //check visibility
+            boolean vis = false;
+            switch (viewMode) {
+                case STACK:
+                    if (jo <= selLayer) vis = true;
                     break;
-                case "left-down":
-                    aa = starty;
-                    bb = stopy;
-                    cc = -stopx + 1;
-                    dd = -startx + 1;
+                case ALL:
+                    vis = true;
                     break;
-                case "right-up":
-                    aa = -stopy + 1;
-                    bb = -starty + 1;
-                    cc = startx;
-                    dd = stopx;
+                case SINGLE:
+                    if (selLayer == jo) vis = true;
                     break;
-                case "left-up":
-                    aa = -stopy + 1;
-                    bb = -starty + 1;
-                    cc = -stopx + 1;
-                    dd = -startx + 1;
+                case CUSTOM:
+                    vis = layers.get( jo ).isVisible();
                     break;
             }
 
-            String flag;
-            Long mm = null;
-            flag = "00";
-
-            cache.beginCache();
-
-            for (int jo = 0; jo < layers.size(); jo++) {
-                //check visibility
-                boolean vis=false;
-                switch (viewMode){
-                    case STACK:
-                        if (jo <=selLayer) vis=true; break;
-                    case ALL:
-                        vis=true;break;
-                    case SINGLE:
-                        if (selLayer==jo) vis=true;break;
-                    case CUSTOM:
-                        vis=layers.get(jo).isVisible();break;
+            if (layers.get( jo ).getType() == layer.Type.TILE && vis) {
+                if (layers.get( jo ).getOpacity() != 0 && sEnableBlending) {
+                    Gdx.gl.glEnable( GL20.GL_BLEND );
+                    Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
+                    batch.setColor( 1, 1, 1, layers.get( jo ).getOpacity() );
                 }
+                java.util.List<drawer> drawers = new ArrayList<drawer>();
+                drawers.clear();
+                for (int a = aa; a < bb; a++) {
+                    for (int b = cc; b < dd; b++) {
+                        //position=(Math.abs(a)*Tw)+Math.abs(b);
 
-                if (layers.get(jo).getType() == layer.Type.TILE && vis) {
-                    if (layers.get(jo).getOpacity() != 0 && sEnableBlending) {
-                        Gdx.gl.glEnable(GL20.GL_BLEND);
-                        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-                        batch.setColor(1, 1, 1, layers.get(jo).getOpacity());
-                    }
-                    java.util.List<drawer> drawers = new ArrayList<drawer>();
-                    drawers.clear();
-                    for (int a = aa; a < bb; a++) {
-                        for (int b = cc; b < dd; b++) {
-                            //position=(Math.abs(a)*Tw)+Math.abs(b);
+                        int position = (abs( a ) * Tw) + abs( b );
+                        ini = layers.get( jo ).getStr().get( position );
+                        int initset = -1;
+                        if (tilesets.size() > 0)
+                            initset = layers.get( jo ).getTset().get( position );
+                        if (initset == -1) continue;
+                        if (ini == 0) continue;//dont draw empty, amazing performance boost
+                        int xpos = position % Tw;
+                        int ypos = position / Tw;
+                        if (orientation.equalsIgnoreCase( "isometric" )) {
+                            offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
+                            offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
+                        }
 
-                            int position = (abs(a) * Tw) + abs(b);
-                            ini = layers.get(jo).getStr().get(position);
-                            int initset = layers.get(jo).getTset().get(position);
-                            if (initset == -1) continue;
-                            if (ini == 0) continue;//dont draw empty, amazing performance boost
-                            int xpos = position % Tw;
-                            int ypos = position / Tw;
-                            if (orientation.equalsIgnoreCase("isometric")) {
-                                offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
-                                offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
-                            }
+                        mm = ini;
+                        flag = "00";
+                        if (ini > total) {
+                            hex = Long.toHexString( ini );
+                            trailer = "00000000" + hex;
+                            hex = trailer.substring( trailer.length() - 8 );
+                            flag = hex.substring( 0, 2 );
+                            mm = Long.decode( "#00" + hex.substring( 2, 8 ) );
+                        }
+                        tiles = tilesets.get( initset ).getTiles();
+                        tilesize = tiles.size();
 
-                            mm = ini;
-                            flag = "00";
-                            if (ini > total) {
-                                hex = Long.toHexString(ini);
-                                trailer = "00000000" + hex;
-                                hex = trailer.substring(trailer.length() - 8);
-                                flag = hex.substring(0, 2);
-                                mm = Long.decode("#00" + hex.substring(2, 8));
-                            }
-                            tiles = tilesets.get(initset).getTiles();
-                            tilesize = tiles.size();
-
-                            if (tilesize > 0) {
-                                for (int n = 0; n < tilesize; n++) {
-                                    if (tiles.get(n).getAnimation().size() > 0) {
-                                        if (mm == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
-                                            mm = (long) tiles.get(n).getActiveFrameID() + tilesets.get(initset).getFirstgid();
-                                        }
+                        if (tilesize > 0) {
+                            for (int n = 0; n < tilesize; n++) {
+                                if (tiles.get( n ).getAnimation().size() > 0) {
+                                    if (mm == tiles.get( n ).getTileID() + tilesets.get( initset ).getFirstgid()) {
+                                        mm = (long) tiles.get( n ).getActiveFrameID() + tilesets.get( initset ).getFirstgid();
                                     }
                                 }
                             }
+                        }
 
-                            sprX = (int) (mm - tilesets.get(initset).getFirstgid()) % (tilesets.get(initset).getWidth());
-                            sprY = (int) (mm - tilesets.get(initset).getFirstgid()) / (tilesets.get(initset).getWidth());
-                            margin = tilesets.get(initset).getMargin();
-                            spacing = tilesets.get(initset).getSpacing();
-                            Tswa = tilesets.get(initset).getTilewidth();
-                            Tsha = tilesets.get(initset).getTileheight();
-                            int Tswad = 0;
-                            int Tshad = 0;
-                            if (sResizeTiles) {
-                                Tswad = Tsw;
-                                Tshad = Tsh;
-                            } else {
-                                Tswad = Tswa;
-                                Tshad = Tsha;
-                            }
-                            drawer tempdrawer = new drawer();
-                            switch (flag) {
-                                case "20"://diagonal flip 'THIS ONE"
-                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
-                                    break;
-                                case "40"://flipy nd
-                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
-                                    break;
-                                case "60"://270 degrees clockwise nd
-                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
-                                    break;
-                                case "80"://flipx nd
-                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
-                                    break;
-                                case "a0"://90 degress cw
-                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
-                                    break;
-                                case "c0"://180 degrees cw nd
-                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
-                                    break;
-                                case "e0"://180 degrees ccw "AND THIS ONE"
-                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
-                                    break;
-                                case "00":
-                                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
-                                    break;
+                        sprX = (int) (mm - tilesets.get( initset ).getFirstgid()) % (tilesets.get( initset ).getWidth());
+                        sprY = (int) (mm - tilesets.get( initset ).getFirstgid()) / (tilesets.get( initset ).getWidth());
+                        margin = tilesets.get( initset ).getMargin();
+                        spacing = tilesets.get( initset ).getSpacing();
+                        Tswa = tilesets.get( initset ).getTilewidth();
+                        Tsha = tilesets.get( initset ).getTileheight();
+                        int Tswad = 0;
+                        int Tshad = 0;
+                        if (sResizeTiles) {
+                            Tswad = Tsw;
+                            Tshad = Tsh;
+                        } else {
+                            Tswad = Tswa;
+                            Tshad = Tsha;
+                        }
+                        drawer tempdrawer = new drawer();
+                        switch (flag) {
+                            case "20"://diagonal flip 'THIS ONE"
+                                tempdrawer.setdrawer( initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false );
+                                break;
+                            case "40"://flipy nd
+                                tempdrawer.setdrawer( initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true );
+                                break;
+                            case "60"://270 degrees clockwise nd
+                                tempdrawer.setdrawer( initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false );
+                                break;
+                            case "80"://flipx nd
+                                tempdrawer.setdrawer( initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false );
+                                break;
+                            case "a0"://90 degress cw
+                                tempdrawer.setdrawer( initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false );
+                                break;
+                            case "c0"://180 degrees cw nd
+                                tempdrawer.setdrawer( initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false );
+                                break;
+                            case "e0"://180 degrees ccw "AND THIS ONE"
+                                tempdrawer.setdrawer( initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false );
+                                break;
+                            case "00":
+                                tempdrawer.setdrawer( initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false );
+                                break;
 
-                            }
-
-
-
-
-                            drawers.add(tempdrawer);
+                        }
 
 
-                        } //for  b
-                    }//for a
+                        drawers.add( tempdrawer );
 
-                    //java.util.Collections.sort(drawers);//fps hogger
-                    int counting = 0;
-                    for (drawer drawer : drawers) {
 
-                        counting += 1;
-                        drawer.add(cache, tilesets);
+                    } //for  b
+                }//for a
+
+                //java.util.Collections.sort(drawers);//fps hogger
+                int counting = 0;
+                for (drawer drawer : drawers) {
+
+                    counting += 1;
+                    drawer.add( cache, tilesets );
 
                         /* cache should be prevented to reach 8000.
                         if (counting == 8000) {
@@ -3375,72 +3432,71 @@ String texta="";
                             counting = 0;
                         }
                          */
-                    }
+                }
 
-                    if (layers.get(jo).getOpacity() != 0 && sEnableBlending) {
-                        Gdx.gl.glDisable(GL20.GL_BLEND);
-                    }
+                if (layers.get( jo ).getOpacity() != 0 && sEnableBlending) {
+                    Gdx.gl.glDisable( GL20.GL_BLEND );
+                }
 
-                }//for jo
-            }
-            int id = cache.endCache();
-            return id;
+            }//for jo
+        }
+        int id = cache.endCache();
+        return id;
     }
 
     private void drawObjects() {
-        sr.setProjectionMatrix(cam.combined);
+        sr.setProjectionMatrix( cam.combined );
 
         //Part one of 2, filled.
-        sr.begin(ShapeRenderer.ShapeType.Filled); //Edit it with filled to make it looks gorgeous.
-        Gdx.gl.glEnable(GL20.GL_BLEND);
+        sr.begin( ShapeRenderer.ShapeType.Filled ); //Edit it with filled to make it looks gorgeous.
+        Gdx.gl.glEnable( GL20.GL_BLEND );
 
-        Gdx.gl20.glLineWidth(5);//average
-        sr.setColor(0.5f, 0.5f, 0.5f, 0.5f); //blink
+        Gdx.gl20.glLineWidth( 5 );//average
+        sr.setColor( 0.5f, 0.5f, 0.5f, 0.5f ); //blink
 
         if (layers.size() > 0) {
             for (int i = 0; i < layers.size(); i++) {
 
-                if (i==selLayer){
-                    sr.setColor(0.5f, 0.7f, 0.5f, 0.5f); //blink
+                if (i == selLayer) {
+                    sr.setColor( 0.5f, 0.7f, 0.5f, 0.5f ); //blink
 
-                }else{
-                    sr.setColor(0.5f, 0.5f, 0.5f, 0.5f); //blink
+                } else {
+                    sr.setColor( 0.5f, 0.5f, 0.5f, 0.5f ); //blink
 
                 }
 
                 boolean isShown = false;
-                switch (viewMode)
-                {
+                switch (viewMode) {
                     case ALL:
-                        isShown=true;
+                        isShown = true;
                         break;
                     case STACK:
-                        if (i<=selLayer) isShown=true;
+                        if (i <= selLayer) isShown = true;
                         break;
                     case SINGLE:
-                        if (i==selLayer) isShown=true;
+                        if (i == selLayer) isShown = true;
                         break;
                     case CUSTOM:
-                        if (layers.get(i).isVisible()) isShown=true;
+                        if (layers.get( i ).isVisible()) isShown = true;
                         break;
                 }
 
-                if (layers.get(i).getType() == layer.Type.OBJECT && isShown && layers.get(i).getObjects().size() > 0) {
+                if (layers.get( i ).getType() == layer.Type.OBJECT && isShown && layers.get( i ).getObjects().size() > 0) {
 
-                    for (int j = 0; j < layers.get(i).getObjects().size(); j++) {
+                    for (int j = 0; j < layers.get( i ).getObjects().size(); j++) {
 
-                        obj ox = layers.get(i).getObjects().get(j);
+                        obj ox = layers.get( i ).getObjects().get( j );
 
                         if (ox.getShape() != null) {
                             switch (ox.getShape()) {
                                 case "ellipse":
-                                    sr.ellipse(ox.getX(), -ox.getY() + Tsh - ox.getH(), ox.getW(), ox.getH());
+                                    sr.ellipse( ox.getX(), -ox.getY() + Tsh - ox.getH(), ox.getW(), ox.getH() );
 
                                     break;
                                 case "point":
-                                    sr.ellipse(ox.getXa() + Tsh / 4, -ox.getYa() + Tsh - Tsh * 3 / 4, Tsw / 2, Tsh / 2);
+                                    sr.ellipse( ox.getXa() + Tsh / 4, -ox.getYa() + Tsh - Tsh * 3 / 4, Tsw / 2, Tsh / 2 );
 
-                                    sr.rect(ox.getXa() + Tsh / 4, -ox.getYa() + Tsh - Tsh * 3 / 4, Tsw / 2, Tsh / 2);
+                                    sr.rect( ox.getXa() + Tsh / 4, -ox.getYa() + Tsh - Tsh * 3 / 4, Tsw / 2, Tsh / 2 );
 
                                     break;
                                 case "polygon":
@@ -3448,13 +3504,13 @@ String texta="";
                                     //sr.ellipse(ox.getXa() + Tsh * 3 / 8, -ox.getYa() + Tsh - Tsh * 5 / 8, Tsw / 4, Tsh / 4);
 
 
-                                    float[] f = ox.getVertices(Tsh);
+                                    float[] f = ox.getVertices( Tsh );
                                     if (ox.getPointsSize() >= 3) {
                                         Polygon polygon = new Polygon();
-                                        polygon.setVertices(f);
-                                        polygon.setOrigin(ox.getX(), -ox.getY() + Tsh);
-                                        polygon.rotate(360 - ox.getRotation());
-                                        sr.polygon(polygon.getTransformedVertices());
+                                        polygon.setVertices( f );
+                                        polygon.setOrigin( ox.getX(), -ox.getY() + Tsh );
+                                        polygon.rotate( 360 - ox.getRotation() );
+                                        sr.polygon( polygon.getTransformedVertices() );
                                     }
 
                                     break;
@@ -3474,31 +3530,29 @@ String texta="";
 
                                     break;
                                 case "text":
-                                    sr.rect(ox.getX(), ox.getYantingelag(Tsh) - ox.getH(), 0, 0, ox.getW(), ox.getH(), 1, 1, ox.getRotation());
+                                    sr.rect( ox.getX(), ox.getYantingelag( Tsh ) - ox.getH(), 0, 0, ox.getW(), ox.getH(), 1, 1, ox.getRotation() );
                                     //str1.draw(batch, ox.getText(), ox.getX(), -ox.getYantingelag(Tsh));
 
                                     break;
                                 case "image":
-                                    sr.rect(ox.getX(), ox.getYantingelag(Tsh), 0, 0, ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation());
+                                    sr.rect( ox.getX(), ox.getYantingelag( Tsh ), 0, 0, ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation() );
                                     break;
                                 default:
-                                    if (orientation.equalsIgnoreCase("orthogonal")) {
-                                        sr.rect(ox.getX(), ox.getYantingelag(Tsh)-ox.getH(), 0, ox.getH(), ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation());
-                                    }
-                                    else if (orientation.equalsIgnoreCase("isometric"))
-                                    {
+                                    if (orientation.equalsIgnoreCase( "orthogonal" )) {
+                                        sr.rect( ox.getX(), ox.getYantingelag( Tsh ) - ox.getH(), 0, ox.getH(), ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation() );
+                                    } else if (orientation.equalsIgnoreCase( "isometric" )) {
                                         //anchor
-                                        float offx= (ox.getX()/Tsh*Tsw/2) - (ox.getY()/Tsh*Tsw/2);//-ox.getY();
-                                        float offy= (-ox.getX()/Tsh*Tsh/2) - (ox.getY()/Tsh*Tsh/2); //-ox.getY()*Tsh/2;
+                                        float offx = (ox.getX() / Tsh * Tsw / 2) - (ox.getY() / Tsh * Tsw / 2);//-ox.getY();
+                                        float offy = (-ox.getX() / Tsh * Tsh / 2) - (ox.getY() / Tsh * Tsh / 2); //-ox.getY()*Tsh/2;
 
-                                        float op1 = Tsw/2; //'0'
+                                        float op1 = Tsw / 2; //'0'
                                         float op2 = Tsh; //0
-                                        float op3 = ox.getW()/Tsh*Tsw/2;
-                                        float op4 = ox.getW()/Tsh*Tsh/2;
-                                        float op5 = (ox.getW()/Tsh*Tsw/2) - (ox.getH()/Tsh*Tsw/2);
-                                        float op6 = (-ox.getH()/Tsh*Tsh/2) - (ox.getW()/Tsh*Tsh/2);
-                                        float op7 = -ox.getH()/Tsh*Tsw/2;
-                                        float op8 = -ox.getH()/Tsh*Tsh/2;
+                                        float op3 = ox.getW() / Tsh * Tsw / 2;
+                                        float op4 = ox.getW() / Tsh * Tsh / 2;
+                                        float op5 = (ox.getW() / Tsh * Tsw / 2) - (ox.getH() / Tsh * Tsw / 2);
+                                        float op6 = (-ox.getH() / Tsh * Tsh / 2) - (ox.getW() / Tsh * Tsh / 2);
+                                        float op7 = -ox.getH() / Tsh * Tsw / 2;
+                                        float op8 = -ox.getH() / Tsh * Tsh / 2;
 
                                         float p1 = offx + op1;
                                         float p2 = offy + op2;
@@ -3509,7 +3563,7 @@ String texta="";
                                         float p7 = offx + op1 + op7;
                                         float p8 = offy + op2 + op8;
 
-                                        sr.polygon(new float[]{p1, p2,p3,p4,p5,p6,p7,p8});
+                                        sr.polygon( new float[]{p1, p2, p3, p4, p5, p6, p7, p8} );
 
 
                                     }
@@ -3521,7 +3575,7 @@ String texta="";
 
 
                         } else {
-                            sr.rect(ox.getX(), ox.getYantingelag(Tsh) - ox.getH(), ox.getW(), ox.getH());
+                            sr.rect( ox.getX(), ox.getYantingelag( Tsh ) - ox.getH(), ox.getW(), ox.getH() );
 
                         }
 
@@ -3534,120 +3588,117 @@ String texta="";
         sr.end();
 
         //part 2 of 2, outline.
-        sr.begin(ShapeRenderer.ShapeType.Line); //Edit it with filled to make it looks gorgeous.
-        Gdx.gl.glEnable(GL20.GL_BLEND);
+        sr.begin( ShapeRenderer.ShapeType.Line ); //Edit it with filled to make it looks gorgeous.
+        Gdx.gl.glEnable( GL20.GL_BLEND );
 
-        Gdx.gl20.glLineWidth(5);//average
+        Gdx.gl20.glLineWidth( 5 );//average
         //sr.setColor(0.8f, 0.8f, 0.8f, 0.5f); //blink
 
         if (layers.size() > 0) {
             for (int i = 0; i < layers.size(); i++) {
 
-                if (i==selLayer){
-                    sr.setColor(0.5f, 1f, 0.5f, 1f); //blink
+                if (i == selLayer) {
+                    sr.setColor( 0.5f, 1f, 0.5f, 1f ); //blink
 
-                }else{
-                    sr.setColor(0.8f, 0.8f, 0.8f, 0.5f); //blink
+                } else {
+                    sr.setColor( 0.8f, 0.8f, 0.8f, 0.5f ); //blink
 
                 }
 
                 boolean isShown = false;
-                switch (viewMode)
-                {
+                switch (viewMode) {
                     case ALL:
-                        isShown=true;
+                        isShown = true;
                         break;
                     case STACK:
-                        if (i<=selLayer) isShown=true;
+                        if (i <= selLayer) isShown = true;
                         break;
                     case SINGLE:
-                        if (i==selLayer) isShown=true;
+                        if (i == selLayer) isShown = true;
                         break;
                     case CUSTOM:
-                        if (layers.get(i).isVisible()) isShown=true;
+                        if (layers.get( i ).isVisible()) isShown = true;
                         break;
                 }
 
-                if (layers.get(i).getType() == layer.Type.OBJECT && isShown && layers.get(i).getObjects().size() > 0) {
+                if (layers.get( i ).getType() == layer.Type.OBJECT && isShown && layers.get( i ).getObjects().size() > 0) {
 
-                    for (int j = 0; j < layers.get(i).getObjects().size(); j++) {
+                    for (int j = 0; j < layers.get( i ).getObjects().size(); j++) {
 
-                        obj ox = layers.get(i).getObjects().get(j);
+                        obj ox = layers.get( i ).getObjects().get( j );
 
                         if (ox.getShape() != null) {
                             switch (ox.getShape()) {
                                 case "ellipse":
-                                    sr.ellipse(ox.getX(), -ox.getY() + Tsh - ox.getH(), ox.getW(), ox.getH());
+                                    sr.ellipse( ox.getX(), -ox.getY() + Tsh - ox.getH(), ox.getW(), ox.getH() );
 
                                     break;
                                 case "point":
-                                    sr.ellipse(ox.getXa() + Tsh / 4, -ox.getYa() + Tsh - Tsh * 3 / 4, Tsw / 2, Tsh / 2);
+                                    sr.ellipse( ox.getXa() + Tsh / 4, -ox.getYa() + Tsh - Tsh * 3 / 4, Tsw / 2, Tsh / 2 );
 
-                                    sr.rect(ox.getXa() + Tsh / 4, -ox.getYa() + Tsh - Tsh * 3 / 4, Tsw / 2, Tsh / 2);
+                                    sr.rect( ox.getXa() + Tsh / 4, -ox.getYa() + Tsh - Tsh * 3 / 4, Tsw / 2, Tsh / 2 );
 
                                     break;
                                 case "polygon":
-                                    sr.ellipse(ox.getXa() + Tsh / 4, -ox.getYa() + Tsh - Tsh * 3 / 4, Tsw / 2, Tsh / 2);
-                                    sr.ellipse(ox.getXa() + Tsh * 3 / 8, -ox.getYa() + Tsh - Tsh * 5 / 8, Tsw / 4, Tsh / 4);
+                                    sr.ellipse( ox.getXa() + Tsh / 4, -ox.getYa() + Tsh - Tsh * 3 / 4, Tsw / 2, Tsh / 2 );
+                                    sr.ellipse( ox.getXa() + Tsh * 3 / 8, -ox.getYa() + Tsh - Tsh * 5 / 8, Tsw / 4, Tsh / 4 );
 
 
-                                    float[] f = ox.getVertices(Tsh);
+                                    float[] f = ox.getVertices( Tsh );
                                     if (ox.getPointsSize() == 2) {
 
-                                        f = ox.getVertices(Tsh);
-                                        Polyline polyline = new Polyline(f);
-                                        polyline.setOrigin(ox.getX(), -ox.getY() + Tsh);
-                                        polyline.rotate(360 - ox.getRotation());
-                                        sr.polyline(polyline.getTransformedVertices());
+                                        f = ox.getVertices( Tsh );
+                                        Polyline polyline = new Polyline( f );
+                                        polyline.setOrigin( ox.getX(), -ox.getY() + Tsh );
+                                        polyline.rotate( 360 - ox.getRotation() );
+                                        sr.polyline( polyline.getTransformedVertices() );
 
                                     } else if (ox.getPointsSize() >= 3) {
                                         Polygon polygon = new Polygon();
-                                        polygon.setVertices(f);
-                                        polygon.setOrigin(ox.getX(), -ox.getY() + Tsh);
-                                        polygon.rotate(360 - ox.getRotation());
-                                        sr.polygon(polygon.getTransformedVertices());
+                                        polygon.setVertices( f );
+                                        polygon.setOrigin( ox.getX(), -ox.getY() + Tsh );
+                                        polygon.rotate( 360 - ox.getRotation() );
+                                        sr.polygon( polygon.getTransformedVertices() );
                                     }
 
                                     break;
                                 case "polyline":
-                                    sr.ellipse(ox.getXa() + Tsh / 4f, -ox.getYa() + Tsh - Tsh * 3f / 4f, Tsw / 2f, Tsh / 2f);
-                                    sr.ellipse(ox.getXa() + Tsh * 3f / 8f, -ox.getYa() + Tsh - Tsh * 5f / 8f, Tsw / 4f, Tsh / 4f);
+                                    sr.ellipse( ox.getXa() + Tsh / 4f, -ox.getYa() + Tsh - Tsh * 3f / 4f, Tsw / 2f, Tsh / 2f );
+                                    sr.ellipse( ox.getXa() + Tsh * 3f / 8f, -ox.getYa() + Tsh - Tsh * 5f / 8f, Tsw / 4f, Tsh / 4f );
 
                                     if (ox.getPointsSize() >= 2) {
-                                        f = ox.getVertices(Tsh);
-                                        Polyline polyline = new Polyline(f);
-                                        polyline.setOrigin(ox.getX(), -ox.getY() + Tsh);
-                                        polyline.rotate(360 - ox.getRotation());
-                                        sr.polyline(polyline.getTransformedVertices());
+                                        f = ox.getVertices( Tsh );
+                                        Polyline polyline = new Polyline( f );
+                                        polyline.setOrigin( ox.getX(), -ox.getY() + Tsh );
+                                        polyline.rotate( 360 - ox.getRotation() );
+                                        sr.polyline( polyline.getTransformedVertices() );
                                     }
                                     break;
                                 case "text":
-                                    sr.rect(ox.getX(), ox.getYantingelag(Tsh) - ox.getH(), 0, 0, ox.getW(), ox.getH(), 1, 1, ox.getRotation());
+                                    sr.rect( ox.getX(), ox.getYantingelag( Tsh ) - ox.getH(), 0, 0, ox.getW(), ox.getH(), 1, 1, ox.getRotation() );
                                     //str1.draw(batch, ox.getText(), ox.getX(), -ox.getYantingelag(Tsh));
 
                                     break;
                                 case "image":
-                                    sr.rect(ox.getX(), ox.getYantingelag(Tsh), 0, 0, ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation());
+                                    sr.rect( ox.getX(), ox.getYantingelag( Tsh ), 0, 0, ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation() );
                                     break;
                                 default:
-                                    if (orientation.equalsIgnoreCase("orthogonal")) {
-                                        sr.rect(ox.getX(), ox.getYantingelag(Tsh)-ox.getH(), 0, ox.getH(), ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation());
-                                    }
-                                    else if (orientation.equalsIgnoreCase("isometric"))
-                                    {
+                                    if (orientation.equalsIgnoreCase( "orthogonal" )) {
+                                        sr.rect( ox.getX(), ox.getYantingelag( Tsh ) - ox.getH(), 0, ox.getH(), ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation() );
+                                    } else if (orientation.equalsIgnoreCase( "isometric" )) {
 
                                         //anchor
-                                        float offx= (ox.getX()/Tsh*Tsw/2) - (ox.getY()/Tsh*Tsw/2);//-ox.getY();
-                                        float offy= (-ox.getX()/Tsh*Tsh/2) - (ox.getY()/Tsh*Tsh/2); //-ox.getY()*Tsh/2;
+                                        float offx = (ox.getX() / Tsh * Tsw / 2) - (ox.getY() / Tsh * Tsw / 2);//-ox.getY();
+                                        float offy = (-ox.getX() / Tsh * Tsh / 2) - (ox.getY() / Tsh * Tsh / 2); //-ox.getY()*Tsh/2;
 
-                                        float op1 = Tsw/2; //'0'
+                                        float op1 = Tsw / 2; //'0'
                                         float op2 = Tsh; //0
-                                        float op3 = ox.getW()/Tsh*Tsw/2;
-                                        float op4 = ox.getW()/Tsh*Tsh/2;
-                                        float op5 = (ox.getW()/Tsh*Tsw/2) - (ox.getH()/Tsh*Tsw/2);
-                                        float op6 = (-ox.getH()/Tsh*Tsh/2) - (ox.getW()/Tsh*Tsh/2);
-                                        float op7 = -ox.getH()/Tsh*Tsw/2;
-                                        float op8 = -ox.getH()/Tsh*Tsh/2;
+                                        float op3 = ox.getW() / Tsh * Tsw / 2;
+                                        float op4 = ox.getW() / Tsh * Tsh / 2;
+                                        float op5 = (ox.getW() / Tsh * Tsw / 2) - (ox.getH() / Tsh * Tsw / 2);
+                                        float op6 = (-ox.getH() / Tsh * Tsh / 2) - (ox.getW() / Tsh * Tsh / 2);
+                                        float op7 = -ox.getH() / Tsh * Tsw / 2;
+                                        float op8 = -ox.getH() / Tsh * Tsh / 2;
 
                                         float p1 = offx + op1;
                                         float p2 = offy + op2;
@@ -3658,7 +3709,7 @@ String texta="";
                                         float p7 = offx + op1 + op7;
                                         float p8 = offy + op2 + op8;
 
-                                        sr.polygon(new float[]{p1, p2,p3,p4,p5,p6,p7,p8});
+                                        sr.polygon( new float[]{p1, p2, p3, p4, p5, p6, p7, p8} );
 
 
                                     }
@@ -3670,7 +3721,7 @@ String texta="";
 
 
                         } else {
-                            sr.rect(ox.getX(), ox.getYantingelag(Tsh) - ox.getH(), ox.getW(), ox.getH());
+                            sr.rect( ox.getX(), ox.getYantingelag( Tsh ) - ox.getH(), ox.getW(), ox.getH() );
 
                         }
 
@@ -3686,53 +3737,52 @@ String texta="";
 
     public void drawObjectsInfo() {
 
-        batch.setProjectionMatrix(cam.combined);
+        batch.setProjectionMatrix( cam.combined );
         batch.begin();
-        str1.getData().setScale(Tsw / 200f);
+        str1.getData().setScale( Tsw / 200f );
         if (layers.size() > 0) {
             for (int i = 0; i < layers.size(); i++) {
-                if (layers.get(i).getType() == layer.Type.OBJECT && layers.get(i).isVisible() && layers.get(i).getObjects().size() > 0) {
+                if (layers.get( i ).getType() == layer.Type.OBJECT && layers.get( i ).isVisible() && layers.get( i ).getObjects().size() > 0) {
 
-                    for (int j = 0; j < layers.get(i).getObjects().size(); j++) {
+                    for (int j = 0; j < layers.get( i ).getObjects().size(); j++) {
 
-                        obj ox = layers.get(i).getObjects().get(j);
+                        obj ox = layers.get( i ).getObjects().get( j );
 
                         if (ox.getGid() != 0) {
                             int kyut = 0;
                             for (int c = 0; c < tilesets.size(); c++) {
-                                if (ox.getGid() >= tilesets.get(c).getFirstgid() && ox.getGid() < tilesets.get(c).getFirstgid() + tilesets.get(c).getTilecount()) {
+                                if (ox.getGid() >= tilesets.get( c ).getFirstgid() && ox.getGid() < tilesets.get( c ).getFirstgid() + tilesets.get( c ).getTilecount()) {
                                     kyut = c;
                                     break;
                                 }
                             }
 
                             if (ox.getGid() != 0) {
-                                int sprX = (ox.getGid() - tilesets.get(kyut).getFirstgid()) % (tilesets.get(kyut).getWidth());
-                                int sprY = (ox.getGid() - tilesets.get(kyut).getFirstgid()) / (tilesets.get(kyut).getWidth());
-                                int margin = tilesets.get(kyut).getMargin();
-                                int spacing = tilesets.get(kyut).getSpacing();
-                                int Tswa = tilesets.get(kyut).getTilewidth();
-                                int Tsha = tilesets.get(kyut).getTileheight();
+                                int sprX = (ox.getGid() - tilesets.get( kyut ).getFirstgid()) % (tilesets.get( kyut ).getWidth());
+                                int sprY = (ox.getGid() - tilesets.get( kyut ).getFirstgid()) / (tilesets.get( kyut ).getWidth());
+                                int margin = tilesets.get( kyut ).getMargin();
+                                int spacing = tilesets.get( kyut ).getSpacing();
+                                int Tswa = tilesets.get( kyut ).getTilewidth();
+                                int Tsha = tilesets.get( kyut ).getTileheight();
 
-                                TextureRegion region = new TextureRegion(tilesets.get(kyut).getTexture(), (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha);
-                                Sprite s = new Sprite(region);
-                               // s.setX( ox.getX() );
-                               // s.setY( ox.getYantingelag( Tsh ) - ox.getH());
-                                s.setBounds( ox.getX(),ox.getYantingelag( Tsh ),ox.getW(),ox.getH() );
+                                TextureRegion region = new TextureRegion( tilesets.get( kyut ).getTexture(), (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha );
+                                Sprite s = new Sprite( region );
+                                // s.setX( ox.getX() );
+                                // s.setY( ox.getYantingelag( Tsh ) - ox.getH());
+                                s.setBounds( ox.getX(), ox.getYantingelag( Tsh ), ox.getW(), ox.getH() );
 
-                                s.setOrigin( 0,0 );
-                                s.setRotation( 360-ox.getRotation() );
+                                s.setOrigin( 0, 0 );
+                                s.setRotation( 360 - ox.getRotation() );
 
                                 //for RW ONLY
-                                if (layers.get(i).getName().equalsIgnoreCase( "UnitObjects" )){
-                                    if (s.getRotation()==360+90)
-                                    {
+                                if (layers.get( i ).getName().equalsIgnoreCase( "UnitObjects" )) {
+                                    if (s.getRotation() == 360 + 90) {
                                         s.rotate90( true );
                                     }
                                 }
 
 
-                              //  s.rotate90( false );
+                                //  s.rotate90( false );
                                 s.draw( batch );
                                 //batch.draw(region, ox.getX(), ox.getYantingelag(Tsh) - ox.getH(), 0,ox.getH(),ox.getW(), ox.getH(),1,1, 360-ox.getRotation(),true);
                             }
@@ -3740,32 +3790,33 @@ String texta="";
                         }
                         String kucing = "";
                         if (ox.getName() != null) kucing = ox.getName();
-                        str1.getData().setScale(0.2f + Tsw / 160f);
-                        float offx=0,offy=0;
+                        str1.getData().setScale( 0.2f + Tsw / 160f );
+                        float offx = 0, offy = 0;
+                        int multiplier = 1;
 
                         if (orientation.equalsIgnoreCase( "isometric" )) {
+                            multiplier = 2;
                             offx = (ox.getX() + (ox.getY()));//-ox.getY();
                             offy = (ox.getX() / 2f) + (-ox.getY() / 2f); //-ox.getY()*Tsh/2;
-
                         }
                         //draw object label
-                        str1.getData().setScale(0.1f + Tsw / 160f);
-                        str1.draw(batch, kucing, ox.getX()*2-offx, ox.getYantingelag(Tsh)+2-offy);
+                        str1.getData().setScale( 0.1f + Tsw / 160f );
+                        str1.draw( batch, kucing, ox.getX() * multiplier - offx, ox.getYantingelag( Tsh ) + 2 - offy );
 
                         if (ox.getShape() != null) {
                             switch (ox.getShape()) {
                                 case "text":
 
 
-                                    str1.getData().setScale(0.2f + Tsw / 160f);
+                                    str1.getData().setScale( 0.2f + Tsw / 160f );
                                     if (ox.getText() != null) {
                                         if (ox.isWrap()) {
-                                            str1.draw(batch, ox.getText(), ox.getX()*2-offx, ox.getYantingelag(Tsh)-offy, ox.getW(), com.badlogic.gdx.utils.Align.left, false);
+                                            str1.draw( batch, ox.getText(), ox.getX() * multiplier - offx, ox.getYantingelag( Tsh ) - offy, ox.getW(), com.badlogic.gdx.utils.Align.left, false );
                                         } else {
-                                            str1.draw(batch, ox.getText(), ox.getX()*2-offx, ox.getYantingelag(Tsh)-offy);
+                                            str1.draw( batch, ox.getText(), ox.getX() * multiplier - offx, ox.getYantingelag( Tsh ) - offy );
                                         }
                                     }
-                                    str1.getData().setScale(0.2f + Tsw / 160f);
+                                    str1.getData().setScale( 0.2f + Tsw / 160f );
 
                                     break;
                             }
@@ -3776,7 +3827,7 @@ String texta="";
                 }
             }
         }
-        str1.getData().setScale(1f);
+        str1.getData().setScale( 1f );
         batch.end();
     }
 
@@ -3803,16 +3854,16 @@ String texta="";
         tz3 = uicam.position.z;
 
         //cam = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        nssx=width;
-        nssy=height;
+        nssx = width;
+        nssy = height;
         if (width > height) {
             stage = hstage;
             //stage.addActor(hstage.getRoot());
-            cam.setToOrtho(false, ssy, ssx);
-            tilecam.setToOrtho(false, ssy, ssx);
-            uicam.setToOrtho(false, ssy, ssx);
-            minicam.setToOrtho(false, ssy, ssx);
-            gamecam.setToOrtho(false, 20,11);
+            cam.setToOrtho( false, ssy, ssx );
+            tilecam.setToOrtho( false, ssy, ssx );
+            uicam.setToOrtho( false, ssy, ssx );
+            minicam.setToOrtho( false, ssy, ssx );
+            gamecam.setToOrtho( false, 20, 11 );
             tx3 = Tsw * Tw * 10f;
             ty3 = 0;
             tz3 = 0;
@@ -3822,28 +3873,28 @@ String texta="";
         } else {
             stage = vstage;
             //stage.addActor(vstage.getRoot());
-            cam.setToOrtho(false, ssx, ssy);
-            tilecam.setToOrtho(false, ssx, ssy);
-            uicam.setToOrtho(false, ssx, ssy);
-            minicam.setToOrtho(false, ssx, ssy);
-            gamecam.setToOrtho(false, 11,20);
+            cam.setToOrtho( false, ssx, ssy );
+            tilecam.setToOrtho( false, ssx, ssy );
+            uicam.setToOrtho( false, ssx, ssy );
+            minicam.setToOrtho( false, ssx, ssy );
+            gamecam.setToOrtho( false, 11, 20 );
             tx3 = 0;
             ty3 = -0;
             tz3 = 0;
             landscape = false;
         }
-        stage.getViewport().setScreenSize(width, height);
+        stage.getViewport().setScreenSize( width, height );
         if (kartu == "stage") {
             //setMenuMap();
-            gotoStage(lastStage);
-            if (lastStage==tMenu || lastStage==tMap){
+            gotoStage( lastStage );
+            if (lastStage == tMenu || lastStage == tMap) {
                 setMenuMap();
-                gotoStage(tMenu);
+                gotoStage( tMenu );
             }
 
             //gotoStage(lastStage);
             //backToMap();
-        }else if (kartu == "game") {
+        } else if (kartu == "game") {
         } else {
             if (dialog != null) {
                 dialog.hide();
@@ -3858,9 +3909,9 @@ String texta="";
         }
 
 
-        cam.position.set(tx, ty, tz);
+        cam.position.set( tx, ty, tz );
         cam.update();
-        tilecam.position.set(tx1, ty1, tz1);
+        tilecam.position.set( tx1, ty1, tz1 );
         tilecam.update();
         gamecam.update();
         recenterUI();
@@ -3899,14 +3950,14 @@ String texta="";
         if (!landscape) {
 
             if (Gdx.input.isTouched() && mousepos.x >= x / 100 * ssx && mousepos.x <= w / 100 * ssx && mousepos.y >= y / 100 * ssy && mousepos.y <= h / 100 * ssy && drag == false) {
-                uis.setColor(0, 0.4f, 1, 0.4f);
+                uis.setColor( 0, 0.4f, 1, 0.4f );
             } else {
                 if (color == null) {
-                    uis.setColor(0, 0, 0, 0.4f);
-                } else if (color.toString().equalsIgnoreCase("00ff00ff")) {
-                    uis.setColor(0f, blink, 0f, .4f);
+                    uis.setColor( 0, 0, 0, 0.4f );
+                } else if (color.toString().equalsIgnoreCase( "00ff00ff" )) {
+                    uis.setColor( 0f, blink, 0f, .4f );
                 } else {
-                    if (!tutoring) uis.setColor(color);
+                    if (!tutoring) uis.setColor( color );
                 }
 
             }
@@ -3914,18 +3965,18 @@ String texta="";
 
             float xredux = .5f; //if (w==100||x==0) xredux=0;
             float yredux = .3f; //if (h==100||y==0) yredux=0;
-            uis.roundedRect((x + xredux) / 100 * ssx, (y + yredux) / 100 * ssy, (w - x - xredux * 2) / 100 * ssx, (h - y - yredux * 2) / 100 * ssy, 20f);
+            uis.roundedRect( (x + xredux) / 100 * ssx, (y + yredux) / 100 * ssy, (w - x - xredux * 2) / 100 * ssx, (h - y - yredux * 2) / 100 * ssy, 20f );
         } else {
 
             if (Gdx.input.isTouched() && mousepos.x >= x / 100 * ssy && mousepos.x <= w / 100 * ssy && mousepos.y >= y / 100 * ssx && mousepos.y <= h / 100 * ssx && drag == false) {
-                uis.setColor(0, 0.4f, 1, 0.4f);
+                uis.setColor( 0, 0.4f, 1, 0.4f );
             } else {
                 if (color == null) {
-                    uis.setColor(0, 0, 0, 0.4f);
-                } else if (color.toString().equalsIgnoreCase("00ff00ff")) {
-                    uis.setColor(0f, blink, 0f, .4f);
+                    uis.setColor( 0, 0, 0, 0.4f );
+                } else if (color.toString().equalsIgnoreCase( "00ff00ff" )) {
+                    uis.setColor( 0f, blink, 0f, .4f );
                 } else {
-                    if (!tutoring) uis.setColor(color);
+                    if (!tutoring) uis.setColor( color );
                 }
 
             }
@@ -3934,7 +3985,7 @@ String texta="";
             float xredux = .2f; //if (w==100||x==0) xredux=0;
             float yredux = .5f; //if (h==100||y==0) yredux=0;
 
-            uis.roundedRect((x + xredux) / 100 * ssy, (y + yredux) / 100 * ssx, (w - x - xredux * 2) / 100 * ssy, (h - y - yredux * 2) / 100 * ssx, 10f);
+            uis.roundedRect( (x + xredux) / 100 * ssy, (y + yredux) / 100 * ssx, (w - x - xredux * 2) / 100 * ssy, (h - y - yredux * 2) / 100 * ssx, 10f );
 
         }
     }
@@ -3953,51 +4004,51 @@ String texta="";
 
         }
         if (!landscape) {
-            str1.draw(ui, strin, x / 100 * ssx, (y + 6) / 100 * ssy, (w - x) / 100 * ssx, Align.center, true);
+            str1.draw( ui, strin, x / 100 * ssx, (y + 6) / 100 * ssy, (w - x) / 100 * ssx, Align.center, true );
         } else {
-            str1.draw(ui, strin, x / 100 * ssy, (y + 6) / 100 * ssx, (w - x) / 100 * ssy, Align.center, true);
+            str1.draw( ui, strin, x / 100 * ssy, (y + 6) / 100 * ssx, (w - x) / 100 * ssy, Align.center, true );
         }
 
     }
 
     public void str1drawbuttonlabel(SpriteBatch ui, String strin, gui gui) {
-        str1.setColor(1, 1, 1, 1);
+        str1.setColor( 1, 1, 1, 1 );
 
         if (landscape) {
-            str1.getData().setScale(.5f);
+            str1.getData().setScale( .5f );
         } else {
-            str1.getData().setScale(.6f);
+            str1.getData().setScale( .6f );
         }
 
         float x = 0, y = 0, w = 0;
         if (landscape) {
             x = gui.getXl();
-            y = gui.getYl() -2.8f;
+            y = gui.getYl() - 2.8f;
             w = gui.getWl();
 
         } else {
             x = gui.getX();
-            y = gui.getY() -2.8f;
+            y = gui.getY() - 2.8f;
             w = gui.getW();
 
         }
         if (!landscape) {
-            str1.draw(ui, strin, x / 100 * ssx, (y + 6) / 100 * ssy, (w - x) / 100 * ssx, Align.center, true);
+            str1.draw( ui, strin, x / 100 * ssx, (y + 6) / 100 * ssy, (w - x) / 100 * ssx, Align.center, true );
         } else {
-            str1.draw(ui, strin, x / 100 * ssy, (y + 6) / 100 * ssx, (w - x) / 100 * ssy, Align.center, true);
+            str1.draw( ui, strin, x / 100 * ssy, (y + 6) / 100 * ssx, (w - x) / 100 * ssy, Align.center, true );
         }
 
     }
 
     public void str1draw(SpriteBatch ui, String strin, gui gui) {
-        str1.setColor(1, 1, 1, 1);
+        str1.setColor( 1, 1, 1, 1 );
         if (landscape) {
-            str1.getData().setScale(.7f);
+            str1.getData().setScale( .7f );
         } else {
-            str1.getData().setScale(1f);
+            str1.getData().setScale( 1f );
         }
 
-        float x = 0, y = 0, w = 0,h=0;
+        float x = 0, y = 0, w = 0, h = 0;
         if (landscape) {
             x = gui.getXl();
             y = gui.getYl();
@@ -4014,19 +4065,19 @@ String texta="";
 
         }
         if (!landscape) {
-            str1.draw(ui, strin, x / 100 * ssx, (h-((h-y)/2.8f )) / 100 * ssy, (w - x) / 100 * ssx, Align.center, true);
+            str1.draw( ui, strin, x / 100 * ssx, (h - ((h - y) / 2.8f)) / 100 * ssy, (w - x) / 100 * ssx, Align.center, true );
         } else {
-            str1.draw(ui, strin, x / 100 * ssy, (h-((h-y)/2.8f )) / 100 * ssx, (w - x) / 100 * ssy, Align.center, true);
+            str1.draw( ui, strin, x / 100 * ssy, (h - ((h - y) / 2.8f)) / 100 * ssx, (w - x) / 100 * ssy, Align.center, true );
         }
 
     }
 
     public void str1draw(SpriteBatch ui, String strin, gui gui, int offset) {
-        str1.setColor(1, 1, 1, 1);
+        str1.setColor( 1, 1, 1, 1 );
         if (landscape) {
-            str1.getData().setScale(.7f);
+            str1.getData().setScale( .7f );
         } else {
-            str1.getData().setScale(1f);
+            str1.getData().setScale( 1f );
         }
 
         float x = 0, y = 0, w = 0;
@@ -4042,9 +4093,9 @@ String texta="";
 
         }
         if (!landscape) {
-            str1.draw(ui, strin, x / 100 * ssx, (y + offset) / 100 * ssy, (w - x) / 100 * ssx, Align.center, true);
+            str1.draw( ui, strin, x / 100 * ssx, (y + offset) / 100 * ssy, (w - x) / 100 * ssx, Align.center, true );
         } else {
-            str1.draw(ui, strin, x / 100 * ssy, (y + offset) / 100 * ssx, (w - x) / 100 * ssy, Align.center, true);
+            str1.draw( ui, strin, x / 100 * ssy, (y + offset) / 100 * ssx, (w - x) / 100 * ssy, Align.center, true );
         }
 
     }
@@ -4053,19 +4104,19 @@ String texta="";
         float x = 0, y = 0, w = 0, h = 0;
         if (landscape) {
             x = gui.getXl() + margin + 1;
-            y = gui.getYl() + margin ;
+            y = gui.getYl() + margin;
             w = gui.getWl() - margin - 1;
-            h = gui.getHl() - margin ;
+            h = gui.getHl() - margin;
         } else {
             x = gui.getX() + margin + 1;
-            y = gui.getY() + margin ;
+            y = gui.getY() + margin;
             w = gui.getW() - margin - 1;
-            h = gui.getH() - margin ;
+            h = gui.getH() - margin;
         }
         if (!landscape) {
-            ui.draw(tx, x / 100 * ssx, y / 100 * ssy, (w - x) / 100 * ssx, (h - y) / 100 * ssy);
+            ui.draw( tx, x / 100 * ssx, y / 100 * ssy, (w - x) / 100 * ssx, (h - y) / 100 * ssy );
         } else {
-            ui.draw(tx, x / 100 * ssy, y / 100 * ssx, (w - x) / 100 * ssy, (h - y) / 100 * ssx);
+            ui.draw( tx, x / 100 * ssy, y / 100 * ssx, (w - x) / 100 * ssy, (h - y) / 100 * ssx );
         }
 
     }
@@ -4075,64 +4126,64 @@ String texta="";
         float x = 0, y = 0, w = 0, h = 0;
         if (landscape) {
             x = gui.getXl();// + margin + 1;
-            y = gui.getYl() + margin +1;
+            y = gui.getYl() + margin + 1;
             w = gui.getWl();// - margin - 1;
-            h = gui.getHl() - margin +1;
+            h = gui.getHl() - margin + 1;
         } else {
             x = gui.getX();// + margin + 1;
-            y = gui.getY() + margin +1;
+            y = gui.getY() + margin + 1;
             w = gui.getW();// - margin - 1;
-            h = gui.getH() - margin +1;
+            h = gui.getH() - margin + 1;
         }
         if (!landscape) {
-            ui.setColor(Color.BLACK);
-            ui.draw(tx, 1+(x / 100 * ssx)+((w - x) / 100 * ssx/2)-((h - y) / 100 * ssy/2), -1+y / 100 * ssy, (h - y) / 100 * ssy, (h - y) / 100 * ssy);
-            ui.setColor(Color.WHITE);
-            ui.draw(tx, (x / 100 * ssx)+((w - x) / 100 * ssx/2)-((h - y) / 100 * ssy/2), y / 100 * ssy, (h - y) / 100 * ssy, (h - y) / 100 * ssy);
-           // ui.draw(tx, x / 100 * ssx, y / 100 * ssy, (w - x) / 100 * ssx, (h - y) / 100 * ssy);
+            ui.setColor( Color.BLACK );
+            ui.draw( tx, 1 + (x / 100 * ssx) + ((w - x) / 100 * ssx / 2) - ((h - y) / 100 * ssy / 2), -1 + y / 100 * ssy, (h - y) / 100 * ssy, (h - y) / 100 * ssy );
+            ui.setColor( Color.WHITE );
+            ui.draw( tx, (x / 100 * ssx) + ((w - x) / 100 * ssx / 2) - ((h - y) / 100 * ssy / 2), y / 100 * ssy, (h - y) / 100 * ssy, (h - y) / 100 * ssy );
+            // ui.draw(tx, x / 100 * ssx, y / 100 * ssy, (w - x) / 100 * ssx, (h - y) / 100 * ssy);
         } else {
-            ui.setColor(Color.BLACK);
-            ui.draw(tx, 1+(x / 100 * ssy)+((w - x) / 100 * ssy/2)-((h - y) / 100 * ssx/2), -1+y / 100 * ssx, (h - y) / 100 * ssx, (h - y) / 100 * ssx);
-            ui.setColor(Color.WHITE);
-            ui.draw(tx, (x / 100 * ssy)+((w - x) / 100 * ssy/2)-((h - y) / 100 * ssx/2), y / 100 * ssx, (h - y) / 100 * ssx, (h - y) / 100 * ssx);
+            ui.setColor( Color.BLACK );
+            ui.draw( tx, 1 + (x / 100 * ssy) + ((w - x) / 100 * ssy / 2) - ((h - y) / 100 * ssx / 2), -1 + y / 100 * ssx, (h - y) / 100 * ssx, (h - y) / 100 * ssx );
+            ui.setColor( Color.WHITE );
+            ui.draw( tx, (x / 100 * ssy) + ((w - x) / 100 * ssy / 2) - ((h - y) / 100 * ssx / 2), y / 100 * ssx, (h - y) / 100 * ssx, (h - y) / 100 * ssx );
 
             //            ui.draw(tx, x / 100 * ssy, y / 100 * ssx, (w - x) / 100 * ssy, (h - y) / 100 * ssx);
         }
 
 ///////////LABEL///////////////////////////////////
-        str1.setColor(1f, 1f, 1, 1);
+        str1.setColor( 1f, 1f, 1, 1 );
 
         if (landscape) {
-            str1.getData().setScale(.5f);
+            str1.getData().setScale( .5f );
         } else {
-            str1.getData().setScale(.6f);
+            str1.getData().setScale( .6f );
         }
 
         if (landscape) {
             x = gui.getXl();
-            y = gui.getYl() -3;
+            y = gui.getYl() - 3;
             w = gui.getWl();
 
         } else {
             x = gui.getX();
-            y = gui.getY() -3;
+            y = gui.getY() - 3;
             w = gui.getW();
 
         }
 
-        if (margin ==0) y-=0.5f;
-        if (margin ==3.1f) y+=1f;
+        if (margin == 0) y -= 0.5f;
+        if (margin == 3.1f) y += 1f;
         if (!landscape) {
-            str1.draw(ui, strin, x / 100 * ssx, (y + 6) / 100 * ssy, (w - x) / 100 * ssx, Align.center, true);
+            str1.draw( ui, strin, x / 100 * ssx, (y + 6) / 100 * ssy, (w - x) / 100 * ssx, Align.center, true );
         } else {
-            str1.draw(ui, strin, x / 100 * ssy, (y + 6) / 100 * ssx, (w - x) / 100 * ssy, Align.center, true);
+            str1.draw( ui, strin, x / 100 * ssy, (y + 6) / 100 * ssx, (w - x) / 100 * ssy, Align.center, true );
         }
 
 
         if (landscape) {
-            str1.getData().setScale(.7f);
+            str1.getData().setScale( .7f );
         } else {
-            str1.getData().setScale(1f);
+            str1.getData().setScale( 1f );
         }
     }
 
@@ -4145,9 +4196,9 @@ String texta="";
             h = gui.getHl() - margin - 1;
         } else {
             x = gui.getX() + margin + 1;
-            y = gui.getY() + margin +1;
+            y = gui.getY() + margin + 1;
             w = gui.getW() - margin - 1;
-            h = gui.getH() - margin+1;
+            h = gui.getH() - margin + 1;
         }
         float roti = 0;
         boolean flipx = false, flipy = false;
@@ -4195,78 +4246,78 @@ String texta="";
         }
 
         if (!landscape) {
-            ui.draw(tx, x / 100 * ssx, y / 100 * ssy, (w - x) / 100 * ssx / 2, (h - y) / 100 * ssy / 2, (w - x) / 100 * ssx, (h - y) / 100 * ssy, 1, 1, roti, srcx, srcy, srcw, srch, flipx, flipy);
+            ui.draw( tx, x / 100 * ssx, y / 100 * ssy, (w - x) / 100 * ssx / 2, (h - y) / 100 * ssy / 2, (w - x) / 100 * ssx, (h - y) / 100 * ssy, 1, 1, roti, srcx, srcy, srcw, srch, flipx, flipy );
         } else {
-            ui.draw(tx, x / 100 * ssy, y / 100 * ssx, (w - x) / 100 * ssy / 2, (h - y) / 100 * ssx / 2, (w - x) / 100 * ssy, (h - y) / 100 * ssx, 1, 1, roti, srcx, srcy, srcw, srch, flipx, flipy);
+            ui.draw( tx, x / 100 * ssy, y / 100 * ssx, (w - x) / 100 * ssy / 2, (h - y) / 100 * ssx / 2, (w - x) / 100 * ssy, (h - y) / 100 * ssx, 1, 1, roti, srcx, srcy, srcw, srch, flipx, flipy );
         }
 
     }
 
     public void drawWorldUI() {
         //status(cam.zoom+"",4);
-        Gdx.gl.glEnable(GL20.GL_BLEND);
-        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-        Vector3 mouse = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
-        uicam.unproject(mouse); // mousePos is now in world coordinates
+        Gdx.gl.glEnable( GL20.GL_BLEND );
+        Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
+        Vector3 mouse = new Vector3( Gdx.input.getX(), Gdx.input.getY(), 0 );
+        uicam.unproject( mouse ); // mousePos is now in world coordinates
 
         //status(Integer.toString(batch.totalRenderCalls),5);
         //status(Float.toString(cam.zoom),1);
-        uis.setProjectionMatrix(uicam.combined);
-        uis.begin(ShapeRenderer.ShapeType.Filled);
-        uis.setColor(0f, 0f, 0, 0.6f);
+        uis.setProjectionMatrix( uicam.combined );
+        uis.begin( ShapeRenderer.ShapeType.Filled );
+        uis.setColor( 0f, 0f, 0, 0.6f );
 
         if (cammode == "View only") {
             if (!takingss) {
-                uisrect(gui.screenshot, mouse, null);//tile/obj switch
-                uisrect(gui.center, mouse, vis("center"));//map props. button
+                uisrect( gui.screenshot, mouse, null );//tile/obj switch
+                uisrect( gui.center, mouse, vis( "center" ) );//map props. button
 
             }
             uis.end();
-            ui.setProjectionMatrix(uicam.combined);
+            ui.setProjectionMatrix( uicam.combined );
             ui.begin();
             if (!takingss) {
-                uidraw(txcenter, gui.center, 2);
-                str1draw(ui, z.screenshot, gui.screenshot);
+                uidraw( txcenter, gui.center, 2 );
+                str1draw( ui, z.screenshot, gui.screenshot );
 
             }
 
             if (statustimeout > 0) {
                 statustimeout -= delta;
-                str1.setColor(1, 0, 0, 1);
-                if (!takingss) str1draw(ui, debugMe, gui.status);
-                str1.setColor(1, 1, 1, 1);
+                str1.setColor( 1, 0, 0, 1 );
+                if (!takingss) str1draw( ui, debugMe, gui.status );
+                str1.setColor( 1, 1, 1, 1 );
             }
 
             ui.end();
         } else if (cammode != "View only") {
 
 
-            if (roll || stamp) uisrect(gui.info, mouse, null);//info
+            if (roll || stamp) uisrect( gui.info, mouse, null );//info
 
-            if (tutoring){
-                uisrect(gui.canceltutorial, mouse, vis("cancel"));//tile/obj switch
+            if (tutoring) {
+                uisrect( gui.canceltutorial, mouse, vis( "cancel" ) );//tile/obj switch
             }
 
-            if (kartu=="editor"){
-                uisrect(gui.editorcancel, mouse, vis("editorcancel"));//tile/obj switch
-                uisrect(gui.editormode, mouse, vis("editormode"));//layer switch
-                uisrect(gui.editorsave, mouse, vis("editorsave"));//viewmode switch
-                uisrect(gui.editorleft, mouse, vis("editorleft"));//tile/obj switch
-                uisrect(gui.editorright, mouse, vis("editorright"));//layer switch
-                uisrect(gui.editorup, mouse, vis("editorup"));//viewmode switch
-                uisrect(gui.editordown, mouse, vis("editordown"));//tile/obj switch
-                uisrect(gui.info, mouse, vis("infoinfo"));
+            if (kartu == "editor") {
+                uisrect( gui.editorcancel, mouse, vis( "editorcancel" ) );//tile/obj switch
+                uisrect( gui.editormode, mouse, vis( "editormode" ) );//layer switch
+                uisrect( gui.editorsave, mouse, vis( "editorsave" ) );//viewmode switch
+                uisrect( gui.editorleft, mouse, vis( "editorleft" ) );//tile/obj switch
+                uisrect( gui.editorright, mouse, vis( "editorright" ) );//layer switch
+                uisrect( gui.editorup, mouse, vis( "editorup" ) );//viewmode switch
+                uisrect( gui.editordown, mouse, vis( "editordown" ) );//tile/obj switch
+                uisrect( gui.info, mouse, vis( "infoinfo" ) );
             }
 
-            if (mode == "tile" || mode == "object"|| mode == "image") {
-                uisrect(gui.mode, mouse, vis("addlayer"));//tile/obj switch
-                uisrect(gui.layer, mouse, vis("layerlist"));//layer switch
-                uisrect(gui.viewmode, mouse, vis("viewmode"));//viewmode switch
+            if (mode == "tile" || mode == "object" || mode == "image") {
+                uisrect( gui.mode, mouse, vis( "addlayer" ) );//tile/obj switch
+                uisrect( gui.layer, mouse, vis( "layerlist" ) );//layer switch
+                uisrect( gui.viewmode, mouse, vis( "viewmode" ) );//viewmode switch
                 //uisrect(gui.center, mouse, vis("center"));//map props. button
-                uisrect(gui.menu, mouse, vis("menu"));//main menu button
-                uisrect(gui.map, mouse, vis("map"));//map props. button
-                uisrect(gui.save, mouse, vis("quicksave"));//main menu button
-                uisrect(gui.layerpick, mouse, vis("layerpick"));//layerpicker
+                uisrect( gui.menu, mouse, vis( "menu" ) );//main menu button
+                uisrect( gui.map, mouse, vis( "map" ) );//map props. button
+                uisrect( gui.save, mouse, vis( "quicksave" ) );//main menu button
+                uisrect( gui.layerpick, mouse, vis( "layerpick" ) );//layerpicker
                 /* draw filled rectangle for the whole minimap.
                 if (sMinimap){
                 if (!landscape) {
@@ -4280,22 +4331,15 @@ String texta="";
 */
 
 
-
-
-                for (property p : properties)
-                {
-                    if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled platformer") )
-                    {
-                        uisrect(gui.play, mouse, vis("play"));//redo
-                    }
-                    else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
-                        uisrect(gui.play, mouse, vis("play"));//redo
-                    }
-                    else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("Pixel Editor")) {
-                        uisrect(gui.play, mouse, vis("play"));//redo
-                    }
-                    else if (p.getName().equalsIgnoreCase("tag") && p.getValue().equalsIgnoreCase("RW")) {
-                        uisrect(gui.play, mouse, vis("play"));//redo
+                for (property p : properties) {
+                    if (p.getName().equalsIgnoreCase( "type" ) && p.getValue().equalsIgnoreCase( "NotTiled platformer" )) {
+                        uisrect( gui.play, mouse, vis( "play" ) );//redo
+                    } else if (p.getName().equalsIgnoreCase( "type" ) && p.getValue().equalsIgnoreCase( "NotTiled music" )) {
+                        uisrect( gui.play, mouse, vis( "play" ) );//redo
+                    } else if (p.getName().equalsIgnoreCase( "type" ) && p.getValue().equalsIgnoreCase( "Pixel Editor" )) {
+                        uisrect( gui.play, mouse, vis( "play" ) );//redo
+                    } else if (p.getName().equalsIgnoreCase( "tag" ) && p.getValue().equalsIgnoreCase( "RW" )) {
+                        uisrect( gui.play, mouse, vis( "play" ) );//redo
                     }
 
                 }
@@ -4304,11 +4348,11 @@ String texta="";
 
             if (mode == "tile") {
 
-                if (sShowFPS) uisrect(gui.fps, mouse, vis("FPS"));//tile/obj switch
+                if (sShowFPS) uisrect( gui.fps, mouse, vis( "FPS" ) );//tile/obj switch
 
-                uisrect(gui.rotation, mouse, vis("rotation"));//rotation switch
-                uisrect(gui.undo, mouse, vis("undo"));//undo
-                uisrect(gui.redo, mouse, vis("redo"));//redo
+                uisrect( gui.rotation, mouse, vis( "rotation" ) );//rotation switch
+                uisrect( gui.undo, mouse, vis( "undo" ) );//undo
+                uisrect( gui.redo, mouse, vis( "redo" ) );//redo
                 if (swatches) {
                     //uisrect( gui.swatches, mouse, vis( "swatches" ) );//swatches
                     uisrect( gui.sw1, mouse, vis( "swatches1" ) );//swatches
@@ -4321,67 +4365,63 @@ String texta="";
                 }
 
 
-                uisrect(gui.picker, mouse, vis("tilepick"));//select tile
-                if (autotiles.size() > 0 || kartu=="editor")
-                    uisrect(gui.autopicker, mouse, vis("autotilepick"));//select auto tile
-                if (autotiles.size() > 0 || kartu=="editor")
-                    uisrect(gui.autotile, mouse, vis("refresh"));//tool switch
-
-
+                uisrect( gui.picker, mouse, vis( "tilepick" ) );//select tile
+                if (autotiles.size() > 0 || kartu == "editor")
+                    uisrect( gui.autopicker, mouse, vis( "autotilepick" ) );//select auto tile
+                if (autotiles.size() > 0 || kartu == "editor")
+                    uisrect( gui.autotile, mouse, vis( "refresh" ) );//tool switch
 
 
                 Color c1 = null, c2 = null, c3 = null, c4 = null, c5 = null;
                 switch (activetool) {
                     case 0:
-                        c1 = new Color(1f, 1f, 0f, .4f);
+                        c1 = new Color( 1f, 1f, 0f, .4f );
                         break;
                     case 1:
                         break;
                     case 2:
-                        c3 = new Color(1f, 1f, 0f, .4f);
+                        c3 = new Color( 1f, 1f, 0f, .4f );
                         break;
                     case 3:
-                        c4 = new Color(1f, 1f, 0f, .4f);
+                        c4 = new Color( 1f, 1f, 0f, .4f );
                         break;
                     case 4:
-                        c5 = new Color(1f, 1f, 0f, .4f);
+                        c5 = new Color( 1f, 1f, 0f, .4f );
                         break;
                 }
 
-                if (eraser) c2 = new Color(1f, 0.3f, 0f, .4f);
+                if (eraser) c2 = new Color( 1f, 0.3f, 0f, .4f );
 
 
                 if (!tutoring) {
-                    uisrect(gui.tool1, mouse, c1);
-                    uisrect(gui.tool2, mouse, c2);
-                    uisrect(gui.tool3, mouse, c3);
-                    uisrect(gui.tool4, mouse, c4);
-                    uisrect(gui.tool5, mouse, c5);
-                }
-                else
-                {
-                    uisrect(gui.tool1, mouse, vis("tool1"));
-                    uisrect(gui.tool2, mouse, vis("tool2"));
-                    uisrect(gui.tool3, mouse, vis("tool3"));
-                    uisrect(gui.tool4, mouse, vis("tool4"));
-                    uisrect(gui.tool5, mouse, vis("tool5"));
+                    uisrect( gui.tool1, mouse, c1 );
+                    uisrect( gui.tool2, mouse, c2 );
+                    uisrect( gui.tool3, mouse, c3 );
+                    uisrect( gui.tool4, mouse, c4 );
+                    uisrect( gui.tool5, mouse, c5 );
+                } else {
+                    uisrect( gui.tool1, mouse, vis( "tool1" ) );
+                    uisrect( gui.tool2, mouse, vis( "tool2" ) );
+                    uisrect( gui.tool3, mouse, vis( "tool3" ) );
+                    uisrect( gui.tool4, mouse, vis( "tool4" ) );
+                    uisrect( gui.tool5, mouse, vis( "tool5" ) );
                 }
             }
 
             if (mode == "object") {
-                uisrect(gui.objectpickermid, mouse, null);//objtools switch
-                uisrect(gui.objectpickerleft, mouse, null);//objtools switch
-                uisrect(gui.objectpickerright, mouse, null);//objtools switch
-                uisrect(gui.lock, mouse, null);//tool switch
+                uisrect( gui.objectpickermid, mouse, null );//objtools switch
+                uisrect( gui.objectpickerleft, mouse, null );//objtools switch
+                uisrect( gui.objectpickerright, mouse, null );//objtools switch
+                uisrect( gui.lock, mouse, null );//tool switch
 
             }
             if (mode == "image") {
-                uisrect(gui.objectpickermid, mouse, null);//objtools switch
+                uisrect( gui.objectpickermid, mouse, null );//objtools switch
 
             }
             if (mode == "newpoly") {
-                uisrect(gui.undo, mouse, null);//undo
-                uisrect(gui.tool, mouse, null);//tool switch
+                uisrect( gui.undo, mouse, null );//undo
+                uisrect( gui.tool, mouse, null );//tool switch
             }
 
             uis.end();
@@ -4408,15 +4448,15 @@ String texta="";
                 if (!caching & tcaches.size() > 0) {
                     for (int i = 0; i < tcaches.size(); i++) {
 
-                        SpriteCache cache = tcaches.get(i).getCache();
-                        int myid = tcaches.get(i).getCacheID();
-                        cache.setProjectionMatrix(minicam.combined);
-                        Gdx.gl.glEnable(GL20.GL_BLEND);
-                        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+                        SpriteCache cache = tcaches.get( i ).getCache();
+                        int myid = tcaches.get( i ).getCacheID();
+                        cache.setProjectionMatrix( minicam.combined );
+                        Gdx.gl.glEnable( GL20.GL_BLEND );
+                        Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
 
                         cache.begin();
 
-                        cache.draw(myid); //call our cache with cache ID and draw it
+                        cache.draw( myid ); //call our cache with cache ID and draw it
                         cache.end();
 
 
@@ -4424,22 +4464,22 @@ String texta="";
                 }
 
                 //red rectangle
-                uis.setProjectionMatrix(minicam.combined);
-                uis.begin(ShapeRenderer.ShapeType.Line);
-                uis.setColor(0f, 0f, 0f, 0.7f);
+                uis.setProjectionMatrix( minicam.combined );
+                uis.begin( ShapeRenderer.ShapeType.Line );
+                uis.setColor( 0f, 0f, 0f, 0.7f );
 
-                int onset=0;
-                if (orientation.equalsIgnoreCase("isometric")){
-                    onset=Tsw*Tw/2;
+                int onset = 0;
+                if (orientation.equalsIgnoreCase( "isometric" )) {
+                    onset = Tsw * Tw / 2;
                 }
-                uis.rect(0-onset, Tsh, Tsw * Tw, -Tsh * Th);
+                uis.rect( 0 - onset, Tsh, Tsw * Tw, -Tsh * Th );
                 if (1500 * cam.zoom < Tsw * Tw) {
-                    uis.setColor(1f, 0f, 0, 1f);
+                    uis.setColor( 1f, 0f, 0, 1f );
 
                     if (landscape) {
-                        uis.rect(cam.position.x - (1500 * cam.zoom / 2), cam.position.y - (800 * cam.zoom / 2), 1500 * cam.zoom, 800 * cam.zoom);
+                        uis.rect( cam.position.x - (1500 * cam.zoom / 2), cam.position.y - (800 * cam.zoom / 2), 1500 * cam.zoom, 800 * cam.zoom );
                     } else {
-                        uis.rect(cam.position.x - (800 * cam.zoom / 2), cam.position.y - (1500 * cam.zoom / 2), 800 * cam.zoom, 1500 * cam.zoom);
+                        uis.rect( cam.position.x - (800 * cam.zoom / 2), cam.position.y - (1500 * cam.zoom / 2), 800 * cam.zoom, 1500 * cam.zoom );
                     }
                 }
                 uis.end();
@@ -4447,33 +4487,33 @@ String texta="";
 
             /////////////// tile view /////////////////
 
-            ui.setProjectionMatrix(uicam.combined);
+            ui.setProjectionMatrix( uicam.combined );
             ui.begin();
             //////////
             if (tilesets.size() > 0 && mode == "tile" && curspr != 0) {
                 long num = curspr;
                 int initset = 0;
                 for (int o = 0; o < tilesets.size(); o++) {
-                    if (num >= tilesets.get(o).getFirstgid() && num < tilesets.get(o).getFirstgid() + tilesets.get(o).getTilecount()) {
+                    if (num >= tilesets.get( o ).getFirstgid() && num < tilesets.get( o ).getFirstgid() + tilesets.get( o ).getTilecount()) {
                         initset = o;
                         break;
                     }
                 }
-                sprX = (int) (num - tilesets.get(initset).getFirstgid()) % (tilesets.get(initset).getWidth());
-                sprY = (int) (num - tilesets.get(initset).getFirstgid()) / (tilesets.get(initset).getWidth());
-                margin = tilesets.get(initset).getMargin();
-                spacing = tilesets.get(initset).getSpacing();
-                Tswa = tilesets.get(initset).getTilewidth();
-                Tsha = tilesets.get(initset).getTileheight();
+                sprX = (int) (num - tilesets.get( initset ).getFirstgid()) % (tilesets.get( initset ).getWidth());
+                sprY = (int) (num - tilesets.get( initset ).getFirstgid()) / (tilesets.get( initset ).getWidth());
+                margin = tilesets.get( initset ).getMargin();
+                spacing = tilesets.get( initset ).getSpacing();
+                Tswa = tilesets.get( initset ).getTilewidth();
+                Tsha = tilesets.get( initset ).getTileheight();
                 //TextureRegion region= new TextureRegion(tilesets.get(initset).getTexture(), );
-                uidraw(tilesets.get(initset).getTexture(), gui.picker, 1, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha);
+                uidraw( tilesets.get( initset ).getTexture(), gui.picker, 1, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha );
             }
 
             if (tilesets.size() > 0 && mode == "tile" && swatches) {
 
-                for (int ii=0;ii<6;ii++) {
-                    long num = swatchValue.get(ii);// ini intinyakah?
-                    if (num==0) continue;
+                for (int ii = 0; ii < 6; ii++) {
+                    long num = swatchValue.get( ii );// ini intinyakah?
+                    if (num == 0) continue;
                     int initset = 0;
                     for (int o = 0; o < tilesets.size(); o++) {
                         if (num >= tilesets.get( o ).getFirstgid() && num < tilesets.get( o ).getFirstgid() + tilesets.get( o ).getTilecount()) {
@@ -4488,9 +4528,9 @@ String texta="";
                     Tswa = tilesets.get( initset ).getTilewidth();
                     Tsha = tilesets.get( initset ).getTileheight();
                     //TextureRegion region= new TextureRegion(tilesets.get(initset).getTexture(), );
-                    int mgn=1;
-                    if (landscape) mgn=0;
-                    switch (ii+1){
+                    int mgn = 1;
+                    if (landscape) mgn = 0;
+                    switch (ii + 1) {
                         case 1:
                             uidraw( tilesets.get( initset ).getTexture(), gui.sw1, mgn, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha );
                             break;
@@ -4518,40 +4558,39 @@ String texta="";
 
             //normal font
             if (landscape) {
-                str1.getData().setScale(.7f);
+                str1.getData().setScale( .7f );
             } else {
-                str1.getData().setScale(1f);
+                str1.getData().setScale( 1f );
             }
             if (statustimeout > 0) {
                 statustimeout -= delta;
-                str1.setColor(1, 0, 0, 1);
-                if (!takingss) str1draw(ui, debugMe, gui.status);
-                str1.setColor(1, 1, 1, 1);
+                str1.setColor( 1, 0, 0, 1 );
+                if (!takingss) str1draw( ui, debugMe, gui.status );
+                str1.setColor( 1, 1, 1, 1 );
             }
             //z.canceltutorial="Cancel Tutorial";
-            if (tutoring) str1draw(ui, z.canceltutorial, gui.canceltutorial);
-            if (kartu=="editor"){
-                uidrawbutton(txsave, z.save, gui.editorsave, 1);
-                uidrawbutton(txundo, z.cancel, gui.editorcancel, 1);
-                uidrawbutton(txmap, z.edit, gui.editormode, 1);
-                uidrawbutton(txLeft, "-", gui.editorleft, 1);
-                uidrawbutton(txRight, "+", gui.editorright, 1);
-                uidrawbutton(txDown, "+", gui.editorup, 1);
-                uidrawbutton(txUp, "-", gui.editordown, 1);
+            if (tutoring) str1draw( ui, z.canceltutorial, gui.canceltutorial );
+            if (kartu == "editor") {
+                uidrawbutton( txsave, z.save, gui.editorsave, 1 );
+                uidrawbutton( txundo, z.cancel, gui.editorcancel, 1 );
+                uidrawbutton( txmap, z.edit, gui.editormode, 1 );
+                uidrawbutton( txLeft, "-", gui.editorleft, 1 );
+                uidrawbutton( txRight, "+", gui.editorright, 1 );
+                uidrawbutton( txDown, "+", gui.editorup, 1 );
+                uidrawbutton( txUp, "-", gui.editordown, 1 );
             }
 
             if (cammode != "View only") {
 
-                if (mode == "tile" || mode == "object"|| mode == "image") {
+                if (mode == "tile" || mode == "object" || mode == "image") {
 
                     if (sMinimap) {
-                        if (txMinimap != null)
-                        {
+                        if (txMinimap != null) {
 
                             if (!landscape) {
-                                ui.draw( txMinimap, gui.minimap.x/100f*ssx, gui.minimap.y/100f*ssy, (gui.minimap.w-gui.minimap.x)/100f*ssx,(gui.minimap.h-gui.minimap.y)/100f*ssy) ;
-                            }else{
-                                ui.draw( txMinimap, gui.minimap.xl/100f*ssy, gui.minimap.yl/100f*ssx, (gui.minimap.wl-gui.minimap.xl)/100f*ssy,(gui.minimap.hl-gui.minimap.yl)/100f*ssx) ;
+                                ui.draw( txMinimap, gui.minimap.x / 100f * ssx, gui.minimap.y / 100f * ssy, (gui.minimap.w - gui.minimap.x) / 100f * ssx, (gui.minimap.h - gui.minimap.y) / 100f * ssy );
+                            } else {
+                                ui.draw( txMinimap, gui.minimap.xl / 100f * ssy, gui.minimap.yl / 100f * ssx, (gui.minimap.wl - gui.minimap.xl) / 100f * ssy, (gui.minimap.hl - gui.minimap.yl) / 100f * ssx );
 
                             }
 
@@ -4562,97 +4601,96 @@ String texta="";
                     }
 
 
-                    if (layers.size() >0) str1draw(ui, layers.get(selLayer).getName(), gui.layer);
-                    uidrawbutton(txlayer, z.layer, gui.layerpick, 1);
-                    uidrawbutton(txmenu, z.menu, gui.menu, 2);
-                    uidrawbutton(txmap, z.map, gui.map, 2);
-                    uidrawbutton(txadd, z.layer, gui.mode, 3.1f);
-                    if (layers.size() >0) {
-                        String vm="";
-                        switch (viewMode){
+                    if (layers.size() > 0)
+                        str1draw( ui, layers.get( selLayer ).getName(), gui.layer );
+                    uidrawbutton( txlayer, z.layer, gui.layerpick, 1 );
+                    uidrawbutton( txmenu, z.menu, gui.menu, 2 );
+                    uidrawbutton( txmap, z.map, gui.map, 2 );
+                    uidrawbutton( txadd, z.layer, gui.mode, 3.1f );
+                    if (layers.size() > 0) {
+                        String vm = "";
+                        switch (viewMode) {
                             case STACK:
-                                vm=z.stack; break;
+                                vm = z.stack;
+                                break;
                             case ALL:
-                                vm=z.all;break;
+                                vm = z.all;
+                                break;
                             case SINGLE:
-                                vm=z.single;break;
+                                vm = z.single;
+                                break;
                             case CUSTOM:
-                                vm=z.visibility;break;
+                                vm = z.visibility;
+                                break;
                         }
 
-                        if (layers.get(selLayer).isVisible()) {
-                            uidrawbutton(txVisible, vm, gui.viewmode, 3.1f);
+                        if (layers.get( selLayer ).isVisible()) {
+                            uidrawbutton( txVisible, vm, gui.viewmode, 3.1f );
                         } else {
-                            uidrawbutton(txInvisible, vm, gui.viewmode, 3.1f);
+                            uidrawbutton( txInvisible, vm, gui.viewmode, 3.1f );
                         }
                     }
 
 
-                        if (sAutoSave) {
-                        uidrawbutton(txsave2, z.save, gui.save, 2);
+                    if (sAutoSave) {
+                        uidrawbutton( txsave2, z.save, gui.save, 2 );
                     } else {
-                        uidrawbutton(txsave, z.save, gui.save, 2);
+                        uidrawbutton( txsave, z.save, gui.save, 2 );
                     }
                     //uidrawbutton(txcenter, z.recenter, gui.center, 2);
 
-                    for (property p : properties)
-                    {
-                        if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled platformer") )
-                        {
-                            uidrawbutton(txplay, z.play, gui.play, 2);
-                        }
-                        else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
+                    for (property p : properties) {
+                        if (p.getName().equalsIgnoreCase( "type" ) && p.getValue().equalsIgnoreCase( "NotTiled platformer" )) {
+                            uidrawbutton( txplay, z.play, gui.play, 2 );
+                        } else if (p.getName().equalsIgnoreCase( "type" ) && p.getValue().equalsIgnoreCase( "NotTiled music" )) {
                             if (midiplaying) {
                                 uidrawbutton( txLeft, z.stop, gui.play, 2 );
-                            }else{
+                            } else {
                                 uidrawbutton( txplay, z.play, gui.play, 2 );
 
                             }
 
-                        }
-                        else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("Pixel Editor")) {
+                        } else if (p.getName().equalsIgnoreCase( "type" ) && p.getValue().equalsIgnoreCase( "Pixel Editor" )) {
                             if (rotating) {
                                 uidrawbutton( txLeft, z.stop, gui.play, 2 );
-                            }else{
+                            } else {
                                 uidrawbutton( txplay, z.play, gui.play, 2 );
 
                             }
 
-                        }
-                        else if (p.getName().equalsIgnoreCase("tag") && p.getValue().equalsIgnoreCase("RW")) {
-                            uidrawbutton(txplay, z.play, gui.play, 2);
+                        } else if (p.getName().equalsIgnoreCase( "tag" ) && p.getValue().equalsIgnoreCase( "RW" )) {
+                            uidrawbutton( txplay, z.play, gui.play, 2 );
                         }
 
                     }
 
                     if (stamp) {
                         if (roll) {
-                            str1draw(ui, z.smartstampmode, gui.info);
+                            str1draw( ui, z.smartstampmode, gui.info );
                         } else {
-                            str1draw(ui, z.stampmode, gui.info);
+                            str1draw( ui, z.stampmode, gui.info );
                         }
                     } else {
                         if (roll) {
                             if (activetool == 0) {
-                                switch (currentShape)
-                                {
+                                switch (currentShape) {
                                     case RECTANGLE:
-                                        str1draw(ui, z.rectangle, gui.info);
+                                        str1draw( ui, z.rectangle, gui.info );
                                         break;
                                     case CIRCLE:
-                                        str1draw(ui, z.circle, gui.info);
+                                        str1draw( ui, z.circle, gui.info );
                                         break;
                                     case LINE:
-                                        str1draw(ui, z.line, gui.info);
+                                        str1draw( ui, z.line, gui.info );
                                         break;
                                 }
 
                             } else if (activetool == 1) {
-                                str1draw(ui, z.eraser, gui.info);
+                                str1draw( ui, z.eraser, gui.info );
                             } else if (activetool == 3) {
-                                str1draw(ui, z.select, gui.info);
+                                str1draw( ui, z.select, gui.info );
                             } else if (activetool == 4) {
-                                str1draw(ui, z.paintbrush, gui.info);
+                                str1draw( ui, z.paintbrush, gui.info );
                             }
                         }
                     }
@@ -4660,14 +4698,11 @@ String texta="";
                 }
 
                 if (mode == "tile") {
-                    if (sShowFPS) str1draw(ui, fps, gui.fps);
+                    if (sShowFPS) str1draw( ui, fps, gui.fps );
 
 
-
-
-
-                    str1draw(ui, rotationName, gui.rotation);
-                    uidrawbutton(txtile, z.tile, gui.picker, 0);
+                    str1draw( ui, rotationName, gui.rotation );
+                    uidrawbutton( txtile, z.tile, gui.picker, 0 );
 
 
                     /*
@@ -4683,101 +4718,97 @@ String texta="";
                      */
 
 
-                    if (autotiles.size() > 0|| kartu=="editor") {
-                        uidrawbutton(txautopick, z.macrotiles, gui.autopicker, 2);
-                        uidrawbutton(txplay, z.runmacro, gui.autotile, 2);
+                    if (autotiles.size() > 0 || kartu == "editor") {
+                        uidrawbutton( txautopick, z.macrotiles, gui.autopicker, 2 );
+                        uidrawbutton( txplay, z.runmacro, gui.autotile, 2 );
                     }
 
 
-                    switch (currentShape)
-                    {
+                    switch (currentShape) {
                         case RECTANGLE:
-                            uidrawbutton(txrectangle, z.rectangle, gui.tool1, 3);
+                            uidrawbutton( txrectangle, z.rectangle, gui.tool1, 3 );
                             break;
                         case CIRCLE:
-                            uidrawbutton(txcircle, z.circle, gui.tool1, 3);
+                            uidrawbutton( txcircle, z.circle, gui.tool1, 3 );
                             break;
                         case LINE:
-                            uidrawbutton(txline, z.line, gui.tool1, 3);
+                            uidrawbutton( txline, z.line, gui.tool1, 3 );
                             break;
                     }
 
 
-
-                    uidrawbutton(txeraser, z.eraser, gui.tool2, 3);
-                    uidrawbutton(txfill, z.fill, gui.tool3, 3);
-                    switch (movetool){
+                    uidrawbutton( txeraser, z.eraser, gui.tool2, 3 );
+                    uidrawbutton( txfill, z.fill, gui.tool3, 3 );
+                    switch (movetool) {
                         case PICKER:
-                            uidrawbutton(txpicker, z.picker, gui.tool4, 3);
+                            uidrawbutton( txpicker, z.picker, gui.tool4, 3 );
                             break;
                         case COPY:
-                            uidrawbutton(txcopy, z.copy, gui.tool4, 3);
+                            uidrawbutton( txcopy, z.copy, gui.tool4, 3 );
                             break;
                         case MOVE:
-                            uidrawbutton(txmove, z.move, gui.tool4, 3);
+                            uidrawbutton( txmove, z.move, gui.tool4, 3 );
                             break;
                         case FLIP:
-                            uidrawbutton(txflip, z.flip, gui.tool4, 3);
+                            uidrawbutton( txflip, z.flip, gui.tool4, 3 );
                             break;
                         case CLONE:
-                            uidrawbutton(txClone, z.clone, gui.tool4, 3);
+                            uidrawbutton( txClone, z.clone, gui.tool4, 3 );
                             break;
                     }
 
-                    uidrawbutton(txbrush, z.brush, gui.tool5, 3);
-                    uidrawbutton(txundo, z.undo, gui.undo, 3.1f);
-                    uidrawbutton(txredo, z.redo, gui.redo, 3.1f);
+                    uidrawbutton( txbrush, z.brush, gui.tool5, 3 );
+                    uidrawbutton( txundo, z.undo, gui.undo, 3.1f );
+                    uidrawbutton( txredo, z.redo, gui.redo, 3.1f );
                 } else if (mode == "object") {
 
 
-                    str1draw(ui, shapeName, gui.objectpickermid);
-                    uidrawbutton(txLeft, "", gui.objectpickerleft, 3);
-                    uidrawbutton(txRight, "", gui.objectpickerright, 3);
+                    str1draw( ui, shapeName, gui.objectpickermid );
+                    uidrawbutton( txLeft, "", gui.objectpickerleft, 3 );
+                    uidrawbutton( txRight, "", gui.objectpickerright, 3 );
 
                     if (magnet == 0) {
-                        uidrawbutton(txunlock, z.grid, gui.lock, 3);
+                        uidrawbutton( txunlock, z.grid, gui.lock, 3 );
                     } else {
-                        uidrawbutton(txlock, z.grid, gui.lock, 3);
+                        uidrawbutton( txlock, z.grid, gui.lock, 3 );
                     }
                     //str1draw(ui, magnetName, 85,100,10);
 
                 } else if (mode == "newpoly") {
-                    uidrawbutton(txundo, z.undo, gui.undo, 3);
-                    str1draw(ui, z.ok, gui.tool);
-                } else if (mode.equalsIgnoreCase("image")){
-                    str1draw(ui, z.properties, gui.objectpickermid);
+                    uidrawbutton( txundo, z.undo, gui.undo, 3 );
+                    str1draw( ui, z.ok, gui.tool );
+                } else if (mode.equalsIgnoreCase( "image" )) {
+                    str1draw( ui, z.properties, gui.objectpickermid );
                 }
 
                 //smaller yellow font for label
 
-                str1.getData().setScale(.4f);
-                str1.setColor(1, 1, 0, 1);
-                if (mode == "tile" || mode == "object"|| mode == "image") {
-                 //   str1drawlabel(ui, z.activelayer, gui.layer);
-                    if (mode=="tile"){
-                       // str1drawbuttonlabel(ui, z.tilelayer, gui.layer);
-                    }
-                    else if (mode =="object"){
-                      //  str1drawbuttonlabel(ui, z.objectgroup, gui.layer);
-                    }
-                    else if (mode =="image"){
-                    //    str1drawbuttonlabel(ui, z.imagelayer, gui.layer);
+                str1.getData().setScale( .4f );
+                str1.setColor( 1, 1, 0, 1 );
+                if (mode == "tile" || mode == "object" || mode == "image") {
+                    //   str1drawlabel(ui, z.activelayer, gui.layer);
+                    if (mode == "tile") {
+                        // str1drawbuttonlabel(ui, z.tilelayer, gui.layer);
+                    } else if (mode == "object") {
+                        //  str1drawbuttonlabel(ui, z.objectgroup, gui.layer);
+                    } else if (mode == "image") {
+                        //    str1drawbuttonlabel(ui, z.imagelayer, gui.layer);
                     }
                 }
 
 
                 if (mode == "tile") {
-                    if (sShowFPS) str1drawbuttonlabel(ui, "FPS", gui.fps);
+                    if (sShowFPS) str1drawbuttonlabel( ui, "FPS", gui.fps );
 
                     if (rotate < 4) {
-                        str1drawbuttonlabel(ui, z.rotate, gui.rotation);
+                        str1drawbuttonlabel( ui, z.rotate, gui.rotation );
                     } else {
-                        str1drawbuttonlabel(ui, z.flip, gui.rotation);
+                        str1drawbuttonlabel( ui, z.flip, gui.rotation );
                     }
                 }
 
                 if (mode == "object") {
-                   // str1drawbuttonlabel(ui, z.activeobjecttool, gui.objectpickermid);
+                    // str1drawbuttonlabel(ui, z.activeobjecttool, gui.objectpickermid);
 
                 }
 
@@ -4786,11 +4817,11 @@ String texta="";
 
             ui.end();
         }
-        str1.setColor(1, 1, 1, 1);
-        str1.getData().setScale(1f);
+        str1.setColor( 1, 1, 1, 1 );
+        str1.getData().setScale( 1f );
 
 
-        Gdx.gl.glDisable(GL20.GL_BLEND);
+        Gdx.gl.glDisable( GL20.GL_BLEND );
 
     }
 
@@ -4799,55 +4830,55 @@ String texta="";
 //////////////////////////////////////////////////////
     private void loadOpen() {
         tOpen = new Table();
-        tOpen.setFillParent(true);
+        tOpen.setFillParent( true );
     }
 
     private void initSD() {
     }
 
     private void initErrorHandling() {
-        Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+        Thread.setDefaultUncaughtExceptionHandler( new Thread.UncaughtExceptionHandler() {
             public void uncaughtException(Thread t, Throwable e) {
-                ErrorBung((Exception) e, "errorlog.txt");
-                Gdx.net.openURI("https://www.mirwanda.com/p/nottiled-crashed.html?m=1");
-                System.exit(1);
+                ErrorBung( (Exception) e, "errorlog.txt" );
+                Gdx.net.openURI( "https://www.mirwanda.com/p/nottiled-crashed.html?m=1" );
+                System.exit( 1 );
             }
-        });
+        } );
     }
 
     private void ErrorBung(Exception e, String filenya) {
-        filenya="errorlog.txt";
-        FileHandle file = Gdx.files.external(filenya);
+        filenya = "errorlog.txt";
+        FileHandle file = Gdx.files.external( filenya );
         StringWriter sw = new StringWriter();
-        e.printStackTrace(new PrintWriter(sw));
+        e.printStackTrace( new PrintWriter( sw ) );
         String exceptionAsString = sw.toString();
-        System.out.println(exceptionAsString);
-        file.writeString("\n\n"+exceptionAsString, true);
+        System.out.println( exceptionAsString );
+        file.writeString( "\n\n" + exceptionAsString, true );
 
-        saveMap(curdir + "/" + curfile + "_re.tmx");
-        prefs.putString("lof", "NotTiled/" + "sample/island.tmx");
-        prefs.putString("lastpath", "NotTiled/");
+        saveMap( curdir + "/" + curfile + "_re.tmx" );
+        prefs.putString( "lof", "NotTiled/" + "sample/island.tmx" );
+        prefs.putString( "lastpath", "NotTiled/" );
         prefs.flush();
 
     }
 
     private void writeThis(String path, String isi) {
-        FileHandle file = Gdx.files.external(path);
+        FileHandle file = Gdx.files.external( path );
         StringWriter sw = new StringWriter();
-        file.writeString(isi, false);
+        file.writeString( isi, false );
     }
 
     private void writeThisAbs(String path, String isi) {
-        FileHandle file = Gdx.files.external(path);
+        FileHandle file = Gdx.files.external( path );
         StringWriter sw = new StringWriter();
-        file.writeString(isi, false);
+        file.writeString( isi, false );
     }
 
     private void loadGdxStuff() {
-        Gdx.input.setCatchBackKey(true);
-        Gdx.gl.glClearColor(0.5f, 0.5f, 0.5f, 1f);
-        Gdx.input.setInputProcessor(gd);
-        gd.setLongPressSeconds(.4f);
+        Gdx.input.setCatchBackKey( true );
+        Gdx.gl.glClearColor( 0.5f, 0.5f, 0.5f, 1f );
+        Gdx.input.setInputProcessor( gd );
+        gd.setLongPressSeconds( .4f );
         int assx = Gdx.graphics.getWidth();
         int assy = Gdx.graphics.getHeight();
         if (assx < assy) {
@@ -4865,84 +4896,84 @@ String texta="";
             btny = 100 * ssy / 1080;
         }
 
-        txline = new Texture(Gdx.files.internal("images/line.png"));
-        txcircle = new Texture(Gdx.files.internal("images/circle.png"));
-        txpencil = new Texture(Gdx.files.internal("images/pencil.png"));
-        txfill = new Texture(Gdx.files.internal("images/fill.png"));
-        txcopy = new Texture(Gdx.files.internal("images/copy.png"));
-        txmove = new Texture(Gdx.files.internal("images/move.png"));
-        txflip = new Texture(Gdx.files.internal("images/flip96.png"));
-        txpicker = new Texture(Gdx.files.internal("images/picker96.png"));
-        txeraser = new Texture(Gdx.files.internal("images/eraser.png"));
-        txbrush = new Texture(Gdx.files.internal("images/brush.png"));
-        txlock = new Texture(Gdx.files.internal("images/lock.png"));
-        txunlock = new Texture(Gdx.files.internal("images/unlock.png"));
-        txnumbers = new Texture(Gdx.files.internal("images/numbers.png"));
-        txrectangle = new Texture(Gdx.files.internal("images/rectangle.png"));
-        txmenu = new Texture(Gdx.files.internal("images/menu.png"));
-        txsave = new Texture(Gdx.files.internal("images/save.png"));
-        txsave2 = new Texture(Gdx.files.internal("images/save2.png"));
-        txcenter = new Texture(Gdx.files.internal("images/center.png"));
-        txadd = new Texture(Gdx.files.internal("images/add.png"));
-        txdelete = new Texture(Gdx.files.internal("images/delete.png"));
-        txtiles = new Texture(Gdx.files.internal("images/tile96.png"));
-        txinfo = new Texture(Gdx.files.internal("images/info.png"));
-        txplay = new Texture(Gdx.files.internal("images/play.png"));
-        txmap = new Texture(Gdx.files.internal("images/map.png"));
-        txlayer = new Texture(Gdx.files.internal("images/layer.png"));
-        txundo = new Texture(Gdx.files.internal("images/undo.png"));
-        txredo = new Texture(Gdx.files.internal("images/redo.png"));
-        txtile = new Texture(Gdx.files.internal("images/tile.png"));
-        txauto = new Texture(Gdx.files.internal("images/autotile.png"));
+        txline = new Texture( Gdx.files.internal( "images/line.png" ) );
+        txcircle = new Texture( Gdx.files.internal( "images/circle.png" ) );
+        txpencil = new Texture( Gdx.files.internal( "images/pencil.png" ) );
+        txfill = new Texture( Gdx.files.internal( "images/fill.png" ) );
+        txcopy = new Texture( Gdx.files.internal( "images/copy.png" ) );
+        txmove = new Texture( Gdx.files.internal( "images/move.png" ) );
+        txflip = new Texture( Gdx.files.internal( "images/flip96.png" ) );
+        txpicker = new Texture( Gdx.files.internal( "images/picker96.png" ) );
+        txeraser = new Texture( Gdx.files.internal( "images/eraser.png" ) );
+        txbrush = new Texture( Gdx.files.internal( "images/brush.png" ) );
+        txlock = new Texture( Gdx.files.internal( "images/lock.png" ) );
+        txunlock = new Texture( Gdx.files.internal( "images/unlock.png" ) );
+        txnumbers = new Texture( Gdx.files.internal( "images/numbers.png" ) );
+        txrectangle = new Texture( Gdx.files.internal( "images/rectangle.png" ) );
+        txmenu = new Texture( Gdx.files.internal( "images/menu.png" ) );
+        txsave = new Texture( Gdx.files.internal( "images/save.png" ) );
+        txsave2 = new Texture( Gdx.files.internal( "images/save2.png" ) );
+        txcenter = new Texture( Gdx.files.internal( "images/center.png" ) );
+        txadd = new Texture( Gdx.files.internal( "images/add.png" ) );
+        txdelete = new Texture( Gdx.files.internal( "images/delete.png" ) );
+        txtiles = new Texture( Gdx.files.internal( "images/tile96.png" ) );
+        txinfo = new Texture( Gdx.files.internal( "images/info.png" ) );
+        txplay = new Texture( Gdx.files.internal( "images/play.png" ) );
+        txmap = new Texture( Gdx.files.internal( "images/map.png" ) );
+        txlayer = new Texture( Gdx.files.internal( "images/layer.png" ) );
+        txundo = new Texture( Gdx.files.internal( "images/undo.png" ) );
+        txredo = new Texture( Gdx.files.internal( "images/redo.png" ) );
+        txtile = new Texture( Gdx.files.internal( "images/tile.png" ) );
+        txauto = new Texture( Gdx.files.internal( "images/autotile.png" ) );
 
 
-        txautopick = new Texture(Gdx.files.internal("images/autopick.png"));
-        txresources = new Texture(Gdx.files.internal("images/resources.png"));
-        txstamp = new Texture(Gdx.files.internal("images/stamp.png"));
-        txlauncher = new Texture(Gdx.files.internal("images/ic_launcher.png"));
-        txVisible = new Texture(Gdx.files.internal("images/visible.png"));
-        txInvisible = new Texture(Gdx.files.internal("images/invisible.png"));
+        txautopick = new Texture( Gdx.files.internal( "images/autopick.png" ) );
+        txresources = new Texture( Gdx.files.internal( "images/resources.png" ) );
+        txstamp = new Texture( Gdx.files.internal( "images/stamp.png" ) );
+        txlauncher = new Texture( Gdx.files.internal( "images/ic_launcher.png" ) );
+        txVisible = new Texture( Gdx.files.internal( "images/visible.png" ) );
+        txInvisible = new Texture( Gdx.files.internal( "images/invisible.png" ) );
 
-        txTypeTile = new Texture(Gdx.files.internal("images/tiletype.png"));
-        txTypeObject = new Texture(Gdx.files.internal("images/object.png"));
-        txTypeImage = new Texture(Gdx.files.internal("images/image.png"));
-        txTypeGroup = new Texture(Gdx.files.internal("images/group.png"));
-        txUp = new Texture(Gdx.files.internal("images/up96.png"));
-        txDown = new Texture(Gdx.files.internal("images/down96.png"));
-        txLeft = new Texture(Gdx.files.internal("images/left96.png"));
-        txRight = new Texture(Gdx.files.internal("images/right96.png"));
-        txClone = new Texture(Gdx.files.internal("images/clone.png"));
-        txOutline = new Texture(Gdx.files.internal("images/outline.png"));
-        txRectangle2 = new Texture(Gdx.files.internal("images/rectangle2.png"));
-        txEraser2 = new Texture(Gdx.files.internal("images/eraser2.png"));
+        txTypeTile = new Texture( Gdx.files.internal( "images/tiletype.png" ) );
+        txTypeObject = new Texture( Gdx.files.internal( "images/object.png" ) );
+        txTypeImage = new Texture( Gdx.files.internal( "images/image.png" ) );
+        txTypeGroup = new Texture( Gdx.files.internal( "images/group.png" ) );
+        txUp = new Texture( Gdx.files.internal( "images/up96.png" ) );
+        txDown = new Texture( Gdx.files.internal( "images/down96.png" ) );
+        txLeft = new Texture( Gdx.files.internal( "images/left96.png" ) );
+        txRight = new Texture( Gdx.files.internal( "images/right96.png" ) );
+        txClone = new Texture( Gdx.files.internal( "images/clone.png" ) );
+        txOutline = new Texture( Gdx.files.internal( "images/outline.png" ) );
+        txRectangle2 = new Texture( Gdx.files.internal( "images/rectangle2.png" ) );
+        txEraser2 = new Texture( Gdx.files.internal( "images/eraser2.png" ) );
 
 
         if (ssx < ssy) {
-            hstage = new Stage(new StretchViewport(ssy * 1.5f, ssx * 1.5f));
-            vstage = new Stage(new StretchViewport(ssx, ssy));
-            stage = new Stage(new StretchViewport(ssx, ssy));
-            tilecam = new OrthographicCamera(ssx, ssy);
-            uicam = new OrthographicCamera(ssx, ssy);
-            cam = new OrthographicCamera(ssx, ssy);
-            gamecam = new OrthographicCamera(ssx, ssy);
-            minicam = new OrthographicCamera(11, 20);
+            hstage = new Stage( new StretchViewport( ssy * 1.5f, ssx * 1.5f ) );
+            vstage = new Stage( new StretchViewport( ssx, ssy ) );
+            stage = new Stage( new StretchViewport( ssx, ssy ) );
+            tilecam = new OrthographicCamera( ssx, ssy );
+            uicam = new OrthographicCamera( ssx, ssy );
+            cam = new OrthographicCamera( ssx, ssy );
+            gamecam = new OrthographicCamera( ssx, ssy );
+            minicam = new OrthographicCamera( 11, 20 );
         } else {
-            hstage = new Stage(new StretchViewport(ssx * 1.5f, ssy * 1.5f));
-            vstage = new Stage(new StretchViewport(ssy, ssx));
-            stage = new Stage(new StretchViewport(ssy, ssx));
-            tilecam = new OrthographicCamera(ssy, ssx);
-            uicam = new OrthographicCamera(ssy, ssx);
-            cam = new OrthographicCamera(ssy, ssx);
-            gamecam = new OrthographicCamera(ssy, ssx);
-            minicam = new OrthographicCamera(20, 11);
+            hstage = new Stage( new StretchViewport( ssx * 1.5f, ssy * 1.5f ) );
+            vstage = new Stage( new StretchViewport( ssy, ssx ) );
+            stage = new Stage( new StretchViewport( ssy, ssx ) );
+            tilecam = new OrthographicCamera( ssy, ssx );
+            uicam = new OrthographicCamera( ssy, ssx );
+            cam = new OrthographicCamera( ssy, ssx );
+            gamecam = new OrthographicCamera( ssy, ssx );
+            minicam = new OrthographicCamera( 20, 11 );
 
         }
         minicam.zoom = 10f;
         minicam.update();
 
 
-        batch = new SpriteBatch(8191);
-        fbo = new FrameBuffer(Pixmap.Format.RGBA8888, ssx, ssy, false);
+        batch = new SpriteBatch( 8191 );
+        fbo = new FrameBuffer( Pixmap.Format.RGBA8888, ssx, ssy, false );
         ui = new SpriteBatch();
         uis = new myShapeRenderer();
         sr = new ShapeRendererPlus();
@@ -4950,17 +4981,17 @@ String texta="";
         //str1 = new BitmapFont();
 
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        FileHandle fileHandl = Gdx.files.internal("languages/characters");
+        FileHandle fileHandl = Gdx.files.internal( "languages/characters" );
         Map<String, String> vars = new HashMap<String, String>();
         String allstr = fileHandl.readString();
-        String[] cumi = allstr.split("\r\n");
+        String[] cumi = allstr.split( "\r\n" );
         for (int ad = 0; ad < cumi.length; ad++) {
-            String[] cuma = cumi[ad].split(":");
-            vars.put(cuma[0], cuma[1]);
+            String[] cuma = cumi[ad].split( ":" );
+            vars.put( cuma[0], cuma[1] );
         }
 
-        parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS + vars.get(language);
-        parameter.borderColor = new Color(.5f, .5f, .5f, .9f);
+        parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS + vars.get( language );
+        parameter.borderColor = new Color( .5f, .5f, .5f, .9f );
         parameter.borderWidth = 0;
         if (ssx < ssy) {
             if (fontsize == 0) fontsize = 48 * ssx / 1080;
@@ -4972,118 +5003,114 @@ String texta="";
         parameter.size = fontsize;
 
 
-        parameter.shadowColor = new Color(0f, 0f, 0f, .9f);
+        parameter.shadowColor = new Color( 0f, 0f, 0f, .9f );
         parameter.shadowOffsetY = 4;
-        FreeTypeFontGenerator generator=null;
+        FreeTypeFontGenerator generator = null;
 
         String filenam = "font.ttf";
-        if (language.equalsIgnoreCase("Chinese")) {
+        if (language.equalsIgnoreCase( "Chinese" )) {
             filenam = "noto.otf";
         }
-        if (language.equalsIgnoreCase("Japanese")) {
+        if (language.equalsIgnoreCase( "Japanese" )) {
             filenam = "japanese.otf";
         }
 
 
-        if (sCustomFont.equalsIgnoreCase("")){
-        generator = new FreeTypeFontGenerator(Gdx.files.internal(filenam));
-        }else
-        {
-            try{
-                generator = new FreeTypeFontGenerator(Gdx.files.external(sCustomFont));
-            }  catch(Exception e){
-                generator = new FreeTypeFontGenerator(Gdx.files.internal(filenam));
+        if (sCustomFont.equalsIgnoreCase( "" )) {
+            generator = new FreeTypeFontGenerator( Gdx.files.internal( filenam ) );
+        } else {
+            try {
+                generator = new FreeTypeFontGenerator( Gdx.files.external( sCustomFont ) );
+            } catch (Exception e) {
+                generator = new FreeTypeFontGenerator( Gdx.files.internal( filenam ) );
             }
         }
         generator.setMaxTextureSize( 99999 );
-        str1 = generator.generateFont(parameter);
+        str1 = generator.generateFont( parameter );
         generator.dispose();
 
         skin = new Skin();
-        skin.add("font", str1, BitmapFont.class);
+        skin.add( "font", str1, BitmapFont.class );
 
-        FileHandle fileHandle = Gdx.files.internal("skins/holo/Holo-dark-hdpi.json");
-        FileHandle atlasFile = fileHandle.sibling("Holo-dark-hdpi.atlas");
+        FileHandle fileHandle = Gdx.files.internal( "skins/holo/Holo-dark-hdpi.json" );
+        FileHandle atlasFile = fileHandle.sibling( "Holo-dark-hdpi.atlas" );
 
         if (atlasFile.exists()) {
-            skin.addRegions(new TextureAtlas(atlasFile));
+            skin.addRegions( new TextureAtlas( atlasFile ) );
         }
 
-        skin.load(fileHandle);
+        skin.load( fileHandle );
     }
 
-    public void checkAndReloadSamples(){
+    public void checkAndReloadSamples() {
 
         if (!isSampleReloaded) {
-            FileHandle fh2 = Gdx.files.external("NotTiled/");
+            FileHandle fh2 = Gdx.files.external( "NotTiled/" );
             if (!fh2.exists()) fh2.mkdirs();
-            FileHandle fh3 = Gdx.files.external("NotTiled/sample");
+            FileHandle fh3 = Gdx.files.external( "NotTiled/sample" );
             if (fh3.exists() && !fh3.isDirectory()) fh3.delete();
-            FileHandle fhc = Gdx.files.external("NotTiled/sample/island.tmx");
+            FileHandle fhc = Gdx.files.external( "NotTiled/sample/island.tmx" );
             if (!fhc.exists()) {
 
-                FileHandle from = Gdx.files.internal("sample.zip");
-                FileHandle to = Gdx.files.external("NotTiled");
-                from.copyTo(to);
-                FileHandle zipo = Gdx.files.external("NotTiled/sample.zip");
-                unzip(zipo, to);
+                FileHandle from = Gdx.files.internal( "sample.zip" );
+                FileHandle to = Gdx.files.external( "NotTiled" );
+                from.copyTo( to );
+                FileHandle zipo = Gdx.files.external( "NotTiled/sample.zip" );
+                unzip( zipo, to );
 
-                prefs.putString("lof", "NotTiled/sample/island.tmx").flush();
-                prefs.putString("lastpath", "NotTiled").flush();
+                prefs.putString( "lof", "NotTiled/sample/island.tmx" ).flush();
+                prefs.putString( "lastpath", "NotTiled" ).flush();
                 lastpath = "NotTiled/sample";
             }
             isSampleReloaded = true;
-            prefs.putBoolean("reloaded", isSampleReloaded).flush();
+            prefs.putBoolean( "reloaded", isSampleReloaded ).flush();
         }
     }
 
-    public void justReloadSamples(){
-        FileHandle fh2 = Gdx.files.external("NotTiled/");
+    public void justReloadSamples() {
+        FileHandle fh2 = Gdx.files.external( "NotTiled/" );
         if (!fh2.exists()) fh2.mkdirs();
-        FileHandle fh3 = Gdx.files.external("NotTiled/sample");
+        FileHandle fh3 = Gdx.files.external( "NotTiled/sample" );
         if (fh3.exists() && !fh3.isDirectory()) fh3.delete();
 
-            FileHandle from = Gdx.files.internal("sample.zip");
-            FileHandle to = Gdx.files.external("NotTiled");
-            from.copyTo(to);
-            FileHandle zipo = Gdx.files.external("NotTiled/sample.zip");
-            unzip(zipo,to);
-            // zipo.delete();
+        FileHandle from = Gdx.files.internal( "sample.zip" );
+        FileHandle to = Gdx.files.external( "NotTiled" );
+        from.copyTo( to );
+        FileHandle zipo = Gdx.files.external( "NotTiled/sample.zip" );
+        unzip( zipo, to );
+        // zipo.delete();
 //            FileHandle from = Gdx.files.internal("sample/");
-            //          from.copyTo(Gdx.files.external("NotTiled/"));
-            prefs.putString("lof", "NotTiled/sample/island.tmx");
-            prefs.putString("lastpath", "NotTiled");
-            lastpath = "NotTiled/sample";
+        //          from.copyTo(Gdx.files.external("NotTiled/"));
+        prefs.putString( "lof", "NotTiled/sample/island.tmx" );
+        prefs.putString( "lastpath", "NotTiled" );
+        lastpath = "NotTiled/sample";
         prefs.flush();
     }
 
     public void unzip(FileHandle src, FileHandle dest) {
 
         // create output directory if it doesn't exist
-        if(!dest.exists()) dest.mkdirs();
+        if (!dest.exists()) dest.mkdirs();
         FileInputStream fis;
         //buffer for read and write data to file
         byte[] buffer = new byte[1024];
         try {
-            fis = new FileInputStream(src.file());
-            ZipInputStream zis = new ZipInputStream(fis);
+            fis = new FileInputStream( src.file() );
+            ZipInputStream zis = new ZipInputStream( fis );
             ZipEntry ze = zis.getNextEntry();
-            while(ze != null){
+            while (ze != null) {
 
                 String fileName = ze.getName();
-                FileHandle newFile = Gdx.files.external(dest.path() + File.separator + fileName);
-                System.out.println("Unzipping to "+newFile.path());
+                FileHandle newFile = Gdx.files.external( dest.path() + File.separator + fileName );
+                System.out.println( "Unzipping to " + newFile.path() );
 
-                if (ze.isDirectory())
-                {
+                if (ze.isDirectory()) {
                     newFile.mkdirs();
-                }
-                else
-                {
-                    FileOutputStream fos = new FileOutputStream(newFile.file());
+                } else {
+                    FileOutputStream fos = new FileOutputStream( newFile.file() );
                     int len;
-                    while ((len = zis.read(buffer)) > 0) {
-                        fos.write(buffer, 0, len);
+                    while ((len = zis.read( buffer )) > 0) {
+                        fos.write( buffer, 0, len );
                     }
                     fos.close();
                 }
@@ -5096,7 +5123,7 @@ String texta="";
             zis.close();
             fis.close();
         } catch (IOException e) {
-            ErrorBung(e,"errorlog.txt");
+            ErrorBung( e, "errorlog.txt" );
         }
 
     }
@@ -5105,7 +5132,7 @@ String texta="";
         //newtmxfile(false);
         try {
 
-            FileHandle fh1 = Gdx.files.external("NotTiled/noads.txt");
+            FileHandle fh1 = Gdx.files.external( "NotTiled/noads.txt" );
             if (fh1.exists()) {
                 bypassads = true;
             }
@@ -5114,25 +5141,25 @@ String texta="";
             checkAndReloadSamples();
 
             if (!intend.isEmpty()) {
-                String raw = intend.substring(7);
+                String raw = intend.substring( 7 );
                 try {
-                    raw = java.net.URLDecoder.decode(raw, "UTF-8");
+                    raw = java.net.URLDecoder.decode( raw, "UTF-8" );
                 } catch (UnsupportedEncodingException e) {
                 }
-                loadtmx(raw);
+                loadtmx( raw );
                 return;
             }
 
-            String lf = prefs.getString("lof", "NotTiled/" + "sample/island.tmx");
-            FileHandle tst = Gdx.files.external(lf);
+            String lf = prefs.getString( "lof", "NotTiled/" + "sample/island.tmx" );
+            FileHandle tst = Gdx.files.external( lf );
 
             if (tst.exists()) {
-                loadtmx(lf);
+                loadtmx( lf );
             } else {
-                newtmxfile(false);
+                newtmxfile( false );
             }
-        }catch(Exception e){
-            status("Error, check storage permission.",5);
+        } catch (Exception e) {
+            status( "Error, check storage permission.", 5 );
         }
 
     }
@@ -5143,12 +5170,12 @@ String texta="";
         background = null;
         if (user) {
             curdir = fNCurdir.getText();
-            curdir = curdir.replace("//", "/");
+            curdir = curdir.replace( "//", "/" );
             curfile = fNFilename.getText();
-            Tw = Integer.parseInt(fNTw.getText());
-            Th = Integer.parseInt(fNTh.getText());
-            Tsw = Integer.parseInt(fNTsw.getText());
-            Tsh = Integer.parseInt(fNTsh.getText());
+            Tw = Integer.parseInt( fNTw.getText() );
+            Th = Integer.parseInt( fNTh.getText() );
+            Tsw = Integer.parseInt( fNTsw.getText() );
+            Tsh = Integer.parseInt( fNTsh.getText() );
             renderorder = sbNMapRenderOrder.getSelected().toString();
             mapFormat = sbNMapFormat.getSelected().toString();
             orientation = sbNMapOrientation.getSelected().toString();
@@ -5165,7 +5192,8 @@ String texta="";
         }
         undolayer.clear();
         redolayer.clear();
-        cliplayer = null;clipsource=0;
+        cliplayer = null;
+        clipsource = 0;
         String isi = "";
         String prName = "";
         String prValue = "";
@@ -5182,29 +5210,29 @@ String texta="";
         int curobjid = -1;
         curid = 1;
         layer l = new layer();
-        l.setType(layer.Type.TILE);
-        l.setVisible(true);
-        l.setName(z.layer + " 1");
+        l.setType( layer.Type.TILE );
+        l.setVisible( true );
+        l.setName( z.layer + " 1" );
         java.util.List<Long> ls = new ArrayList<Long>();
         java.util.List<Integer> lts = new ArrayList<Integer>();
 
         for (long i = 0; i < Tw * Th; i++) {
-            ls.add((long) 0);
-            lts.add(-1);
+            ls.add( (long) 0 );
+            lts.add( -1 );
         }
 
 
-        l.setStr(ls);
-        l.setTset(lts);
-        layers.add(l);
+        l.setStr( ls );
+        l.setTset( lts );
+        layers.add( l );
 
         kartu = "world";
         mode = "tile";
         curspr = 0;
-        cam.position.set(Tsw * Tw / 2, -Tsh * Th / 2, 0);
+        cam.position.set( Tsw * Tw / 2, -Tsh * Th / 2, 0 );
         cam.zoom = .5f;
         cam.update();
-        panTo(Tsw * Tw / 2, -Tsh * Th / 2, .25f, 1f);
+        panTo( Tsw * Tw / 2, -Tsh * Th / 2, .25f, 1f );
 
 
         //loadautotiles();
@@ -5214,7 +5242,7 @@ String texta="";
         //uicam.update();
         firstload = loadtime;
         resetMinimap();
-        resetcam(false);
+        resetcam( false );
         loadingfile = false;
         updateMinimap();
     }
@@ -5222,12 +5250,12 @@ String texta="";
     public void newtmxfileplus(boolean user) {
         loadingfile = true;
         String faths = "NotTiled/sample/template/" + ltemplate.getSelected();
-        FileHandle fh = Gdx.files.external(faths);
+        FileHandle fh = Gdx.files.external( faths );
         if (!fh.exists()) {
-            msgbox("Template file not found. Please redownload.");
+            msgbox( "Template file not found. Please redownload." );
             return;
         }
-        loadtmxnewplus(faths);
+        loadtmxnewplus( faths );
         resetSwatches();
 
 
@@ -5235,127 +5263,127 @@ String texta="";
 
     private void showtsetselection(final java.util.List<tileset> tset) {
         bigman = new Table();
-        bigman.setFillParent(true);
+        bigman.setFillParent( true );
         Table tsetsel = new Table();
-        tsetsel.defaults().width(btnx).height(btny).padBottom(2);
-        ScrollPane sps = new ScrollPane(tsetsel);
-        bigman.add(sps);
-        tsetsel.add(new Label(z.selecttilesets, skin)).row();
-        cball = new CheckBox(z.selectall, skin);
-        cball.setChecked(true);
-        cball.align(Align.left);
-        tsetsel.add(cball).width(btnx).left().align(Align.left).row();
+        tsetsel.defaults().width( btnx ).height( btny ).padBottom( 2 );
+        ScrollPane sps = new ScrollPane( tsetsel );
+        bigman.add( sps );
+        tsetsel.add( new Label( z.selecttilesets, skin ) ).row();
+        cball = new CheckBox( z.selectall, skin );
+        cball.setChecked( true );
+        cball.align( Align.left );
+        tsetsel.add( cball ).width( btnx ).left().align( Align.left ).row();
         newcb = new CheckBox[tset.size()];
 
         for (int i = 0; i < tset.size(); i++) {
-            newcb[i] = new CheckBox(tset.get(i).getName(), skin);
-            newcb[i].setChecked(true);
-            newcb[i].align(Align.left);
-            tsetsel.add(newcb[i]).width(btnx).left().align(Align.left).row();
+            newcb[i] = new CheckBox( tset.get( i ).getName(), skin );
+            newcb[i].setChecked( true );
+            newcb[i].align( Align.left );
+            tsetsel.add( newcb[i] ).width( btnx ).left().align( Align.left ).row();
         }
-        TextButton okey = new TextButton(z.apply, skin);
+        TextButton okey = new TextButton( z.apply, skin );
 
-        okey.addListener(new ChangeListener() {
+        okey.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 for (int i = tset.size() - 1; i >= 0; i--) {
                     if (!newcb[i].isChecked()) {
-                        tset.remove(i);
+                        tset.remove( i );
                     }
                 }
 
-                if (tset ==tilesets2){
-                    for (tileset t: tilesets2){
+                if (tset == tilesets2) {
+                    for (tileset t : tilesets2) {
                         t.setFirstgid( requestGid() );
-                        tilesets.add(t);
+                        tilesets.add( t );
                     }
                 }
                 CacheAllTset();
                 backToMap();
-                cue("applytemplate");
+                cue( "applytemplate" );
             }
-        });
-        tsetsel.add(okey).row();
+        } );
+        tsetsel.add( okey ).row();
 
-        cball.addListener(new ChangeListener() {
+        cball.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 if (cball.isChecked()) {
                     for (int i = 0; i < tset.size(); i++) {
-                        newcb[i].setChecked(true);
+                        newcb[i].setChecked( true );
                     }
                 } else {
                     for (int i = 0; i < tset.size(); i++) {
-                        newcb[i].setChecked(false);
+                        newcb[i].setChecked( false );
                     }
                 }
                 //CacheAllTset();
             }
-        });
+        } );
 
-        gotoStage(bigman);
+        gotoStage( bigman );
 
     }
 
     public void loadTemplate() {
         //
-        bTmplBack = new TextButton(z.back, skin);
-        bTmplOK = new TextButton(z.ok, skin);
-        bTmplDownload = new TextButton(z.download, skin);
-        ltemplate = new com.badlogic.gdx.scenes.scene2d.ui.List<String>(skin);
-        ScrollPane spok = new ScrollPane(ltemplate);
+        bTmplBack = new TextButton( z.back, skin );
+        bTmplOK = new TextButton( z.ok, skin );
+        bTmplDownload = new TextButton( z.download, skin );
+        ltemplate = new com.badlogic.gdx.scenes.scene2d.ui.List<String>( skin );
+        ScrollPane spok = new ScrollPane( ltemplate );
 
-        bTmplBack.addListener(new ChangeListener() {
+        bTmplBack.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                if (!cue("usetemplateback") && lockUI) return;
-                gotoStage(tNewFile);
+                if (!cue( "usetemplateback" ) && lockUI) return;
+                gotoStage( tNewFile );
             }
-        });
+        } );
 
-        bTmplOK.addListener(new ChangeListener() {
+        bTmplOK.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-               if (!softcue("usetemplateok") && lockUI) return;
+                if (!softcue( "usetemplateok" ) && lockUI) return;
                 if (ltemplate.getSelectedIndex() < 0) return;
-                if (fNTsh.getText() == null) fNTsh.setText("20");
-                if (fNTsw.getText() == null) fNTsw.setText("20");
-                if (fNTh.getText() == null) fNTh.setText("20");
-                if (fNTw.getText() == null) fNTw.setText("20");
-                prefs.putString("Tsw", fNTsw.getText());
-                prefs.putString("Tsh", fNTsh.getText());
-                prefs.putString("Tw", fNTw.getText());
-                prefs.putString("Th", fNTh.getText());
+                if (fNTsh.getText() == null) fNTsh.setText( "20" );
+                if (fNTsw.getText() == null) fNTsw.setText( "20" );
+                if (fNTh.getText() == null) fNTh.setText( "20" );
+                if (fNTw.getText() == null) fNTw.setText( "20" );
+                prefs.putString( "Tsw", fNTsw.getText() );
+                prefs.putString( "Tsh", fNTsh.getText() );
+                prefs.putString( "Tw", fNTw.getText() );
+                prefs.putString( "Th", fNTh.getText() );
                 prefs.flush();
-                newtmxfileplus(true);
+                newtmxfileplus( true );
 
             }
-        });
+        } );
 
-        bTmplDownload.addListener(new ChangeListener() {
+        bTmplDownload.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                if (!cue("usetemplatedownload") && lockUI) return;
-                gotoStage(tOnline);
+                if (!cue( "usetemplatedownload" ) && lockUI) return;
+                gotoStage( tOnline );
                 refreshOnline();
             }
-        });
+        } );
 
         tTemplate = new Table();
-        tTemplate.setFillParent(true);
-        tTemplate.defaults().width(btnx).padBottom(2);
-        tTemplate.add(new Label(z.selecttemplate, skin)).padTop(10).row();
-        tTemplate.add(spok).height(0.45f * ssy).row();
-        tTemplate.add(bTmplOK).row();
-        tTemplate.add(bTmplDownload).row();
-        tTemplate.add(bNNew).row();
+        tTemplate.setFillParent( true );
+        tTemplate.defaults().width( btnx ).padBottom( 2 );
+        tTemplate.add( new Label( z.selecttemplate, skin ) ).padTop( 10 ).row();
+        tTemplate.add( spok ).height( 0.45f * ssy ).row();
+        tTemplate.add( bTmplOK ).row();
+        tTemplate.add( bTmplDownload ).row();
+        tTemplate.add( bNNew ).row();
 
-        tTemplate.add(bTmplBack).row();
+        tTemplate.add( bTmplBack ).row();
     }
 
     public void refreshTemplate() {
         String[] srr = new String[]{};
-        FileHandle del = Gdx.files.external("NotTiled/sample/template/");
+        FileHandle del = Gdx.files.external( "NotTiled/sample/template/" );
 
         FileHandle[] handle = del.list();
 
@@ -5376,25 +5404,25 @@ String texta="";
             }
 
         }
-        ltemplate.setItems(srr);
+        ltemplate.setItems( srr );
 
         if (ltemplate.getItems().size > 0) {
-            ltemplate.setSelectedIndex(0);
+            ltemplate.setSelectedIndex( 0 );
         }
     }
 
     public void refreshOnline() {
         String[] srr = new String[]{};
-        lonline.setItems(srr);
-        Net.HttpRequest request = new Net.HttpRequest(Net.HttpMethods.GET);
-        request.setUrl("https://www.dropbox.com/s/d114sswkkv64vs6/test.txt?dl=1");
-        Gdx.net.sendHttpRequest(request, new com.badlogic.gdx.Net.HttpResponseListener() {
+        lonline.setItems( srr );
+        Net.HttpRequest request = new Net.HttpRequest( Net.HttpMethods.GET );
+        request.setUrl( "https://www.dropbox.com/s/d114sswkkv64vs6/test.txt?dl=1" );
+        Gdx.net.sendHttpRequest( request, new com.badlogic.gdx.Net.HttpResponseListener() {
 
             @Override
             public void handleHttpResponse(Net.HttpResponse httpResponse) {
-                final FileHandle tmpFile = FileHandle.tempFile("model");
-                tmpFile.write(httpResponse.getResultAsStream(), false);
-                Gdx.app.postRunnable(new Runnable() {
+                final FileHandle tmpFile = FileHandle.tempFile( "model" );
+                tmpFile.write( httpResponse.getResultAsStream(), false );
+                Gdx.app.postRunnable( new Runnable() {
                     @Override
                     public void run() {
                         //String sss= tmpFile.readString();
@@ -5403,12 +5431,12 @@ String texta="";
                             templates = new Online();
 
                             Json json = new Json();
-                            templates = json.fromJson(Online.class, tmpFile);
+                            templates = json.fromJson( Online.class, tmpFile );
 
                             String[] srr = new String[templates.getTemplates().size()];
                             for (int i = 0; i < templates.getTemplates().size(); i++) {
-                                String nem = templates.getTemplates().get(i).getName();
-                                FileHandle del = Gdx.files.external("NotTiled/sample/template/" + nem);
+                                String nem = templates.getTemplates().get( i ).getName();
+                                FileHandle del = Gdx.files.external( "NotTiled/sample/template/" + nem );
                                 if (del.exists()) {
                                     srr[i] = nem + " (" + z.saved + ")";
                                 } else {
@@ -5416,253 +5444,276 @@ String texta="";
                                 }
                             }
 
-                            lonline.setItems(srr);
+                            lonline.setItems( srr );
                             if (lonline.getItems().size > 0) {
-                                lonline.setSelectedIndex(0);
+                                lonline.setSelectedIndex( 0 );
                             }
 
                         } catch (Exception e) {
-                            ErrorBung(e, "errorlog.txt");
+                            ErrorBung( e, "errorlog.txt" );
                         }
                     }
-                });
+                } );
             }
 
             @Override
             public void failed(Throwable t) {
-                msgbox(z.checkinternet);
+                msgbox( z.checkinternet );
             }
 
             @Override
             public void cancelled() {
-                msgbox(z.downloadcancel);
+                msgbox( z.downloadcancel );
             }
-        });
+        } );
 
     }
 
     public void downloadTemplate() {
         if (lonline.getSelectedIndex() < 0) return;
-        final String foldname = templates.getTemplates().get(lonline.getSelectedIndex()).getName();
-        final String lonk1 = templates.getTemplates().get(lonline.getSelectedIndex()).getTemplate();
-        final String lonk2 = templates.getTemplates().get(lonline.getSelectedIndex()).getExtension();
-        final String extName = templates.getTemplates().get(lonline.getSelectedIndex()).getExtension_name();
+        final String foldname = templates.getTemplates().get( lonline.getSelectedIndex() ).getName();
+        final String lonk1 = templates.getTemplates().get( lonline.getSelectedIndex() ).getTemplate();
+        final String lonk2 = templates.getTemplates().get( lonline.getSelectedIndex() ).getExtension();
+        final String extName = templates.getTemplates().get( lonline.getSelectedIndex() ).getExtension_name();
 
-        FileHandle fh = Gdx.files.external("NotTiled/sample/template/" + foldname);
+        FileHandle fh = Gdx.files.external( "NotTiled/sample/template/" + foldname );
         if (!fh.exists()) fh.mkdirs();
 
-        if (lonk2!=null) {
-            Net.HttpRequest request2 = new Net.HttpRequest(Net.HttpMethods.GET);
-            request2.setUrl(lonk2);
-            Gdx.net.sendHttpRequest(request2, new com.badlogic.gdx.Net.HttpResponseListener() {
+        if (lonk2 != null) {
+            Net.HttpRequest request2 = new Net.HttpRequest( Net.HttpMethods.GET );
+            request2.setUrl( lonk2 );
+            Gdx.net.sendHttpRequest( request2, new com.badlogic.gdx.Net.HttpResponseListener() {
 
                 @Override
                 public void handleHttpResponse(Net.HttpResponse httpResponse) {
-                    final FileHandle tmpFile = FileHandle.tempFile("mode3");
-                    tmpFile.write(httpResponse.getResultAsStream(), false);
-                    Gdx.app.postRunnable(new Runnable() {
+                    final FileHandle tmpFile = FileHandle.tempFile( "mode3" );
+                    tmpFile.write( httpResponse.getResultAsStream(), false );
+                    Gdx.app.postRunnable( new Runnable() {
                         @Override
                         public void run() {
 
                             try {
                                 templates = new Online();
-                                FileHandle fh = Gdx.files.external("NotTiled/sample/template/" + foldname + "/"+extName);
-                                fh.write( tmpFile.read(),false );
+                                FileHandle fh = Gdx.files.external( "NotTiled/sample/template/" + foldname + "/" + extName );
+                                fh.write( tmpFile.read(), false );
                             } catch (Exception e) {
-                                ErrorBung(e, "errorlog.txt");
+                                ErrorBung( e, "errorlog.txt" );
                             }
                         }
-                    });
+                    } );
                 }
 
                 @Override
                 public void failed(Throwable t) {
-                    msgbox(z.checkinternet);
+                    msgbox( z.checkinternet );
                 }
 
                 @Override
                 public void cancelled() {
-                    msgbox(z.downloadcancel);
+                    msgbox( z.downloadcancel );
                 }
-            });
+            } );
         }
 
-        Net.HttpRequest request = new Net.HttpRequest(Net.HttpMethods.GET);
-        request.setUrl(lonk1);
-        Gdx.net.sendHttpRequest(request, new com.badlogic.gdx.Net.HttpResponseListener() {
+        Net.HttpRequest request = new Net.HttpRequest( Net.HttpMethods.GET );
+        request.setUrl( lonk1 );
+        Gdx.net.sendHttpRequest( request, new com.badlogic.gdx.Net.HttpResponseListener() {
 
             @Override
             public void handleHttpResponse(Net.HttpResponse httpResponse) {
-                final FileHandle tmpFile = FileHandle.tempFile("mode2");
-                tmpFile.write(httpResponse.getResultAsStream(), false);
-                Gdx.app.postRunnable(new Runnable() {
+                final FileHandle tmpFile = FileHandle.tempFile( "mode2" );
+                tmpFile.write( httpResponse.getResultAsStream(), false );
+                Gdx.app.postRunnable( new Runnable() {
                     @Override
                     public void run() {
                         String sss = tmpFile.readString();
 
                         try {
                             templates = new Online();
-                            FileHandle fh = Gdx.files.external("NotTiled/sample/template/" + foldname + "/template.tmx");
-                            fh.writeString(sss, false);
+                            FileHandle fh = Gdx.files.external( "NotTiled/sample/template/" + foldname + "/template.tmx" );
+                            fh.writeString( sss, false );
                             refreshOnline();
-                            msgbox(z.downloadcomplete);
+                            msgbox( z.downloadcomplete );
                             downloading = false;
 
                         } catch (Exception e) {
-                            ErrorBung(e, "enyoh.txt");
+                            ErrorBung( e, "enyoh.txt" );
                         }
                     }
-                });
+                } );
             }
 
             @Override
             public void failed(Throwable t) {
-                msgbox(z.checkinternet);
+                msgbox( z.checkinternet );
                 downloading = false;
             }
 
             @Override
             public void cancelled() {
-                msgbox(z.downloadcancel);
+                msgbox( z.downloadcancel );
                 downloading = false;
             }
-        });
+        } );
     }
 
-    public void loadExport(){
+    public void loadExport() {
         tExport = new Table();
-        tExport.setFillParent(true);
-        tExport.defaults().width(btnx).padBottom(2);
-        fExportFilename = new TextField("export",skin);
-        TextButton topng = new TextButton(z.exporttopng, skin);
-        TextButton astileset = new TextButton(z.exportastileset, skin);
-        TextButton tolua = new TextButton(z.exporttolua, skin);
-        TextButton tojson = new TextButton(z.exporttojson, skin);
-        TextButton tomidi = new TextButton(z.exporttomidi, skin);
-        TextButton towav = new TextButton(z.recordwav, skin);
-        TextButton toback = new TextButton(z.back, skin);
-        tExport.add(new Label(z.filename, skin)).row();
-        tExport.add(fExportFilename).row();
-        tExport.add(topng).row();
-        tExport.add(astileset).row();
-        tExport.add(tolua).row();
-        tExport.add(tojson).row();
-        tExport.add(tomidi).row();
-        tExport.add(towav).row();
-        tExport.add(toback).row();
+        tExport.setFillParent( true );
+        tExport.defaults().width( btnx ).padBottom( 2 );
+        fExportFilename = new TextField( "export", skin );
+        TextButton totemplate = new TextButton( z.exportastemplate, skin );
+        TextButton topng = new TextButton( z.exporttopng, skin );
+        TextButton astileset = new TextButton( z.exportastileset, skin );
+        TextButton selastset = new TextButton( z.selectionastileset, skin );
+        TextButton tolua = new TextButton( z.exporttolua, skin );
+        TextButton tojson = new TextButton( z.exporttojson, skin );
+        TextButton tomidi = new TextButton( z.exporttomidi, skin );
+        TextButton towav = new TextButton( z.recordwav, skin );
+        TextButton toback = new TextButton( z.back, skin );
+        tExport.add( new Label( z.filename, skin ) ).row();
+        tExport.add( fExportFilename ).row();
+        tExport.add( totemplate ).row();
+        tExport.add( selastset ).row();
+        tExport.add( topng ).row();
+        tExport.add( astileset ).row();
+        tExport.add( tolua ).row();
+        tExport.add( tojson ).row();
+        tExport.add( tomidi ).row();
+        tExport.add( towav ).row();
+        tExport.add( toback ).row();
 
-        topng.addListener(new ChangeListener() {
+        totemplate.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                exporttopng(fExportFilename.getText());
-                cue("exporttopng");
-
+                exportastemplate( fExportFilename.getText() );
+                cue( "exportastemplate" );
             }
-        });
+        } );
 
-        astileset.addListener(new ChangeListener() {
+
+
+        topng.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                exportastileset(fExportFilename.getText());
-            }
-        });
+                exporttopng( fExportFilename.getText() );
+                cue( "exporttopng" );
 
-        tolua.addListener(new ChangeListener() {
+            }
+        } );
+
+        selastset.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                exporttolua(fExportFilename.getText());
-            }
-        });
+                selectionastset( fExportFilename.getText() );
+                cue( "selastset" );
 
-        tojson.addListener(new ChangeListener() {
+            }
+        } );
+
+        astileset.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                exporttojson(fExportFilename.getText());
+                exportastileset( fExportFilename.getText() );
             }
+        } );
 
-
-        });
-
-        tomidi.addListener(new ChangeListener() {
+        tolua.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                exporttomidi(fExportFilename.getText());
+                exporttolua( fExportFilename.getText() );
             }
+        } );
 
-
-        });
-        towav.addListener(new ChangeListener() {
+        tojson.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                recordwav(fExportFilename.getText());
+                exporttojson( fExportFilename.getText() );
             }
 
 
-        });
+        } );
 
-        toback.addListener(new ChangeListener() {
+        tomidi.addListener( new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                exporttomidi( fExportFilename.getText() );
+            }
+
+
+        } );
+        towav.addListener( new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                recordwav( fExportFilename.getText() );
+            }
+
+
+        } );
+
+        toback.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 backToMap();
             }
-        });
+        } );
     }
 
-    public void recordAudio(int wavwidth, final String filenamenya){
+    public void recordAudio(int wavwidth, final String filenamenya) {
         final int samples = 22000;
         boolean isMono = true;
         final short[] data = new short[samples * (wavwidth)];
 
-        final AudioRecorder recorder = Gdx.audio.newAudioRecorder(samples, isMono);
-        final AudioDevice player = Gdx.audio.newAudioDevice(samples, isMono);
+        final AudioRecorder recorder = Gdx.audio.newAudioRecorder( samples, isMono );
+        final AudioDevice player = Gdx.audio.newAudioDevice( samples, isMono );
         //Sound sfxlock =  Gdx.audio.newSound(Gdx.files.external("test.wav"));
         //sfxlock.play();
-        new Thread(new Runnable() {
+        new Thread( new Runnable() {
             @Override
             public void run() {
-                System.out.println("Record: Start");
+                System.out.println( "Record: Start" );
 
-                recorder.read(data, 0, data.length);
+                recorder.read( data, 0, data.length );
                 recorder.dispose();
-                System.out.println("Record: End");
+                System.out.println( "Record: End" );
 
-                System.out.println("Saving File...");
-                FileHandle fh = Gdx.files.external(curdir + "/"+filenamenya+".wav");
-                try{
-                OutputStream out = new FileOutputStream(fh.file());
-                PCMtoFile(out, data, samples, 1, 16);
-                    System.out.println("Saved.");
-                }catch (Exception e){
-                    ErrorBung(e,"waveerrror.txt");
-                    System.out.println("Saving Error.");
+                System.out.println( "Saving File..." );
+                FileHandle fh = Gdx.files.external( curdir + "/" + filenamenya + ".wav" );
+                try {
+                    OutputStream out = new FileOutputStream( fh.file() );
+                    PCMtoFile( out, data, samples, 1, 16 );
+                    System.out.println( "Saved." );
+                } catch (Exception e) {
+                    ErrorBung( e, "waveerrror.txt" );
+                    System.out.println( "Saving Error." );
                 }
             }
-        }).start();
+        } ).start();
     }
 
     public void loadImport() {
 
-        bImportOK = new TextButton(z.ok, skin);
-        TextButton bImportImageSize = new TextButton(z.imagesize, skin);
-        TextButton bImportTileSize = new TextButton(z.tilesize, skin);
-        TextButton bImportPowerOfTwo = new TextButton(z.powerof2, skin);
+        bImportOK = new TextButton( z.ok, skin );
+        TextButton bImportImageSize = new TextButton( z.imagesize, skin );
+        TextButton bImportTileSize = new TextButton( z.tilesize, skin );
+        TextButton bImportPowerOfTwo = new TextButton( z.powerof2, skin );
 
-        bImportOK.addListener(new ChangeListener() {
+        bImportOK.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 try {
                     loadingfile = true;
                     errors = " ";
-                    if (fImportWidth.getText().equalsIgnoreCase("")) {
-                        fImportWidth.setText(Tsw + "");
+                    if (fImportWidth.getText().equalsIgnoreCase( "" )) {
+                        fImportWidth.setText( Tsw + "" );
                     }
-                    if (fImportHeight.getText().equalsIgnoreCase("")) {
-                        fImportHeight.setText(Tsh + "");
+                    if (fImportHeight.getText().equalsIgnoreCase( "" )) {
+                        fImportHeight.setText( Tsh + "" );
                     }
-                    if (thefile.file().getName().toLowerCase().contains(".tsx")) {
-                        loadtsx(openedfile, tilesets, curdir);
+                    if (thefile.file().getName().toLowerCase().contains( ".tsx" )) {
+                        loadtsx( openedfile, tilesets, curdir );
                     } else {
-                        addImageTset(thefile);
+                        addImageTset( thefile );
                     }
 
                     CacheAllTset();
@@ -5672,149 +5723,143 @@ String texta="";
                     seltset = tilesets.size() - 1;
                     onToPicker();
                     recenterpick();
-                    cue("importtilesetok");
+                    cue( "importtilesetok" );
                 } catch (Exception e) {
                     loadingfile = false;
                     onToPicker();
                 }
 
                 if (errors != " ") {
-                    status(errors, 5);
+                    status( errors, 5 );
                 } else {
-                    cue("tilesetadded");
+                    cue( "tilesetadded" );
                 }
             }
-        });
+        } );
 
-        bImportTileSize.addListener(new ChangeListener() {
+        bImportTileSize.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                fImportHeight.setText(Tsh+"");
-                fImportWidth.setText(Tsw+"");
+                fImportHeight.setText( Tsh + "" );
+                fImportWidth.setText( Tsw + "" );
             }
-        });
+        } );
 
-        bImportImageSize.addListener(new ChangeListener() {
+        bImportImageSize.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                if (thefile.file().getName().toLowerCase().contains(".tsx")) {
-                    msgbox("TSX");
+                if (thefile.file().getName().toLowerCase().contains( ".tsx" )) {
+                    msgbox( "TSX" );
                 } else {
 
                     try {
                         File f = thefile.file();
-                        SimpleImageInfo s = new SimpleImageInfo(f);
-                        fImportHeight.setText(s.getHeight()+"");
-                        fImportWidth.setText(s.getWidth()+"");
-                    }
-                    catch (Exception e){
-                        msgbox(e.toString());
+                        SimpleImageInfo s = new SimpleImageInfo( f );
+                        fImportHeight.setText( s.getHeight() + "" );
+                        fImportWidth.setText( s.getWidth() + "" );
+                    } catch (Exception e) {
+                        msgbox( e.toString() );
                     }
 
 
                 }
             }
-        });
+        } );
 
-        bImportPowerOfTwo.addListener(new ChangeListener() {
+        bImportPowerOfTwo.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                if (!isPowerOf2(Integer.parseInt(fImportHeight.getText())))
-                {
-                    fImportHeight.setText(16+"");
-                    fImportWidth.setText(16+"");
-                }
-                else
-                {
-                    int thenum = Integer.parseInt(fImportHeight.getText());
-                    if (thenum >=256)
-                    {
-                        fImportHeight.setText(16+"");
-                        fImportWidth.setText(16+"");
-                    }
-                    else {
+                if (!isPowerOf2( Integer.parseInt( fImportHeight.getText() ) )) {
+                    fImportHeight.setText( 16 + "" );
+                    fImportWidth.setText( 16 + "" );
+                } else {
+                    int thenum = Integer.parseInt( fImportHeight.getText() );
+                    if (thenum >= 256) {
+                        fImportHeight.setText( 16 + "" );
+                        fImportWidth.setText( 16 + "" );
+                    } else {
                         thenum = thenum * 2;
-                        fImportHeight.setText(thenum + "");
-                        fImportWidth.setText(thenum + "");
+                        fImportHeight.setText( thenum + "" );
+                        fImportWidth.setText( thenum + "" );
                     }
                 }
 
             }
-        });
+        } );
 
-        fImportWidth = new TextField("", skin);
-        fImportHeight = new TextField("", skin);
-        fImportWidth.setTextFieldFilter(tffint);
-        fImportHeight.setTextFieldFilter(tffint);
-        cImportEmbed = new CheckBox(z.embedtileset, skin);
+        fImportWidth = new TextField( "", skin );
+        fImportHeight = new TextField( "", skin );
+        fImportWidth.setTextFieldFilter( tffint );
+        fImportHeight.setTextFieldFilter( tffint );
+        cImportEmbed = new CheckBox( z.embedtileset, skin );
 
         tImport = new Table();
-        tImport.setFillParent(true);
-        tImport.defaults().width(btnx).padBottom(2);
-        tImport.add(new Label(z.importtileset, skin)).padTop(10).colspan(2).row();
+        tImport.setFillParent( true );
+        tImport.defaults().width( btnx ).padBottom( 2 );
+        tImport.add( new Label( z.importtileset, skin ) ).padTop( 10 ).colspan( 2 ).row();
 
-        tImport.add(bImportTileSize).colspan(2).row();
-        tImport.add(bImportImageSize).colspan(2).row();
-        tImport.add(bImportPowerOfTwo).colspan(2).row();
+        tImport.add( bImportTileSize ).colspan( 2 ).row();
+        tImport.add( bImportImageSize ).colspan( 2 ).row();
+        tImport.add( bImportPowerOfTwo ).colspan( 2 ).row();
 
-        tImport.add(new Label(z.tilewidth, skin)).width(btnx / 2).padTop(10);
-        tImport.add(fImportWidth).width(btnx / 2).row();
-        tImport.add(new Label(z.tileheight, skin)).width(btnx / 2).padTop(10);
-        tImport.add(fImportHeight).width(btnx / 2).row();
-        tImport.add(cImportEmbed).colspan(2).row();
-        tImport.add(bImportOK).colspan(2).row();
+        tImport.add( new Label( z.tilewidth, skin ) ).width( btnx / 2 ).padTop( 10 );
+        tImport.add( fImportWidth ).width( btnx / 2 ).row();
+        tImport.add( new Label( z.tileheight, skin ) ).width( btnx / 2 ).padTop( 10 );
+        tImport.add( fImportHeight ).width( btnx / 2 ).row();
+        tImport.add( cImportEmbed ).colspan( 2 ).row();
+        tImport.add( bImportOK ).colspan( 2 ).row();
 
 
     }
 
     public void loadOnline() {
-        bOnlineBack = new TextButton(z.back, skin);
-        bOnlineRefresh = new TextButton(z.refresh, skin);
-        bOnlineDownload = new TextButton(z.dls, skin);
-        lonline = new com.badlogic.gdx.scenes.scene2d.ui.List<String>(skin);
-        ScrollPane spok = new ScrollPane(lonline);
+        bOnlineBack = new TextButton( z.back, skin );
+        bOnlineRefresh = new TextButton( z.refresh, skin );
+        bOnlineDownload = new TextButton( z.dls, skin );
+        lonline = new com.badlogic.gdx.scenes.scene2d.ui.List<String>( skin );
+        ScrollPane spok = new ScrollPane( lonline );
 
-        bOnlineBack.addListener(new ChangeListener() {
+        bOnlineBack.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                gotoStage(tTemplate);
+                gotoStage( tTemplate );
                 refreshTemplate();
             }
-        });
+        } );
 
-        bOnlineRefresh.addListener(new ChangeListener() {
+        bOnlineRefresh.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 lonline.clearItems();
                 refreshOnline();
             }
-        });
+        } );
 
-        bOnlineDownload.addListener(new ChangeListener() {
+        bOnlineDownload.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 if (downloading) {
-                    msgbox(z.downloading);
+                    msgbox( z.downloading );
                     return;
                 }
                 downloading = true;
                 downloadTemplate();
                 //gotoStage(tOnline);
             }
-        });
+        } );
 
         tOnline = new Table();
-        tOnline.setFillParent(true);
-        tOnline.defaults().width(btnx).padBottom(2);
-        tOnline.add(new Label(z.onlinetemplate, skin)).padTop(10).row();
-        tOnline.add(spok).height(0.5f * ssy).row();
-        tOnline.add(bOnlineDownload).row();
-        tOnline.add(bOnlineRefresh).row();
-        tOnline.add(bOnlineBack).row();
+        tOnline.setFillParent( true );
+        tOnline.defaults().width( btnx ).padBottom( 2 );
+        tOnline.add( new Label( z.onlinetemplate, skin ) ).padTop( 10 ).row();
+        tOnline.add( spok ).height( 0.5f * ssy ).row();
+        tOnline.add( bOnlineDownload ).row();
+        tOnline.add( bOnlineRefresh ).row();
+        tOnline.add( bOnlineBack ).row();
 
     }
 
-    public void loadListener(){
+    public void loadListener() {
         listBack = new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -5824,72 +5869,71 @@ String texta="";
     }
 
     public void loadMenuMap() {
-        bLicense = new TextButton(z.license, skin);
-        bNew = new TextButton(z.newfile, skin);
-        bOpen = new TextButton(z.open, skin);
-        bSave = new TextButton(z.save, skin);
-        bSaveAs = new TextButton(z.saveas, skin);
-        bTutorial = new TextButton(z.tutorial, skin);
-        bTutorBack = new TextButton(z.back, skin);
-        bTutorOK = new TextButton(z.ok, skin);
+        bLicense = new TextButton( z.license, skin );
+        bNew = new TextButton( z.newfile, skin );
+        bOpen = new TextButton( z.open, skin );
+        bSave = new TextButton( z.save, skin );
+        bSaveAs = new TextButton( z.saveas, skin );
+        bTutorial = new TextButton( z.tutorial, skin );
+        bTutorBack = new TextButton( z.back, skin );
+        bTutorOK = new TextButton( z.ok, skin );
 
-         bExporter = new TextButton(z.export, skin);
-         bDiscord = new TextButton(z.discordserver, skin);
-         bWhatsapp = new TextButton(z.whatsappgroup, skin);
-        bPatreon = new TextButton(z.supportnottiled, skin);
-         bPatreon2 = new TextButton(z.supportnottiled, skin);
-         credito = new TextButton(z.credits, skin);
-         bBackground = new TextButton(z.background, skin);
-         bCollaboration = new TextButton(z.collaboration, skin);
-        bReload = new TextButton(z.reloadsamples, skin);
-         bCopyto = new TextButton(z.copytorustedwarfare, skin);
-        bRusted = new TextButton("Rusted Warfare", skin);
-        bWardate = new TextButton("Rusted WarDate", skin);
-        bManual = new TextButton(z.manualbook, skin);
-        bVideos = new TextButton(z.videotutorials, skin);
+        bExporter = new TextButton( z.export, skin );
+        bDiscord = new TextButton( z.discordserver, skin );
+        bWhatsapp = new TextButton( z.whatsappgroup, skin );
+        bPatreon = new TextButton( z.supportnottiled, skin );
+        bPatreon2 = new TextButton( z.supportnottiled, skin );
+        credito = new TextButton( z.credits, skin );
+        bBackground = new TextButton( z.background, skin );
+        bCollaboration = new TextButton( z.collaboration, skin );
+        bReload = new TextButton( z.reloadsamples, skin );
+        bCopyto = new TextButton( z.copytorustedwarfare, skin );
+        bRusted = new TextButton( "Rusted Warfare", skin );
+        bWardate = new TextButton( "Rusted WarDate", skin );
+        bManual = new TextButton( z.manualbook, skin );
+        bVideos = new TextButton( z.videotutorials, skin );
 
         tRecent = new Table();
-        tRecent.setFillParent(true);
-        tRecent.defaults().width(btnx).padBottom(2);
-        bRecent = new TextButton(z.recentfile, skin);
-        bRecentOpen = new TextButton(z.open, skin);
-        bRecentBack = new TextButton(z.back, skin);
-        lrecentlist = new com.badlogic.gdx.scenes.scene2d.ui.List<String>(skin);
-        ScrollPane spok = new ScrollPane(lrecentlist);
-        tRecent.add(spok).height(0.7f * ssy).row();
-        tRecent.add(bRecentOpen).row();
-        tRecent.add(bRecentBack);
+        tRecent.setFillParent( true );
+        tRecent.defaults().width( btnx ).padBottom( 2 );
+        bRecent = new TextButton( z.recentfile, skin );
+        bRecentOpen = new TextButton( z.open, skin );
+        bRecentBack = new TextButton( z.back, skin );
+        lrecentlist = new com.badlogic.gdx.scenes.scene2d.ui.List<String>( skin );
+        ScrollPane spok = new ScrollPane( lrecentlist );
+        tRecent.add( spok ).height( 0.7f * ssy ).row();
+        tRecent.add( bRecentOpen ).row();
+        tRecent.add( bRecentBack );
         try {
             recents = new recents();
             Json json = new Json();
-            FileHandle f = Gdx.files.external("NotTiled/recents.json");
-            recents = json.fromJson(recents.class, f);
+            FileHandle f = Gdx.files.external( "NotTiled/recents.json" );
+            recents = json.fromJson( recents.class, f );
         } catch (Exception e) {
         }
 
         tTutorial = new Table();
-        tTutorial.setFillParent(true);
-        tTutorial.defaults().width(btnx).padBottom(2);
-        ltutorial = new com.badlogic.gdx.scenes.scene2d.ui.List<String>(skin);
-        ScrollPane spoki = new ScrollPane(ltutorial);
-        tTutorial.add(spoki).height(0.7f * ssy).row();
-        tTutorial.add(bTutorOK).row();
-        tTutorial.add(bTutorBack);
+        tTutorial.setFillParent( true );
+        tTutorial.defaults().width( btnx ).padBottom( 2 );
+        ltutorial = new com.badlogic.gdx.scenes.scene2d.ui.List<String>( skin );
+        ScrollPane spoki = new ScrollPane( ltutorial );
+        tTutorial.add( spoki ).height( 0.7f * ssy ).row();
+        tTutorial.add( bTutorOK ).row();
+        tTutorial.add( bTutorBack );
 
-        bLinks = new TextButton(z.links, skin);
+        bLinks = new TextButton( z.links, skin );
 
-        bExit = new TextButton(z.exit, skin);
-        bBack = new TextButton(z.back, skin);
+        bExit = new TextButton( z.exit, skin );
+        bBack = new TextButton( z.back, skin );
 
-        bFeedback = new TextButton(z.sendfeedback, skin);
-        bPreference = new TextButton(z.preferences, skin);
-        bProperties = new TextButton(z.mapproperties, skin);
-        bTileMgmt = new TextButton(z.layer, skin);
-        bTsetMgmt = new TextButton(z.tileset, skin);
-        bAutoMgmt = new TextButton(z.macro, skin);
-        bUIEditor = new TextButton(z.uieditor, skin);
-         bTools = new TextButton(z.tools, skin);
-
+        bFeedback = new TextButton( z.sendfeedback, skin );
+        bPreference = new TextButton( z.preferences, skin );
+        bProperties = new TextButton( z.mapproperties, skin );
+        bTileMgmt = new TextButton( z.layer, skin );
+        bTsetMgmt = new TextButton( z.tileset, skin );
+        bAutoMgmt = new TextButton( z.macro, skin );
+        bUIEditor = new TextButton( z.uieditor, skin );
+        bTools = new TextButton( z.tools, skin );
 
 
         ///////
@@ -5912,306 +5956,305 @@ String texta="";
 		*/
         /////
 
-        bRecentBack.addListener(listBack);
-        bTutorBack.addListener(listBack);
+        bRecentBack.addListener( listBack );
+        bTutorBack.addListener( listBack );
 
-        bBackground.addListener(new ChangeListener() {
+        bBackground.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                FileDialog(z.openimagefile, "background", "file", new String[]{".png", ".bmp", ".jpg", ".jpeg", ".gif"}, null);
+                FileDialog( z.openimagefile, "background", "file", new String[]{".png", ".bmp", ".jpg", ".jpeg", ".gif"}, null );
             }
-        });
+        } );
 
-        credito.addListener(new ChangeListener() {
+        credito.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 Json json = new Json();
-                writeThis("testtut.json", json.prettyPrint(tutor));
+                writeThis( "testtut.json", json.prettyPrint( tutor ) );
                 showCredits();
             }
-        });
+        } );
 
-        bReload.addListener(new ChangeListener() {
+        bReload.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 justReloadSamples();
-                msgbox(z.sampleshasbeenreloaded);
+                msgbox( z.sampleshasbeenreloaded );
 
             }
-        });
+        } );
 
-        bCopyto.addListener(new ChangeListener() {
+        bCopyto.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
 
                 copyToRW();
 
             }
-        });
+        } );
 
 
-        bBack.addListener(listBack);
-        bBack2 = new TextButton(z.back, skin);
-        bBack2.addListener(listBack);
-         bBack3 = new TextButton(z.back, skin);
-        bBack3.addListener(listBack);
-        bExit.addListener(new ChangeListener() {
+        bBack.addListener( listBack );
+        bBack2 = new TextButton( z.back, skin );
+        bBack2.addListener( listBack );
+        bBack3 = new TextButton( z.back, skin );
+        bBack3.addListener( listBack );
+        bExit.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 Gdx.app.exit();
             }
-        });
+        } );
 
-        bLinks.addListener(new ChangeListener() {
+        bLinks.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 setLinksMap();
-                gotoStage(tLinks);
-                cue("links");
+                gotoStage( tLinks );
+                cue( "links" );
             }
-        });
+        } );
 
-        bCollaboration.addListener(new ChangeListener() {
+        bCollaboration.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                gotoStage(tCollab);
-                cue("collab");
+                gotoStage( tCollab );
+                cue( "collab" );
             }
-        });
+        } );
 
-        bTutorial.addListener(new ChangeListener() {
+        bTutorial.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                gotoStage(tTutorial);
+                gotoStage( tTutorial );
             }
-        });
+        } );
 
-        bNew.addListener(new ChangeListener() {
+        bNew.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                lastpath = prefs.getString("lastpath", "NotTiled");
-                if (lastpath.startsWith(Gdx.files.getExternalStoragePath()))
-                {
-                    lastpath = lastpath.substring(Gdx.files.getExternalStoragePath().length());
+                lastpath = prefs.getString( "lastpath", "NotTiled" );
+                if (lastpath.startsWith( Gdx.files.getExternalStoragePath() )) {
+                    lastpath = lastpath.substring( Gdx.files.getExternalStoragePath().length() );
 
                 }
 
-                fNCurdir.setText(lastpath);
-                fNTsw.setText(prefs.getString("Tsw", "20"));
-                fNTsh.setText(prefs.getString("Tsh", "20"));
-                fNTw.setText(prefs.getString("Tw", "20"));
-                fNTh.setText(prefs.getString("Th", "20"));
-                sbNMapFormat.setSelected("base64-gzip");
+                fNCurdir.setText( lastpath );
+                fNTsw.setText( prefs.getString( "Tsw", "20" ) );
+                fNTsh.setText( prefs.getString( "Tsh", "20" ) );
+                fNTw.setText( prefs.getString( "Tw", "20" ) );
+                fNTh.setText( prefs.getString( "Th", "20" ) );
+                sbNMapFormat.setSelected( "base64-gzip" );
 
-                gotoStage(tNewFile);
-                cue("new");
+                gotoStage( tNewFile );
+                cue( "new" );
             }
-        });
+        } );
 
-        bOpen.addListener(new ChangeListener() {
+        bOpen.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                FileDialog(z.opentmxfile, "open", "file", new String[]{".tmx",".ntp"}, null);
+                FileDialog( z.opentmxfile, "open", "file", new String[]{".tmx", ".ntp"}, null );
             }
-        });
+        } );
 
-        bLicense.addListener(new ChangeListener() {
+        bLicense.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                gotoStage(tLicense);
+                gotoStage( tLicense );
             }
-        });
+        } );
 
-        bExporter.addListener(new ChangeListener() {
+        bExporter.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                gotoStage(tExport);
-                cue("export");
+                gotoStage( tExport );
+                cue( "export" );
             }
-        });
+        } );
 
 
-        bRecent.addListener(new ChangeListener() {
+        bRecent.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                gotoStage(tRecent);
+                gotoStage( tRecent );
                 lrecentlist.setItems();
 
                 java.util.List<String> spt = new ArrayList<String>();
                 for (int i = recents.getPaths().size() - 1; i >= 0; i--) {
-                    spt.add(recents.getPaths().get(i));
+                    spt.add( recents.getPaths().get( i ) );
                 }
-                lrecentlist.setItems(spt.toArray(new String[0]));
+                lrecentlist.setItems( spt.toArray( new String[0] ) );
             }
-        });
+        } );
 
-        bRecentOpen.addListener(new ChangeListener() {
+        bRecentOpen.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                FileHandle file = Gdx.files.external(lrecentlist.getSelected());
-                if (file.extension().equalsIgnoreCase( "ntp" )){
+                FileHandle file = Gdx.files.external( lrecentlist.getSelected() );
+                if (file.extension().equalsIgnoreCase( "ntp" )) {
                     backToMap();
                     String curdir = file.parent().path();
-                    FileHandle tmpfolder=Gdx.files.external("NotTiled/Temp");
-                    unzip(file,tmpfolder);
+                    FileHandle tmpfolder = Gdx.files.external( "NotTiled/Temp" );
+                    unzip( file, tmpfolder );
                     recents.addrecent( file.path() );
                     saveRecents();
-                    playgame( "NotTiled/Temp", "index.tmx");
-                }else{
-                    loadtmx(lrecentlist.getSelected());
+                    playgame( "NotTiled/Temp", "index.tmx" );
+                } else {
+                    loadtmx( lrecentlist.getSelected() );
                     backToMap();
                 }
 
             }
-        });
+        } );
 
 
-        bSave.addListener(new ChangeListener() {
+        bSave.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                saveMap(curdir + "/" + curfile);
-                cue("save");
-                msgbox(z.yourmaphasbeensaved);
+                saveMap( curdir + "/" + curfile );
+                cue( "save" );
+                msgbox( z.yourmaphasbeensaved );
                 if (!bypassads) face.showinterstitial();
             }
-        });
+        } );
 
-        bSaveAs.addListener(new ChangeListener() {
+        bSaveAs.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                FileDialog(z.selectnewlocation, "saveas", "dir", new String[]{}, tMenu);
+                FileDialog( z.selectnewlocation, "saveas", "dir", new String[]{}, tMenu );
             }
-        });
+        } );
 
-        bDiscord.addListener(new ChangeListener() {
+        bDiscord.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                Gdx.net.openURI("https://discord.gg/pZBGBKr");
+                Gdx.net.openURI( "https://discord.gg/pZBGBKr" );
             }
-        });
+        } );
 
-        bRusted.addListener(new ChangeListener() {
+        bRusted.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                Gdx.net.openURI("https://play.google.com/store/apps/details?id=com.corrodinggames.rts");
+                Gdx.net.openURI( "https://play.google.com/store/apps/details?id=com.corrodinggames.rts" );
             }
-        });
+        } );
 
-        bWardate.addListener(new ChangeListener() {
+        bWardate.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                Gdx.net.openURI("https://play.google.com/store/apps/details?id=com.fantasy.final.apps.rustedwardate");
+                Gdx.net.openURI( "https://play.google.com/store/apps/details?id=com.fantasy.final.apps.rustedwardate" );
             }
-        });
+        } );
 
-        bManual.addListener(new ChangeListener() {
+        bManual.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                Gdx.net.openURI("https://www.mirwanda.com/2019/03/nottiled-manual-book.html?m=1");
+                Gdx.net.openURI( "https://www.mirwanda.com/2019/03/nottiled-manual-book.html?m=1" );
             }
-        });
+        } );
 
-        bFeedback.addListener(new ChangeListener() {
+        bFeedback.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                Gdx.net.openURI("mailto:reza@mirwanda.com?subject=NotTiled%20feedback");
+                Gdx.net.openURI( "mailto:reza@mirwanda.com?subject=NotTiled%20feedback" );
             }
-        });
+        } );
 
-        bVideos.addListener(new ChangeListener() {
+        bVideos.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                Gdx.net.openURI("https://www.youtube.com/playlist?list=PLaZhehDwQZIKlNPsMKqR3YRYxvdWctWt9");
+                Gdx.net.openURI( "https://www.youtube.com/playlist?list=PLaZhehDwQZIKlNPsMKqR3YRYxvdWctWt9" );
             }
-        });
+        } );
 
-        bUIEditor.addListener(new ChangeListener() {
+        bUIEditor.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
 
                 backToMap();
-                loadInterface("custominterface.json");
+                loadInterface( "custominterface.json" );
                 kartu = "editor";
             }
-        });
+        } );
 
-         bManualCN = new TextButton(z.checkupdate, skin);
-        bManualCN.addListener(new ChangeListener() {
+        bManualCN = new TextButton( z.checkupdate, skin );
+        bManualCN.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                switch (language){
+                switch (language) {
                     case "Chinese":
-                        Gdx.net.openURI("http://jmjs.ys168.com/");
+                        Gdx.net.openURI( "http://jmjs.ys168.com/" );
                         break;
                     default:
-                        Gdx.net.openURI("https://play.google.com/store/apps/details?id=com.mirwanda.nottiled");
+                        Gdx.net.openURI( "https://play.google.com/store/apps/details?id=com.mirwanda.nottiled" );
 
                 }
             }
-        });
+        } );
 
-        bWhatsapp.addListener(new ChangeListener() {
+        bWhatsapp.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                Gdx.net.openURI("https://chat.whatsapp.com/LnZ74s758mTJnBu1ClKUA6");
+                Gdx.net.openURI( "https://chat.whatsapp.com/LnZ74s758mTJnBu1ClKUA6" );
             }
-        });
+        } );
 
-        bPatreon.addListener(new ChangeListener() {
+        bPatreon.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 if (!face.buyadfree()) {
-                    Gdx.net.openURI("https://www.mirwanda.com");
+                    Gdx.net.openURI( "https://www.mirwanda.com" );
                 }
             }
-        });
-        bPatreon.setColor(0, 1, 0, 1);
+        } );
+        bPatreon.setColor( 0, 1, 0, 1 );
 
-        bPatreon2.addListener(new ChangeListener() {
+        bPatreon2.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 if (!face.buyadfree()) {
-                    Gdx.net.openURI("https://www.mirwanda.com");
+                    Gdx.net.openURI( "https://www.mirwanda.com" );
                 }
             }
-        });
-        bPatreon2.setColor(0, 1, 0, 1);
+        } );
+        bPatreon2.setColor( 0, 1, 0, 1 );
 
-        bTools.addListener(new ChangeListener() {
+        bTools.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                gotoStage(ttools);
+                gotoStage( ttools );
             }
-        });
+        } );
 
-        bTutorial.addListener(new ChangeListener() {
+        bTutorial.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                gotoStage(tTutorial);
+                gotoStage( tTutorial );
                 ltutorial.setItems();
 
                 java.util.List<String> spt = new ArrayList<String>();
                 for (int i = 0; i < tutor.getT().size(); i++) {
-                    spt.add(tutor.getT().get(i).getName());
+                    spt.add( tutor.getT().get( i ).getName() );
                 }
-                ltutorial.setItems(spt.toArray(new String[0]));
+                ltutorial.setItems( spt.toArray( new String[0] ) );
 
             }
-        });
+        } );
 
-        bTutorOK.addListener(new ChangeListener() {
+        bTutorOK.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 backToMap();
 
                 tutoring = true;
                 activetutor = ltutorial.getSelectedIndex();
-                tutor.getT().get(activetutor).reset();
-                cue("start");
+                tutor.getT().get( activetutor ).reset();
+                cue( "start" );
 
 
             }
-        });
+        } );
 
         pSaveAs = new com.badlogic.gdx.Input.TextInputListener() {
 
@@ -6222,7 +6265,7 @@ String texta="";
                 }
                 curdir = saveasdir;
                 curfile = input;
-                saveMap(saveasdir + "/" + input);
+                saveMap( saveasdir + "/" + input );
             }
 
             @Override
@@ -6232,42 +6275,40 @@ String texta="";
         };
 
 
-
-
-
         setMenuMap();
         setMapMap();
         setLinksMap();
     }
 
-    private void copyToRW(){
-        FileHandle fl = Gdx.files.external(rwpath);
+    private void copyToRW() {
+        FileHandle fl = Gdx.files.external( rwpath );
         if (!fl.exists()) fl.mkdirs();
-        FileHandle fla = Gdx.files.external(rwpath+ "/maps");
+        FileHandle fla = Gdx.files.external( rwpath + "/maps" );
         if (!fla.exists()) {
             fla.mkdirs();
         }
-        saveMap(curdir + "/" + curfile);
-        FileHandle from = Gdx.files.external(curdir + "/" + curfile);
-        from.copyTo(Gdx.files.external(rwpath+ "/maps"));
+        saveMap( curdir + "/" + curfile );
+        FileHandle from = Gdx.files.external( curdir + "/" + curfile );
+        from.copyTo( Gdx.files.external( rwpath + "/maps" ) );
 
-        createRWthumbnail( curfile.substring(0, curfile.length() - 4) + "_map" );
-        FileHandle from2 = Gdx.files.external(curdir + "/" + curfile.substring(0, curfile.length() - 4) + "_map.png");
+        createRWthumbnail( curfile.substring( 0, curfile.length() - 4 ) + "_map" );
+        FileHandle from2 = Gdx.files.external( curdir + "/" + curfile.substring( 0, curfile.length() - 4 ) + "_map.png" );
         if (from2.exists())
-            from2.copyTo(Gdx.files.external(rwpath+ "/maps"));
+            from2.copyTo( Gdx.files.external( rwpath + "/maps" ) );
 
-        msgbox(z.mapsenttorustedwatfare);
-        cue("copytorw");
+        msgbox( z.mapsenttorustedwatfare );
+        cue( "copytorw" );
     }
-    private void setLinksMap(){
+
+    private void setLinksMap() {
         if (landscape) {
             tLinks = new Table();
             tLinks.setFillParent( true );
             tLinks.defaults().width( btnx ).height( btny + 2 ).padBottom( 2 );
             Table tLinks2 = new Table();
-            tLinks2.defaults().width( btnx ).height( btny *2 ).padBottom( 2 );
+            tLinks2.defaults().width( btnx ).height( btny * 2 ).padBottom( 2 );
             Table tLinks1 = new Table();
-            tLinks1.defaults().width( btnx ).height( btny *2).padBottom( 2 );
+            tLinks1.defaults().width( btnx ).height( btny * 2 ).padBottom( 2 );
             tLinks1.add( bLicense ).row();
             tLinks1.add( bManual ).row();
             tLinks1.add( bVideos ).row();
@@ -6283,7 +6324,7 @@ String texta="";
             tLinks2.add( bBack3 );
             tLinks.add( tLinks1 );
             tLinks.add( tLinks2 );
-        }else{
+        } else {
             tLinks = new Table();
             tLinks.setFillParent( true );
             tLinks.defaults().width( btnx ).height( btny + 2 ).padBottom( 2 );
@@ -6303,13 +6344,13 @@ String texta="";
     }
 
 
-    private void setMapMap(){
+    private void setMapMap() {
         if (landscape) {
             tMap = new Table();
-             tMap1 = new Table();
-             tMap2 = new Table();
-            tMap1.defaults().width(btnx).height(btny *2);
-            tMap2.defaults().width(btnx).height(btny *2);
+            tMap1 = new Table();
+            tMap2 = new Table();
+            tMap1.defaults().width( btnx ).height( btny * 2 );
+            tMap2.defaults().width( btnx ).height( btny * 2 );
             tMap.setFillParent( true );
             tMap.defaults().width( btnx ).height( btny + 3 ).padBottom( 2 );
             if (!face.ispro()) tMap1.add( bPatreon2 ).row();
@@ -6326,7 +6367,7 @@ String texta="";
             tMap2.add( bBack2 ).row();
             tMap.add( tMap1 );
             tMap.add( tMap2 );
-        }  else {
+        } else {
             tMap = new Table();
             tMap.setFillParent( true );
             tMap.defaults().width( btnx ).height( btny + 3 ).padBottom( 2 );
@@ -6345,304 +6386,306 @@ String texta="";
 
     }
 
-    private void setMenuMap(){
-        if (landscape){
+    private void setMenuMap() {
+        if (landscape) {
             tMenu = new Table();
             tMenu1 = new Table();
             tMenu2 = new Table();
-            tMenu.setFillParent(true);
-            tMenu.defaults().width(btnx).height(btny + 2);
-            tMenu1.defaults().width(btnx).height(btny *2);
-            tMenu2.defaults().width(btnx).height(btny *2);
+            tMenu.setFillParent( true );
+            tMenu.defaults().width( btnx ).height( btny + 2 );
+            tMenu1.defaults().width( btnx ).height( btny * 2 );
+            tMenu2.defaults().width( btnx ).height( btny * 2 );
 
-            if (!face.ispro()) tMenu1.add(bPatreon).row();
-            tMenu1.add(bNew).row();
-            tMenu1.add(bOpen).row();
-            tMenu1.add(bRecent).row();
-            tMenu1.add(bSave).row();
-            tMenu1.add(bSaveAs).row();
-            tMenu1.add(bExporter).row();
-            tMenu2.add(bTutorial).row();
-            tMenu2.add(bPreference).row();
-            tMenu2.add(bLinks).row();
-            tMenu2.add(credito).row();
-            tMenu2.add(bExit).row();
-            tMenu2.add(bBack);
+            if (!face.ispro()) tMenu1.add( bPatreon ).row();
+            tMenu1.add( bNew ).row();
+            tMenu1.add( bOpen ).row();
+            tMenu1.add( bRecent ).row();
+            tMenu1.add( bSave ).row();
+            tMenu1.add( bSaveAs ).row();
+            tMenu1.add( bExporter ).row();
+            tMenu2.add( bTutorial ).row();
+            tMenu2.add( bPreference ).row();
+            tMenu2.add( bLinks ).row();
+            tMenu2.add( credito ).row();
+            tMenu2.add( bExit ).row();
+            tMenu2.add( bBack );
             tMenu.add( tMenu1 );
             tMenu.add( tMenu2 );
-        }else {
+        } else {
             tMenu = new Table();
-            tMenu.setFillParent(true);
-            tMenu.defaults().width(btnx).height(btny + 2);
+            tMenu.setFillParent( true );
+            tMenu.defaults().width( btnx ).height( btny + 2 );
 
-            if (!face.ispro()) tMenu.add(bPatreon).row();
-            tMenu.add(bNew).row();
-            tMenu.add(bOpen).row();
-            tMenu.add(bRecent).row();
-            tMenu.add(bSave).row();
-            tMenu.add(bSaveAs).row();
-            tMenu.add(bExporter).row();
-            tMenu.add(bTutorial).row();
-            tMenu.add(bPreference).row();
-            tMenu.add(bLinks).row();
-            tMenu.add(credito).row();
-            tMenu.add(bExit).row();
-            tMenu.add(bBack);
+            if (!face.ispro()) tMenu.add( bPatreon ).row();
+            tMenu.add( bNew ).row();
+            tMenu.add( bOpen ).row();
+            tMenu.add( bRecent ).row();
+            tMenu.add( bSave ).row();
+            tMenu.add( bSaveAs ).row();
+            tMenu.add( bExporter ).row();
+            tMenu.add( bTutorial ).row();
+            tMenu.add( bPreference ).row();
+            tMenu.add( bLinks ).row();
+            tMenu.add( credito ).row();
+            tMenu.add( bExit ).row();
+            tMenu.add( bBack );
 
         }
     }
 
     private void msgbox(String msg) {
-        Gdx.input.setInputProcessor(stage);
-        dialog = new Dialog(z.info, skin, "dialog") {
+        Gdx.input.setInputProcessor( stage );
+        dialog = new Dialog( z.info, skin, "dialog" ) {
             @Override
             protected void result(Object object) {
-                if (kartu.equalsIgnoreCase("world")) {
-                    Gdx.input.setInputProcessor(gd);
+                if (kartu.equalsIgnoreCase( "world" )) {
+                    Gdx.input.setInputProcessor( gd );
                 }
 
-                if (kartu.equalsIgnoreCase("tile")) {
-                    Gdx.input.setInputProcessor(gd);
+                if (kartu.equalsIgnoreCase( "tile" )) {
+                    Gdx.input.setInputProcessor( gd );
                 }
-                cue("next");
+                cue( "next" );
             }
         };
-        Label lab = new Label(msg, skin);
+        Label lab = new Label( msg, skin );
 
-        lab.setWrap(true);
+        lab.setWrap( true );
 
-        dialog.add(lab).width(btnx - 50).row();
-        dialog.button(z.ok);
-        dialog.show(stage);
+        dialog.add( lab ).width( btnx - 50 ).row();
+        dialog.button( z.ok );
+        dialog.show( stage );
     }
 
     private void loadTools() {
         ttools = new Table();
-        ttools.setFillParent(true);
-        TextButton hmirror = new TextButton(z.mirrorhorizontally, skin);
-        TextButton vmirror = new TextButton(z.mirrorvertically, skin);
-        TextButton hvmirror = new TextButton(z.mirrorboth, skin);
-        TextButton hvmirrorrev = new TextButton(z.mirrorreverse, skin);
-        TextButton randomize = new TextButton(z.randommap, skin);
-        TextButton replacetiles = new TextButton(z.replacetiles, skin);
-        TextButton toback = new TextButton(z.back, skin);
+        ttools.setFillParent( true );
+        TextButton hmirror = new TextButton( z.mirrorhorizontally, skin );
+        TextButton vmirror = new TextButton( z.mirrorvertically, skin );
+        TextButton hvmirror = new TextButton( z.mirrorboth, skin );
+        TextButton hvmirrorrev = new TextButton( z.mirrorreverse, skin );
+        TextButton randomize = new TextButton( z.randommap, skin );
+        TextButton replacetiles = new TextButton( z.replacetiles, skin );
+        TextButton toback = new TextButton( z.back, skin );
 
         //TextButton replacetile=new TextButton("Replace Tiles",skin);
         //TextButton cleartiles=new TextButton("Clear Tiles",skin);
 
-        ttools.defaults().width(btnx).padBottom(2);
-        ttools.add(hmirror).row();
-        ttools.add(vmirror).row();
-        ttools.add(hvmirror).row();
-        ttools.add(hvmirrorrev).row();
-        ttools.add(randomize).row();
-        ttools.add(replacetiles).row();
-        ttools.add(toback).row();
+        ttools.defaults().width( btnx ).padBottom( 2 );
+        ttools.add( hmirror ).row();
+        ttools.add( vmirror ).row();
+        ttools.add( hvmirror ).row();
+        ttools.add( hvmirrorrev ).row();
+        ttools.add( randomize ).row();
+        ttools.add( replacetiles ).row();
+        ttools.add( toback ).row();
         //ttools.add(replacetile).row();
         //ttools.add(cleartiles).row();
 
-        hmirror.addListener(new ChangeListener() {
+        hmirror.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 runhmirror();
             }
-        });
+        } );
 
-        vmirror.addListener(new ChangeListener() {
+        vmirror.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 runvmirror();
             }
-        });
+        } );
 
-        hvmirror.addListener(new ChangeListener() {
+        hvmirror.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 runhvmirror();
             }
-        });
+        } );
 
-        hvmirrorrev.addListener(new ChangeListener() {
+        hvmirrorrev.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 runhvmirrorrev();
             }
-        });
+        } );
 
-        randomize.addListener(new ChangeListener() {
+        randomize.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                gotoStage(trandomgen);
+                gotoStage( trandomgen );
             }
-        });
+        } );
 
-        replacetiles.addListener(new ChangeListener() {
+        replacetiles.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                gotoStage(treplacetiles);
+                fprevstr.setText( curspr+"" );
+                gotoStage( treplacetiles );
             }
-        });
+        } );
 
-        toback.addListener(new ChangeListener() {
+        toback.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 backToMap();
             }
-        });
+        } );
 
         trandomgen = new Table();
-        trandomgen.setFillParent(true);
-        trandomgen.defaults().width(btnx / 2).padBottom(2).height(btny);
-        ffirstgen = new TextField("0.5", skin);
-        slfirstgen = new Slider(.4f, .6f, .01f, false, skin);
-        slfirstgen.setValue(.5f);
-        fgencount = new TextField("5", skin);
-        fbirthlim = new TextField("5", skin);
-        fdeathlim = new TextField("3", skin);
-        flivestr = new TextField("0", skin);
-        flivetset = new TextField("0", skin);
-        fdeadstr = new TextField("0", skin);
-        fdeadtset = new TextField("0", skin);
-        TextButton runrandomize = new TextButton(z.randomize, skin);
-        TextButton pickrnda = new TextButton(z.picktile1, skin);
-        TextButton pickrndb = new TextButton(z.picktile2, skin);
-        TextButton randback = new TextButton(z.back, skin);
+        trandomgen.setFillParent( true );
+        trandomgen.defaults().width( btnx / 2 ).padBottom( 2 ).height( btny );
+        ffirstgen = new TextField( "0.5", skin );
+        slfirstgen = new Slider( .4f, .6f, .01f, false, skin );
+        slfirstgen.setValue( .5f );
+        fgencount = new TextField( "5", skin );
+        fbirthlim = new TextField( "5", skin );
+        fdeathlim = new TextField( "3", skin );
+        flivestr = new TextField( "0", skin );
+        flivetset = new TextField( "0", skin );
+        fdeadstr = new TextField( "0", skin );
+        fdeadtset = new TextField( "0", skin );
+        TextButton runrandomize = new TextButton( z.randomize, skin );
+        TextButton pickrnda = new TextButton( z.picktile1, skin );
+        TextButton pickrndb = new TextButton( z.picktile2, skin );
+        TextButton randback = new TextButton( z.back, skin );
 
-        pickrnda.addListener(new ChangeListener() {
+        pickrnda.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                pickTile("rnda");
+                pickTile( "rnda" );
             }
-        });
+        } );
 
-        randback.addListener(new ChangeListener() {
+        randback.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                gotoStage(ttools);
+                gotoStage( ttools );
             }
-        });
+        } );
 
-        pickrndb.addListener(new ChangeListener() {
+        pickrndb.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                pickTile("rndb");
+                pickTile( "rndb" );
             }
-        });
+        } );
 
-        trandomgen.add(new Label(z.balance, skin));
-        trandomgen.add(slfirstgen).row();
+        trandomgen.add( new Label( z.balance, skin ) );
+        trandomgen.add( slfirstgen ).row();
 
-        trandomgen.add(new Label("GID 1", skin));
-        trandomgen.add(flivestr).row();
+        trandomgen.add( new Label( "GID 1", skin ) );
+        trandomgen.add( flivestr ).row();
         trandomgen.add();
-        trandomgen.add(pickrnda).row();
-        trandomgen.add(new Label("GID 2", skin));
-        trandomgen.add(fdeadstr).row();
+        trandomgen.add( pickrnda ).row();
+        trandomgen.add( new Label( "GID 2", skin ) );
+        trandomgen.add( fdeadstr ).row();
         trandomgen.add();
-        trandomgen.add(pickrndb).row();
-        trandomgen.add(runrandomize).width(btnx).colspan(2).row();
-        trandomgen.add(randback).width(btnx).colspan(2);
+        trandomgen.add( pickrndb ).row();
+        trandomgen.add( runrandomize ).width( btnx ).colspan( 2 ).row();
+        trandomgen.add( randback ).width( btnx ).colspan( 2 );
 
-        runrandomize.addListener(new ChangeListener() {
+        runrandomize.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 float p1 = slfirstgen.getValue();// Float.parseFloat(ffirstgen.getText());
                 int p2 = 5;//Integer.parseInt(fgencount.getText());
                 int p3 = 5;//Integer.parseInt(fbirthlim.getText());
                 int p4 = 3;//Integer.parseInt(fdeathlim.getText());
-                long p5 = Long.parseLong(flivestr.getText());
+                long p5 = Long.parseLong( flivestr.getText() );
                 int p6 = 0;
-                long p7 = Long.parseLong(fdeadstr.getText());
+                long p7 = Long.parseLong( fdeadstr.getText() );
                 int p8 = 0;
 
                 for (int i = 0; i < tilesets.size(); i++) {
-                    if (p5 >= tilesets.get(i).getFirstgid() && p5 < tilesets.get(i).getFirstgid() + tilesets.get(i).getTilecount()) {
+                    if (p5 >= tilesets.get( i ).getFirstgid() && p5 < tilesets.get( i ).getFirstgid() + tilesets.get( i ).getTilecount()) {
                         p6 = i;
                     }
-                    if (p7 >= tilesets.get(i).getFirstgid() && p7 < tilesets.get(i).getFirstgid() + tilesets.get(i).getTilecount()) {
+                    if (p7 >= tilesets.get( i ).getFirstgid() && p7 < tilesets.get( i ).getFirstgid() + tilesets.get( i ).getTilecount()) {
                         p8 = i;
                     }
                 }
 
-                rundomize(p1, p2, p3, p4, p5, p6, p7, p8);
+                rundomize( p1, p2, p3, p4, p5, p6, p7, p8 );
             }
-        });
+        } );
 
 
         treplacetiles = new Table();
-        treplacetiles.setFillParent(true);
-        treplacetiles.defaults().width(btnx / 2).padBottom(2).height(btny);
+        treplacetiles.setFillParent( true );
+        treplacetiles.defaults().width( btnx / 2 ).padBottom( 2 ).height( btny );
 
-        fprevstr = new TextField("0", skin);
-        fnextstr = new TextField("0", skin);
+        fprevstr = new TextField( "0", skin );
+        fnextstr = new TextField( "0", skin );
 
-        TextButton runreplace = new TextButton(z.replacetiles, skin);
-        TextButton pickrepa = new TextButton(z.picktile1, skin);
-        TextButton pickrepb = new TextButton(z.picktile2, skin);
-        TextButton repback = new TextButton(z.back, skin);
+        TextButton runreplace = new TextButton( z.replacetiles, skin );
+        TextButton pickrepa = new TextButton( z.picktile1, skin );
+        TextButton pickrepb = new TextButton( z.picktile2, skin );
+        TextButton repback = new TextButton( z.back, skin );
 
-        pickrepa.addListener(new ChangeListener() {
+        pickrepa.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                pickTile("repa");
+                pickTile( "repa" );
             }
-        });
+        } );
 
-        repback.addListener(new ChangeListener() {
+        repback.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                gotoStage(ttools);
+                gotoStage( ttools );
             }
-        });
+        } );
 
-        pickrepb.addListener(new ChangeListener() {
+        pickrepb.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                pickTile("repb");
+                pickTile( "repb" );
             }
-        });
+        } );
 
-        treplacetiles.add(new Label(z.from, skin));
-        treplacetiles.add(fprevstr).row();
+        treplacetiles.add( new Label( z.from, skin ) );
+        treplacetiles.add( fprevstr ).row();
         treplacetiles.add();
-        treplacetiles.add(pickrepa).row();
-        treplacetiles.add(new Label(z.to, skin));
-        treplacetiles.add(fnextstr).row();
+        treplacetiles.add( pickrepa ).row();
+        treplacetiles.add( new Label( z.to, skin ) );
+        treplacetiles.add( fnextstr ).row();
         treplacetiles.add();
-        treplacetiles.add(pickrepb).row();
-        treplacetiles.add(runreplace).width(btnx).colspan(2).row();
-        treplacetiles.add(repback).width(btnx).colspan(2);
+        treplacetiles.add( pickrepb ).row();
+        treplacetiles.add( runreplace ).width( btnx ).colspan( 2 ).row();
+        treplacetiles.add( repback ).width( btnx ).colspan( 2 );
 
-        runreplace.addListener(new ChangeListener() {
+        runreplace.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                long p1 = Long.parseLong(fprevstr.getText());
+                long p1 = Long.parseLong( fprevstr.getText() );
                 int p2 = 0;
-                long p3 = Long.parseLong(fnextstr.getText());
+                long p3 = Long.parseLong( fnextstr.getText() );
                 int p4 = 0;
 
                 for (int i = 0; i < tilesets.size(); i++) {
-                    if (p1 >= tilesets.get(i).getFirstgid() && p1 < tilesets.get(i).getFirstgid() + tilesets.get(i).getTilecount()) {
+                    if (p1 >= tilesets.get( i ).getFirstgid() && p1 < tilesets.get( i ).getFirstgid() + tilesets.get( i ).getTilecount()) {
                         p2 = i;
                     }
-                    if (p3 >= tilesets.get(i).getFirstgid() && p3 < tilesets.get(i).getFirstgid() + tilesets.get(i).getTilecount()) {
+                    if (p3 >= tilesets.get( i ).getFirstgid() && p3 < tilesets.get( i ).getFirstgid() + tilesets.get( i ).getTilecount()) {
                         p4 = i;
                     }
                 }
 
-                replacetiles(p1, p2, p3, p4);
+                replacetiles( p1, p2, p3, p4 );
             }
-        });
+        } );
     }
 
     private void replacetiles(long p1, int p2, long p3, int p4) {
-        if (layers.get(selLayer).getType() != layer.Type.TILE) return;
+        if (layers.get( selLayer ).getType() != layer.Type.TILE) return;
 
-        for (int i = 0; i < layers.get(selLayer).getStr().size(); i++) {
-            long prev = layers.get(selLayer).getStr().get(i);
+        for (int i = 0; i < layers.get( selLayer ).getStr().size(); i++) {
+            long prev = layers.get( selLayer ).getStr().get( i );
             if (prev == p1) {
-                layers.get(selLayer).getStr().set(i, p3);
-                layers.get(selLayer).getTset().set(i, p4);
+                layers.get( selLayer ).getStr().set( i, p3 );
+                layers.get( selLayer ).getTset().set( i, p4 );
+                updateCache( i );
             }
         }
     }
@@ -6650,388 +6693,386 @@ String texta="";
     private void exporttolua(String filenamenya) {
         StringBuilderPlus sb = new StringBuilderPlus();
 
-        sb.wlo("return{");
-        sb.wl("version = \"1.2\",");
-        sb.wl("luaversion = \"5.1\",");
-        sb.wl("tiledversion = \"1.2.3\",");
-        sb.wl("orientation = \"" + orientation + "\",");
-        sb.wl("renderorder = \"" + renderorder + "\",");
-        sb.wl("width = " + Tw + ",");
-        sb.wl("height = " + Th + ",");
-        sb.wl("tilewidth = " + Tsw + ",");
-        sb.wl("tileheight = " + Tsh + ",");
-        sb.wl("nextlayerid = " + (1 + layers.size()) + ",");
-        sb.wl("nextobjectid = " + curid + ",");
-        sb.wprop(properties);
+        sb.wlo( "return{" );
+        sb.wl( "version = \"1.2\"," );
+        sb.wl( "luaversion = \"5.1\"," );
+        sb.wl( "tiledversion = \"1.2.3\"," );
+        sb.wl( "orientation = \"" + orientation + "\"," );
+        sb.wl( "renderorder = \"" + renderorder + "\"," );
+        sb.wl( "width = " + Tw + "," );
+        sb.wl( "height = " + Th + "," );
+        sb.wl( "tilewidth = " + Tsw + "," );
+        sb.wl( "tileheight = " + Tsh + "," );
+        sb.wl( "nextlayerid = " + (1 + layers.size()) + "," );
+        sb.wl( "nextobjectid = " + curid + "," );
+        sb.wprop( properties );
 
-        sb.wlo("tilesets = {");
+        sb.wlo( "tilesets = {" );
         for (int n = 0; n < tilesets.size(); n++) {
-            tileset t = tilesets.get(n);
-            sb.wlo("{");//tileset inside
-            sb.wl("name = \"" + t.getName() + "\",");
-            sb.wl("firstgid = " + t.getFirstgid() + ",");
-            sb.wl("tilewidth = " + t.getTilewidth() + ",");
-            sb.wl("tileheight = " + t.getTileheight() + ",");
-            sb.wl("spacing = " + t.getSpacing() + ",");
-            sb.wl("margin = " + t.getMargin() + ",");
-            sb.wl("columns = " + t.getColumns() + ",");
-            sb.wl("tilecount = " + t.getTilecount() + ",");
-            sb.wl("image = \"" + t.getSource() + "\",");
-            sb.wl("imagewidth = " + t.getOriginalwidth() + ",");
-            sb.wl("imageheight = " + t.getOriginalheight() + ",");
-            sb.wl("tileoffset = {\n        x = 0,\n        y = 0\n      },");
-            sb.wl("grid = {\n        orientation = \"" + orientation + "\",\n        width = " + Tsw + ", \n        height = " + Tsh + "\n      },");
-            sb.wprop(tilesets.get(n).getProperties());
-            sb.wl("terrains = {},");
+            tileset t = tilesets.get( n );
+            sb.wlo( "{" );//tileset inside
+            sb.wl( "name = \"" + t.getName() + "\"," );
+            sb.wl( "firstgid = " + t.getFirstgid() + "," );
+            sb.wl( "tilewidth = " + t.getTilewidth() + "," );
+            sb.wl( "tileheight = " + t.getTileheight() + "," );
+            sb.wl( "spacing = " + t.getSpacing() + "," );
+            sb.wl( "margin = " + t.getMargin() + "," );
+            sb.wl( "columns = " + t.getColumns() + "," );
+            sb.wl( "tilecount = " + t.getTilecount() + "," );
+            sb.wl( "image = \"" + t.getSource() + "\"," );
+            sb.wl( "imagewidth = " + t.getOriginalwidth() + "," );
+            sb.wl( "imageheight = " + t.getOriginalheight() + "," );
+            sb.wl( "tileoffset = {\n        x = 0,\n        y = 0\n      }," );
+            sb.wl( "grid = {\n        orientation = \"" + orientation + "\",\n        width = " + Tsw + ", \n        height = " + Tsh + "\n      }," );
+            sb.wprop( tilesets.get( n ).getProperties() );
+            sb.wl( "terrains = {}," );
 
-            if (tilesets.get(n).getTiles().size() != 0) {
-                sb.wlo("tiles = {");//tiles
-                for (int m = 0; m < tilesets.get(n).getTiles().size(); m++) {
-                    tile tt = tilesets.get(n).getTiles().get(m);
-                    sb.wlo("{");//tile
-                    sb.wl("id = " + tt.getTileID() + ",");
-                    sb.wprop(tt.getProperties());
+            if (tilesets.get( n ).getTiles().size() != 0) {
+                sb.wlo( "tiles = {" );//tiles
+                for (int m = 0; m < tilesets.get( n ).getTiles().size(); m++) {
+                    tile tt = tilesets.get( n ).getTiles().get( m );
+                    sb.wlo( "{" );//tile
+                    sb.wl( "id = " + tt.getTileID() + "," );
+                    sb.wprop( tt.getProperties() );
 
                     if (tt.getAnimation().size() > 0) {
-                        sb.wlo("animation = {");
+                        sb.wlo( "animation = {" );
                         for (int am = 0; am < tt.getAnimation().size(); am++) {
-                            sb.wlo("{");
-                            sb.wl("tileid = " + tt.getAnimation().get(am).getTileID() + ",");
-                            sb.wl("duration = " + tt.getAnimation().get(am).getDuration());
+                            sb.wlo( "{" );
+                            sb.wl( "tileid = " + tt.getAnimation().get( am ).getTileID() + "," );
+                            sb.wl( "duration = " + tt.getAnimation().get( am ).getDuration() );
 
                             if (am != tt.getAnimation().size() - 1) {
-                                sb.wlc("},");
+                                sb.wlc( "}," );
                             } else {
-                                sb.wlc("}");
+                                sb.wlc( "}" );
                             }
                         }
-                        sb.wlc("}");
+                        sb.wlc( "}" );
                     }
 
 
-                    if (m != tilesets.get(n).getTiles().size() - 1) {
-                        sb.wlc("},");
+                    if (m != tilesets.get( n ).getTiles().size() - 1) {
+                        sb.wlc( "}," );
                     } else {
-                        sb.wlc("}");
+                        sb.wlc( "}" );
                     }
                 }
-                sb.wlc("}");
+                sb.wlc( "}" );
             } else {
-                sb.wl("tiles = {}");
+                sb.wl( "tiles = {}" );
             }
 
             if (n != tilesets.size() - 1) {
-                sb.wlc("},");//tileset inside
+                sb.wlc( "}," );//tileset inside
             } else {
-                sb.wlc("}");//tileset inside
+                sb.wlc( "}" );//tileset inside
             }
         }
-        sb.wlc("},"); //tileset;
+        sb.wlc( "}," ); //tileset;
 
-        sb.wlo("layers = {");//layers
+        sb.wlo( "layers = {" );//layers
 
 
         //tilelayers
         for (int n = 0; n < layers.size(); n++) {
-            if (layers.get(n).getType() == layer.Type.TILE) {
-                layer l = layers.get(n);
-                sb.wlo("{");//tile layer
-                sb.wl("type = \"tilelayer\",");
-                sb.wl("id = " + (n + 1) + ",");
-                sb.wl("name = \"" + l.getName() + "\",");
-                sb.wl("x = 0,");
-                sb.wl("y = 0,");
-                sb.wl("width = " + Tw + ",");
-                sb.wl("height = " + Th + ",");
-                sb.wl("visible = true,");
+            if (layers.get( n ).getType() == layer.Type.TILE) {
+                layer l = layers.get( n );
+                sb.wlo( "{" );//tile layer
+                sb.wl( "type = \"tilelayer\"," );
+                sb.wl( "id = " + (n + 1) + "," );
+                sb.wl( "name = \"" + l.getName() + "\"," );
+                sb.wl( "x = 0," );
+                sb.wl( "y = 0," );
+                sb.wl( "width = " + Tw + "," );
+                sb.wl( "height = " + Th + "," );
+                sb.wl( "visible = true," );
 
                 if (l.getOpacity() == 0) {
-                    sb.wl("opacity = 1,");
+                    sb.wl( "opacity = 1," );
                 } else {
-                    sb.wl("opacity = " + l.getOpacity() + ",");
+                    sb.wl( "opacity = " + l.getOpacity() + "," );
                 }
 
-                sb.wl("offsetx = 0,");
-                sb.wl("offsety = 0,");
-                sb.wprop(layers.get(n).getProperties());
-                sb.wl("encoding = \"lua\",");
-                sb.wlo("data = {");
+                sb.wl( "offsetx = 0," );
+                sb.wl( "offsety = 0," );
+                sb.wprop( layers.get( n ).getProperties() );
+                sb.wl( "encoding = \"lua\"," );
+                sb.wlo( "data = {" );
 
                 for (int k = 0; k < Th; k++) {
-                    sb.w("        ");
+                    sb.w( "        " );
                     for (int j = 0; j < Tw; j++) {
-                        sb.append(l.getStr().get(k * Tw + j));
-                        if (!(k == Th - 1 && j == Tw - 1)) sb.append(", ");
+                        sb.append( l.getStr().get( k * Tw + j ) );
+                        if (!(k == Th - 1 && j == Tw - 1)) sb.append( ", " );
                     }
-                    sb.wl("");
+                    sb.wl( "" );
                 }
-                sb.wlc("}");//data
+                sb.wlc( "}" );//data
 
 
-            }
-            else if (layers.get(n).getType() == layer.Type.OBJECT) {
-                layer l = layers.get(n);
-                sb.wlo("{");//tile layer
-                sb.wl("type = \"objectgroup\",");
+            } else if (layers.get( n ).getType() == layer.Type.OBJECT) {
+                layer l = layers.get( n );
+                sb.wlo( "{" );//tile layer
+                sb.wl( "type = \"objectgroup\"," );
                 int nid = n + layers.size() + 1;
-                sb.wl("id = " + nid + ",");
-                sb.wl("name = \"" + l.getName() + "\",");
-                sb.wl("visible = true,");
-                sb.wl("opacity = 1,");
-                sb.wl("offsetx = 0,");
-                sb.wl("offsety = 0,");
-                sb.wl("draworder = \"topdown\",");
-                sb.wl("properties ={},");
+                sb.wl( "id = " + nid + "," );
+                sb.wl( "name = \"" + l.getName() + "\"," );
+                sb.wl( "visible = true," );
+                sb.wl( "opacity = 1," );
+                sb.wl( "offsetx = 0," );
+                sb.wl( "offsety = 0," );
+                sb.wl( "draworder = \"topdown\"," );
+                sb.wl( "properties ={}," );
 
                 if (l.getObjects().size() > 0) {
-                    sb.wlo("objects = {");
+                    sb.wlo( "objects = {" );
                     for (int ao = 0; ao < l.getObjects().size(); ao++) {
-                        obj oo = l.getObjects().get(ao);
-                        sb.wlo("{");
-                        sb.wl("id = " + oo.getId() + ",");
-                        sb.wl("name = \"" + oo.getName() + "\",");
-                        sb.wl("type = \"" + oo.getType() + "\",");
+                        obj oo = l.getObjects().get( ao );
+                        sb.wlo( "{" );
+                        sb.wl( "id = " + oo.getId() + "," );
+                        sb.wl( "name = \"" + oo.getName() + "\"," );
+                        sb.wl( "type = \"" + oo.getType() + "\"," );
                         if (oo.getShape() == "") {
-                            sb.wl("shape = \"rectangle\",");
+                            sb.wl( "shape = \"rectangle\"," );
 
                         } else {
-                            sb.wl("shape = \"" + oo.getShape() + "\",");
+                            sb.wl( "shape = \"" + oo.getShape() + "\"," );
                         }
-                        sb.wl("x = " + oo.getX() + ",");
-                        sb.wl("y = " + oo.getY() + ",");
+                        sb.wl( "x = " + oo.getX() + "," );
+                        sb.wl( "y = " + oo.getY() + "," );
 
-                        if (oo.getShape().equalsIgnoreCase("point")) {
-                            sb.wl("width = 0,");
-                            sb.wl("height = 0,");
+                        if (oo.getShape().equalsIgnoreCase( "point" )) {
+                            sb.wl( "width = 0," );
+                            sb.wl( "height = 0," );
 
                         } else {
-                            sb.wl("width = " + oo.getW() + ",");
-                            sb.wl("height = " + oo.getH() + ",");
+                            sb.wl( "width = " + oo.getW() + "," );
+                            sb.wl( "height = " + oo.getH() + "," );
 
                         }
-                        sb.wl("rotation = " + oo.getRotation() + ",");
-                        sb.wl("visible = true,");
-                        if (oo.getShape().equalsIgnoreCase("polygon") || oo.getShape().equalsIgnoreCase("polyline")) {
-                            sb.wlo(oo.getShape() + " = {");
+                        sb.wl( "rotation = " + oo.getRotation() + "," );
+                        sb.wl( "visible = true," );
+                        if (oo.getShape().equalsIgnoreCase( "polygon" ) || oo.getShape().equalsIgnoreCase( "polyline" )) {
+                            sb.wlo( oo.getShape() + " = {" );
                             for (int ok = 0; ok < oo.getPoints().size(); ok++) {
-                                float xar = oo.getPoints().get(ok).x;
-                                float yar = oo.getPoints().get(ok).y;
+                                float xar = oo.getPoints().get( ok ).x;
+                                float yar = oo.getPoints().get( ok ).y;
                                 if (ok != oo.getPoints().size() - 1) {
-                                    sb.wl("{ x = " + xar + ", y = " + yar + " },");
+                                    sb.wl( "{ x = " + xar + ", y = " + yar + " }," );
                                 } else {
-                                    sb.wl("{ x = " + xar + ", y = " + yar + " }");
+                                    sb.wl( "{ x = " + xar + ", y = " + yar + " }" );
                                 }
                             }
-                            sb.wlc("},");
+                            sb.wlc( "}," );
                         }
 
-                        sb.wprop(oo.getProperties());
+                        sb.wprop( oo.getProperties() );
 
                         if (ao != l.getObjects().size()) {
-                            sb.wlc("},");
+                            sb.wlc( "}," );
                         } else {
-                            sb.wlc("}");
+                            sb.wlc( "}" );
                         }
 
                     }
-                    sb.wlc("}");//objects
+                    sb.wlc( "}" );//objects
                 } else {
-                    sb.wl("objects = {}");
+                    sb.wl( "objects = {}" );
                 }
 
             }
 
             if (n != layers.size() - 1) {
-                sb.wlc("},");
+                sb.wlc( "}," );
             } else {
-                sb.wlc("}");
+                sb.wlc( "}" );
 
             }
 
         }
 
 
+        sb.wlc( "}" );//layers
+        sb.wlc( "}" );//map
 
-        sb.wlc("}");//layers
-        sb.wlc("}");//map
-
-        FileHandle fh = Gdx.files.external(curdir + "/" + filenamenya + ".lua");
-        fh.writeString(sb.toString(), false);
+        FileHandle fh = Gdx.files.external( curdir + "/" + filenamenya + ".lua" );
+        fh.writeString( sb.toString(), false );
         backToMap();
-        msgbox(z.exportfinished);
+        msgbox( z.exportfinished );
     }
 
     private void exporttojson(String filenamenya) {
         StringBuilderPlus sb = new StringBuilderPlus();
-        sb.wlo("{");
-        sb.wl("\"version\":1.2,");
-        sb.wl("\"type\":\"map\",");
-        sb.wl("\"infinite\":false,");
-        sb.wl("\"tiledversion\":\"1.2.3\",");
-        sb.wl("\"orientation\":\"" + orientation + "\",");
-        sb.wl("\"renderorder\":\"" + renderorder + "\",");
-        sb.wl("\"width\":" + Tw + ",");
-        sb.wl("\"height\":" + Th + ",");
-        sb.wl("\"tilewidth\":" + Tsw + ",");
-        sb.wl("\"tileheight\":" + Tsh + ",");
-        sb.wl("\"nextlayerid\":" + (1 + layers.size()) + ",");
-        sb.wl("\"nextobjectid\":" + curid + ",");
-        sb.wpropj(properties);
-        sb.wl(",");
+        sb.wlo( "{" );
+        sb.wl( "\"version\":1.2," );
+        sb.wl( "\"type\":\"map\"," );
+        sb.wl( "\"infinite\":false," );
+        sb.wl( "\"tiledversion\":\"1.2.3\"," );
+        sb.wl( "\"orientation\":\"" + orientation + "\"," );
+        sb.wl( "\"renderorder\":\"" + renderorder + "\"," );
+        sb.wl( "\"width\":" + Tw + "," );
+        sb.wl( "\"height\":" + Th + "," );
+        sb.wl( "\"tilewidth\":" + Tsw + "," );
+        sb.wl( "\"tileheight\":" + Tsh + "," );
+        sb.wl( "\"nextlayerid\":" + (1 + layers.size()) + "," );
+        sb.wl( "\"nextobjectid\":" + curid + "," );
+        sb.wpropj( properties );
+        sb.wl( "," );
 
 
-        sb.wlo("\"tilesets\":[");
+        sb.wlo( "\"tilesets\":[" );
         for (int n = 0; n < tilesets.size(); n++) {
-            tileset t = tilesets.get(n);
-            sb.wlo("{");//tileset inside
-            sb.wl("\"name\":\"" + t.getName() + "\",");
-            sb.wl("\"firstgid\":" + t.getFirstgid() + ",");
-            sb.wl("\"tilewidth\":" + t.getTilewidth() + ",");
-            sb.wl("\"tileheight\":" + t.getTileheight() + ",");
-            sb.wl("\"spacing\":" + t.getSpacing() + ",");
-            sb.wl("\"margin\":" + t.getMargin() + ",");
-            sb.wl("\"columns\":" + t.getColumns() + ",");
-            sb.wl("\"tilecount\":" + t.getTilecount() + ",");
+            tileset t = tilesets.get( n );
+            sb.wlo( "{" );//tileset inside
+            sb.wl( "\"name\":\"" + t.getName() + "\"," );
+            sb.wl( "\"firstgid\":" + t.getFirstgid() + "," );
+            sb.wl( "\"tilewidth\":" + t.getTilewidth() + "," );
+            sb.wl( "\"tileheight\":" + t.getTileheight() + "," );
+            sb.wl( "\"spacing\":" + t.getSpacing() + "," );
+            sb.wl( "\"margin\":" + t.getMargin() + "," );
+            sb.wl( "\"columns\":" + t.getColumns() + "," );
+            sb.wl( "\"tilecount\":" + t.getTilecount() + "," );
             if (t.getSource() != null) {
-                sb.wl("\"image\":\"" + t.getSource().replace("/", "\\/") + "\",");
+                sb.wl( "\"image\":\"" + t.getSource().replace( "/", "\\/" ) + "\"," );
             }
-            sb.wl("\"imagewidth\":" + t.getOriginalwidth() + ",");
-            sb.wl("\"imageheight\":" + t.getOriginalheight() + ",");
+            sb.wl( "\"imagewidth\":" + t.getOriginalwidth() + "," );
+            sb.wl( "\"imageheight\":" + t.getOriginalheight() + "," );
 
 
-            if (tilesets.get(n).getTiles().size() != 0) {
-                sb.wlo("\"tiles\":[");//tiles
-                for (int m = 0; m < tilesets.get(n).getTiles().size(); m++) {
-                    tile tt = tilesets.get(n).getTiles().get(m);
-                    sb.wlo("{");//tile
-                    sb.wl("\"id\":" + tt.getTileID() + ",");
+            if (tilesets.get( n ).getTiles().size() != 0) {
+                sb.wlo( "\"tiles\":[" );//tiles
+                for (int m = 0; m < tilesets.get( n ).getTiles().size(); m++) {
+                    tile tt = tilesets.get( n ).getTiles().get( m );
+                    sb.wlo( "{" );//tile
+                    sb.wl( "\"id\":" + tt.getTileID() + "," );
 
                     if (tt.getAnimation().size() > 0) {
-                        sb.wlo("\"animation\":[");
+                        sb.wlo( "\"animation\":[" );
                         for (int am = 0; am < tt.getAnimation().size(); am++) {
-                            sb.wlo("{");
-                            sb.wl("\"tileid\":" + tt.getAnimation().get(am).getTileID() + ",");
-                            sb.wl("\"duration\":" + tt.getAnimation().get(am).getDuration());
+                            sb.wlo( "{" );
+                            sb.wl( "\"tileid\":" + tt.getAnimation().get( am ).getTileID() + "," );
+                            sb.wl( "\"duration\":" + tt.getAnimation().get( am ).getDuration() );
 
                             if (am != tt.getAnimation().size() - 1) {
-                                sb.wlc("},");
+                                sb.wlc( "}," );
                             } else {
-                                sb.wlc("}");
+                                sb.wlc( "}" );
                             }
                         }
-                        sb.wlc("],");//animation
+                        sb.wlc( "]," );//animation
                     }
 
-                    sb.wpropj(tt.getProperties());
+                    sb.wpropj( tt.getProperties() );
 
 
-                    if (m != tilesets.get(n).getTiles().size() - 1) {
-                        sb.wlc("},");
+                    if (m != tilesets.get( n ).getTiles().size() - 1) {
+                        sb.wlc( "}," );
                     } else {
-                        sb.wlc("}");
+                        sb.wlc( "}" );
                     }
                 }
-                sb.wlc("],");//tiles
+                sb.wlc( "]," );//tiles
             } else {
-                sb.wl("\"tiles\":[],");
+                sb.wl( "\"tiles\":[]," );
             }
-            sb.wpropj(tilesets.get(n).getProperties());
+            sb.wpropj( tilesets.get( n ).getProperties() );
             if (n != tilesets.size() - 1) {
-                sb.wlc("},");//tileset inside
+                sb.wlc( "}," );//tileset inside
             } else {
-                sb.wlc("}");//tileset inside
+                sb.wlc( "}" );//tileset inside
             }
         }
-        sb.wlc("],"); //tileset;
+        sb.wlc( "]," ); //tileset;
 
-        sb.wlo("\"layers\":[");//layers
+        sb.wlo( "\"layers\":[" );//layers
 
         //tilelayers
         for (int n = 0; n < layers.size(); n++) {
-            if (layers.get(n).getType() == layer.Type.TILE) {
-            layer l = layers.get(n);
-            sb.wlo("{");//tile layer
-            sb.wl("\"type\":\"tilelayer\",");
-            sb.wl("\"id\":" + (n + 1) + ",");
-            sb.wl("\"name\":\"" + l.getName() + "\",");
-            sb.wl("\"x\":0,");
-            sb.wl("\"y\":0,");
-            sb.wl("\"width\":" + Tw + ",");
-            sb.wl("\"height\":" + Th + ",");
-            sb.wl("\"visible\":true,");
+            if (layers.get( n ).getType() == layer.Type.TILE) {
+                layer l = layers.get( n );
+                sb.wlo( "{" );//tile layer
+                sb.wl( "\"type\":\"tilelayer\"," );
+                sb.wl( "\"id\":" + (n + 1) + "," );
+                sb.wl( "\"name\":\"" + l.getName() + "\"," );
+                sb.wl( "\"x\":0," );
+                sb.wl( "\"y\":0," );
+                sb.wl( "\"width\":" + Tw + "," );
+                sb.wl( "\"height\":" + Th + "," );
+                sb.wl( "\"visible\":true," );
 
-            if (l.getOpacity() == 0) {
-                sb.wl("\"opacity\":1,");
-            } else {
-                sb.wl("\"opacity\":" + l.getOpacity() + ",");
-            }
-
-            sb.wl("\"offsetx\":0,");
-            sb.wl("\"offsety\":0,");
-
-            sb.w("\"data\":[");
-
-            for (int k = 0; k < Th; k++) {
-                for (int j = 0; j < Tw; j++) {
-                    sb.append(l.getStr().get(k * Tw + j));
-                    if (!(k == Th - 1 && j == Tw - 1)) sb.append(", ");
+                if (l.getOpacity() == 0) {
+                    sb.wl( "\"opacity\":1," );
+                } else {
+                    sb.wl( "\"opacity\":" + l.getOpacity() + "," );
                 }
+
+                sb.wl( "\"offsetx\":0," );
+                sb.wl( "\"offsety\":0," );
+
+                sb.w( "\"data\":[" );
+
+                for (int k = 0; k < Th; k++) {
+                    for (int j = 0; j < Tw; j++) {
+                        sb.append( l.getStr().get( k * Tw + j ) );
+                        if (!(k == Th - 1 && j == Tw - 1)) sb.append( ", " );
+                    }
+                }
+                sb.appendLine( "]," );//data
+                sb.wpropj( layers.get( n ).getProperties() );
+
+
             }
-            sb.appendLine("],");//data
-            sb.wpropj(layers.get(n).getProperties());
-
-
-        }
-            if (layers.get(n).getType() == layer.Type.OBJECT) {
-                layer l = layers.get(n);
-                sb.wlo("{");//tile layer
-                sb.wl("\"type\":\"objectgroup\",");
+            if (layers.get( n ).getType() == layer.Type.OBJECT) {
+                layer l = layers.get( n );
+                sb.wlo( "{" );//tile layer
+                sb.wl( "\"type\":\"objectgroup\"," );
                 int nid = n + layers.size() + 1;
-                sb.wl("\"id\":" + nid + ",");
-                sb.wl("\"name\":\"" + l.getName() + "\",");
-                sb.wl("\"visible\":true,");
-                sb.wl("\"opacity\":1,");
-                sb.wl("\"offsetx\":0,");
-                sb.wl("\"offsety\":0,");
-                sb.wl("\"draworder\":\"topdown\",");
+                sb.wl( "\"id\":" + nid + "," );
+                sb.wl( "\"name\":\"" + l.getName() + "\"," );
+                sb.wl( "\"visible\":true," );
+                sb.wl( "\"opacity\":1," );
+                sb.wl( "\"offsetx\":0," );
+                sb.wl( "\"offsety\":0," );
+                sb.wl( "\"draworder\":\"topdown\"," );
 
                 if (l.getObjects().size() > 0) {
-                    sb.wlo("\"objects\":[");
+                    sb.wlo( "\"objects\":[" );
                     for (int ao = 0; ao < l.getObjects().size(); ao++) {
-                        obj oo = l.getObjects().get(ao);
-                        sb.wlo("{");
-                        sb.wl("\"id\":" + oo.getId() + ",");
-                        sb.wl("\"name\":\"" + oo.getName() + "\",");
-                        sb.wl("\"type\":\"" + oo.getType() + "\",");
-                        sb.wl("\"x\":" + oo.getX() + ",");
-                        sb.wl("\"y\":" + oo.getY() + ",");
+                        obj oo = l.getObjects().get( ao );
+                        sb.wlo( "{" );
+                        sb.wl( "\"id\":" + oo.getId() + "," );
+                        sb.wl( "\"name\":\"" + oo.getName() + "\"," );
+                        sb.wl( "\"type\":\"" + oo.getType() + "\"," );
+                        sb.wl( "\"x\":" + oo.getX() + "," );
+                        sb.wl( "\"y\":" + oo.getY() + "," );
 
-                        if (oo.getShape().equalsIgnoreCase("point")) {
-                            sb.wl("\"point\":true,");
-                            sb.wl("\"width\":0,");
-                            sb.wl("\"height\":0,");
+                        if (oo.getShape().equalsIgnoreCase( "point" )) {
+                            sb.wl( "\"point\":true," );
+                            sb.wl( "\"width\":0," );
+                            sb.wl( "\"height\":0," );
 
                         } else {
-                            sb.wl("\"width\":" + oo.getW() + ",");
-                            sb.wl("\"height\":" + oo.getH() + ",");
+                            sb.wl( "\"width\":" + oo.getW() + "," );
+                            sb.wl( "\"height\":" + oo.getH() + "," );
 
                         }
-                        sb.wl("\"rotation\":" + oo.getRotation() + ",");
+                        sb.wl( "\"rotation\":" + oo.getRotation() + "," );
 
-                        if (oo.getShape().equalsIgnoreCase("polygon") || oo.getShape().equalsIgnoreCase("polyline")) {
-                            sb.wlo(oo.getShape() + "\":[");
+                        if (oo.getShape().equalsIgnoreCase( "polygon" ) || oo.getShape().equalsIgnoreCase( "polyline" )) {
+                            sb.wlo( oo.getShape() + "\":[" );
                             for (int ok = 0; ok < oo.getPoints().size(); ok++) {
-                                float xar = oo.getPoints().get(ok).x;
-                                float yar = oo.getPoints().get(ok).y;
+                                float xar = oo.getPoints().get( ok ).x;
+                                float yar = oo.getPoints().get( ok ).y;
                                 if (ok != oo.getPoints().size() - 1) {
-                                    sb.wl("\"{ \"x\":" + xar + ", y\":" + yar + " },");
+                                    sb.wl( "\"{ \"x\":" + xar + ", y\":" + yar + " }," );
                                 } else {
-                                    sb.wl("\"{ \"x\":" + xar + ", y\":" + yar + " }");
+                                    sb.wl( "\"{ \"x\":" + xar + ", y\":" + yar + " }" );
                                 }
                             }
-                            sb.wlc("},");
+                            sb.wlc( "}," );
                         }
-                        sb.wl("\"visible\":true,");
+                        sb.wl( "\"visible\":true," );
 					/*
 					if(oo.getProperties().size()>0)
 					{
@@ -7042,50 +7083,50 @@ String texta="";
 					}
 					*/
 
-                        sb.wpropj(oo.getProperties());
+                        sb.wpropj( oo.getProperties() );
 
                         if (ao != l.getObjects().size() - 1) {
-                            sb.wlc("},");
+                            sb.wlc( "}," );
                         } else {
-                            sb.wlc("}");
+                            sb.wlc( "}" );
                         }
 
                     }
-                    sb.wlc("]");//objects
+                    sb.wlc( "]" );//objects
                 } else {
-                    sb.wl("\"objects\":[]");
+                    sb.wl( "\"objects\":[]" );
                 }
 
             }
 
             if (n != layers.size() - 1) {
-                sb.wlc("},");//tilelayer
+                sb.wlc( "}," );//tilelayer
             } else {
-                sb.wlc("}");//tilelayer
+                sb.wlc( "}" );//tilelayer
             }
         }
 
 
-        sb.wlc("]");//layers
-        sb.wlc("}");//map
+        sb.wlc( "]" );//layers
+        sb.wlc( "}" );//map
 
-        FileHandle fh = Gdx.files.external(curdir + "/" + filenamenya + ".json");
-        fh.writeString(sb.toString(), false);
+        FileHandle fh = Gdx.files.external( curdir + "/" + filenamenya + ".json" );
+        fh.writeString( sb.toString(), false );
         backToMap();
-        msgbox(z.exportfinished);
+        msgbox( z.exportfinished );
 
     }
 
     private Pixmap createRWthumbnail(String filenamenya) {
         try {
-            Gdx.gl.glEnable(GL20.GL_BLEND);
-            int Tsw=1;
-            int Tsh=1;
-            Pixmap pm2 = new Pixmap(Tw, Th, Pixmap.Format.RGBA8888);
-            Pixmap pp = pixmapfromtexture( txresources,"ff00ff" );
-            Pixmap pn = pixmapfromtexture( txnumbers,"ff0099" );
+            Gdx.gl.glEnable( GL20.GL_BLEND );
+            int Tsw = 1;
+            int Tsh = 1;
+            Pixmap pm2 = new Pixmap( Tw, Th, Pixmap.Format.RGBA8888 );
+            Pixmap pp = pixmapfromtexture( txresources, "ff00ff" );
+            Pixmap pn = pixmapfromtexture( txnumbers, "ff0099" );
 
-            int Tz = Math.max( Tw,Th );
+            int Tz = Math.max( Tw, Th );
             tilesetsize = tilesets.size();
             if (tilesetsize > 0 && !loadingfile) {
                 int offsetx = 0, offsety = 0;
@@ -7129,7 +7170,7 @@ String texta="";
                 flag = "00";
 
                 for (int jo = 0; jo < layers.size(); jo++) {
-                    if (layers.get(jo).getType() == layer.Type.TILE && layers.get(jo).isVisible()) {
+                    if (layers.get( jo ).getType() == layer.Type.TILE && layers.get( jo ).isVisible()) {
                         java.util.List<drawer> drawers = new ArrayList<drawer>();
                         drawers.clear();
                         java.util.List<drawer> drawers2 = new ArrayList<drawer>();
@@ -7140,46 +7181,46 @@ String texta="";
                             for (int b = cc; b < dd; b++) {
                                 //position=(Math.abs(a)*Tw)+Math.abs(b);
 
-                                position = (abs(a) * Tw) + abs(b);
-                                ini = layers.get(jo).getStr().get(position);
-                                initset = layers.get(jo).getTset().get(position);
+                                position = (abs( a ) * Tw) + abs( b );
+                                ini = layers.get( jo ).getStr().get( position );
+                                initset = layers.get( jo ).getTset().get( position );
                                 if (initset == -1) continue;
                                 if (ini == 0) continue;//dont draw empty, amazing performance boost
                                 xpos = position % Tw;
                                 ypos = position / Tw;
-                                if (orientation.equalsIgnoreCase("isometric")) {
-                                   // offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
+                                if (orientation.equalsIgnoreCase( "isometric" )) {
+                                    // offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
                                     //offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
                                 }
 
                                 mm = ini;
                                 flag = "00";
                                 if (ini > total) {
-                                    hex = Long.toHexString(ini);
+                                    hex = Long.toHexString( ini );
                                     trailer = "00000000" + hex;
-                                    hex = trailer.substring(trailer.length() - 8);
-                                    flag = hex.substring(0, 2);
-                                    mm = Long.decode("#00" + hex.substring(2, 8));
+                                    hex = trailer.substring( trailer.length() - 8 );
+                                    flag = hex.substring( 0, 2 );
+                                    mm = Long.decode( "#00" + hex.substring( 2, 8 ) );
                                 }
-                                tiles = tilesets.get(initset).getTiles();
+                                tiles = tilesets.get( initset ).getTiles();
                                 tilesize = tiles.size();
 
                                 if (tilesize > 0) {
                                     for (int n = 0; n < tilesize; n++) {
-                                        if (tiles.get(n).getAnimation().size() > 0) {
-                                            if (mm == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
-                                                mm = (long) tiles.get(n).getActiveFrameID() + tilesets.get(initset).getFirstgid();
+                                        if (tiles.get( n ).getAnimation().size() > 0) {
+                                            if (mm == tiles.get( n ).getTileID() + tilesets.get( initset ).getFirstgid()) {
+                                                mm = (long) tiles.get( n ).getActiveFrameID() + tilesets.get( initset ).getFirstgid();
                                             }
                                         }
                                     }
                                 }
 
-                                sprX = (int) (mm - tilesets.get(initset).getFirstgid()) % (tilesets.get(initset).getWidth());
-                                sprY = (int) (mm - tilesets.get(initset).getFirstgid()) / (tilesets.get(initset).getWidth());
-                                margin = tilesets.get(initset).getMargin();
-                                spacing = tilesets.get(initset).getSpacing();
-                                Tswa = tilesets.get(initset).getTilewidth();
-                                Tsha = tilesets.get(initset).getTileheight();
+                                sprX = (int) (mm - tilesets.get( initset ).getFirstgid()) % (tilesets.get( initset ).getWidth());
+                                sprY = (int) (mm - tilesets.get( initset ).getFirstgid()) / (tilesets.get( initset ).getWidth());
+                                margin = tilesets.get( initset ).getMargin();
+                                spacing = tilesets.get( initset ).getSpacing();
+                                Tswa = tilesets.get( initset ).getTilewidth();
+                                Tsha = tilesets.get( initset ).getTileheight();
 
                                 tempdrawer = new drawer();
                                 tempdrawer.mm = mm;
@@ -7191,117 +7232,117 @@ String texta="";
 
                                 switch (flag) {
                                     case "20"://diagonal flip
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, true);
+                                        tempdrawer.setdrawer( initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, true );
                                         break;
                                     case "40"://flipy
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
+                                        tempdrawer.setdrawer( initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true );
                                         break;
                                     case "60"://270 degrees clockwise
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        tempdrawer.setdrawer( initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false );
                                         break;
                                     case "80"://flipx
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                        tempdrawer.setdrawer( initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false );
                                         break;
                                     case "a0"://90 degress cw
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        tempdrawer.setdrawer( initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false );
                                         break;
                                     case "c0"://180 degrees cw
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        tempdrawer.setdrawer( initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false );
                                         break;
                                     case "00":
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        tempdrawer.setdrawer( initset, xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false );
                                         break;
                                 }
-                                drawers.add(tempdrawer);
+                                drawers.add( tempdrawer );
 
                                 ///////////////////
-                                if (layers.get(jo).getName().equalsIgnoreCase("Units")) {
+                                if (layers.get( jo ).getName().equalsIgnoreCase( "Units" )) {
 
 
-                                        mm = layers.get(jo).getStr().get(position);
-                                        int mmo = layers.get(jo).getTset().get(position);
-                                        if (mmo==-1) continue;
-                                        int xpos = position % Tw;
-                                        int ypos = position / Tw;
-                                        int maex = -1, maye = -1;
-                                        for (tile t:tilesets.get(mmo).getTiles()){
-                                            //log(mm+"P");
+                                    mm = layers.get( jo ).getStr().get( position );
+                                    int mmo = layers.get( jo ).getTset().get( position );
+                                    if (mmo == -1) continue;
+                                    int xpos = position % Tw;
+                                    int ypos = position / Tw;
+                                    int maex = -1, maye = -1;
+                                    for (tile t : tilesets.get( mmo ).getTiles()) {
+                                        //log(mm+"P");
 
-                                            if (t.getTileID()+tilesets.get(mmo).getFirstgid()==mm){
-                                                boolean isCC=false;
-                                                int team=-1;
-                                                for (property p: t.getProperties()){
-                                                    if (p.getName().equalsIgnoreCase( "unit" ) && p.getValue().equalsIgnoreCase( "commandCenter" ) ){
-                                                        isCC=true;
-                                                        //log(isCC+"P");
-                                                    }
-                                                    if (p.getName().equalsIgnoreCase( "team" )){
-                                                        team=Integer.parseInt( p.getValue()  );
-                                                    }
+                                        if (t.getTileID() + tilesets.get( mmo ).getFirstgid() == mm) {
+                                            boolean isCC = false;
+                                            int team = -1;
+                                            for (property p : t.getProperties()) {
+                                                if (p.getName().equalsIgnoreCase( "unit" ) && p.getValue().equalsIgnoreCase( "commandCenter" )) {
+                                                    isCC = true;
+                                                    //log(isCC+"P");
                                                 }
-                                                if (!isCC) continue;
-                                                //log(isCC+"");
-                                                switch (team){
-                                                    case 0:
-                                                        maex = 0;
-                                                        maye = 0;
-                                                        break;
-                                                    case 1:
-                                                        maex = 1 * 56;
-                                                        maye = 0;
-                                                        break;
-                                                    case 2:
-                                                        maex = 2 * 56;
-                                                        maye = 0;
-                                                        break;
-                                                    case 3:
-                                                        maex = 3 * 56;
-                                                        maye = 0;
-                                                        break;
-                                                    case 4:
-                                                        maex = 4 * 56;
-                                                        maye = 0;
-                                                        break;
-                                                    case 5:
-                                                        maex = 0;
-                                                        maye = 56;
-                                                        break;
-                                                    case 6:
-                                                        maex = 1 * 56;
-                                                        maye = 56;
-                                                        break;
-                                                    case 7:
-                                                        maex = 2 * 56;
-                                                        maye = 56;
-                                                        break;
-                                                    case 8:
-                                                        maex = 3 * 56;
-                                                        maye = 56;
-                                                        break;
-                                                    case 9:
-                                                        maex = 4 * 56;
-                                                        maye = 56;
-                                                        break;
-
+                                                if (p.getName().equalsIgnoreCase( "team" )) {
+                                                    team = Integer.parseInt( p.getValue() );
                                                 }
                                             }
-                                        }
+                                            if (!isCC) continue;
+                                            //log(isCC+"");
+                                            switch (team) {
+                                                case 0:
+                                                    maex = 0;
+                                                    maye = 0;
+                                                    break;
+                                                case 1:
+                                                    maex = 1 * 56;
+                                                    maye = 0;
+                                                    break;
+                                                case 2:
+                                                    maex = 2 * 56;
+                                                    maye = 0;
+                                                    break;
+                                                case 3:
+                                                    maex = 3 * 56;
+                                                    maye = 0;
+                                                    break;
+                                                case 4:
+                                                    maex = 4 * 56;
+                                                    maye = 0;
+                                                    break;
+                                                case 5:
+                                                    maex = 0;
+                                                    maye = 56;
+                                                    break;
+                                                case 6:
+                                                    maex = 1 * 56;
+                                                    maye = 56;
+                                                    break;
+                                                case 7:
+                                                    maex = 2 * 56;
+                                                    maye = 56;
+                                                    break;
+                                                case 8:
+                                                    maex = 3 * 56;
+                                                    maye = 56;
+                                                    break;
+                                                case 9:
+                                                    maex = 4 * 56;
+                                                    maye = 56;
+                                                    break;
 
-                                        if (maex != -1) {
-                                            drawer tempdrawer2 = new drawer();
-                                            int widthy = 56;
-                                            tempdrawer2.setdrawer( 0, xpos-(Tz/12f), ypos-(Tz/12f), maex, maye, widthy, widthy, 1f, 1f, 0f, maex, maye, 55, 55, false, false );
-                                            drawers3.add(tempdrawer2);
+                                            }
                                         }
+                                    }
+
+                                    if (maex != -1) {
+                                        drawer tempdrawer2 = new drawer();
+                                        int widthy = 56;
+                                        tempdrawer2.setdrawer( 0, xpos - (Tz / 12f), ypos - (Tz / 12f), maex, maye, widthy, widthy, 1f, 1f, 0f, maex, maye, 55, 55, false, false );
+                                        drawers3.add( tempdrawer2 );
+                                    }
 
                                 }//if
 
                                 ///////////////////
-                                if (layers.get(jo).getName().equalsIgnoreCase("Items")) {
+                                if (layers.get( jo ).getName().equalsIgnoreCase( "Items" )) {
 
 
-                                    mm = layers.get(jo).getStr().get( position );
-                                    int mmo = layers.get(jo).getTset().get( position );
+                                    mm = layers.get( jo ).getStr().get( position );
+                                    int mmo = layers.get( jo ).getTset().get( position );
                                     if (mmo == -1) continue;
                                     int xpos = position % Tw;
                                     int ypos = position / Tw;
@@ -7322,7 +7363,7 @@ String texta="";
                                     if (isPool) {
                                         drawer tempdrawer = new drawer();
                                         int widthy = 32;
-                                        tempdrawer.setdrawer( 0, xpos-(Tz/20f), ypos-(Tz/20f), 0, 0, widthy, widthy, 1f, 1f, 0f, 0, 0, 32, 32, false, false );
+                                        tempdrawer.setdrawer( 0, xpos - (Tz / 20f), ypos - (Tz / 20f), 0, 0, widthy, widthy, 1f, 1f, 0f, 0, 0, 32, 32, false, false );
                                         drawers2.add( tempdrawer );
                                         //tempdrawer.draw( batch, txresources );
                                     }
@@ -7330,22 +7371,21 @@ String texta="";
                                 }
 
 
-
                             } //for  b
                         }//for a
 
-                        java.util.Collections.sort(drawers);//fps hogger
+                        java.util.Collections.sort( drawers );//fps hogger
 
                         for (drawer drawer : drawers) {
-                            drawer.draw(pm2, tilesets, Tsw, Tsh);
+                            drawer.draw( pm2, tilesets, Tsw, Tsh );
                         }
 
                         for (drawer drawer : drawers2) {
-                            drawer.draw(pm2, pp, (int) (Tz/10f), (int) (Tz/10f));
+                            drawer.draw( pm2, pp, (int) (Tz / 10f), (int) (Tz / 10f) );
                         }
 
                         for (drawer drawer : drawers3) {
-                            drawer.draw(pm2, pn, (int) (Tz/6f), (int) (Tz/6f));
+                            drawer.draw( pm2, pn, (int) (Tz / 6f), (int) (Tz / 6f) );
                         }
 
                     }
@@ -7356,20 +7396,32 @@ String texta="";
 
 
             //
-            if (filenamenya!="XOXXO") {
+            if (filenamenya != "XOXXO") {
                 FileHandle fh = Gdx.files.external( curdir + "/" + filenamenya + ".png" );
                 PixmapIO.writePNG( fh, pm2 );
                 backToMap();
                 status( z.exportfinished, 3 );
                 return null;
-            }else{
+            } else {
                 return pm2;
             }
         } catch (Exception e) {
-            msgbox(z.error);
-            ErrorBung(e, "errorlog.txt");
+            msgbox( z.error );
+            ErrorBung( e, "errorlog.txt" );
             return null;
         }
+    }
+
+    private void exportastemplate(String filenamenya) {
+        if (filenamenya == "") {
+            return;
+        }
+        String exportpath = "NotTiled/sample/template/"+filenamenya;
+        FileHandle fh = Gdx.files.external( exportpath );
+        if (!fh.exists()) fh.mkdirs();
+        saveMap( exportpath + "/" + "template.tmx" );
+        backToMap();
+        status(z.filesaved,2);
     }
 
     private void exporttopng(String filenamenya) {
@@ -7525,6 +7577,218 @@ String texta="";
             PixmapIO.writePNG(fh, pm2);
             backToMap();
             status(z.exportfinished,3);
+        } catch (Exception e) {
+            msgbox(z.error);
+            ErrorBung(e, "errorlog.txt");
+        }
+    }
+
+    private void selectionastset(String filenamenya) {
+        try {
+            Gdx.gl.glEnable(GL20.GL_BLEND);
+            tileset t = new tileset();
+            int posx = mapstartSelect % Tw;
+            int posy = mapstartSelect / Tw;
+            int posx2 = mapendSelect % Tw +1;
+            int posy2 = mapendSelect / Tw +1;
+            int widih = mapendSelect % Tw - mapstartSelect % Tw +1;
+            int heih = mapendSelect / Tw - mapstartSelect / Tw +1;
+            status(posx+"-"+posx2+","+posy+"-"+posy2+ "("+widih+","+heih+")",5);
+            Pixmap pm2 = new Pixmap(widih * Tsw, heih * Tsh, Pixmap.Format.RGBA8888);
+            tilesetsize = tilesets.size();
+            if (tilesetsize > 0 && !loadingfile) {
+                int offsetx = 0, offsety = 0;
+                int jon = 0, joni = 0;
+                long ini;
+                int total = widih * heih;
+                int startx = posx, stopx = posx2;
+                int starty = posy, stopy = posy2;
+
+                int aa = 0, bb = 0, cc = 0, dd = 0;
+                switch (renderorder) {
+                    case "right-down":
+                        aa = starty;
+                        bb = stopy;
+                        cc = startx;
+                        dd = stopx;
+                        break;
+                    case "left-down":
+                        aa = starty;
+                        bb = stopy;
+                        cc = -stopx + 1;
+                        dd = -startx + 1;
+                        break;
+                    case "right-up":
+                        aa = -stopy + 1;
+                        bb = -starty + 1;
+                        cc = startx;
+                        dd = stopx;
+                        break;
+                    case "left-up":
+                        aa = -stopy + 1;
+                        bb = -starty + 1;
+                        cc = -stopx + 1;
+                        dd = -startx + 1;
+                        break;
+                }
+
+                String flag;
+                Long mm = null;
+                flag = "00";
+                int jo = selLayer;
+                    if (layers.get(jo).getType() == layer.Type.TILE && layers.get(jo).isVisible()) {
+                        java.util.List<drawer> drawers = new ArrayList<drawer>();
+                        drawers.clear();
+                        for (int a = aa; a < bb; a++) {
+                            for (int b = cc; b < dd; b++) {
+                                //position=(Math.abs(a)*Tw)+Math.abs(b);
+
+                                //num
+                                position = (abs(a) * Tw) + abs(b);
+
+
+
+                                ini = layers.get(jo).getStr().get(position);
+                                initset = layers.get(jo).getTset().get(position);
+                                if (initset == -1) continue;
+                                if (ini == 0) continue;//dont draw empty, amazing performance boost
+                                xpos = (b - posx);
+                                ypos = (a - posy);
+
+
+
+                                if (orientation.equalsIgnoreCase("isometric")) {
+                                    offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
+                                    offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
+                                }
+
+                                mm = ini;
+                                flag = "00";
+                                if (ini > total) {
+                                    hex = Long.toHexString(ini);
+                                    trailer = "00000000" + hex;
+                                    hex = trailer.substring(trailer.length() - 8);
+                                    flag = hex.substring(0, 2);
+                                    mm = Long.decode("#00" + hex.substring(2, 8));
+                                }
+                                tiles = tilesets.get(initset).getTiles();
+                                tilesize = tiles.size();
+                                int poss =-1;
+                                if (tilesize > 0) {
+                                    for (int n = 0; n < tilesize; n++) {
+                                        if (tiles.get(n).getAnimation().size() > 0) {
+                                            if (mm == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
+                                                mm = (long) tiles.get(n).getActiveFrameID() + tilesets.get(initset).getFirstgid();
+                                            }
+                                        }
+
+                                        if (tiles.get(n).getTileID()==ini - tilesets.get(initset).getFirstgid()){
+                                            poss=n;
+                                        }
+
+                                    }
+
+                                    if (poss>-1) {
+                                        tile tt = new tile();
+                                        tt.setTileID( ypos * widih + xpos );
+                                        tt.setProperties( tiles.get( poss ).getProperties() );
+                                        t.getTiles().add( tt );
+                                    }
+
+                                }
+
+
+                                sprX = (int) (mm - tilesets.get(initset).getFirstgid()) % (tilesets.get(initset).getWidth());
+                                sprY = (int) (mm - tilesets.get(initset).getFirstgid()) / (tilesets.get(initset).getWidth());
+                                margin = tilesets.get(initset).getMargin();
+                                spacing = tilesets.get(initset).getSpacing();
+                                Tswa = tilesets.get(initset).getTilewidth();
+                                Tsha = tilesets.get(initset).getTileheight();
+
+
+                                tempdrawer = new drawer();
+                                tempdrawer.mm = mm;
+                                int Tswad = 0;
+                                int Tshad = 0;
+                                int ttx=0;
+                                int tty=0;
+
+                                Tswad = Tswa;
+                                Tshad = Tsha;
+
+                                switch (flag) {
+                                    case "20"://diagonal flip 'THIS ONE"
+                                        tempdrawer.setdrawer(initset, xpos * Tsw  + ttx - offsetx, ypos * Tsh + tty  - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                        break;
+                                    case "40"://flipy nd
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
+                                        break;
+                                    case "60"://270 degrees clockwise nd
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        break;
+                                    case "80"://flipx nd
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                        break;
+                                    case "a0"://90 degress cw
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx   - offsetx, ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        break;
+                                    case "c0"://180 degrees cw nd
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx   - offsetx, ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        break;
+                                    case "e0"://180 degrees ccw "AND THIS ONE"
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                        break;
+                                    case "00":
+                                        tempdrawer.setdrawer(initset, xpos * Tsw + ttx   - offsetx, ypos * Tsh +tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        break;
+                                }
+                                drawers.add(tempdrawer);
+
+                            } //for  b
+                        }//for a
+
+                        //java.util.Collections.sort(drawers);//fps hogger
+
+                        for (drawer drawer : drawers) {
+                            drawer.draw(pm2, tilesets, Tsw, Tsh);
+                        }
+                    }
+
+
+            }//no tileswt
+
+
+            //save it to PNG
+            FileHandle fh = Gdx.files.external("NotTiled/Temp/"+filenamenya+".png");
+            PixmapIO.writePNG(fh, pm2);
+
+            //import it
+            loadingfile = true;
+            errors = " ";
+            if (fImportWidth.getText().equalsIgnoreCase( "" )) {
+                fImportWidth.setText( Tsw + "" );
+            }
+            if (fImportHeight.getText().equalsIgnoreCase( "" )) {
+                fImportHeight.setText( Tsh + "" );
+            }
+            cImportEmbed.setChecked( true );
+            fh = Gdx.files.external("NotTiled/Temp/"+filenamenya+".png");
+            addImageTset( fh );
+            tilesets.get(tilesets.size()-1).setTiles( t.getTiles());
+            CacheAllTset();
+            loadingfile = false;
+            seltset = tilesets.size() - 1;
+            backToMap();
+            onToPicker();
+            recenterpick();
+            cue( "importtilesetok" );
+            status(z.exportfinished,3);
+            fh.delete();
+
+
+
+
+
         } catch (Exception e) {
             msgbox(z.error);
             ErrorBung(e, "errorlog.txt");
@@ -7735,9 +7999,13 @@ String texta="";
             if (Math.random() < chanceToStartAlive) {
                 layers.get(selLayer).getStr().set(x, livestr);
                 layers.get(selLayer).getTset().set(x, livetset);
+                updateCache( x );
+
             } else {
                 layers.get(selLayer).getStr().set(x, deadstr);
                 layers.get(selLayer).getTset().set(x, deadtset);
+                updateCache( x );
+
             }
 
         }
@@ -7775,6 +8043,8 @@ String texta="";
                 if (living <= deathlimit) {
                     strt.set(k, deadstr);
                     tsett.set(k, deadtset);
+                    updateCache( k );
+
                 }
 
             } else //dead cell
@@ -7782,6 +8052,8 @@ String texta="";
                 if (living >= birthlimit) {
                     strt.set(k, livestr);
                     tsett.set(k, livetset);
+                    updateCache( k );
+
                 }
             }
 
@@ -7838,6 +8110,8 @@ String texta="";
 
                 layers.get(selLayer).getStr().set(location, to);
                 layers.get(selLayer).getTset().set(location, newtset);
+                updateCache( location );
+
             }
         }
         backToMap();
@@ -7896,6 +8170,7 @@ String texta="";
 
                 layers.get(selLayer).getStr().set(location, to);
                 layers.get(selLayer).getTset().set(location, newtset);
+                updateCache( location );
             }
         }
         backToMap();
@@ -9133,6 +9408,7 @@ String texta="";
             elha.get(i).setNewtset(layers.get(zeLayer).getTset().get(i));
             undolayer.add(elha.get(i));
         }
+        resetCaches();
     }
 
     public void loadLayerManagement() {
@@ -9454,7 +9730,9 @@ String texta="";
         bEditProp = new TextButton(z.edit, skin);
         bPropCopy = new TextButton(z.copyall, skin);
         bPropPaste = new TextButton(z.paste, skin);
+        bMoveProp = new TextButton(z.moveup, skin);
 
+        bPropExportAsTemplate = new TextButton(z.exportastemplate, skin);
         bPropTemplate = new TextButton(z.template, skin);
         bPropParse = new TextButton(z.parse, skin);
         lPropID = new Label(z.id, skin);
@@ -9489,6 +9767,46 @@ String texta="";
                 }
             }
         });
+
+        bPropExportAsTemplate.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                int dex = lproplist.getSelectedIndex();
+                java.util.List<property> pp = new ArrayList<property>();
+                switch (sender) {
+                    case "object":
+                        pp = selobj.getProperties();
+                        break;
+                    case "tile":
+                        pp = tilesets.get(selTsetID).getTiles().get(selTileID).getProperties();
+                        break;
+                    case "tilesettings":
+                        pp = tilesets.get(seltset).getTiles().get(selTileID).getProperties();
+                        break;
+                    case "tset":
+                        pp = tilesets.get(selTsetID).getProperties();
+                        break;
+                    case "layer":
+                        pp = layers.get(selLayer).getProperties();
+                        break;
+                    case "map":
+                        pp = properties;
+                        break;
+                    case "auto":
+                        pp = autotiles.get(selat).getProperties();
+                        break;
+                }
+                properties at = new properties();
+                at.setProperties(pp);
+                Json json = new Json();
+                clipProp = json.toJson(at);
+                Gdx.input.getTextInput(psaveproptemplate, z.exportastemplate, "", "");
+
+                //get the name.
+
+            }
+        });
+
         bPropCopy.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -9926,6 +10244,7 @@ String texta="";
         tPropsMgmt.add(bEditProp).padBottom(2).row();
         tPropsMgmt.add(bMoveProp).padBottom(2).row();
         tPropsMgmt.add(bPropTemplate).padBottom(2).row();
+        tPropsMgmt.add(bPropExportAsTemplate).padBottom(2).row();
         tPropsMgmt.add(bPropParse).padBottom(2).row();
         tPropsMgmt.add(bPropCopy).padBottom(2).row();
         tPropsMgmt.add(bPropPaste).padBottom(2).row();
@@ -10528,6 +10847,7 @@ String texta="";
         Label lPT = new Label(z.template, skin);
         final com.badlogic.gdx.scenes.scene2d.ui.List<String> lptlist = new com.badlogic.gdx.scenes.scene2d.ui.List<String>(skin);
         TextButton bApplyPT = new TextButton(z.apply, skin);
+        TextButton bDeletePT = new TextButton(z.remove, skin);
         TextButton bptback = new TextButton(z.back, skin);
 
         bPropTemplate.addListener(new ChangeListener() {
@@ -10538,7 +10858,7 @@ String texta="";
                 lptlist.setItems();
                 java.util.List<String> srr = new ArrayList<String>();
                 FileHandle dirHandle;
-                dirHandle = Gdx.files.internal("template/");
+                dirHandle = Gdx.files.external("NotTiled/sample/json/");
                 for (FileHandle entry : dirHandle.list()) {
 
                     srr.add(entry.file().getName());
@@ -10546,6 +10866,31 @@ String texta="";
                 java.util.Collections.sort(srr);
                 lptlist.setItems(srr.toArray(new String[0]));
                 gotoStage(tpt);
+
+            }
+        });
+
+        bDeletePT.addListener(new ChangeListener() {
+
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+
+                if (lptlist.getSelectedIndex()==-1) return;
+                FileHandle todel;
+                todel = Gdx.files.external("NotTiled/sample/json/"+lptlist.getSelected());
+                todel.delete();
+
+                java.util.List<String> srr = new ArrayList<String>();
+                FileHandle dirHandle;
+                dirHandle = Gdx.files.external("NotTiled/sample/json/");
+                for (FileHandle entry : dirHandle.list()) {
+
+                    srr.add(entry.file().getName());
+                }
+                java.util.Collections.sort(srr);
+                lptlist.setItems(srr.toArray(new String[0]));
+
+                //   gotoStage(tPropsMgmt);
 
             }
         });
@@ -10568,12 +10913,12 @@ String texta="";
 
                 properties at = new properties();
                 Json json = new Json();
-                FileHandle f = Gdx.files.internal("template/" + lptlist.getSelected());
+                FileHandle f = Gdx.files.external("NotTiled/sample/json/" + lptlist.getSelected());
                 at = json.fromJson(properties.class, f);
 
                 switch (sender) {
                     case "object":
-                        layers.get(selLayer).getObjects().get(oedit).setProperties(at.getProperties());
+                        selobj.setProperties(at.getProperties());
 
                         break;
                     case "tile":
@@ -10583,6 +10928,7 @@ String texta="";
                     case "map":
                         properties = at.getProperties();
                         break;
+
                     case "auto":
                         autotiles.get(selat).setProperties(at.getProperties());
                         break;
@@ -10617,6 +10963,7 @@ String texta="";
         ScrollPane spn = new ScrollPane(lptlist);
         tpt.add(spn).height(btnx).row();
         tpt.add(bApplyPT).row();
+        tpt.add(bDeletePT).row();
         tpt.add(bptback).row();
 
     }
@@ -12123,7 +12470,7 @@ String texta="";
                 break;
             case "saveas":
                 saveasdir = file.path();
-                Gdx.input.getTextInput(pSaveAs, "Set new filename", "new.tmx", "");
+                Gdx.input.getTextInput(pSaveAs, z.saveas, "new.tmx", "");
 
                 break;
 
@@ -12294,7 +12641,7 @@ String texta="";
             t.setFirstgid(requestGid());
 
             if (cImportEmbed.isChecked()) {
-                byte[] fileContent = thefile.readBytes();
+                byte[] fileContent = f.readBytes();
                 String asu = android.util.Base64.encodeToString(fileContent, 0);
                 property po = new property("embedded_png", asu);
                 t.getProperties().add(po);
@@ -14281,7 +14628,11 @@ String texta="";
 
     public void CacheAllTset() {
         for (int lay = 0; lay < layers.size(); lay++) {
-            layers.get(lay).setTset(cacheTset(layers.get(lay).getStr()));
+            if (tilesets.size() >0) {
+                layers.get( lay ).setTset( cacheTset( layers.get( lay ).getStr() ) );
+            }else{
+                layers.get( lay ).setTset( cacheTset( layers.get( lay ).getStr() ) );
+            }
         }
     }
 
@@ -14645,7 +14996,8 @@ String texta="";
                     int ab = (int) touch.y;
 
                     //this line is to sovlve problem of the first line not clicked on 1 x 1 tile.
-                    if (touch.y > 0) ab = 1;
+                    //but cause error in other places.
+                    //if (touch.y > 0) ab = 1;
 
                     boolean touched = false;
 
@@ -14655,9 +15007,10 @@ String texta="";
                         touched = true;
                     }
                     if (mode=="object") touched=true;
+                    int num = 0;
+
                     if (touched) {
 
-                        int num = 0;
 
                         if (orientation.equalsIgnoreCase("orthogonal")) {
 
@@ -14697,16 +15050,16 @@ String texta="";
 
                              */
                         }
+                    }
 
-                        if (mode == "tile") {
+                    if (mode == "tile" && touched) {
 
-                            tapTile(num, false, true);
-                        } else if (mode == "object") {
-                            tapObject(num, ae, ab);
+                        tapTile(num, false, true);
+                    } else if (mode == "object") {
+                        tapObject(num, ae, ab);
 
-                        } else if (mode == "newpoly") {
-                            tapNewPoly(num, ae, ab);
-                        }
+                    } else if (mode == "newpoly") {
+                        tapNewPoly(num, ae, ab);
                     }
                     break;
                 case "tile":
@@ -16040,6 +16393,7 @@ String texta="";
 
                                 layers.get(selLayer).getStr().set(nyum, oi);
                                 layers.get(selLayer).getTset().set(nyum, seltset);
+                                updateCache(nyum);
                                 follower = true;
                             }
                         }
@@ -16379,6 +16733,8 @@ String texta="";
                                         newmapendselect=nyum;
                                         lh2 = new layerhistory(followe, from, 0, orinyum, clipsource, tzet, -1);
                                         undolayer.add(lh2);
+                                        updateCache( nyum );
+                                        updateCache( orinyum );
                                         uploaddata(lh2);
                                         redolayer.clear();
                                         followe = true;
@@ -16426,6 +16782,9 @@ String texta="";
                                             layers.get(selLayer).getStr().set(nyum, oi);
                                             layers.get(selLayer).getTset().set(nyum, oritzet);
                                             followe = true;
+                                        updateCache( nyum );
+                                        updateCache( orinyum );
+
                                         //}
 
 
@@ -16471,6 +16830,9 @@ String texta="";
                                                 layers.get( i ).getStr().set( nyum, oi );
                                                 layers.get( i ).getTset().set( nyum, oritzet );
                                                 followe = true;
+                                                updateCache( nyum );
+                                                updateCache( orinyum );
+
                                             }
                                         }
 
@@ -17895,6 +18257,9 @@ String texta="";
 
 
             if (tapped(touch2, gui.screenshot)) {
+                testDialog();
+                return true;
+                /*
                 takingss = true;
                 //Gdx.input.vibrate(100);
 
@@ -17907,6 +18272,7 @@ String texta="";
                         takingss = false;
                     }
                 }, 1f);
+                */
 
             }
             return true;

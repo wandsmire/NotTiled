@@ -377,4 +377,6 @@ recordwav: "Record WAV"
 recording: "Recording. silent please..."
 picker: "Picker"
 showcoords: "Show Coordinates"
+exportastemplate: "Export as Template"
+selectionastileset: "Selection as Tileset"
 }

@@ -3,18 +3,23 @@ package com.mirwanda.nottiled;
 import android.*;
 import android.content.*;
 import android.content.pm.*;
+import android.net.Uri;
 import android.os.*;
 import android.speech.tts.*;
 import android.view.*;
 import android.widget.*;
 import com.badlogic.gdx.backends.android.*;
 import com.google.android.gms.ads.*;//
+
+import java.io.File;
 import java.util.*;
 import javax.annotation.*;
 import org.solovyev.android.checkout.*;
 
 import com.mirwanda.nottiled.BuildConfig;//
 
+import static android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION;
+import static android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
 
 
 public class MainActivity extends AndroidApplication implements Interface
@@ -83,8 +88,59 @@ public class MainActivity extends AndroidApplication implements Interface
 	{
 		return version;
 	}
-	
-	
+
+
+	String pet="";
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		mCheckout.onActivityResult(requestCode, resultCode, data);
+
+		if (requestCode == 123 && resultCode == RESULT_OK) {
+			if ((data != null) && (data.getData() != null)) {
+				Uri selectedFile = data.getData();
+				File f = new File(selectedFile.getPath());
+				pet = f.getPath();
+			}
+		}else{
+			pet="cancel";
+		}
+
+		super.onActivityResult(requestCode, resultCode, data);
+	}
+
+	@Override
+	public String openDialog() {
+
+		pet="";
+		Intent intent = new Intent()
+				.setType("*/*")
+				.setAction(Intent.ACTION_GET_CONTENT);
+		intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+		intent.addCategory(Intent.CATEGORY_OPENABLE);
+		intent.setFlags(FLAG_GRANT_READ_URI_PERMISSION | FLAG_GRANT_WRITE_URI_PERMISSION);
+		startActivityForResult(Intent.createChooser(intent, "Select a file"), 123);
+		return "";
+	}
+
+	@Override
+	public String opet() {
+		return pet;
+	}
+
+	@Override
+	public String saveDialog() {
+		Intent intent = new Intent()
+				.setType("*/*")
+				//.setAction(Intent.ACTION_GET_CONTENT)
+				.setAction(Intent.ACTION_CREATE_DOCUMENT);
+		intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+		intent.addCategory(Intent.CATEGORY_OPENABLE);
+		intent.setFlags(FLAG_GRANT_READ_URI_PERMISSION | FLAG_GRANT_WRITE_URI_PERMISSION);
+		startActivityForResult(Intent.createChooser(intent, "Select a file"), 234);
+		return pet;
+	}
+
+
 	private ActivityCheckout mCheckout;
 	private static final String AD_FREE = "adfree";
 	boolean proVersion = false;
@@ -167,11 +223,6 @@ public class MainActivity extends AndroidApplication implements Interface
         }
     }
 	
-	@Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        mCheckout.onActivityResult(requestCode, resultCode, data);
-        super.onActivityResult(requestCode, resultCode, data);
-    }
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {

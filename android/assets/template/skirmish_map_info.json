@@ -1,9 +1,0 @@
-{
-properties: [
-			{
-				name: type
-				type: String
-				value: skirmish
-			}
-		]
-}
