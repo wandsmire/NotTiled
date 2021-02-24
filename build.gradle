@@ -6,16 +6,12 @@ buildscript {
         mavenCentral()
         maven { url "https://plugins.gradle.org/m2/" }
         maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
-
         jcenter()
         google()
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:4.1.1'
         classpath 'com.mobidevelop.robovm:robovm-gradle-plugin:2.3.8'
-
-        
-
     }
 }
 
@@ -41,6 +37,8 @@ allprojects {
         maven { url "http://repo.clojars.org/" }
         maven { url "https://maven.sing-group.org/repository/maven/" }
     }
+
+
 }
 
 project(":desktop") {
@@ -68,7 +66,6 @@ project(":desktop") {
 
 project(":android") {
     apply plugin: "android"
-
     configurations { natives }
 
     dependencies {
