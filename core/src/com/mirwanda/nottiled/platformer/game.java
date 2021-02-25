@@ -3,6 +3,7 @@ package com.mirwanda.nottiled.platformer;
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.assets.loaders.resolvers.AbsoluteFileHandleResolver;
 import com.badlogic.gdx.assets.loaders.resolvers.ExternalFileHandleResolver;
 import com.badlogic.gdx.assets.loaders.resolvers.InternalFileHandleResolver;
 import com.badlogic.gdx.audio.Music;
@@ -149,7 +150,7 @@ public class game {
 
         try {
             if (playtest) {
-                map = new TmxMapLoader( new ExternalFileHandleResolver() ).load( path + "/" + filename );
+                map = new TmxMapLoader( new AbsoluteFileHandleResolver() ).load( path + "/" + filename );
             } else {
                 map = new TmxMapLoader( new InternalFileHandleResolver() ).load( path + "/" + filename );
 
@@ -887,7 +888,7 @@ public class game {
 
     public FileHandle getFile(String fullpath){
         if (playtest){
-            return Gdx.files.external( fullpath );
+            return Gdx.files.absolute( fullpath );
         }else{
             return Gdx.files.internal( fullpath );
         }

@@ -1,19 +1,41 @@
 package com.mirwanda.nottiled;
 
-import com.badlogic.gdx.*;
+import com.badlogic.gdx.Application;
+import com.badlogic.gdx.ApplicationAdapter;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.Net;
+import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.ai.pfa.GraphPath;
+import com.badlogic.gdx.assets.AssetManager;
+import com.badlogic.gdx.assets.loaders.resolvers.ExternalFileHandleResolver;
 import com.badlogic.gdx.audio.AudioDevice;
 import com.badlogic.gdx.audio.AudioRecorder;
 import com.badlogic.gdx.audio.Music;
-import com.badlogic.gdx.audio.Sound;
-import com.badlogic.gdx.files.*;
-import com.badlogic.gdx.graphics.*;
-import com.badlogic.gdx.graphics.g2d.*;
-import com.badlogic.gdx.graphics.g2d.freetype.*;
-import com.badlogic.gdx.graphics.glutils.*;
-import com.badlogic.gdx.input.*;
+import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.PixmapIO;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.TextureData;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.SpriteCache;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.graphics.glutils.FrameBuffer;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.input.GestureDetector;
 import com.badlogic.gdx.input.GestureDetector.*;
-import com.badlogic.gdx.math.*;
+import com.badlogic.gdx.math.Interpolation;
+import com.badlogic.gdx.math.Polygon;
+import com.badlogic.gdx.math.Polyline;
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.Box2D;
@@ -22,69 +44,84 @@ import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
-import com.badlogic.gdx.scenes.scene2d.*;
-import com.badlogic.gdx.scenes.scene2d.ui.*;
-import com.badlogic.gdx.scenes.scene2d.utils.*;
-import com.badlogic.gdx.utils.*;
-import com.badlogic.gdx.utils.viewport.*;
-import com.bitfire.postprocessing.*;
-import com.bitfire.postprocessing.effects.*;
-import com.bitfire.postprocessing.filters.*;
-import com.bitfire.utils.*;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Button;
+import com.badlogic.gdx.scenes.scene2d.ui.CheckBox;
+import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
+import com.badlogic.gdx.scenes.scene2d.ui.SelectBox;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.Slider;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.TextArea;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.TextField;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.utils.SpriteDrawable;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.utils.Base64Coder;
+import com.badlogic.gdx.utils.BufferUtils;
+import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.utils.async.AsyncExecutor;
+import com.badlogic.gdx.utils.async.AsyncResult;
+import com.badlogic.gdx.utils.viewport.StretchViewport;
+import com.bitfire.postprocessing.PostProcessor;
+import com.bitfire.postprocessing.effects.Bloom;
+import com.bitfire.postprocessing.effects.CrtMonitor;
+import com.bitfire.postprocessing.effects.Curvature;
+import com.bitfire.postprocessing.effects.Vignette;
+import com.bitfire.postprocessing.effects.Zoomer;
+import com.bitfire.postprocessing.filters.Combine;
+import com.bitfire.postprocessing.filters.CrtScreen;
+import com.bitfire.postprocessing.filters.RadialBlur;
+import com.bitfire.utils.ShaderLoader;
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryonet.Client;
+import com.esotericsoftware.kryonet.Connection;
+import com.esotericsoftware.kryonet.Listener;
+import com.esotericsoftware.kryonet.Server;
+import com.mirwanda.nottiled.ai.ATGraph;
+import com.mirwanda.nottiled.ai.AutoTile;
+import com.mirwanda.nottiled.platformer.game;
+import com.mirwanda.nottiled.platformer.gameobject;
 
-import java.awt.Component;
-import java.awt.HeadlessException;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.*;
+import org.jfugue.midi.MidiFileManager;
+import org.jfugue.pattern.Pattern;
+import org.jfugue.player.Player;
+import org.jfugue.rhythm.Rhythm;
+import org.jfugue.theory.ChordProgression;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserFactory;
+import org.xmlpull.v1.XmlSerializer;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.*;
-import java.util.List;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-
-import org.jfugue.midi.MidiFileManager;
-import org.jfugue.pattern.Pattern;
-import org.jfugue.pattern.PatternProducer;
-import org.jfugue.player.Player;
-import org.jfugue.rhythm.Rhythm;
-import org.jfugue.theory.Chord;
-import org.jfugue.theory.ChordProgression;
-import org.jfugue.theory.Note;
-import org.xmlpull.v1.*;
-
-import com.badlogic.gdx.utils.async.*;
-import com.badlogic.gdx.assets.*;
-import com.badlogic.gdx.assets.loaders.resolvers.*;
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryonet.Client;
-import com.esotericsoftware.kryonet.Connection;
-import com.esotericsoftware.kryonet.Listener;
-import com.esotericsoftware.kryonet.Server;
-import com.leff.midi.MidiFile;
-import com.leff.midi.MidiTrack;
-import com.leff.midi.event.MidiEvent;
-import com.leff.midi.event.NoteOn;
-import com.leff.midi.event.ProgramChange;
-import com.leff.midi.event.meta.Tempo;
-import com.leff.midi.event.meta.TimeSignature;
-import com.leff.midi.examples.EventPrinter;
-import com.leff.midi.util.MidiProcessor;
-import com.mirwanda.nottiled.ai.ATGraph;
-import com.mirwanda.nottiled.ai.AutoTile;
-import com.mirwanda.nottiled.platformer.game;
-import com.mirwanda.nottiled.platformer.gameobject;
-
-import javax.swing.JDialog;
-import javax.swing.JFileChooser;
-import javax.swing.JFrame;
-
-import box2dLight.RayHandler;
 
 import static java.lang.Thread.sleep;
 import static org.jfugue.midi.MidiFileManager.savePatternToMidi;
@@ -148,6 +185,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     int senderID; //custom properties
     int selTsetID; //tiles
     String fps = "";
+    boolean nativefilechooser = true;
     float keydown = 0f;
     boolean backing;
     String shapeName = "rectangle", rotationName = "0", toolName = "Tile", viewModeName = "Stack", objViewModeName = "All";
@@ -445,7 +483,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private boolean propertystart;
     private boolean alreadyloaded;
     private String intend;
-    private recents recents;
+    private recents recents = new recents();
     private Texture txnumbers;
     private FrameBuffer fbo;
     private boolean takingss;
@@ -558,8 +596,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     //////////////////////////////////////////////////////
 //            APP CYCLE
 //////////////////////////////////////////////////////
+    String basepath;
+
     @Override
     public void create() {
+        log( "Gdx create started!" );
+        basepath = Gdx.files.getExternalStoragePath();
+        log("basepath = "+basepath);
         nullTable = new Table();
         vers = face.getVersione();
         prefs = Gdx.app.getPreferences( "My Preferences" );
@@ -569,12 +612,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         try {
             reloadLanguage();
+            log( "Language reloaded!" );
 
         } catch (Exception e) {
             ErrorBung( e, "langeror.txt" );
             language = "English";
             prefs.putString( "language", "English" );
             reloadLanguage();
+            log( "Language error, default to english!" );
+
         }
         gd = new GestureDetector( this );
         initSD();
@@ -608,10 +654,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         loadKryonet();
         initializePostProcessor();
         createSwatches();
+        log( "Initialization complete" );
+
+
         activetool = 4;
 
 
-        //animation = GifDecoder.loadGIFAnimation(2, Gdx.files.external("loading.gif").read());
+        //animation = GifDecoder.loadGIFAnimation(2, Gdx.files.absolute("loading.gif").read());
         manager.setLoader(
                 TmxMap.class,
                 new mapLoader(
@@ -641,19 +690,84 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
-    private void testDialog() {
+    String pet = "";
+
+    private void nativeOpen(final String tujuan, final Table T) {
+        pet="";
         new Thread( new Runnable() {
             @Override
             public void run() {
-                String pet = "";
                 face.openDialog();
                 while (pet.equalsIgnoreCase( "" )){
                     pet = face.opet();
                 }
-                status("PET:"+pet,10);
+
+                if (pet.equalsIgnoreCase( "cancel" )){
+                    exitDialog(T);
+                    return;
+                }
+                log(pet);
+                cleanPet();
+                log(pet);
+                FileHandle f = Gdx.files.absolute( pet );
+                exitDialog( T );
+                tujuanDialog( tujuan, f);
             }
         } ).start();
     }
+
+    private void cleanPet(){
+        //check android uris
+        if (pet.startsWith( "/document/" )){
+            String[] pen = pet.split( ":" );
+            String poi = pen[0].substring( 9 );
+            log(poi);
+            switch (poi){
+                case "image": break;
+                case "video": break;
+                case "audio": break;
+                case "primary":
+                default:
+                    pet=pet.replace( "/document/primary:",basepath );
+                    pet=pet.replace( pen[0] +":","/storage/"+poi+"/" );
+                    break;
+            }
+        }
+
+        if (pet.startsWith( "/uid/file" )) {
+            pet=pet.substring( 10 );
+            pet=pet.replace( "%20"," " );
+        }
+            pet=pet.replace( "(invalid)","" );
+
+    }
+    private void nativeDirectory(final String tujuan, final Table T) {
+        pet="";
+        new Thread( new Runnable() {
+            @Override
+            public void run() {
+                face.openDirectory();
+                while (pet.equalsIgnoreCase( "" )){
+                    pet = face.opet();
+                }
+
+                if (pet.equalsIgnoreCase( "cancel" )){
+                    exitDialog(T);
+                    return;
+                }
+                FileHandle f = Gdx.files.absolute( pet );
+                if (f.exists()) f.delete();
+                log(pet);
+                cleanPet();
+                log(pet);
+                 f = Gdx.files.absolute( pet );
+                exitDialog( T );
+                tujuanDialog( tujuan, f);
+
+            }
+        } ).start();
+    }
+
 
     private void resetSwatches() {
         Integer sw = 0;
@@ -3196,24 +3310,36 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     int heii = 20;
 
     private void resetCaches() {
-
-        tcaches.clear();
-        int maxx = Tw / widd;
-        if (Tw % widd != 0) maxx++;
-        //maxx=1;
-        int maxy = Th / heii;
-        if (Th % heii != 0) maxy++;
-        //maxy=1;
-        for (int y = 0; y < maxy; y++) {
-            for (int x = 0; x < maxx; x++) {
-                //enough for 12 layers.
-                SpriteCache cache = new SpriteCache( 2000, false );
-                int cid = cacheTilesOn( cache, x, y );
-                TileCache tcache = new TileCache( cache, cid, x, y );
-                tcaches.add( tcache );
+        try {
+            widd = 20;
+            heii = 20;
+            if (widd > Tw) widd = Tw;
+            if (heii > Th) heii = Th;
+            log( "resetting cache" );
+            tcaches.clear();
+            int maxx = Tw / widd;
+            if (Tw % widd != 0) maxx++;
+            //maxx=1;
+            int maxy = Th / heii;
+            if (Th % heii != 0) maxy++;
+            //maxy=1;
+            log( widd + "|" + heii + "|" + maxx + "|" + maxy + "" );
+            for (int y = 0; y < maxy; y++) {
+                for (int x = 0; x < maxx; x++) {
+                    //enough for 12 layers.
+                    //log( "e" + "|" + x + "|" + y );
+                    SpriteCache cache = new SpriteCache( 2000, true );
+                    //log( "o" );
+                    int cid = cacheTilesOn( cache, x, y );
+                    TileCache tcache = new TileCache( cache, cid, x, y );
+                    tcaches.add( tcache );
+                }
             }
+            log( "resetting cache ok" );
+            //status("Cache reset.",2);
+        }catch(Exception e){
+            log("error cache");
         }
-        //status("Cache reset.",2);
     }
 
     private void updateCache(int num) {
@@ -4848,7 +4974,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void ErrorBung(Exception e, String filenya) {
         filenya = "errorlog.txt";
-        FileHandle file = Gdx.files.external( filenya );
+        FileHandle file = Gdx.files.absolute( basepath+filenya );
         StringWriter sw = new StringWriter();
         e.printStackTrace( new PrintWriter( sw ) );
         String exceptionAsString = sw.toString();
@@ -4856,20 +4982,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         file.writeString( "\n\n" + exceptionAsString, true );
 
         saveMap( curdir + "/" + curfile + "_re.tmx" );
-        prefs.putString( "lof", "NotTiled/" + "sample/island.tmx" );
-        prefs.putString( "lastpath", "NotTiled/" );
+        prefs.putString( "lof", basepath+"NotTiled/" + "sample/island.tmx" );
+        prefs.putString( "lastpath", basepath+"NotTiled/" );
         prefs.flush();
 
     }
 
     private void writeThis(String path, String isi) {
-        FileHandle file = Gdx.files.external( path );
+        FileHandle file = Gdx.files.absolute( path );
         StringWriter sw = new StringWriter();
         file.writeString( isi, false );
     }
 
     private void writeThisAbs(String path, String isi) {
-        FileHandle file = Gdx.files.external( path );
+        FileHandle file = Gdx.files.absolute( path );
         StringWriter sw = new StringWriter();
         file.writeString( isi, false );
     }
@@ -5020,7 +5146,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             generator = new FreeTypeFontGenerator( Gdx.files.internal( filenam ) );
         } else {
             try {
-                generator = new FreeTypeFontGenerator( Gdx.files.external( sCustomFont ) );
+                generator = new FreeTypeFontGenerator( Gdx.files.absolute( sCustomFont ) );
             } catch (Exception e) {
                 generator = new FreeTypeFontGenerator( Gdx.files.internal( filenam ) );
             }
@@ -5045,22 +5171,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void checkAndReloadSamples() {
 
         if (!isSampleReloaded) {
-            FileHandle fh2 = Gdx.files.external( "NotTiled/" );
+            FileHandle fh2 = Gdx.files.absolute( basepath+"NotTiled/" );
             if (!fh2.exists()) fh2.mkdirs();
-            FileHandle fh3 = Gdx.files.external( "NotTiled/sample" );
+            FileHandle fh3 = Gdx.files.absolute( basepath+"NotTiled/sample" );
             if (fh3.exists() && !fh3.isDirectory()) fh3.delete();
-            FileHandle fhc = Gdx.files.external( "NotTiled/sample/island.tmx" );
+            FileHandle fhc = Gdx.files.absolute( basepath+"NotTiled/sample/island.tmx" );
             if (!fhc.exists()) {
 
                 FileHandle from = Gdx.files.internal( "sample.zip" );
-                FileHandle to = Gdx.files.external( "NotTiled" );
+                FileHandle to = Gdx.files.absolute( basepath+"NotTiled" );
                 from.copyTo( to );
-                FileHandle zipo = Gdx.files.external( "NotTiled/sample.zip" );
+                FileHandle zipo = Gdx.files.absolute( basepath+"NotTiled/sample.zip" );
                 unzip( zipo, to );
 
-                prefs.putString( "lof", "NotTiled/sample/island.tmx" ).flush();
-                prefs.putString( "lastpath", "NotTiled" ).flush();
-                lastpath = "NotTiled/sample";
+                prefs.putString( "lof", basepath+"NotTiled/sample/island.tmx" ).flush();
+                lastpath = basepath+"NotTiled/sample";
+                prefs.putString( "lastpath", lastpath ).flush();
             }
             isSampleReloaded = true;
             prefs.putBoolean( "reloaded", isSampleReloaded ).flush();
@@ -5068,22 +5194,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     public void justReloadSamples() {
-        FileHandle fh2 = Gdx.files.external( "NotTiled/" );
+        FileHandle fh2 = Gdx.files.absolute( basepath+"NotTiled/" );
         if (!fh2.exists()) fh2.mkdirs();
-        FileHandle fh3 = Gdx.files.external( "NotTiled/sample" );
+        FileHandle fh3 = Gdx.files.absolute( basepath+"NotTiled/sample" );
         if (fh3.exists() && !fh3.isDirectory()) fh3.delete();
 
         FileHandle from = Gdx.files.internal( "sample.zip" );
-        FileHandle to = Gdx.files.external( "NotTiled" );
+        FileHandle to = Gdx.files.absolute( basepath+"NotTiled" );
         from.copyTo( to );
-        FileHandle zipo = Gdx.files.external( "NotTiled/sample.zip" );
+        FileHandle zipo = Gdx.files.absolute( basepath+"NotTiled/sample.zip" );
         unzip( zipo, to );
         // zipo.delete();
 //            FileHandle from = Gdx.files.internal("sample/");
-        //          from.copyTo(Gdx.files.external("NotTiled/"));
-        prefs.putString( "lof", "NotTiled/sample/island.tmx" );
-        prefs.putString( "lastpath", "NotTiled" );
-        lastpath = "NotTiled/sample";
+        //          from.copyTo(Gdx.files.absolute("NotTiled/"));
+        prefs.putString( "lof", basepath+"NotTiled/sample/island.tmx" );
+        lastpath = basepath+"NotTiled/sample";
+        prefs.putString( "lastpath", lastpath );
         prefs.flush();
     }
 
@@ -5101,7 +5227,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             while (ze != null) {
 
                 String fileName = ze.getName();
-                FileHandle newFile = Gdx.files.external( dest.path() + File.separator + fileName );
+                FileHandle newFile = Gdx.files.absolute( dest.path() + File.separator + fileName );
                 System.out.println( "Unzipping to " + newFile.path() );
 
                 if (ze.isDirectory()) {
@@ -5132,14 +5258,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         //newtmxfile(false);
         try {
 
-            FileHandle fh1 = Gdx.files.external( "NotTiled/noads.txt" );
+            FileHandle fh1 = Gdx.files.absolute( basepath+"NotTiled/noads.txt" );
             if (fh1.exists()) {
                 bypassads = true;
             }
 
 
             checkAndReloadSamples();
-
+            log("checking samples...");
             if (!intend.isEmpty()) {
                 String raw = intend.substring( 7 );
                 try {
@@ -5149,14 +5275,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 loadtmx( raw );
                 return;
             }
-
-            String lf = prefs.getString( "lof", "NotTiled/" + "sample/island.tmx" );
-            FileHandle tst = Gdx.files.external( lf );
+            log("Here?");
+            String lf = prefs.getString( "lof", basepath+"NotTiled/sample/island.tmx" );
+            log(lf);
+            FileHandle tst = Gdx.files.absolute( lf );
 
             if (tst.exists()) {
+                log("Exist.");
                 loadtmx( lf );
+                log("loaded tmx.");
+
             } else {
+                log("Does not exist.");
                 newtmxfile( false );
+                log("New tmx ok.");
             }
         } catch (Exception e) {
             status( "Error, check storage permission.", 5 );
@@ -5170,7 +5302,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         background = null;
         if (user) {
             curdir = fNCurdir.getText();
-            curdir = curdir.replace( "//", "/" );
+            curdir = curdir.replace( basepath+"//", "/" );
             curfile = fNFilename.getText();
             Tw = Integer.parseInt( fNTw.getText() );
             Th = Integer.parseInt( fNTh.getText() );
@@ -5180,7 +5312,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             mapFormat = sbNMapFormat.getSelected().toString();
             orientation = sbNMapOrientation.getSelected().toString();
         } else {
-            curdir = "NotTiled/";
+            curdir = basepath+"NotTiled/";
             curfile = "map01.tmx";
             Tw = 10;
             Th = 10;
@@ -5189,6 +5321,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             mapFormat = "csv";
             renderorder = "right-down";
             orientation = "orthogonal";
+            log("newtmx?");
         }
         undolayer.clear();
         redolayer.clear();
@@ -5206,6 +5339,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         properties.clear();
         tilesets.clear();
         autotiles.clear();
+
         int curgroupid = -1;
         int curobjid = -1;
         curid = 1;
@@ -5237,6 +5371,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         //loadautotiles();
         resetCaches();
+        log("here?");
         resetSwatches();
         //uicam.zoom=0.5f;
         //uicam.update();
@@ -5249,8 +5384,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void newtmxfileplus(boolean user) {
         loadingfile = true;
-        String faths = "NotTiled/sample/template/" + ltemplate.getSelected();
-        FileHandle fh = Gdx.files.external( faths );
+        String faths = basepath+"NotTiled/sample/template/" + ltemplate.getSelected();
+        FileHandle fh = Gdx.files.absolute( faths );
         if (!fh.exists()) {
             msgbox( "Template file not found. Please redownload." );
             return;
@@ -5383,7 +5518,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void refreshTemplate() {
         String[] srr = new String[]{};
-        FileHandle del = Gdx.files.external( "NotTiled/sample/template/" );
+        FileHandle del = Gdx.files.absolute( basepath+"NotTiled/sample/template/" );
 
         FileHandle[] handle = del.list();
 
@@ -5436,7 +5571,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             String[] srr = new String[templates.getTemplates().size()];
                             for (int i = 0; i < templates.getTemplates().size(); i++) {
                                 String nem = templates.getTemplates().get( i ).getName();
-                                FileHandle del = Gdx.files.external( "NotTiled/sample/template/" + nem );
+                                FileHandle del = Gdx.files.absolute( basepath+"NotTiled/sample/template/" + nem );
                                 if (del.exists()) {
                                     srr[i] = nem + " (" + z.saved + ")";
                                 } else {
@@ -5476,7 +5611,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         final String lonk2 = templates.getTemplates().get( lonline.getSelectedIndex() ).getExtension();
         final String extName = templates.getTemplates().get( lonline.getSelectedIndex() ).getExtension_name();
 
-        FileHandle fh = Gdx.files.external( "NotTiled/sample/template/" + foldname );
+        FileHandle fh = Gdx.files.absolute( basepath+"NotTiled/sample/template/" + foldname );
         if (!fh.exists()) fh.mkdirs();
 
         if (lonk2 != null) {
@@ -5494,7 +5629,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                             try {
                                 templates = new Online();
-                                FileHandle fh = Gdx.files.external( "NotTiled/sample/template/" + foldname + "/" + extName );
+                                FileHandle fh = Gdx.files.absolute( basepath+"NotTiled/sample/template/" + foldname + "/" + extName );
                                 fh.write( tmpFile.read(), false );
                             } catch (Exception e) {
                                 ErrorBung( e, "errorlog.txt" );
@@ -5530,7 +5665,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         try {
                             templates = new Online();
-                            FileHandle fh = Gdx.files.external( "NotTiled/sample/template/" + foldname + "/template.tmx" );
+                            FileHandle fh = Gdx.files.absolute( basepath+"NotTiled/sample/template/" + foldname + "/template.tmx" );
                             fh.writeString( sss, false );
                             refreshOnline();
                             msgbox( z.downloadcomplete );
@@ -5666,7 +5801,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         final AudioRecorder recorder = Gdx.audio.newAudioRecorder( samples, isMono );
         final AudioDevice player = Gdx.audio.newAudioDevice( samples, isMono );
-        //Sound sfxlock =  Gdx.audio.newSound(Gdx.files.external("test.wav"));
+        //Sound sfxlock =  Gdx.audio.newSound(Gdx.files.absolute("test.wav"));
         //sfxlock.play();
         new Thread( new Runnable() {
             @Override
@@ -5678,7 +5813,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 System.out.println( "Record: End" );
 
                 System.out.println( "Saving File..." );
-                FileHandle fh = Gdx.files.external( curdir + "/" + filenamenya + ".wav" );
+                FileHandle fh = Gdx.files.absolute( curdir + "/" + filenamenya + ".wav" );
                 try {
                     OutputStream out = new FileOutputStream( fh.file() );
                     PCMtoFile( out, data, samples, 1, 16 );
@@ -5907,9 +6042,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         try {
             recents = new recents();
             Json json = new Json();
-            FileHandle f = Gdx.files.external( "NotTiled/recents.json" );
+            FileHandle f = Gdx.files.absolute( basepath+"NotTiled/recents.json" );
+            log("recent loaded");
             recents = json.fromJson( recents.class, f );
         } catch (Exception e) {
+            log("recent error");
         }
 
         tTutorial = new Table();
@@ -6033,11 +6170,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bNew.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                lastpath = prefs.getString( "lastpath", "NotTiled" );
-                if (lastpath.startsWith( Gdx.files.getExternalStoragePath() )) {
-                    lastpath = lastpath.substring( Gdx.files.getExternalStoragePath().length() );
-
-                }
+                lastpath = prefs.getString( "lastpath", basepath+"NotTiled" );
 
                 fNCurdir.setText( lastpath );
                 fNTsw.setText( prefs.getString( "Tsw", "20" ) );
@@ -6082,7 +6215,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 java.util.List<String> spt = new ArrayList<String>();
                 for (int i = recents.getPaths().size() - 1; i >= 0; i--) {
-                    spt.add( recents.getPaths().get( i ) );
+                    if (recents.getPaths().get(i)!=null) {
+                        spt.add( recents.getPaths().get( i ) );
+                    }
                 }
                 lrecentlist.setItems( spt.toArray( new String[0] ) );
             }
@@ -6091,15 +6226,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bRecentOpen.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                FileHandle file = Gdx.files.external( lrecentlist.getSelected() );
+                FileHandle file = Gdx.files.absolute( lrecentlist.getSelected() );
                 if (file.extension().equalsIgnoreCase( "ntp" )) {
                     backToMap();
                     String curdir = file.parent().path();
-                    FileHandle tmpfolder = Gdx.files.external( "NotTiled/Temp" );
+                    FileHandle tmpfolder = Gdx.files.absolute( basepath+"NotTiled/Temp" );
                     unzip( file, tmpfolder );
                     recents.addrecent( file.path() );
                     saveRecents();
-                    playgame( "NotTiled/Temp", "index.tmx" );
+                    playgame( basepath+"NotTiled/Temp", "index.tmx" );
                 } else {
                     loadtmx( lrecentlist.getSelected() );
                     backToMap();
@@ -6281,20 +6416,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void copyToRW() {
-        FileHandle fl = Gdx.files.external( rwpath );
+        FileHandle fl = Gdx.files.absolute( rwpath );
         if (!fl.exists()) fl.mkdirs();
-        FileHandle fla = Gdx.files.external( rwpath + "/maps" );
+        FileHandle fla = Gdx.files.absolute( rwpath + "/maps" );
         if (!fla.exists()) {
             fla.mkdirs();
         }
         saveMap( curdir + "/" + curfile );
-        FileHandle from = Gdx.files.external( curdir + "/" + curfile );
-        from.copyTo( Gdx.files.external( rwpath + "/maps" ) );
+        FileHandle from = Gdx.files.absolute( curdir + "/" + curfile );
+        from.copyTo( Gdx.files.absolute( rwpath + "/maps" ) );
 
         createRWthumbnail( curfile.substring( 0, curfile.length() - 4 ) + "_map" );
-        FileHandle from2 = Gdx.files.external( curdir + "/" + curfile.substring( 0, curfile.length() - 4 ) + "_map.png" );
+        FileHandle from2 = Gdx.files.absolute( curdir + "/" + curfile.substring( 0, curfile.length() - 4 ) + "_map.png" );
         if (from2.exists())
-            from2.copyTo( Gdx.files.external( rwpath + "/maps" ) );
+            from2.copyTo( Gdx.files.absolute( rwpath + "/maps" ) );
 
         msgbox( z.mapsenttorustedwatfare );
         cue( "copytorw" );
@@ -6896,7 +7031,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         sb.wlc( "}" );//layers
         sb.wlc( "}" );//map
 
-        FileHandle fh = Gdx.files.external( curdir + "/" + filenamenya + ".lua" );
+        FileHandle fh = Gdx.files.absolute( curdir + "/" + filenamenya + ".lua" );
         fh.writeString( sb.toString(), false );
         backToMap();
         msgbox( z.exportfinished );
@@ -7110,7 +7245,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         sb.wlc( "]" );//layers
         sb.wlc( "}" );//map
 
-        FileHandle fh = Gdx.files.external( curdir + "/" + filenamenya + ".json" );
+        FileHandle fh = Gdx.files.absolute( curdir + "/" + filenamenya + ".json" );
         fh.writeString( sb.toString(), false );
         backToMap();
         msgbox( z.exportfinished );
@@ -7397,7 +7532,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             //
             if (filenamenya != "XOXXO") {
-                FileHandle fh = Gdx.files.external( curdir + "/" + filenamenya + ".png" );
+                FileHandle fh = Gdx.files.absolute( curdir + "/" + filenamenya + ".png" );
                 PixmapIO.writePNG( fh, pm2 );
                 backToMap();
                 status( z.exportfinished, 3 );
@@ -7416,8 +7551,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (filenamenya == "") {
             return;
         }
-        String exportpath = "NotTiled/sample/template/"+filenamenya;
-        FileHandle fh = Gdx.files.external( exportpath );
+        String exportpath = basepath+"NotTiled/sample/template/"+filenamenya;
+        FileHandle fh = Gdx.files.absolute( exportpath );
         if (!fh.exists()) fh.mkdirs();
         saveMap( exportpath + "/" + "template.tmx" );
         backToMap();
@@ -7573,7 +7708,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
             //
-            FileHandle fh = Gdx.files.external(curdir + "/" + filenamenya + ".png");
+            FileHandle fh = Gdx.files.absolute(curdir + "/" + filenamenya + ".png");
             PixmapIO.writePNG(fh, pm2);
             backToMap();
             status(z.exportfinished,3);
@@ -7759,7 +7894,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
             //save it to PNG
-            FileHandle fh = Gdx.files.external("NotTiled/Temp/"+filenamenya+".png");
+            FileHandle fh = Gdx.files.absolute(basepath+"NotTiled/Temp/"+filenamenya+".png");
             PixmapIO.writePNG(fh, pm2);
 
             //import it
@@ -7772,7 +7907,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 fImportHeight.setText( Tsh + "" );
             }
             cImportEmbed.setChecked( true );
-            fh = Gdx.files.external("NotTiled/Temp/"+filenamenya+".png");
+            fh = Gdx.files.absolute(basepath+"NotTiled/Temp/"+filenamenya+".png");
             addImageTset( fh );
             tilesets.get(tilesets.size()-1).setTiles( t.getTiles());
             CacheAllTset();
@@ -7812,7 +7947,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             }
 
-            FileHandle fh = Gdx.files.external(curdir + "/" + filenamenya + ".png");
+            FileHandle fh = Gdx.files.absolute(curdir + "/" + filenamenya + ".png");
             PixmapIO.writePNG(fh, pm2);
 
             msgbox(z.exportfinished);
@@ -7978,7 +8113,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }//no tileswt
 
             //
-            FileHandle fh = Gdx.files.external(curdir + "/" + filenamenya + ".png");
+            FileHandle fh = Gdx.files.absolute(curdir + "/" + filenamenya + ".png");
             PixmapIO.writePNG(fh, pm2);
             backToMap();
             msgbox(z.exportfinished);
@@ -8835,10 +8970,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (tfImageSource.getText()!="")
                 {
                     layers.get(selLayer).setImage(tfImageSource.getText());
-                    FileHandle fh = Gdx.files.external(curdir + "/"+ tfImageSource.getText());
+                    FileHandle fh = Gdx.files.absolute(curdir + "/"+ tfImageSource.getText());
                     if (fh.exists()){
                         try {
-                            Texture tmptx = new Texture(Gdx.files.external(curdir + "/"+ tfImageSource.getText()));
+                            Texture tmptx = new Texture(Gdx.files.absolute(curdir + "/"+ tfImageSource.getText()));
                             SimpleImageInfo s = new SimpleImageInfo(fh.file());
                             layers.get(selLayer).setImagewidth(s.getWidth());
                             layers.get(selLayer).setImageheight(s.getHeight());
@@ -10858,7 +10993,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 lptlist.setItems();
                 java.util.List<String> srr = new ArrayList<String>();
                 FileHandle dirHandle;
-                dirHandle = Gdx.files.external("NotTiled/sample/json/");
+                dirHandle = Gdx.files.absolute(basepath+"NotTiled/sample/json/");
                 for (FileHandle entry : dirHandle.list()) {
 
                     srr.add(entry.file().getName());
@@ -10877,12 +11012,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 if (lptlist.getSelectedIndex()==-1) return;
                 FileHandle todel;
-                todel = Gdx.files.external("NotTiled/sample/json/"+lptlist.getSelected());
+                todel = Gdx.files.absolute(basepath+"NotTiled/sample/json/"+lptlist.getSelected());
                 todel.delete();
 
                 java.util.List<String> srr = new ArrayList<String>();
                 FileHandle dirHandle;
-                dirHandle = Gdx.files.external("NotTiled/sample/json/");
+                dirHandle = Gdx.files.absolute(basepath+"NotTiled/sample/json/");
                 for (FileHandle entry : dirHandle.list()) {
 
                     srr.add(entry.file().getName());
@@ -10913,7 +11048,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 properties at = new properties();
                 Json json = new Json();
-                FileHandle f = Gdx.files.external("NotTiled/sample/json/" + lptlist.getSelected());
+                FileHandle f = Gdx.files.absolute(basepath+"NotTiled/sample/json/" + lptlist.getSelected());
                 at = json.fromJson(properties.class, f);
 
                 switch (sender) {
@@ -10972,7 +11107,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         try {
             guis at;
             Json json = new Json();
-            FileHandle f = Gdx.files.external("NotTiled/sample/"+filename);
+            FileHandle f = Gdx.files.absolute(basepath+"NotTiled/sample/"+filename);
             if (f.exists()) {
                 at = json.fromJson(guis.class, f);
                 gui = at;
@@ -11099,7 +11234,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                     autotiles at = new autotiles();
                     Json json = new Json();
-                    FileHandle f = Gdx.files.external(curdir + "/auto.json");
+                    FileHandle f = Gdx.files.absolute(curdir + "/auto.json");
                     at = json.fromJson(autotiles.class, f);
                     autotiles = at.getAutotiles();
                     refreshAutoMgmt();
@@ -11133,7 +11268,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             autotiles.clear();
             autotiles at = new autotiles();
             Json json = new Json();
-            FileHandle f = Gdx.files.external(curdir + "/auto.json");
+            FileHandle f = Gdx.files.absolute(curdir + "/auto.json");
             at = json.fromJson(autotiles.class, f);
             autotiles = at.getAutotiles();
             //refreshAutoMgmt();
@@ -11143,7 +11278,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void saveRecents() {
         Json json = new Json();
-        FileHandle fh = Gdx.files.external("NotTiled/recents.json");
+        FileHandle fh = Gdx.files.absolute(basepath+"NotTiled/recents.json");
         fh.writeString(json.prettyPrint(recents), false);
     }
 
@@ -11435,7 +11570,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
 
-        fNCurdir = new TextField(prefs.getString("curdir", "NotTiled"), skin);
+        fNCurdir = new TextField(prefs.getString("curdir", basepath+"NotTiled"), skin);
         fNCurdir.setDisabled(true);
         fNTsw = new TextField(prefs.getString("Tsw", "20"), skin);
         fNTsw.setTextFieldFilter(filter);
@@ -11929,7 +12064,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     FileHandle filehand = Gdx.files.internal(foredirint + "/" + tempdiri);
 
                     if (!filehand.exists()) {
-                        filehand = Gdx.files.external(foredirext + "/" + tempdiro);
+                        filehand = Gdx.files.absolute(foredirext + "/" + tempdiro);
                         if (!filehand.exists()) {
                             filehand = Gdx.files.internal("empty.jpeg");
                         }
@@ -11992,10 +12127,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     t.setSpacing(0);
                 }
                 try {
-                    FileHandle f = Gdx.files.external(curdir + "/" + tilesets.get(ltsetlist.getSelectedIndex()).getSource());
+                    FileHandle f = Gdx.files.absolute(curdir + "/" + tilesets.get(ltsetlist.getSelectedIndex()).getSource());
                     if (f.exists()) {
 
-                        tilesets.get(ltsetlist.getSelectedIndex()).setTexture(new Texture(Gdx.files.external(curdir + "/" + tilesets.get(ltsetlist.getSelectedIndex()).getSource())));
+                        tilesets.get(ltsetlist.getSelectedIndex()).setTexture(new Texture(Gdx.files.absolute(curdir + "/" + tilesets.get(ltsetlist.getSelectedIndex()).getSource())));
                         if (tilesets.get(ltsetlist.getSelectedIndex()).getTrans() != null) {
                             tilesets.get(ltsetlist.getSelectedIndex()).setTexture(chromaKey(tilesets.get(ltsetlist.getSelectedIndex()).getTexture(), tilesets.get(ltsetlist.getSelectedIndex()).getTrans()));
                         }
@@ -12329,6 +12464,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     public void FileDialog(String prompt, final String dialog, final String fileordir, String[] filter, final Table exitpoint) {
+        if (nativefilechooser){
+            switch (fileordir){
+                case "file":
+                    nativeOpen(dialog, exitpoint);
+                    break;
+                case "dir":
+                    nativeDirectory(dialog, exitpoint);
+                    break;
+            }
+
+            return;
+        }
+
+
         FileChooser fc = new FileChooser(prompt, skin, "file", filter) {
             @Override
             protected void result(Object object) {
@@ -12369,7 +12518,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             }
         };
-        fc.setDirectory(Gdx.files.external(lastpath));
+        fc.setDirectory(Gdx.files.absolute(lastpath));
         tOpen.clear();
         tOpen.add(fc).width(ssx).height(ssy * .7f).width( ssx*.9f );
         gotoStage(tOpen);
@@ -12386,6 +12535,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     public void tujuanDialog(String dialog, FileHandle file) {
+        openedfile = file.path();
         switch (dialog) {
             case "propfile":
                 bPropValfile.setText(file.file().getName());
@@ -12398,12 +12548,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             case "open":
                 if (file.extension().equalsIgnoreCase( "ntp" )){
                     backToMap();
-                    String curdir = file.parent().path();
-                    FileHandle tmpfolder=Gdx.files.external("NotTiled/Temp");
+                    curdir = file.parent().path();
+                    FileHandle tmpfolder=Gdx.files.absolute(basepath+"NotTiled/Temp");
                     unzip(file,tmpfolder);
                     recents.addrecent( file.path() );
                     saveRecents();
-                    playgame( "NotTiled/Temp", "index.tmx");
+                    playgame( basepath+"NotTiled/Temp", "index.tmx");
                 }else{
                     curdir = file.parent().path();
                     loadtmx(openedfile);
@@ -12411,7 +12561,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 break;
             case "background":
-                background = new Texture(Gdx.files.external(openedfile));
+                background = new Texture(Gdx.files.absolute(openedfile));
                 break;
             case "customfont":
                 tfCustomFont.setText(openedfile);
@@ -12478,7 +12628,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 errors = "";
                 String dir = file.path();
                 FileHandle[] filehandles;
-                filehandles = Gdx.files.external(dir).list();
+                filehandles = Gdx.files.absolute(dir).list();
                 for (int i = 0; i < filehandles.length; i++) {
 
                     switch (filehandles[i].extension().toLowerCase()) {
@@ -12703,23 +12853,23 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void saveMap(String actualPath) {
 
         //Craete handle for the actual file
-        FileHandle actualFile = Gdx.files.external(actualPath);
+        FileHandle actualFile = Gdx.files.absolute(actualPath);
         recents.addrecent(actualPath);
         saveRecents();
         prefs.putString("lof", actualFile.path());
         prefs.flush();
 
         //Check and create the temp folder
-        FileHandle fh2 = Gdx.files.external("NotTiled/");
+        FileHandle fh2 = Gdx.files.absolute(basepath+"NotTiled/");
         if (!fh2.exists()) fh2.mkdirs();
-        FileHandle fh3 = Gdx.files.external("NotTiled/Temp");
+        FileHandle fh3 = Gdx.files.absolute(basepath+"NotTiled/Temp");
         if (fh3.exists() && !fh3.isDirectory()) fh3.delete();
         if (!fh3.exists()) fh3.mkdirs();
 
         //Saving the file to the temp folder first
-        String tempPath = "NotTiled/Temp/" + Integer.toString((int) (Math.random()*100000)) +".tmx";
+        String tempPath = basepath+"NotTiled/Temp/" + Integer.toString((int) (Math.random()*100000)) +".tmx";
         buildTMX(tempPath);
-        FileHandle tempFile = Gdx.files.external(tempPath);
+        FileHandle tempFile = Gdx.files.absolute(tempPath);
 
         //copy the temp file to the actual file
         tempFile.copyTo(actualFile);
@@ -12729,7 +12879,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     public void buildTMX(String tempPath) {
-        FileHandle tempfile = Gdx.files.external(tempPath);
+        FileHandle tempfile = Gdx.files.absolute(tempPath);
         if (autotiles.size()>0) {
             autotiles at = new autotiles( autotiles );
             Json json = new Json();
@@ -13155,7 +13305,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
         } catch (Exception e) {
-            FileHandle fil = Gdx.files.external("errorlog.txt");
+            FileHandle fil = Gdx.files.absolute(basepath+"errorlog.txt");
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
             String exceptionAsString = sw.toString();
@@ -13169,7 +13319,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     public void saveTsx(int index) {
-        FileHandle file = Gdx.files.external(curdir + "/" + tilesets.get(index).getTsxfile());
+        FileHandle file = Gdx.files.absolute(curdir + "/" + tilesets.get(index).getTsxfile());
 
         try {
             FileOutputStream fos = new FileOutputStream(file.file());
@@ -13267,7 +13417,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             fos.close();
 
         } catch (Exception e) {
-            FileHandle fil = Gdx.files.external("errorlog.txt");
+            FileHandle fil = Gdx.files.absolute(basepath+"errorlog.txt");
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
             String exceptionAsString = sw.toString();
@@ -13333,8 +13483,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         curfile = fNFilename.getText();
 
 
-                        FileHandle from = Gdx.files.external( filepath +"/template.tmx");
-                        FileHandle to = Gdx.files.external( curdir+"/"+curfile);
+                        FileHandle from = Gdx.files.absolute( filepath +"/template.tmx");
+                        FileHandle to = Gdx.files.absolute( curdir+"/"+curfile);
                         if (from.exists()) {
                             to.write( from.read(), false );
                         }else{
@@ -13344,22 +13494,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             return;
                         }
                         ////Copy assets, which might contain macro anyway...
-                        FileHandle check = Gdx.files.external(filepath+"/assets.zip");
+                        FileHandle check = Gdx.files.absolute(filepath+"/assets.zip");
                         if (check.exists()) {
-                            FileHandle check2 = Gdx.files.external(curdir+"/assets.zip");
+                            FileHandle check2 = Gdx.files.absolute(curdir+"/assets.zip");
                             if (!check2.exists()){
-                                to = Gdx.files.external(curdir);
+                                to = Gdx.files.absolute(curdir);
                                 check.copyTo(to);
-                                check2 = Gdx.files.external( curdir + "/assets.zip" );
+                                check2 = Gdx.files.absolute( curdir + "/assets.zip" );
                                 unzip(check2, to);
                             }
                         }
 
                         //copy macro
-                        check = Gdx.files.external(filepath+"/auto.json");
+                        check = Gdx.files.absolute(filepath+"/auto.json");
                         if (check.exists()) {
-                            FileHandle check2 = Gdx.files.external(curdir+"/auto.json");
-                            to = Gdx.files.external(curdir);
+                            FileHandle check2 = Gdx.files.absolute(curdir+"/auto.json");
+                            to = Gdx.files.absolute(curdir);
                             check.copyTo(to);
                         }
 
@@ -13416,24 +13566,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     public void loadmap(String filepath) {
+        log("loading map :"+filepath);
         errors = "";
         recents.addrecent(filepath);
         saveRecents();
         try {
             xmlFactoryObject = XmlPullParserFactory.newInstance();
             myParser = xmlFactoryObject.newPullParser();
-            FileHandle file;
-            file = Gdx.files.external(filepath);
+            FileHandle file = Gdx.files.absolute(filepath);
             String path = file.parent().path();
 
-            if (!file.exists())
-            {
-                file = Gdx.files.absolute(filepath);
-//                path = file.parent().path().substring(Gdx.files.getExternalStoragePath().length());
-                path = file.parent().path();
-            }
             FileInputStream stream = new FileInputStream(file.file());
-            Gdx.app.log("",path);
+            Gdx.app.log("heret",path);
 
             curdir = path;
             curfile = file.file().getName();
@@ -13633,7 +13777,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     FileHandle filehand = Gdx.files.internal(foredirint + "/" + tempdiri);
 
                                     if (!filehand.exists()) {
-                                        filehand = Gdx.files.external(foredirext + "/" + tempdiro);
+                                        filehand = Gdx.files.absolute(foredirext + "/" + tempdiro);
                                         if (!filehand.exists()) {
                                             filehand = Gdx.files.internal("empty.jpeg");
                                         }
@@ -13713,7 +13857,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                         tempdiri = tempdiri.substring(tempdiri.lastIndexOf("/", tempdiri.lastIndexOf("/") - 1));
                                     }
 
-                                        FileHandle filehand = Gdx.files.external(foredirext + "/" + tempdiro);
+                                        FileHandle filehand = Gdx.files.absolute(foredirext + "/" + tempdiro);
                                         if (!filehand.exists()) {
                                             filehand = Gdx.files.internal("empty.jpeg");
                                         }
@@ -14100,7 +14244,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
         if (isCreateRoom) {
-            FileHandle ff = Gdx.files.external( curdir + "/" + curfile );
+            FileHandle ff = Gdx.files.absolute( curdir + "/" + curfile );
 
             String dat = ff.readString();
 
@@ -14154,7 +14298,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             xmlFactoryObject = XmlPullParserFactory.newInstance();
             myParser = xmlFactoryObject.newPullParser();
             FileHandle file;
-            file = Gdx.files.external(filepath);
+            file = Gdx.files.absolute(filepath);
             String path = file.parent().path();
 
             if (!file.exists())
@@ -14314,7 +14458,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     FileHandle filehand = Gdx.files.internal(foredirint + "/" + tempdiri);
 
                                     if (!filehand.exists()) {
-                                        filehand = Gdx.files.external(foredirext + "/" + tempdiro);
+                                        filehand = Gdx.files.absolute(foredirext + "/" + tempdiro);
                                         if (!filehand.exists()) {
                                             filehand = Gdx.files.internal("empty.jpeg");
                                         }
@@ -14687,7 +14831,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             FileHandle filehand = Gdx.files.internal(foredirint + "/" + tempdiri);
 
             if (!filehand.exists()) {
-                filehand = Gdx.files.external(source);
+                filehand = Gdx.files.absolute(source);
             }
             tsxpath = filehand.path().substring(0, filehand.path().lastIndexOf("/"));
 
@@ -14852,7 +14996,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             filehand = Gdx.files.internal(foredirint + "/" + tempdiri);
 
                             if (!filehand.exists()) {
-                                filehand = Gdx.files.external(foredirext + "/" + tempdiro);
+                                filehand = Gdx.files.absolute(foredirext + "/" + tempdiro);
                                 if (!filehand.exists()) {
                                     filehand = Gdx.files.internal("empty.jpeg");
                                 }
@@ -17154,7 +17298,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
     //private boolean singleTile;
     private void log(String s){
-       // Gdx.app.log("",s);
+        Gdx.app.log("",s);
     }
     private class sirch{
         int distance;
@@ -17304,7 +17448,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void pushUpdate(){
         if (isCreateRoom || isJoinRoom) {
             saveMap( curdir + "/" + curfile );
-            FileHandle ff = Gdx.files.external( curdir + "/" + curfile );
+            FileHandle ff = Gdx.files.absolute( curdir + "/" + curfile );
             String dat = ff.readString();
 
             ///////
@@ -17624,7 +17768,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     //send the map
                                     saveMap(curdir + "/" + curfile);
                                     //read map as text
-                                    FileHandle ff = Gdx.files.external( curdir +"/"+ curfile );
+                                    FileHandle ff = Gdx.files.absolute( curdir +"/"+ curfile );
                                     logNet( "[C] Sending map data...");
 
                                     String dat = ff.readString();
@@ -17665,7 +17809,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         case "mapInformation":
                             if (cmd.from.equalsIgnoreCase( myID )) {
                                 logNet( "[CI] map data received!");
-                                FileHandle fh = Gdx.files.external( "/NotTiled/tempNetworkMap.tmx" );
+                                FileHandle fh = Gdx.files.absolute( basepath+"/NotTiled/tempNetworkMap.tmx" );
                                 fh.writeString( clientMapData,false);
                                 clientMapData="";
                                 backToMap();
@@ -17675,7 +17819,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         case "mapInformationAll":
                             if (!cmd.from.equalsIgnoreCase( myID ) && cmd.room.equalsIgnoreCase(activeRoom)) {
                                 logNet( "[CI] map data received!");
-                                FileHandle fh = Gdx.files.external( curdir + "/" + curfile);
+                                FileHandle fh = Gdx.files.absolute( curdir + "/" + curfile);
 
                                 fh.writeString( clientMapData,false);
                                 clientMapData="";
@@ -18257,7 +18401,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
             if (tapped(touch2, gui.screenshot)) {
-                testDialog();
+                //testDialog();
                 return true;
                 /*
                 takingss = true;
@@ -19306,7 +19450,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 tutor.getT().get(activetutor).next();
                 if (tutor.getT().get(activetutor).getCurrentCue().equalsIgnoreCase("changebg")) {
                     try {
-                        background = new Texture(Gdx.files.external(tutor.getT().get(activetutor).getCurrent()));
+                        background = new Texture(Gdx.files.absolute(basepath+tutor.getT().get(activetutor).getCurrent()));
                     }catch(Exception e){}
                     tutor.getT().get(activetutor).next();
                 }
@@ -19395,7 +19539,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Vector3 upvb = cam.project(vb);
 
 
-        FileHandle fh = Gdx.files.external(curdir + "/" + curfile.substring(0, curfile.length() - 4) + "_map.png");
+        FileHandle fh = Gdx.files.absolute(curdir + "/" + curfile.substring(0, curfile.length() - 4) + "_map.png");
         Pixmap data = getScreenshot((int) upva.x, (int) upva.y - (int) (upvb.y - upva.y), (int) (upvb.x - upva.x), (int) (upvb.y - upva.y), true);
         //if (layers.size()>2 && tilesets.size()>0){
         //if (layers.get(2).getName().equalsIgnoreCase("Units") && tilesets.get(0).getName().equalsIgnoreCase("units")){
@@ -20130,8 +20274,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     /*
     public void readandsaveAudio(){
-        FileHandle fh1 = Gdx.files.external("test.wav");
-        FileHandle fh2 = Gdx.files.external("test2.wav");
+        FileHandle fh1 = Gdx.files.absolute("test.wav");
+        FileHandle fh2 = Gdx.files.absolute("test2.wav");
         final File file1 = fh1.file();
         final File file2 = fh2.file();
         try {
@@ -20877,7 +21021,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Gdx.app.log("ASU",filenya);
         if (filenya.startsWith( "[i]" )) {
             try {
-                Pattern pattern = MidiFileManager.loadPatternFromMidi( Gdx.files.external( "Pictures/" + filenya.substring( 3 )).file() );
+                Pattern pattern = MidiFileManager.loadPatternFromMidi( Gdx.files.absolute( basepath+"Pictures/" + filenya.substring( 3 )).file() );
                 System.out.println( pattern );
                 return;
             } catch (Exception e) {
@@ -21048,14 +21192,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case MIDI:
                         composer c = new composer(seq.toString());
                         c.save( curdir+"/"+filenya+".mid" );
-                        MidiFileManager.savePatternToMidi(seq , Gdx.files.external(curdir+"/"+filenya+"v2.midi").file());
+                        MidiFileManager.savePatternToMidi(seq , Gdx.files.absolute(curdir+"/"+filenya+"v2.midi").file());
                         break;
                     case PLAY:
                         switch(Gdx.app.getType()) {
                             case Android:
                                 c = new composer(seq.toString());
                                 c.save( "NotTiled/Temp/composer.mid" );
-                                composerPlayer = Gdx.audio.newMusic( Gdx.files.external( "NotTiled/Temp/composer.mid" ) );
+                                composerPlayer = Gdx.audio.newMusic( Gdx.files.absolute( basepath+"NotTiled/Temp/composer.mid" ) );
                                 composerPlayer.play();
                                 break;
                                 // android specific code
@@ -21067,7 +21211,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             case iOS:
                                 c = new composer(seq.toString());
                                 c.save( "NotTiled/Temp/composer.mid" );
-                                composerPlayer = Gdx.audio.newMusic( Gdx.files.external( "NotTiled/Temp/composer.mid" ) );
+                                composerPlayer = Gdx.audio.newMusic( Gdx.files.absolute( basepath+"NotTiled/Temp/composer.mid" ) );
                                 composerPlayer.play();
                                 break;
                                 // android specific code
@@ -21077,7 +21221,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         recordAudio(wavwidth,filenya);
                         switch(Gdx.app.getType()) {
                             case Android:
-                                Music m = Gdx.audio.newMusic( Gdx.files.external( curdir + "/" + filenya + ".mid" ) );
+                                Music m = Gdx.audio.newMusic( Gdx.files.absolute( curdir + "/" + filenya + ".mid" ) );
                                 m.play();
                                 break;
                             // android specific code
@@ -21088,7 +21232,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 break;
                             // desktop specific code
                             case iOS:
-                                m = Gdx.audio.newMusic( Gdx.files.external( curdir + "/" + filenya + ".mid" ) );
+                                m = Gdx.audio.newMusic( Gdx.files.absolute( curdir + "/" + filenya + ".mid" ) );
                                 m.play();
                                 break;
                             // android specific code
@@ -21230,14 +21374,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         case MIDI:
                             composer c = new composer(seq.toString());
                             c.save( curdir+"/"+filenya+".mid" );
-                            MidiFileManager.savePatternToMidi(seq , Gdx.files.external(curdir+"/"+filenya+"v2.midi").file());
+                            MidiFileManager.savePatternToMidi(seq , Gdx.files.absolute(curdir+"/"+filenya+"v2.midi").file());
                             break;
                         case PLAY:
                             switch(Gdx.app.getType()) {
                                 case Android:
                                     c = new composer(seq.toString());
                                     c.save( "NotTiled/Temp/composer.mid" );
-                                    composerPlayer = Gdx.audio.newMusic( Gdx.files.external( "NotTiled/Temp/composer.mid" ) );
+                                    composerPlayer = Gdx.audio.newMusic( Gdx.files.absolute( basepath+"NotTiled/Temp/composer.mid" ) );
                                     composerPlayer.play();
                                     break;
                                 // android specific code
@@ -21249,7 +21393,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 case iOS:
                                     c = new composer(seq.toString());
                                     c.save( "NotTiled/Temp/composer.mid" );
-                                    composerPlayer = Gdx.audio.newMusic( Gdx.files.external( "NotTiled/Temp/composer.mid" ) );
+                                    composerPlayer = Gdx.audio.newMusic( Gdx.files.absolute( basepath+"NotTiled/Temp/composer.mid" ) );
                                     composerPlayer.play();
                                     break;
                                 // android specific code
@@ -21259,7 +21403,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             recordAudio(wavwidth,filenya);
                             switch(Gdx.app.getType()) {
                                 case Android:
-                                    Music m = Gdx.audio.newMusic( Gdx.files.external( curdir + "/" + filenya + ".mid" ) );
+                                    Music m = Gdx.audio.newMusic( Gdx.files.absolute( curdir + "/" + filenya + ".mid" ) );
                                     m.play();
                                     break;
                                 // android specific code
@@ -21268,7 +21412,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     break;
                                 // desktop specific code
                                 case iOS:
-                                    m = Gdx.audio.newMusic( Gdx.files.external( curdir + "/" + filenya + ".mid" ) );
+                                    m = Gdx.audio.newMusic( Gdx.files.absolute( curdir + "/" + filenya + ".mid" ) );
                                     m.play();
                                     break;
                                 // android specific code

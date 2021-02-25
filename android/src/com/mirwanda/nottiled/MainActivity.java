@@ -5,6 +5,7 @@ import android.content.*;
 import android.content.pm.*;
 import android.net.Uri;
 import android.os.*;
+import android.provider.DocumentsContract;
 import android.speech.tts.*;
 import android.view.*;
 import android.widget.*;
@@ -98,8 +99,8 @@ public class MainActivity extends AndroidApplication implements Interface
 		if (requestCode == 123 && resultCode == RESULT_OK) {
 			if ((data != null) && (data.getData() != null)) {
 				Uri selectedFile = data.getData();
-				File f = new File(selectedFile.getPath());
-				pet = f.getPath();
+				String p = selectedFile.getPath();
+				pet = selectedFile.getPath();
 			}
 		}else{
 			pet="cancel";
@@ -115,6 +116,19 @@ public class MainActivity extends AndroidApplication implements Interface
 		Intent intent = new Intent()
 				.setType("*/*")
 				.setAction(Intent.ACTION_GET_CONTENT);
+		intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+		intent.addCategory(Intent.CATEGORY_OPENABLE);
+		intent.setFlags(FLAG_GRANT_READ_URI_PERMISSION | FLAG_GRANT_WRITE_URI_PERMISSION);
+		startActivityForResult(Intent.createChooser(intent, "Select a file"), 123);
+		return "";
+	}
+
+	@Override
+	public String openDirectory() {
+		pet="";
+		Intent intent = new Intent()
+				.setType( "*/*")
+				.setAction(Intent.ACTION_CREATE_DOCUMENT);
 		intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
 		intent.addCategory(Intent.CATEGORY_OPENABLE);
 		intent.setFlags(FLAG_GRANT_READ_URI_PERMISSION | FLAG_GRANT_WRITE_URI_PERMISSION);

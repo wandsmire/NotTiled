@@ -8,6 +8,7 @@ public interface Interface
 	public boolean ispro();
 	public String getVersione();
 	public String openDialog();
+	public String openDirectory();
 	public String opet();
 	public String saveDialog();
 	public void speak(final String s);

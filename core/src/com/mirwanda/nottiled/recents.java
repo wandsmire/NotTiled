@@ -1,5 +1,7 @@
 package com.mirwanda.nottiled;
 
+import com.badlogic.gdx.Gdx;
+
 import java.util.*;
 
 public class recents
@@ -19,11 +21,14 @@ public class recents
 	}
 	
 	public void addrecent(String path){
-		for (int i=paths.size()-1; i>=0;i--)
-		{
-			if (paths.get(i).equalsIgnoreCase(path))
-			{
-				paths.remove(i);
+		int ny = paths.size()-1;
+		for (int i=ny; i>=0;i--){
+			//Gdx.app.log("A",paths.get(i)+"/"+i);
+
+			if (paths.get(i)!=null) {
+				if (paths.get( i ).equalsIgnoreCase( path )) {
+					paths.remove( i );
+				}
 			}
 		}
 		paths.add(path);

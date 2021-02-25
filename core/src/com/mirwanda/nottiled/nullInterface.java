@@ -31,6 +31,36 @@ public class nullInterface implements Interface {
 
     @Override
     public String openDialog() {
+        pet="";
+        new Thread( new Runnable() {
+            @Override
+            public void run() {
+                JFileChooser chooser = new JFileChooser();
+                //chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                //chooser.showSaveDialog(null);
+
+                JFrame f = new JFrame();
+                f.setVisible( true );
+                f.toFront();
+                f.setAlwaysOnTop( true );
+                f.setVisible( false );
+
+                int res = chooser.showOpenDialog( f );
+                f.dispose();
+                if (res == JFileChooser.APPROVE_OPTION) {
+                    pet = chooser.getSelectedFile().getAbsolutePath();
+                }else{
+                    pet = "cancel";
+                }
+
+            }
+        } ).start();
+        return null;
+    }
+
+    @Override
+    public String openDirectory() {
+        pet="";
         new Thread( new Runnable() {
             @Override
             public void run() {
@@ -47,7 +77,9 @@ public class nullInterface implements Interface {
                 int res = chooser.showSaveDialog( f );
                 f.dispose();
                 if (res == JFileChooser.APPROVE_OPTION) {
-                    //Do some stuff
+                    pet = chooser.getSelectedFile().getAbsolutePath();
+                }else{
+                    pet = "cancel";
                 }
 
             }
