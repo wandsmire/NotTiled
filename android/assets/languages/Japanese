@@ -379,4 +379,5 @@ picker: "ピッカー"
 showcoords: "座標を示し、"
 exportastemplate: "テンプレートとしてエクスポート"
 selectionastileset: "タイルセットとして選定"
+nativefilechooser: "使用ネイティブファイル選択"
 }

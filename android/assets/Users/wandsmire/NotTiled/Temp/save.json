@@ -4,50 +4,11 @@ vars: [
 		key: cave
 	}
 	{
-		key: win
-	}
-	{
-		key: defuse
-		value: 1
-		hud: true
-		iconx: 1
-		hasicon: true
-		keephud: true
-		icony: 4
-	}
-	{
 		key: energy
 		value: 100
-		hud: true
-		iconx: 3
-		hasicon: true
-		keephud: true
-	}
-	{
-		key: cave1
-		value: 1
-	}
-	{
-		key: cave2
-	}
-	{
-		key: cave3
-	}
-	{
-		key: cave4
-	}
-	{
-		key: cave5
-	}
-	{
-		key: welcome
-		value: 1
-	}
-	{
-		key: nothing
 	}
 ]
-x: 4.2566347
-y: 3.9166431
-mapname: map.tmx
+x: 0.88
+y: 6.926667
+mapname: cave1.tmx
 }

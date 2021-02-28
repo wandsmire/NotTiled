@@ -379,4 +379,5 @@ picker: "tagapitas"
 showcoords: "Ipakita ang mga Coordinate"
 exportastemplate: "I-export bilang Template"
 selectionastileset: "Pinili bilang Tileset"
+nativefilechooser: "Paggamit Katutubong File Tagapili"
 }

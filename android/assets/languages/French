@@ -379,4 +379,5 @@ picker: "Cueilleur"
 showcoords: "Afficher les coordonnées"
 exportastemplate: "Exporter comme modèle"
 selectionastileset: "Sélection comme Tileset"
+nativefilechooser: "Utilisation de fichiers natif Chooser"
 }

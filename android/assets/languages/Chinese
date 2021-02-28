@@ -379,4 +379,5 @@ picker: "选择器"
 showcoords: "显示坐标"
 exportastemplate: "导出为模板"
 selectionastileset: "选择的地形设置"
+nativefilechooser: "使用本机文件选择"
 }

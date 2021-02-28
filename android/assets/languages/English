@@ -379,4 +379,5 @@ picker: "Picker"
 showcoords: "Show Coordinates"
 exportastemplate: "Export as Template"
 selectionastileset: "Selection as Tileset"
+nativefilechooser: "Use Native File Chooser"
 }

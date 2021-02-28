@@ -371,4 +371,5 @@ public class language
 	String showcoords;
 	String exportastemplate;
 	String selectionastileset;
+	String nativefilechooser = "Native file chooser";
 }

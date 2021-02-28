@@ -379,4 +379,5 @@ picker: "toplayıcı"
 showcoords: "göster Koordinatlar"
 exportastemplate: "Şablon olarak İhracat"
 selectionastileset: "Tileset olarak Seçimi"
+nativefilechooser: "Kullanım Doğal Dosya Seçici"
 }

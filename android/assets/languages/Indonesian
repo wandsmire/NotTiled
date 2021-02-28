@@ -379,4 +379,5 @@ picker: "Pemetik"
 showcoords: "Tampilkan Koordinat"
 exportastemplate: "Ekspor sebagai Template"
 selectionastileset: "Seleksi sebagai Tileset"
+nativefilechooser: "Gunakan Native Pemilih Berkas"
 }

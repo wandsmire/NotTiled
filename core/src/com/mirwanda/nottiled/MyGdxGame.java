@@ -185,7 +185,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     int senderID; //custom properties
     int selTsetID; //tiles
     String fps = "";
-    boolean nativefilechooser = true;
+    boolean nativefilechooser = false;
     float keydown = 0f;
     boolean backing;
     String shapeName = "rectangle", rotationName = "0", toolName = "Tile", viewModeName = "Stack", objViewModeName = "All";
@@ -271,7 +271,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     tileset tempTset;
     float initialZoom;
     CheckBox cbShowGrid, cbShowFPS, cbShowGid, cbShowCoords, cbAutoSave, cbShowGidmap, cbResize, cbMinimap;
-    CheckBox cbCustomUI;
+    CheckBox cbCustomUI, cbnativefc;
     TextField tfCustomFont;
     TextButton bBack3;
     CheckBox cbShowCustomGrid;
@@ -9027,8 +9027,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void loadPreferences() {
         swatches = prefs.getBoolean("swatches", true);
+        nativefilechooser = prefs.getBoolean( "nativefc", false );
         lastpath = prefs.getString("lastpath", "NotTiled");
-        rwpath = prefs.getString("rwpath", "/RustedWarfare");
+        rwpath = prefs.getString("rwpath", basepath+"/RustedWarfare");
+        if (rwpath.equalsIgnoreCase( "RustedWarfare" )) rwpath = basepath+"/RustedWarfare";
         autosaveInterval = prefs.getInteger("interval", 1);
         gridOpacity = prefs.getInteger("gridopacity", 5);
         lastpath = prefs.getString("lastpath", "NotTiled");
@@ -9101,6 +9103,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 gotoStage(tPreference);
                 cbMinimap.setChecked(sMinimap);
+                cbnativefc.setChecked( nativefilechooser );
                 cbShowGrid.setChecked(sShowGrid);
                 cbShowFPS.setChecked(sShowFPS);
                 cbCustomUI.setChecked(sCustomUI);
@@ -9130,6 +9133,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         });
 
         cbMinimap = new CheckBox(z.minimap, skin);
+        cbnativefc = new CheckBox(z.nativefilechooser, skin);
         cbCustomUI = new CheckBox(z.customui, skin);
         cbShowGrid = new CheckBox(z.showgrid, skin);
         cbShowCoords = new CheckBox(z.showcoords, skin);
@@ -9187,6 +9191,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 prefs.putBoolean("fps", sShowFPS).flush();
                 sAutoSave = cbAutoSave.isChecked();
                 prefs.putBoolean("autosave", sAutoSave).flush();
+                nativefilechooser = cbnativefc.isChecked();
+                prefs.putBoolean("nativefc", nativefilechooser).flush();
 
                 sCustomFont = tfCustomFont.getText();
                 prefs.putString("customfont", sCustomFont).flush();
@@ -9294,6 +9300,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tPreference2.add(new Label(z.interval, skin)).width(btnx/2);
         tPreference2.add(fAutoSaveInterval).width(btnx/2).row();
         tPreference2.add(cbMinimap).colspan(2).left().row();
+        tPreference2.add(cbnativefc).colspan(2).left().row();
         tPreference2.add(cbCustomUI).colspan(2).left().row();
         tPreference2.add(cbEnableBlending).colspan(2).left().row();
         tPreference2.add(cbShowGrid).colspan(2).left().row();
@@ -16765,7 +16772,62 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (t.isTerrainForEditor() && t.isCenter()) {
                         //means aa will alwyas be the center
                         //this loop detect the surrounding of a tile
+                        final int numa = num;
+                        final tile tt = t;
+                        /*
+                        Thread thread = new Thread(){
+                            public void run(){
 
+                         */
+                                Terrainify(numa, tt, new int[]{0,1,2,3,4,5,6,7,8},false);
+                                //log(numanuma.size()+"");
+
+                                while(!numanuma.isEmpty()) {
+                                    int gogo = 0;
+                                    int[] dir = new int[]{};
+                                    switch ((int) numanuma.get( 0 ).dir) {
+                                        case 0:
+                                            dir = new int[]{0, 1, 3};
+                                            break;
+                                        case 1:
+                                            dir = new int[]{1};
+                                            break;
+                                        case 2:
+                                            dir = new int[]{2, 1, 4};
+                                            break;
+                                        case 3:
+                                            dir = new int[]{3};
+                                            break;
+                                        case 4:
+                                            dir = new int[]{4};
+                                            break;
+                                        case 5:
+                                            dir = new int[]{5, 3, 6};
+                                            break;
+                                        case 6:
+                                            dir = new int[]{6};
+                                            break;
+                                        case 7:
+                                            dir = new int[]{7, 6, 4};
+                                            break;
+                                        case 8:
+                                            dir = new int[]{8};
+                                            break;
+                                    }
+
+                                        Terrainify( (int) numanuma.get( 0 ).num, numanuma.get( 0 ).t, dir, false );
+                                        numanuma.remove( 0 );
+
+                                }
+                                /*
+                                }
+                        };
+
+                        thread.start();
+
+                                 */
+
+                        /*
                         Terrainify(num, t, new int[]{0,1,2,3,4,5,6,7,8},false);
                         //log(numanuma.size()+"");
 
@@ -16806,6 +16868,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             Terrainify((int) numanuma.get(0).num, numanuma.get(0).t, dir,false);
                             numanuma.remove(0);
                         }
+                         */
+
 
 
 
@@ -16910,6 +16974,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                                         //get str from clipboard
                                         oi = cliplayer.getStr().get(orinyum);
+                                        if (oi==0) continue;
                                         int oritzet = cliplayer.getTset().get(orinyum);
 
                                         //the previous data for undo
@@ -17077,152 +17142,161 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     java.util.List<tung> numanuma = new ArrayList<tung>();
 
-    private boolean Terrainify(int num, tile n, int[] directions, boolean fill){
-        boolean requestReterrain=false;
+    private boolean Terrainify(int numx, tile nx, int[] directionsx, boolean fillx){
+        int num = numx;
+        tile n = nx;
+        int[] directions = directionsx;
+        boolean fill = fillx;
+
+        boolean requestReterrain=true;
         int[] aa = null;
         Long from=null;
         int tzet = 0;
         layerhistory lh2=null;
         //if (n==null) return true;
-        if (n!=null) {
-            if (n.isTerrainForEditor()) {
-                aa = n.getTerrain();
-            }
-        }
-        if (aa==null) aa = new int[]{-1,-1,-1,-1};
 
+        while (requestReterrain) {
+            requestReterrain = false;
 
-        for (int i : directions) { //check start here
-
-            //gogo is for detecting index of surrounding tile
-            int gogo = num;
-            switch (i) {
-                case 0:
-                    if (num <= Tw || num % Tw == 0) continue;
-                    gogo = num - Tw - 1;
-                    break;
-                case 1:
-                    if (num <= Tw) continue;
-                    gogo = num - Tw;
-                    break;
-                case 2:
-                    if (num <= Tw || num % Tw == Tw - 1) continue;
-                    gogo = num - Tw + 1;
-                    break;
-                case 3:
-                    if (num <= 1 || num % Tw == 0) continue;
-                    gogo = num - 1;
-                    break;
-                case 4:
-                    if (num >= Tw * Th || num % Tw == Tw - 1) continue;
-                    gogo = num + 1;
-                    break;
-                case 5:
-                    if (num >= Tw * Th - Tw || num % Tw == 0) continue;
-                    gogo = num + Tw - 1;
-                    break;
-                case 6:
-                    if (num >= Tw * Th - Tw) continue;
-                    gogo = num + Tw;
-                    break;
-                case 7:
-                    if (num >= Tw * Th - Tw || num % Tw == Tw - 1) continue;
-                    gogo = num + Tw + 1;
-                    break;
-                case 8:
-                    gogo=num;
-                    break;
-            }
-
-            //nyum is to find the str of gogo location
-            long nyum = layers.get(selLayer).getStr().get(gogo);
-            hex = Long.toHexString(nyum);
-            trailer = "00000000" + hex;
-            hex = trailer.substring(trailer.length() - 8);
-            long noi = Long.decode("#" + 00 + hex.substring(2)) - tilesets.get(seltset).getFirstgid();
-
-            tile t = null;
-
-            for (int k = 0; k < tilesets.get(seltset).getTiles().size(); k++) {
-                if (tilesets.get( seltset ).getTiles().get( k ).getTileID() == noi) {
-                    t = tilesets.get( seltset ).getTiles().get( k );
+            if (n != null) {
+                if (n.isTerrainForEditor()) {
+                    aa = n.getTerrain();
                 }
             }
-            int[] bb;
-            if (t == null) {
-                bb= new int[]{-1,-1,-1,-1};
-            }else{
-                bb = t.getTerrain();
-            }
-            //so basically aa is for the mid, bb is for surrouding
+            if (aa == null) aa = new int[]{-1, -1, -1, -1};
 
-            int[] cc = null;
 
-            if (bb != null) {
-                cc = terrainInt( i,aa,bb );
-                //log(cc[0]+","+cc[1]+","+cc[2]+","+cc[3]);
-                java.util.List<Integer> lint = new ArrayList<Integer>();
+            for (int i : directions) { //check start here
 
-                for (int u = 0; u < tilesets.get(seltset).getTiles().size(); u++) {
-                    tile x = tilesets.get(seltset).getTiles().get(u);
-                    if (x.getTerrainString().equalsIgnoreCase(cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3])) {
-                        //tile found with the selected terrain
-                        lint.add(u);
+                //gogo is for detecting index of surrounding tile
+                int gogo = num;
+                switch (i) {
+                    case 0:
+                        if (num <= Tw || num % Tw == 0) continue;
+                        gogo = num - Tw - 1;
+                        break;
+                    case 1:
+                        if (num <= Tw) continue;
+                        gogo = num - Tw;
+                        break;
+                    case 2:
+                        if (num <= Tw || num % Tw == Tw - 1) continue;
+                        gogo = num - Tw + 1;
+                        break;
+                    case 3:
+                        if (num <= 1 || num % Tw == 0) continue;
+                        gogo = num - 1;
+                        break;
+                    case 4:
+                        if (num >= Tw * Th || num % Tw == Tw - 1) continue;
+                        gogo = num + 1;
+                        break;
+                    case 5:
+                        if (num >= Tw * Th - Tw || num % Tw == 0) continue;
+                        gogo = num + Tw - 1;
+                        break;
+                    case 6:
+                        if (num >= Tw * Th - Tw) continue;
+                        gogo = num + Tw;
+                        break;
+                    case 7:
+                        if (num >= Tw * Th - Tw || num % Tw == Tw - 1) continue;
+                        gogo = num + Tw + 1;
+                        break;
+                    case 8:
+                        gogo = num;
+                        break;
+                }
+
+                //nyum is to find the str of gogo location
+                long nyum = layers.get( selLayer ).getStr().get( gogo );
+                hex = Long.toHexString( nyum );
+                trailer = "00000000" + hex;
+                hex = trailer.substring( trailer.length() - 8 );
+                long noi = Long.decode( "#" + 00 + hex.substring( 2 ) ) - tilesets.get( seltset ).getFirstgid();
+
+                tile t = null;
+
+                for (int k = 0; k < tilesets.get( seltset ).getTiles().size(); k++) {
+                    if (tilesets.get( seltset ).getTiles().get( k ).getTileID() == noi) {
+                        t = tilesets.get( seltset ).getTiles().get( k );
                     }
                 }
-                //if it is found.
-                if (lint.size() > 0) {
-                    tile y = tilesets.get(seltset).getTiles().get(lint.get((int) (Math.random() * lint.size())));
+                int[] bb;
+                if (t == null) {
+                    bb = new int[]{-1, -1, -1, -1};
+                } else {
+                    bb = t.getTerrain();
+                }
+                //so basically aa is for the mid, bb is for surrouding
 
+                int[] cc = null;
 
-                    from = layers.get(selLayer).getStr().get(gogo);
-                    tzet = layers.get(selLayer).getTset().get(gogo);
-                    lh2 = new layerhistory(true, from, (long) y.getTileID() + tilesets.get(seltset).getFirstgid(), gogo, selLayer, tzet, seltset);
-
-                    if (from != (long) y.getTileID() + tilesets.get(seltset).getFirstgid()) {
-                        undolayer.add(lh2);
-                        uploaddata(lh2);
-                        redolayer.clear();
-                    }
-
-                    layers.get(selLayer).getStr().set(gogo, (long) y.getTileID() + tilesets.get(seltset).getFirstgid());
-                    updateCache(gogo);
-                    layers.get(selLayer).getTset().set(gogo, seltset);
-
-                    if ((cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3]).equalsIgnoreCase( "-1,-1,-1,-1")){
-                        layers.get(selLayer).getStr().set(gogo, (long) 0);
-                        layers.get(selLayer).getTset().set(gogo, -1);
-
-                    }
-
-                }else{
-                    //no AI for bad terrain...
-                    // if (aa[0]==-1 && aa[1] ==-1 && aa[2]==-1 && aa[3]==-1) return true;
-                    if (bb[0]==-1 && bb[1] ==-1 && bb[2]==-1 && bb[3]==-1) return true;
-                    int against = bb[0];
-                    if (bb[0]==aa[0]) against =bb[1];
-                    if (bb[1]==aa[0]) against =bb[2];
-                    if (bb[2]==aa[0]) against =bb[3];
-
-                    findBestTile( aa[0],against );
-                   log(ATPath.getCount()+"");
-                    if (ATPath.getCount()<=1) continue;
-                    AutoTile nextAT = ATPath.get( 1 );
-                    int ATid =nextAT.name;
-                    //log("Result="+ATid+"");
-
+                if (bb != null) {
+                    cc = terrainInt( i, aa, bb );
+                    //log(cc[0]+","+cc[1]+","+cc[2]+","+cc[3]);
+                    java.util.List<Integer> lint = new ArrayList<Integer>();
 
                     for (int u = 0; u < tilesets.get( seltset ).getTiles().size(); u++) {
-
                         tile x = tilesets.get( seltset ).getTiles().get( u );
-                        if (x.getTerrainString().equalsIgnoreCase( ATid + "," + ATid + "," + ATid + "," + ATid )) {
+                        if (x.getTerrainString().equalsIgnoreCase( cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3] )) {
+                            //tile found with the selected terrain
                             lint.add( u );
-                            //log(u+"}"+ATid);
                         }
                     }
-
+                    //if it is found.
                     if (lint.size() > 0) {
                         tile y = tilesets.get( seltset ).getTiles().get( lint.get( (int) (Math.random() * lint.size()) ) );
+
+
+                        from = layers.get( selLayer ).getStr().get( gogo );
+                        tzet = layers.get( selLayer ).getTset().get( gogo );
+                        lh2 = new layerhistory( true, from, (long) y.getTileID() + tilesets.get( seltset ).getFirstgid(), gogo, selLayer, tzet, seltset );
+
+                        if (from != (long) y.getTileID() + tilesets.get( seltset ).getFirstgid()) {
+                            undolayer.add( lh2 );
+                            uploaddata( lh2 );
+                            redolayer.clear();
+                        }
+
+                        layers.get( selLayer ).getStr().set( gogo, (long) y.getTileID() + tilesets.get( seltset ).getFirstgid() );
+                        updateCache( gogo );
+                        layers.get( selLayer ).getTset().set( gogo, seltset );
+
+                        if ((cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3]).equalsIgnoreCase( "-1,-1,-1,-1" )) {
+                            layers.get( selLayer ).getStr().set( gogo, (long) 0 );
+                            layers.get( selLayer ).getTset().set( gogo, -1 );
+
+                        }
+
+                    } else {
+                        //no AI for bad terrain...
+                        // if (aa[0]==-1 && aa[1] ==-1 && aa[2]==-1 && aa[3]==-1) return true;
+                        if (bb[0] == -1 && bb[1] == -1 && bb[2] == -1 && bb[3] == -1) return true;
+                        int against = bb[0];
+                        if (bb[0] == aa[0]) against = bb[1];
+                        if (bb[1] == aa[0]) against = bb[2];
+                        if (bb[2] == aa[0]) against = bb[3];
+
+                        findBestTile( aa[0], against );
+                        //log( ATPath.getCount() + "" );
+                        if (ATPath.getCount() <= 1) continue;
+                        AutoTile nextAT = ATPath.get( 1 );
+                        int ATid = nextAT.name;
+                        //log("Result="+ATid+"");
+
+
+                        for (int u = 0; u < tilesets.get( seltset ).getTiles().size(); u++) {
+
+                            tile x = tilesets.get( seltset ).getTiles().get( u );
+                            if (x.getTerrainString().equalsIgnoreCase( ATid + "," + ATid + "," + ATid + "," + ATid )) {
+                                lint.add( u );
+                                //log(u+"}"+ATid);
+                            }
+                        }
+
+                        if (lint.size() > 0) {
+                            tile y = tilesets.get( seltset ).getTiles().get( lint.get( (int) (Math.random() * lint.size()) ) );
 
                             from = layers.get( selLayer ).getStr().get( gogo );
                             tzet = layers.get( selLayer ).getTset().get( gogo );
@@ -17235,70 +17309,68 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             }
 
                             layers.get( selLayer ).getStr().set( gogo, (long) y.getTileID() + tilesets.get( seltset ).getFirstgid() );
-                        updateCache(gogo);
+                            updateCache( gogo );
 
-                        layers.get( selLayer ).getTset().set( gogo, seltset );
-                            if (!fill) requestReterrain=true;
+                            layers.get( selLayer ).getTset().set( gogo, seltset );
+                            if (!fill) requestReterrain = true;
 
-                            if (y.getTerrainString().equalsIgnoreCase( "-1.-1.-1.-1" )){
+                            if (y.getTerrainString().equalsIgnoreCase( "-1.-1.-1.-1" )) {
                                 layers.get( selLayer ).getStr().set( gogo, (long) 0 );
                                 layers.get( selLayer ).getTset().set( gogo, -1 );
-                                updateCache(gogo);
+                                updateCache( gogo );
 
                                 //requestReterrain=false;
                             }
 
-                        switch (i) {
-                            case 0:
-                                if (num <= Tw || num % Tw == 0) continue;
-                                gogo = num - Tw - 1;
-                                break;
-                            case 1:
-                                if (num <= Tw) continue;
-                                gogo = num - Tw;
-                                break;
-                            case 2:
-                                if (num <= Tw || num % Tw == Tw - 1) continue;
-                                gogo = num - Tw + 1;
-                                break;
-                            case 3:
-                                if (num <= 1 || num % Tw == 0) continue;
-                                gogo = num - 1;
-                                break;
-                            case 4:
-                                if (num >= Tw * Th || num % Tw == Tw - 1) continue;
-                                gogo = num + 1;
-                                break;
-                            case 5:
-                                if (num >= Tw * Th - Tw || num % Tw == 0) continue;
-                                gogo = num + Tw - 1;
-                                break;
-                            case 6:
-                                if (num >= Tw * Th - Tw) continue;
-                                gogo = num + Tw;
-                                break;
-                            case 7:
-                                if (num >= Tw * Th - Tw || num % Tw == Tw - 1) continue;
-                                gogo = num + Tw + 1;
-                                break;
+                            switch (i) {
+                                case 0:
+                                    if (num <= Tw || num % Tw == 0) continue;
+                                    gogo = num - Tw - 1;
+                                    break;
+                                case 1:
+                                    if (num <= Tw) continue;
+                                    gogo = num - Tw;
+                                    break;
+                                case 2:
+                                    if (num <= Tw || num % Tw == Tw - 1) continue;
+                                    gogo = num - Tw + 1;
+                                    break;
+                                case 3:
+                                    if (num <= 1 || num % Tw == 0) continue;
+                                    gogo = num - 1;
+                                    break;
+                                case 4:
+                                    if (num >= Tw * Th || num % Tw == Tw - 1) continue;
+                                    gogo = num + 1;
+                                    break;
+                                case 5:
+                                    if (num >= Tw * Th - Tw || num % Tw == 0) continue;
+                                    gogo = num + Tw - 1;
+                                    break;
+                                case 6:
+                                    if (num >= Tw * Th - Tw) continue;
+                                    gogo = num + Tw;
+                                    break;
+                                case 7:
+                                    if (num >= Tw * Th - Tw || num % Tw == Tw - 1) continue;
+                                    gogo = num + Tw + 1;
+                                    break;
+                            }
+                            if (!fill) numanuma.add( new tung( gogo, y, i ) );
+
+
                         }
-                        if (!fill) numanuma.add( new tung(gogo, y, i));
-
-
                     }
+
+
                 }
-
-
-            }
-        } //check ends here
-        if (requestReterrain) {
-                Terrainify( num, n, directions, true );
-        }
+            } //for each direction
+        }//check ends here
         return false;
     }
     //private boolean singleTile;
     private void log(String s){
-        Gdx.app.log("",s);
+      //  Gdx.app.log("",s);
     }
     private class sirch{
         int distance;
@@ -21715,7 +21787,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (locx >= Tw) continue;
                         if (locy >= Th) continue;
                         boolean terrar =false;
-                        if (bx==0 || by ==0 || bx==brushsize-1 || by==brushsize-1) terrar=true;
+                        //if (bx==0 || by ==0 || bx==brushsize-1 || by==brushsize-1) terrar=true;
+
+                        // this code halves the needed taptile with terrain true.
+                        if (bx==0 && by==0) terrar = true;
+                        if (bx==brushsize-1 && by==0) terrar = true;
+                        if (bx==brushsize-1 && by==brushsize-1) terrar = true;
+                        if (by==brushsize-1 && bx==0) terrar = true;
+                        if (bx==0 && by % 2==0) terrar = true;
+                        if (by==0 && bx % 2==0) terrar = true;
+                        if (bx==brushsize-1 && by % 2==0) terrar = true;
+                        if (by==brushsize-1 && bx % 2==0) terrar = true;
+
                         tapTile( locy * Tw + locx, true, terrar);
                     }
                 }

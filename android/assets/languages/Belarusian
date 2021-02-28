@@ -379,4 +379,5 @@ picker: "зборшчык"
 showcoords: "паказаць Каардынаты"
 exportastemplate: "Экспарт у шаблон"
 selectionastileset: "Выбар у якасці Tileset"
+nativefilechooser: "Выкарыстанне Native File Chooser"
 }
