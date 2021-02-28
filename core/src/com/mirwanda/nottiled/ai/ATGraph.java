@@ -26,8 +26,9 @@ public class ATGraph implements IndexedGraph<AutoTile> {
     }
 
     public AutoTile getAT(int ATName){
-        for (AutoTile at: autotiles){
-            if (at.name==ATName){
+        for (int i=0;i<autotiles.size;i++) {
+            AutoTile at = autotiles.get( i );
+            if (at.name == ATName) {
                 return at;
             }
         }

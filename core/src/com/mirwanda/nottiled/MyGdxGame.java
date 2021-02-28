@@ -144,6 +144,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public com.mirwanda.nottiled.Interface face;
     public guis gui = new guis();
     public language z = new language();
+
+    ThreadPool threadPool = new ThreadPool(1, 100);
     public drawer tempdrawer = new drawer();
     public Bloom bloom;
     public Curvature curvature;
@@ -16506,7 +16508,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     }
 
-    private void tapTile(int num, boolean follower, boolean terra) {
+    public void tapTile(int num, boolean follower, boolean terra) {
         if (cammode == "View only") return;
         if (layers.size()==0) return;
         //the actual stamping process.
@@ -21772,15 +21774,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             //remember that longpressing fill will turn it into brush?
             if (activetool == 4 & num != -1) {
                 //small brush
-                tapTile(num, false, false);
+                //tapTile(num, false, false);
                 //Gdx.app.log("aso",brushsize+"");
                 for (int bx=0; bx<brushsize;bx++) {
                     for (int by = 0; by < brushsize; by++) {
                         //celor
                         int curx = num % Tw;
                         int cury = num / Tw;
-                        int locx = curx - brushsize / 2 + bx;
-                        int locy = cury - brushsize / 2 + by;
+                        final int locx = curx - brushsize / 2 + bx;
+                        final int locy = cury - brushsize / 2 + by;
                         // Gdx.app.log( "", cury + "/" + curx + "/" + locy + "/" + locx );
                         if (locx < 0) continue;
                         if (locy < 0) continue;
@@ -21799,7 +21801,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (bx==brushsize-1 && by % 2==0) terrar = true;
                         if (by==brushsize-1 && bx % 2==0) terrar = true;
 
-                        tapTile( locy * Tw + locx, true, terrar);
+                        final boolean ft = terrar;
+                        try {
+                            threadPool.execute( new Runnable(  ){
+                                @Override
+                                public void run() {
+                                    tapTile(locy *Tw+locx, true,ft);
+
+                                }
+                            });
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+
+                        //threadPool.waitUntilAllTasksFinished();
                     }
                 }
 
