@@ -248,7 +248,16 @@ public class MainActivity extends AndroidApplication implements Interface
             }
 		}
 		String intend="";
+		/* Black bar bug
+		getWindow().getDecorView().setSystemUiVisibility(
+				View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+				| View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+				| View.SYSTEM_UI_FLAG_FULLSCREEN
+				| View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+				| View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY );
 
+
+		 */
 		if (getPackageName().equalsIgnoreCase("com.mirwanda.nottiled"))
 		{
 		}
@@ -286,11 +295,12 @@ public class MainActivity extends AndroidApplication implements Interface
 		RelativeLayout layout = new RelativeLayout(this);
 
         // Do the stuff that initialize() would do for you
+		/*
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, 
 							 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
-
+     */
 		
 		
         // Create the libgdx View
@@ -338,7 +348,7 @@ public class MainActivity extends AndroidApplication implements Interface
         	new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, 
 											RelativeLayout.LayoutParams.WRAP_CONTENT);
         adParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-      //  adParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+        adParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
 
         layout.addView(adView, adParams);
 		
@@ -347,4 +357,20 @@ public class MainActivity extends AndroidApplication implements Interface
 		/**/
 		
     }
+
+	@Override
+	public void onWindowFocusChanged(boolean hasFocus) {
+		super.onWindowFocusChanged( hasFocus );
+		/* black bar.
+		if (hasFocus){
+			getWindow().getDecorView().setSystemUiVisibility(
+					View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+							| View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+							| View.SYSTEM_UI_FLAG_FULLSCREEN
+							| View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+							| View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY );
+		}
+
+		 */
+	}
 }

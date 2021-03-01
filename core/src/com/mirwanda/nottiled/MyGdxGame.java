@@ -115,7 +115,10 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -145,7 +148,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public guis gui = new guis();
     public language z = new language();
 
-    ThreadPool threadPool = new ThreadPool(1, 100);
+    ThreadPool autotilePool = new ThreadPool(1, 100);
+    ThreadPool autosavePool = new ThreadPool(1, 10);
+
     public drawer tempdrawer = new drawer();
     public Bloom bloom;
     public Curvature curvature;
@@ -1172,10 +1177,26 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 autosave += delta;
 
                 if (autosave > 60f * autosaveInterval) {
+                    status( z.autosaving, 1 );
+
                     autosave = 0;
                     if (sAutoSave) {
-                        saveMap( curdir + "/" + curfile );
-                        status( z.autosaving, 1 );
+
+                        try {
+                            autosavePool.execute( new Runnable(  ){
+                                @Override
+                                public void run() {
+                                    saveMap( curdir + "/" + curfile );
+
+
+                                }
+                            });
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+
+
+
                     }
                 }
 
@@ -3325,7 +3346,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             int maxy = Th / heii;
             if (Th % heii != 0) maxy++;
             //maxy=1;
-            log( widd + "|" + heii + "|" + maxx + "|" + maxy + "" );
+            //log( widd + "|" + heii + "|" + maxx + "|" + maxy + "" );
             for (int y = 0; y < maxy; y++) {
                 for (int x = 0; x < maxx; x++) {
                     //enough for 12 layers.
@@ -5277,7 +5298,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 loadtmx( raw );
                 return;
             }
-            log("Here?");
             String lf = prefs.getString( "lof", basepath+"NotTiled/sample/island.tmx" );
             log(lf);
             FileHandle tst = Gdx.files.absolute( lf );
@@ -5285,7 +5305,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (tst.exists()) {
                 log("Exist.");
                 loadtmx( lf );
-                log("loaded tmx.");
 
             } else {
                 log("Does not exist.");
@@ -5373,7 +5392,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         //loadautotiles();
         resetCaches();
-        log("here?");
         resetSwatches();
         //uicam.zoom=0.5f;
         //uicam.update();
@@ -9030,12 +9048,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void loadPreferences() {
         swatches = prefs.getBoolean("swatches", true);
         nativefilechooser = prefs.getBoolean( "nativefc", false );
-        lastpath = prefs.getString("lastpath", "NotTiled");
-        rwpath = prefs.getString("rwpath", basepath+"/RustedWarfare");
-        if (rwpath.equalsIgnoreCase( "RustedWarfare" )) rwpath = basepath+"/RustedWarfare";
+        rwpath = prefs.getString("rwpath", basepath+"RustedWarfare");
+        if (rwpath.equalsIgnoreCase( "/RustedWarfare" )) rwpath = basepath+"RustedWarfare";
         autosaveInterval = prefs.getInteger("interval", 1);
         gridOpacity = prefs.getInteger("gridopacity", 5);
-        lastpath = prefs.getString("lastpath", "NotTiled");
+        lastpath = prefs.getString("lastpath", basepath+"NotTiled");
         isSampleReloaded = prefs.getBoolean("reloaded", false);
         if (lastpath.startsWith(Gdx.files.getExternalStoragePath()))
         {
@@ -12527,7 +12544,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             }
         };
-        fc.setDirectory(Gdx.files.absolute(lastpath));
+
+        FileHandle fhtest = Gdx.files.absolute( lastpath );
+        if (fhtest.exists()){
+            fc.setDirectory(Gdx.files.absolute(lastpath));
+        }else{
+            fc.setDirectory(Gdx.files.absolute(basepath));
+        }
+
         tOpen.clear();
         tOpen.add(fc).width(ssx).height(ssy * .7f).width( ssx*.9f );
         gotoStage(tOpen);
@@ -13469,6 +13493,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     public void run() {
 
                         loadmap(filepath);
+                        log("tmx loaded.");
+
 
                     }
                 });
@@ -13586,7 +13612,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             String path = file.parent().path();
 
             FileInputStream stream = new FileInputStream(file.file());
-            Gdx.app.log("heret",path);
 
             curdir = path;
             curfile = file.file().getName();
@@ -17372,7 +17397,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
     //private boolean singleTile;
     private void log(String s){
-      //  Gdx.app.log("",s);
+        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+        Date date = new Date();
+        Gdx.app.log(dateFormat.format(date),s);
     }
     private class sirch{
         int distance;
@@ -17883,11 +17910,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         case "mapInformation":
                             if (cmd.from.equalsIgnoreCase( myID )) {
                                 logNet( "[CI] map data received!");
-                                FileHandle fh = Gdx.files.absolute( basepath+"/NotTiled/tempNetworkMap.tmx" );
+                                FileHandle fh = Gdx.files.absolute( basepath+"NotTiled/tempNetworkMap.tmx" );
                                 fh.writeString( clientMapData,false);
                                 clientMapData="";
                                 backToMap();
-                                loadtmx( "/NotTiled/tempNetworkMap.tmx"  );
+                                loadtmx( basepath+"NotTiled/tempNetworkMap.tmx"  );
                             }
                             break;
                         case "mapInformationAll":
@@ -21802,8 +21829,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (by==brushsize-1 && bx % 2==0) terrar = true;
 
                         final boolean ft = terrar;
+
                         try {
-                            threadPool.execute( new Runnable(  ){
+                            autotilePool.execute( new Runnable(  ){
                                 @Override
                                 public void run() {
                                     tapTile(locy *Tw+locx, true,ft);
@@ -21813,7 +21841,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
-
                         //threadPool.waitUntilAllTasksFinished();
                     }
                 }
