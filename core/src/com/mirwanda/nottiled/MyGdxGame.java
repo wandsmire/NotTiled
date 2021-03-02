@@ -148,7 +148,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public guis gui = new guis();
     public language z = new language();
 
-    ThreadPool autotilePool = new ThreadPool(1, 100);
+    ThreadPool autotilePool = new ThreadPool(1, 100000);
     ThreadPool autosavePool = new ThreadPool(1, 10);
 
     public drawer tempdrawer = new drawer();
@@ -1177,10 +1177,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 autosave += delta;
 
                 if (autosave > 60f * autosaveInterval) {
-                    status( z.autosaving, 1 );
 
                     autosave = 0;
                     if (sAutoSave) {
+                        status( z.autosaving, 1 );
 
                         try {
                             autosavePool.execute( new Runnable(  ){
@@ -3184,138 +3184,139 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
 
-            //Drawing of RW thingy
-            batch.setProjectionMatrix( cam.combined );
-            batch.begin();
+            //Drawing of RW thingy, but it cause a noticable lag, so no.
+            if (cam.zoom>zoomTreshold) {
+                batch.setProjectionMatrix( cam.combined );
+                batch.begin();
 
-            drawCoordinates();
+                drawCoordinates();
 
-            if (layers.size() > 2 && tilesets.size() > 0) {
-                if (layers.get( 2 ).getName().equalsIgnoreCase( "Units" )) {
+                if (layers.size() > 2 && tilesets.size() > 0) {
+                    if (layers.get( 2 ).getName().equalsIgnoreCase( "Units" )) {
 
-                    for (int aa = 0; aa < Tw * Th; aa++) {
+                        for (int aa = 0; aa < Tw * Th; aa++) {
 
-                        long mm = layers.get( 2 ).getStr().get( aa );
-                        int mmo = layers.get( 2 ).getTset().get( aa );
-                        if (mmo == -1) continue;
-                        int xpos = aa % Tw;
-                        int ypos = aa / Tw;
-                        int maex = -1, maye = -1;
-                        for (tile t : tilesets.get( mmo ).getTiles()) {
-                            //log(mm+"P");
+                            long mm = layers.get( 2 ).getStr().get( aa );
+                            int mmo = layers.get( 2 ).getTset().get( aa );
+                            if (mmo == -1) continue;
+                            int xpos = aa % Tw;
+                            int ypos = aa / Tw;
+                            int maex = -1, maye = -1;
+                            for (tile t : tilesets.get( mmo ).getTiles()) {
+                                //log(mm+"P");
 
-                            if (t.getTileID() + tilesets.get( mmo ).getFirstgid() == mm) {
-                                boolean isCC = false;
-                                int team = -1;
-                                for (property p : t.getProperties()) {
-                                    if (p.getName().equalsIgnoreCase( "unit" ) && p.getValue().equalsIgnoreCase( "commandCenter" )) {
-                                        isCC = true;
-                                        //log(isCC+"P");
+                                if (t.getTileID() + tilesets.get( mmo ).getFirstgid() == mm) {
+                                    boolean isCC = false;
+                                    int team = -1;
+                                    for (property p : t.getProperties()) {
+                                        if (p.getName().equalsIgnoreCase( "unit" ) && p.getValue().equalsIgnoreCase( "commandCenter" )) {
+                                            isCC = true;
+                                            //log(isCC+"P");
+                                        }
+                                        if (p.getName().equalsIgnoreCase( "team" )) {
+                                            team = Integer.parseInt( p.getValue() );
+                                        }
                                     }
-                                    if (p.getName().equalsIgnoreCase( "team" )) {
-                                        team = Integer.parseInt( p.getValue() );
-                                    }
-                                }
-                                if (!isCC) continue;
-                                //log(isCC+"");
-                                switch (team) {
-                                    case 0:
-                                        maex = 0;
-                                        maye = 0;
-                                        break;
-                                    case 1:
-                                        maex = 1 * 56;
-                                        maye = 0;
-                                        break;
-                                    case 2:
-                                        maex = 2 * 56;
-                                        maye = 0;
-                                        break;
-                                    case 3:
-                                        maex = 3 * 56;
-                                        maye = 0;
-                                        break;
-                                    case 4:
-                                        maex = 4 * 56;
-                                        maye = 0;
-                                        break;
-                                    case 5:
-                                        maex = 0;
-                                        maye = 56;
-                                        break;
-                                    case 6:
-                                        maex = 1 * 56;
-                                        maye = 56;
-                                        break;
-                                    case 7:
-                                        maex = 2 * 56;
-                                        maye = 56;
-                                        break;
-                                    case 8:
-                                        maex = 3 * 56;
-                                        maye = 56;
-                                        break;
-                                    case 9:
-                                        maex = 4 * 56;
-                                        maye = 56;
-                                        break;
+                                    if (!isCC) continue;
+                                    //log(isCC+"");
+                                    switch (team) {
+                                        case 0:
+                                            maex = 0;
+                                            maye = 0;
+                                            break;
+                                        case 1:
+                                            maex = 1 * 56;
+                                            maye = 0;
+                                            break;
+                                        case 2:
+                                            maex = 2 * 56;
+                                            maye = 0;
+                                            break;
+                                        case 3:
+                                            maex = 3 * 56;
+                                            maye = 0;
+                                            break;
+                                        case 4:
+                                            maex = 4 * 56;
+                                            maye = 0;
+                                            break;
+                                        case 5:
+                                            maex = 0;
+                                            maye = 56;
+                                            break;
+                                        case 6:
+                                            maex = 1 * 56;
+                                            maye = 56;
+                                            break;
+                                        case 7:
+                                            maex = 2 * 56;
+                                            maye = 56;
+                                            break;
+                                        case 8:
+                                            maex = 3 * 56;
+                                            maye = 56;
+                                            break;
+                                        case 9:
+                                            maex = 4 * 56;
+                                            maye = 56;
+                                            break;
 
+                                    }
                                 }
                             }
-                        }
 
-                        if (maex != -1) {
-                            drawer tempdrawer2 = new drawer();
-                            int widthy = (int) (cam.zoom * 60);
-                            tempdrawer2.setdrawer( 0, xpos * Tsw - widthy / 2, -ypos * Tsh - widthy / 2, Tsw / 2, Tsh / 2, widthy, widthy, 1f, 1f, 0f, maex, maye, 55, 55, false, false );
-                            tempdrawer2.draw( batch, txnumbers );
-                        }
-
-                        mm = layers.get( 1 ).getStr().get( aa );
-                        if (mm == 284) {
-                            drawer tempdrawer2 = new drawer();
-                            int widthy = (int) (cam.zoom * 30);
-                            tempdrawer2.setdrawer( 0, xpos * Tsw - widthy / 2, -ypos * Tsh - widthy / 2, Tsw / 2, Tsh / 2, widthy, widthy, 1f, 1f, 0f, 0, 0, 32, 32, false, false );
-                            tempdrawer2.draw( batch, txresources );
-                        }
-                    }//for
-
-                }//if
-                if (layers.get( 1 ).getName().equalsIgnoreCase( "Items" )) {
-
-                    for (int aa = 0; aa < Tw * Th; aa++) {
-
-                        long mm = layers.get( 1 ).getStr().get( aa );
-                        int mmo = layers.get( 1 ).getTset().get( aa );
-                        if (mmo == -1) continue;
-                        int xpos = aa % Tw;
-                        int ypos = aa / Tw;
-                        boolean isPool = false;
-                        for (tile t : tilesets.get( mmo ).getTiles()) {
-
-                            if (t.getTileID() + tilesets.get( mmo ).getFirstgid() == mm) {
-
-                                for (property p : t.getProperties()) {
-                                    if (p.getName().equalsIgnoreCase( "res_pool" )) {
-                                        isPool = true;
-                                    }
-                                }
-                                if (!isPool) continue;
+                            if (maex != -1) {
+                                drawer tempdrawer2 = new drawer();
+                                int widthy = (int) (cam.zoom * 60);
+                                tempdrawer2.setdrawer( 0, xpos * Tsw - widthy / 2, -ypos * Tsh - widthy / 2, Tsw / 2, Tsh / 2, widthy, widthy, 1f, 1f, 0f, maex, maye, 55, 55, false, false );
+                                tempdrawer2.draw( batch, txnumbers );
                             }
-                        }
-                        if (isPool) {
-                            drawer tempdrawer2 = new drawer();
-                            int widthy = (int) (cam.zoom * 30);
-                            tempdrawer2.setdrawer( 0, xpos * Tsw - widthy / 2, -ypos * Tsh - widthy / 2, Tsw / 2, Tsh / 2, widthy, widthy, 1f, 1f, 0f, 0, 0, 32, 32, false, false );
-                            tempdrawer2.draw( batch, txresources );
-                        }
 
-                    }//for
+                            mm = layers.get( 1 ).getStr().get( aa );
+                            if (mm == 284) {
+                                drawer tempdrawer2 = new drawer();
+                                int widthy = (int) (cam.zoom * 30);
+                                tempdrawer2.setdrawer( 0, xpos * Tsw - widthy / 2, -ypos * Tsh - widthy / 2, Tsw / 2, Tsh / 2, widthy, widthy, 1f, 1f, 0f, 0, 0, 32, 32, false, false );
+                                tempdrawer2.draw( batch, txresources );
+                            }
+                        }//for
 
-                }//if
-            }// if
-            batch.end();
-            //fbo.end();
+                    }//if
+                    if (layers.get( 1 ).getName().equalsIgnoreCase( "Items" )) {
+
+                        for (int aa = 0; aa < Tw * Th; aa++) {
+
+                            long mm = layers.get( 1 ).getStr().get( aa );
+                            int mmo = layers.get( 1 ).getTset().get( aa );
+                            if (mmo == -1) continue;
+                            int xpos = aa % Tw;
+                            int ypos = aa / Tw;
+                            boolean isPool = false;
+                            for (tile t : tilesets.get( mmo ).getTiles()) {
+
+                                if (t.getTileID() + tilesets.get( mmo ).getFirstgid() == mm) {
+
+                                    for (property p : t.getProperties()) {
+                                        if (p.getName().equalsIgnoreCase( "res_pool" )) {
+                                            isPool = true;
+                                        }
+                                    }
+                                    if (!isPool) continue;
+                                }
+                            }
+                            if (isPool) {
+                                drawer tempdrawer2 = new drawer();
+                                int widthy = (int) (cam.zoom * 30);
+                                tempdrawer2.setdrawer( 0, xpos * Tsw - widthy / 2, -ypos * Tsh - widthy / 2, Tsw / 2, Tsh / 2, widthy, widthy, 1f, 1f, 0f, 0, 0, 32, 32, false, false );
+                                tempdrawer2.draw( batch, txresources );
+                            }
+
+                        }//for
+
+                    }//if
+                }// if
+                batch.end();
+            }
 
         }
     }
@@ -6451,7 +6452,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (from2.exists())
             from2.copyTo( Gdx.files.absolute( rwpath + "/maps" ) );
 
-        msgbox( z.mapsenttorustedwatfare );
+        status( z.mapsenttorustedwatfare ,2);
         cue( "copytorw" );
     }
 
@@ -9427,6 +9428,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         a.addStep(z.t302, "menu","click on the new file");
         a.addStep(z.t303, "new", "Rusted Warfare uses 20x20 tile. So, make sure the tile width and tile height are both 20. We will set map width and map height to 50 and 50. When you are done, click [OK] button");
         a.addStep("settilesize", "20");
+        a.addStep("setmapsize", "50");
         a.addStep(z.t304, "usetemplate", "Choose [Rusted Warfare Tutorial] and press OK.");
         a.addStep(z.t305, "usetemplateok", "Well done! just click Apply.");
         a.addStep(z.t306, "applytemplate", "Okay!! good job so far!");
@@ -9474,7 +9476,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tutor.getT().add(a);
 
         a=new tutorial();
-        a.setName(z.t400, "04 RW Mapping using Autotiles");
+        a.setName(z.t400, "04 RW Mapping using Macro");
         a.addStep(z.t401, "start", "Welcome back! Make sure you have taken the basic RW mapping tutorial first, otherwise just cancel this tutorial. Okay, now, open the menu.");
         a.addStep("lockUI","");
         a.addStep(z.t402, "menu","click on the new file");
@@ -9530,11 +9532,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tutor.getT().add(a);
 
         a=new tutorial();
-        a.setName(z.t600, "06 Using NotTiled as a Game Editor");
-        a.addStep(z.t601, "start", "Welcome back! I made this NotTiled platformer so that we could make a game in NotTiled. This is still new, so it is not that good... Nevertheless, just give it a try. Open the menu");
+        a.setName(z.t600, "07 RW Mapping using Terrain Autotile");
+    a.addStep(z.t601, "start", "Welcome back! Terrain autotile is a new feature that could help making maps easier. Now, open the menu.");
         a.addStep("lockUI","");
         a.addStep(z.t602, "menu","Click on the new file");
-        a.addStep(z.t603, "new", "Make sure to put your file in \"NotTiled/sample/\" folder, otherwise the game will crash. It uses 16x16 tile, I'll set it for you. The map size is up to you. When you are done, click [OK] button");
+        a.addStep(z.t603, "new", "It uses 16x16 tile, I'll set it for you. The map size is up to you. When you are done, click [OK] button");
         a.addStep("settilesize", "16");
         a.addStep(z.t604, "usetemplate", "Now choose [NotTiled platformer] and press OK.");
         a.addStep(z.t605, "usetemplateok", "Click Apply.");
@@ -9548,6 +9550,26 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         a.addStep(z.t612, "tileclick", "Fantastico! to play the game, click the Play button on the left.");
         a.addStep("end","");
         tutor.getT().add(a);
+
+        a=new tutorial();
+        a.setName(z.t700, "07 RW Mapping using Terrain Autotile");
+        a.addStep(z.t701, "start", "Welcome back! Terrain autotile is a new feature that could help making maps easier. Now, open the menu.");
+        a.addStep("lockUI","");
+        a.addStep(z.t702, "menu","Click on the new file");
+        a.addStep(z.t703, "new", "I'll set tile and map size. Just click [OK] button");
+        a.addStep("settilesize", "20");
+        a.addStep("setmapsize", "50");
+        a.addStep(z.t704, "usetemplate", "Now choose [Rusted Warfare V2] and press OK.");
+        a.addStep(z.t705, "usetemplateok", "Click Apply.");
+        a.addStep(z.t706, "applytemplate", "Okay!! good.");
+        a.addStep("unlockUI","");
+        a.addStep(z.t707, "next", "To draw something, pick an item from the picker (bottom center).");
+        a.addStep(z.t708, "tilepick", "This time, transition tiles will be done automatically, so just pick any tile in the first tileset.");
+        a.addStep(z.t709, "tilepickclick", "Use brush and see the magic");
+        a.addStep(z.t710, "tileclick", "Fantastico! Remember that terrain autotiles does not work with fill tool. See you later.");
+        a.addStep("end","");
+        tutor.getT().add(a);
+
 
     }
 
@@ -10731,7 +10753,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
                 tbl.add(tut).colspan(4).row();
+                gotoStage(tblmain);
                 cue("layerpick");
+
 
                 break;
 
@@ -10791,6 +10815,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 tbl.add(tit).row();
                 tbl.add(tut).row();
+                gotoStage(tblmain);
 
                 break;
             case "macro":
@@ -10839,7 +10864,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
 
                     if (macrosize==0) {
-                        runAutoTiles( "" );
+                        try {
+                            runAutoTiles( "" );
+                        }catch(Exception e){
+                            msgbox(e.toString());
+                        }
                         backToMap();
                         return;
                     }
@@ -10854,6 +10883,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 });
 
                 tbl.add(tut).row();
+                gotoStage(tblmain);
 
                 break;
 
@@ -10902,6 +10932,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 });
 
                 tbl.add(tut).row();
+                gotoStage(tblmain);
 
                 break;
 
@@ -10914,7 +10945,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
 
-        gotoStage(tblmain);
+
     }
 
     private void saveViewMode(){
@@ -12053,6 +12084,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 tileset t = tilesets.get(selTsetID);
                 if (fTsPropName.getText() != "") t.setName(fTsPropName.getText());
                 if (!t.getSource().equalsIgnoreCase(fTsPropSource.getText())){
+
                     //Gdx.app.log( "LLL","LL" );
                     ///
                     String internalpath = "rusted_warfare/assets/tilesets";
@@ -12064,6 +12096,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (foredir.substring(foredir.length() - 1).equalsIgnoreCase("/")) {
                         foredir = foredir.substring(0, foredir.length() - 1);
                     }
+                    t.setSource( fTsPropSource.getText() );
                     tempdiro = t.getSource();
                     tempdiri = t.getSource();
 
@@ -12092,7 +12125,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (!filehand.exists()) {
                         filehand = Gdx.files.absolute(foredirext + "/" + tempdiro);
                         if (!filehand.exists()) {
-                            filehand = Gdx.files.internal("empty.jpeg");
+                            filehand = Gdx.files.absolute( tempdiro);
+                            if (!filehand.exists()) {
+                                filehand = Gdx.files.internal("empty.jpeg");
+                            }
                         }
                     }
 
@@ -12739,7 +12775,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             case "replacetset":
                 File fd = file.file();
                 fd = file.file();
-                fTsPropSource.setText(fd.getName());
+                fTsPropSource.setText(fd.getAbsolutePath());
                 CacheAllTset();
 
 
@@ -13811,9 +13847,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     FileHandle filehand = Gdx.files.internal(foredirint + "/" + tempdiri);
 
                                     if (!filehand.exists()) {
+
                                         filehand = Gdx.files.absolute(foredirext + "/" + tempdiro);
                                         if (!filehand.exists()) {
-                                            filehand = Gdx.files.internal("empty.jpeg");
+                                            filehand = Gdx.files.absolute(tempdiro);
+                                            if (!filehand.exists()) {
+                                                filehand = Gdx.files.internal("empty.jpeg");
+                                            }
                                         }
                                     }
 
@@ -18439,6 +18479,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (layers.get(l).getName().equalsIgnoreCase( p.getValue() )){
                         selLayer=l;
                         updateObjectCollision();
+
+                        switch (viewMode) {
+                            case STACK:
+                            case SINGLE:
+                                resetCaches();
+                                break;
+                        }
+
                         break;
                     }
                 }
@@ -18502,9 +18550,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
             if (tapped(touch2, gui.screenshot)) {
-                //testDialog();
-                return true;
-                /*
                 takingss = true;
                 //Gdx.input.vibrate(100);
 
@@ -18517,7 +18562,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         takingss = false;
                     }
                 }, 1f);
-                */
 
             }
             return true;
@@ -22137,7 +22181,42 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 switch (currentShape)
                                 {
                                     case RECTANGLE:
-                                        tapTile(num + xx + (yy * Tw), !firstone, true);
+                                        boolean terrar =false;
+                                        //if (xx==0 || yy ==0 || xx==widih-1 || yy==heih-1) terrar=true;
+
+                                        // this code halves the needed taptile with terrain true.
+
+                                        if (xx==0 && yy==0) terrar = true;
+                                        if (xx==widih && yy==0) terrar = true;
+                                        if (xx==widih && yy==heih) terrar = true;
+                                        if (yy==heih && xx==0) terrar = true;
+                                        if (xx==0 && yy % 2==0) terrar = true;
+                                        if (yy==0 && xx % 2==0) terrar = true;
+                                        if (xx==widih && yy % 2==0) terrar = true;
+                                        if (yy==heih && xx % 2==0) terrar = true;
+
+
+
+                                        final boolean ft = terrar;
+                                        final boolean firstonex = firstone;
+                                        final int numa = num;
+                                        final int xxx = xx;
+                                        final int yyy=yy;
+                                        final int Ttw = Tw;
+
+                                        try {
+                                            autotilePool.execute( new Runnable(  ){
+                                                @Override
+                                                public void run() {
+                                                    tapTile(numa + xxx + (yyy * Ttw), !firstonex,ft);
+
+                                                }
+                                            });
+                                        } catch (Exception e) {
+                                            e.printStackTrace();
+                                        }
+                                        //threadPool.waitUntilAllTasksFinished();
+
                                         if (firstone) firstone = false;
                                         break;
                                     case CIRCLE:

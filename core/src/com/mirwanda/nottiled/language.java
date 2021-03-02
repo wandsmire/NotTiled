@@ -342,6 +342,17 @@ public class language
 	String t610;
 	String t611;
 	String t612;
+	String t700="";
+	String t701="";
+	String t702="";
+	String t703="";
+	String t704="";
+	String t705="";
+	String t706="";
+	String t707="";
+	String t708="";
+	String t709="";
+	String t710="";
 	String charas;
 	String port;
 	String uieditor;
