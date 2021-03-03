@@ -6613,6 +6613,99 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         dialog.show( stage );
     }
 
+    Pixmap pbg, pts;
+    java.util.List<Color> tscolor;
+
+    private void traceBackground(){
+        pbg = new Pixmap( background.getWidth(), background.getHeight(), Pixmap.Format.RGBA8888 );
+        pbg = pixmapfromtexture( background, "ff00ff" );
+        pbg = resizepixmap(pbg,Tw*Tsw,Th*Tsh );
+        pts = tilesets.get(seltset).getPixmap();
+
+
+        tileset tts = tilesets.get(seltset);
+        tscolor = new ArrayList<Color>();
+
+        for (int yy =0; yy<tts.getHeight();yy++){
+            for (int xx =0; xx<tts.getWidth();xx++){
+
+                float tcell =0;
+                float rr = 0, gg=0,bb=0,aa=0;
+
+                for (int j=0;j<tts.getTileheight();j++){
+                    for (int i=0;i<tts.getTilewidth();i++){
+                        Color tc = new Color(pts.getPixel( xx * tts.getTilewidth()+i, yy *tts.getTileheight()+j));
+                        //if (tc.a >0){
+                        tcell++;
+                        rr+=tc.r;
+                        gg+=tc.g;
+                        bb+=tc.b;
+                        aa+=tc.a;
+
+                        //  }
+
+                    }
+                }
+                // if (aa/tcell<0.5f) continue;
+                Color tc = new Color(rr/tcell,gg/tcell,bb/tcell,0);
+                tscolor.add( tc );
+
+            }
+        }
+
+        for (int x=0; x<Tw; x++){
+            for (int y=0; y<Th; y++){
+                traceCell(x,y);
+            }
+        }
+        //background.dispose();
+        //background=null;
+        resetCaches();
+
+    }
+
+    private void traceCell(int x, int y){
+        //Color bg = new Color(pbg.getPixel( x,y ));
+        float tcell =0;
+        float rr = 0, gg=0,bb=0,aa=0;
+        for (int i=0;i<Tsw;i++){
+            for (int j=0;j<Tsh;j++){
+                Color tc = new Color(pbg.getPixel( (int) (x * Tsw) + i, (int) (y * Tsh) + j));
+               // if (tc.a >0){
+                    tcell++;
+                    rr+=tc.r;
+                    gg+=tc.g;
+                    bb+=tc.b;
+                    aa+=tc.a;
+                //}
+
+            }
+        }
+       // if (aa/tcell<0.5f) return;
+        Color bg = new Color(rr/tcell,gg/tcell,bb/tcell,0);
+
+        long cnum = 0;
+        float cnumdiff=999999;
+
+        tileset tts = tilesets.get(seltset);
+        for (int xx =0; xx<tts.getWidth();xx++){
+            for (int yy =0; yy<tts.getHeight();yy++){
+
+                Color tc = tscolor.get(yy*tts.getWidth()+xx);
+
+                float rdiff = Math.abs(tc.r - bg.r) +  Math.abs(tc.g - bg.g) +  Math.abs(tc.b - bg.b);
+                if (rdiff < cnumdiff){
+                    cnumdiff = rdiff;
+                    cnum = (long) tts.getFirstgid()+(yy*tts.getWidth()+xx);
+                }
+            }
+        }
+
+        layers.get(selLayer).getStr().set( y * Tw + x, cnum );
+        layers.get(selLayer).getTset().set( y * Tw + x, seltset);
+
+    }
+
     private void loadTools() {
         ttools = new Table();
         ttools.setFillParent( true );
@@ -6622,6 +6715,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         TextButton hvmirrorrev = new TextButton( z.mirrorreverse, skin );
         TextButton randomize = new TextButton( z.randommap, skin );
         TextButton replacetiles = new TextButton( z.replacetiles, skin );
+        TextButton tracebackground = new TextButton( "Trace Background", skin );
         TextButton toback = new TextButton( z.back, skin );
 
         //TextButton replacetile=new TextButton("Replace Tiles",skin);
@@ -6634,6 +6728,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         ttools.add( hvmirrorrev ).row();
         ttools.add( randomize ).row();
         ttools.add( replacetiles ).row();
+        ttools.add( tracebackground ).row();
         ttools.add( toback ).row();
         //ttools.add(replacetile).row();
         //ttools.add(cleartiles).row();
@@ -6642,6 +6737,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 runhmirror();
+            }
+        } );
+
+        tracebackground.addListener( new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+
+                traceBackground();
             }
         } );
 
@@ -12631,6 +12734,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 break;
             case "background":
                 background = new Texture(Gdx.files.absolute(openedfile));
+
                 break;
             case "customfont":
                 tfCustomFont.setText(openedfile);
