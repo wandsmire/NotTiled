@@ -8024,12 +8024,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             //import it
             loadingfile = true;
             errors = " ";
-            if (fImportWidth.getText().equalsIgnoreCase( "" )) {
-                fImportWidth.setText( Tsw + "" );
-            }
-            if (fImportHeight.getText().equalsIgnoreCase( "" )) {
-                fImportHeight.setText( Tsh + "" );
-            }
+            fImportWidth.setText( Tsw + "" );
+            fImportHeight.setText( Tsh + "" );
             cImportEmbed.setChecked( true );
             fh = Gdx.files.absolute(basepath+"NotTiled/Temp/"+filenamenya+".png");
             addImageTset( fh );
@@ -12953,6 +12949,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             t.setOriginalheight(s.getHeight());
             t.setColumns(s.getWidth() / Tswa);
             t.setTilecount((s.getHeight() / Tswa) * (s.getWidth() / Tsha));
+            if (t.getTilecount()==0) t.setTilecount( 1 );
             t.setWidth(s.getWidth() / Tswa);
             t.setHeight(s.getHeight() / Tsha);
             t.setTilewidth(Tswa);
