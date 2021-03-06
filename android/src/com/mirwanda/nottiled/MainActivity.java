@@ -10,14 +10,14 @@ import android.speech.tts.*;
 import android.view.*;
 import android.widget.*;
 import com.badlogic.gdx.backends.android.*;
-import com.google.android.gms.ads.*;//
+//import com.google.android.gms.ads.*;//
 
 import java.io.File;
 import java.util.*;
-import javax.annotation.*;
-import org.solovyev.android.checkout.*;
+//import javax.annotation.*;
+//import org.solovyev.android.checkout.*;
 
-import com.mirwanda.nottiled.BuildConfig;//
+//import com.mirwanda.nottiled.BuildConfig;//
 
 import static android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION;
 import static android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
@@ -94,7 +94,7 @@ public class MainActivity extends AndroidApplication implements Interface
 	String pet="";
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		mCheckout.onActivityResult(requestCode, resultCode, data);
+		//mCheckout.onActivityResult(requestCode, resultCode, data);
 
 		if (requestCode == 123 && resultCode == RESULT_OK) {
 			if ((data != null) && (data.getData() != null)) {
@@ -155,12 +155,12 @@ public class MainActivity extends AndroidApplication implements Interface
 	}
 
 
-	private ActivityCheckout mCheckout;
+	//private ActivityCheckout mCheckout;
 	private static final String AD_FREE = "adfree";
-	boolean proVersion = false;
+	boolean proVersion = true;
 	/**/
-	public AdView adView;//
-	private InterstitialAd mInterstitialAd;//
+	//public AdView adView;//
+	//private InterstitialAd mInterstitialAd;//
 	/**/
 	
 	@Override
@@ -169,7 +169,7 @@ public class MainActivity extends AndroidApplication implements Interface
 				@Override
 				public void run() {
 					if (proVersion) return;
-					mInterstitialAd.show();//
+					//mInterstitialAd.show();//
 				}
 			});
 	}
@@ -183,14 +183,14 @@ public class MainActivity extends AndroidApplication implements Interface
 					/**/
 					if (proVersion) 
 					{
-						adView.setVisibility(View.GONE);
+						//adView.setVisibility(View.GONE);
 						return;
 					}
 					if (show){
-						adView.setVisibility(View.VISIBLE);
+						//adView.setVisibility(View.VISIBLE);
 					}else
 					{
-						adView.setVisibility(View.GONE);
+						//adView.setVisibility(View.GONE);
 					}
 					/**/
 				}
@@ -203,7 +203,7 @@ public class MainActivity extends AndroidApplication implements Interface
 		runOnUiThread(new Runnable() {
 				@Override
 				public void run() {
-					mCheckout.startPurchaseFlow(ProductTypes.IN_APP, AD_FREE, null, new PurchaseListener());
+					//mCheckout.startPurchaseFlow(ProductTypes.IN_APP, AD_FREE, null, new PurchaseListener());
 				}
 			});
 		return true;
@@ -215,7 +215,7 @@ public class MainActivity extends AndroidApplication implements Interface
 	
 	
 	
-
+/*
     private class PurchaseListener extends EmptyRequestListener<Purchase> {
         @Override
         public void onSuccess(@Nonnull Purchase purchase) {
@@ -236,6 +236,8 @@ public class MainActivity extends AndroidApplication implements Interface
             }
         }
     }
+
+ */
 	
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -279,20 +281,21 @@ public class MainActivity extends AndroidApplication implements Interface
 					}
 				}
 			});
-		
-		final Billing billing = Aplikasi.get().getBilling();
-        mCheckout = Checkout.forActivity(this, billing);
-        mCheckout.start();
-        mCheckout.loadInventory(Inventory.Request.create().loadAllPurchases(), new InventoryCallback());
+
+
+//		final Billing billing = Aplikasi.get().getBilling();
+ //       mCheckout = Checkout.forActivity(this, billing);
+  //      mCheckout.start();
+   //     mCheckout.loadInventory(Inventory.Request.create().loadAllPurchases(), new InventoryCallback());
 		
 		Intent intent = getIntent();
 		if (intent.getData()!=null) intend=intent.getData().toString();
 		
         AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
-		//initialize(new MyGdxGame(intend,this), cfg);
+		initialize(new MyGdxGame(intend,this), cfg);
 		/**/
 		
-		RelativeLayout layout = new RelativeLayout(this);
+		//RelativeLayout layout = new RelativeLayout(this);
 
         // Do the stuff that initialize() would do for you
 		/*
@@ -304,11 +307,13 @@ public class MainActivity extends AndroidApplication implements Interface
 		
 		
         // Create the libgdx View
-        View gameView = initializeForView(new MyGdxGame(intend,this));
-		layout.addView(gameView);
+        //View gameView = initializeForView(new MyGdxGame(intend,this));
+		//layout.addView(gameView);
 		
 		
 		//Create and setup interstitial
+
+		/*
 		mInterstitialAd = new InterstitialAd(this);
 		String ads;
 		if (BuildConfig.DEBUG) {
@@ -351,9 +356,11 @@ public class MainActivity extends AndroidApplication implements Interface
         adParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
 
         layout.addView(adView, adParams);
+
+		 */
 		
         // Hook it all up
-        setContentView(layout);
+        //setContentView(layout);
 		/**/
 		
     }

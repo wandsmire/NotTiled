@@ -162,6 +162,10 @@ T: [
 				trigger: settilesize
 			}
 			{
+				text: 50
+				trigger: setmapsize
+			}
+			{
 				text: "Choose [Rusted Warfare Tutorial] and press OK."
 				trigger: usetemplate
 			}
@@ -340,7 +344,7 @@ T: [
 		]
 	}
 	{
-		name: 04 RW Mapping using Autotiles
+		name: 04 RW Mapping using Macro
 		steps: [
 			{
 				text: "Welcome back! Make sure you have taken the basic RW mapping tutorial first, otherwise just cancel this tutorial. Okay, now, open the menu."
@@ -379,11 +383,11 @@ T: [
 				trigger: next
 			}
 			{
-				text: "The right one is the Autotile selection button, it is just like the tile selection, but for autotiles."
+				text: "The right one is the [Macro Tile] selection button, it is just like the tile selection, but for [Macro tiles]."
 				trigger: next
 			}
 			{
-				text: "The left one is the Refresh button, to apply autotiles to the map."
+				text: "The left one is the [Run Macro] button, to apply macro to the map."
 				trigger: next
 			}
 			{
@@ -391,7 +395,7 @@ T: [
 				trigger: next
 			}
 			{
-				text: "There are more layers right? The Set layer is where we put our autotiles, while the trigger layer... just ignore it for now :)"
+				text: "There are more layers right? The Set layer is where we put our macro, while the trigger layer... just ignore it for now :)"
 				trigger: layerpick
 			}
 			{
@@ -407,7 +411,7 @@ T: [
 				trigger: changebg
 			}
 			{
-				text: "But first, you will need to pick an autotile. Click on the autotile selection button in the bottom."
+				text: "But first, you will need to pick a macro tile. Click on the [Macro Tile] selection button at the bottom."
 				trigger: next
 			}
 			{
@@ -419,7 +423,7 @@ T: [
 				trigger: redo
 			}
 			{
-				text: "Now, longpress (press and hold) the refresh button."
+				text: "Now, longpress (press and hold) the [Run Macro] button."
 				trigger: redo
 			}
 			{
@@ -427,7 +431,7 @@ T: [
 				trigger: refresh
 			}
 			{
-				text: Cool isn't it? Much easier than before! The power of autotiles! :P
+				text: Cool isn't it? Much easier than before! The power of Macros! :P
 				trigger: redo
 			}
 			{
@@ -435,11 +439,11 @@ T: [
 				trigger: next
 			}
 			{
-				text: Take note that autotiles are not perfect. It cannot do anything about tiles that have no adjacent tiles.
+				text: Take note that Macro are not perfect. It cannot do anything about tiles that have no adjacent tiles.
 				trigger: next
 			}
 			{
-				text: "and not every autotiles can mix with other autotiles. For example, Water can only mix with Shallow Water and Deep Water."
+				text: "and not every macro tile can mix with other macro tiles. For example, Water can only mix with Shallow Water and Deep Water."
 				trigger: next
 			}
 			{
@@ -557,7 +561,7 @@ T: [
 				trigger: menu
 			}
 			{
-				text: Make sure to put your file in NotTiled/sample/ folder
+				text: You can put it in any folder you want.
 				trigger: new
 			}
 			{
@@ -589,7 +593,7 @@ T: [
 				trigger: tilepick
 			}
 			{
-				text: "At the minimum, you will need the man as the player, and the girl as the finish line. (Cliche, I know. You can change it anyway)"
+				text: "At the minimum, you will need the man with the white shirt as the player and some places for him to stand."
 				trigger: next
 			}
 			{
@@ -602,6 +606,71 @@ T: [
 			}
 			{
 				text: "Fantastico! to play the game, click the Play button on the left."
+				trigger: tileclick
+			}
+			{
+				text: ""
+				trigger: end
+			}
+		]
+	}
+	{
+		name: 07 RW Mapping using Terrain Autotile
+		steps: [
+			{
+				text: "Welcome back! Terrain autotile is a new feature that could help making maps easier. Now, open the menu."
+				trigger: start
+			}
+			{
+				text: ""
+				trigger: lockUI
+			}
+			{
+				text: Click on the new file
+				trigger: menu
+			}
+			{
+				text: "I'll set tile and map size. Just click [OK] button"
+				trigger: new
+			}
+			{
+				text: 20
+				trigger: settilesize
+			}
+			{
+				text: 50
+				trigger: setmapsize
+			}
+			{
+				text: "Now choose [Rusted Warfare V2] (or V3 if you are.... patient) and press OK."
+				trigger: usetemplate
+			}
+			{
+				text: Click Apply.
+				trigger: usetemplateok
+			}
+			{
+				text: Okay!! good.
+				trigger: applytemplate
+			}
+			{
+				text: ""
+				trigger: unlockUI
+			}
+			{
+				text: "To draw something, pick an item from the picker (bottom center)."
+				trigger: next
+			}
+			{
+				text: "This time, transition tiles will be done automatically, so just pick any tile in the first tileset."
+				trigger: tilepick
+			}
+			{
+				text: Use brush and see the magic
+				trigger: tilepickclick
+			}
+			{
+				text: Fantastico! Remember that terrain autotiles does not work with fill tool. See you later.
 				trigger: tileclick
 			}
 			{

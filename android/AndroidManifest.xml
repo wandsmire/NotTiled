@@ -18,12 +18,12 @@
         android:resizeableActivity = "true"
         android:requestLegacyExternalStorage="true">
         
-        <!---->
+        <!---
         <meta-data android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version"/>
         <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-0329741361926795~9960638706"/>
-        <!---->
+        -->
         
     <activity
                  android:name="com.mirwanda.nottiled.MainActivity"

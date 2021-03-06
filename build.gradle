@@ -16,7 +16,7 @@ buildscript {
 }
 
 allprojects {
-
+    buildDir = "/users/wandsmire/Dropbox/${rootProject.name}/${project.name}"
     version = '1.0'
     ext {
         appName = "NotTiled"
@@ -88,8 +88,8 @@ project(":android") {
         natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-arm64-v8a"
         natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-x86"
         natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-x86_64"
-        implementation "com.google.android.gms:play-services-ads:16.0.0"
-        implementation 'org.solovyev.android:checkout:1.0.0'
+//        implementation "com.google.android.gms:play-services-ads:16.0.0"
+//        implementation 'org.solovyev.android:checkout:1.0.0'
         implementation (group: 'kryonet', name: 'kryonet', version: '2.21') {
             exclude group: 'com.esotericsoftware.reflectasm', module: 'reflectasm'
             exclude group: 'com.esotericsoftware.minlog', module: 'minlog'

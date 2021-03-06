@@ -1247,6 +1247,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 for (int i = 0; i < layers.size(); i++) {
                                     if (layers.get( i ).isVisible() && i > selLayer) {
                                         selLayer = i;
+                                        resetCaches();
                                         break;
                                     }
                                 }
@@ -8698,7 +8699,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         fPropName = new TextField("", skin);
         String[] types = new String[]{"String", "Integer", "Float", "Color", "Boolean", "File"};
         sbPropType = new SelectBox(skin);
-        sbPropType.setItems(types);
+        sbPropType.setItems((Object[]) types);
         fPropVal = new TextArea("", skin);
         fPropVal.setHeight(400);
 
@@ -8721,7 +8722,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         });
 
         sbPropValbool = new SelectBox(skin);
-        sbPropValbool.setItems(new String[]{"false", "true"});
+        sbPropValbool.setItems((Object[]) new String[]{"false", "true"});
 
 
         sbPropType.addListener(new ChangeListener() {
@@ -9206,7 +9207,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         srr.add("Ukranian");
         srr.add("Indonesian");
 
-        sbLanguage.setItems(srr.toArray(new String[0]));
+        sbLanguage.setItems((Object[])srr.toArray(new String[0]));
         bBack3 = new TextButton(z.back, skin);
         bBack3.addListener(new ChangeListener() {
             @Override
@@ -11737,11 +11738,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         fNTh = new TextField(prefs.getString("Th", "20"), skin);
         fNTh.setTextFieldFilter(filter);
         sbNMapFormat = new SelectBox(skin);
-        sbNMapFormat.setItems(new String[]{"csv", "base64", "base64-zlib", "base64-gzip", "xml"});
+        sbNMapFormat.setItems((Object[]) new String[]{"csv", "base64", "base64-zlib", "base64-gzip", "xml"});
         sbNMapRenderOrder = new SelectBox(skin);
-        sbNMapRenderOrder.setItems(new String[]{"right-down", "left-down", "right-up", "left-up"});
+        sbNMapRenderOrder.setItems((Object[]) new String[]{"right-down", "left-down", "right-up", "left-up"});
         sbNMapOrientation = new SelectBox(skin);
-        sbNMapOrientation.setItems(new String[]{"orthogonal", "isometric"});
+        sbNMapOrientation.setItems((Object[]) new String[]{"orthogonal", "isometric"});
 
         tNewFile = new Table();
         tNewFile.defaults().width(btnx).height(btny);
@@ -11900,11 +11901,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         fTsx.setDisabled(true);
 
         sbMapFormat = new SelectBox(skin);
-        sbMapFormat.setItems(new String[]{"csv", "base64", "base64-zlib", "base64-gzip", "xml"});
+        sbMapFormat.setItems( (Object[])new String[]{"csv", "base64", "base64-zlib", "base64-gzip", "xml"});
         sbMapRenderOrder = new SelectBox(skin);
-        sbMapRenderOrder.setItems(new String[]{"right-down", "left-down", "right-up", "left-up"});
+        sbMapRenderOrder.setItems((Object[]) new String[]{"right-down", "left-down", "right-up", "left-up"});
         sbMapOrientation = new SelectBox(skin);
-        sbMapOrientation.setItems(new String[]{"orthogonal", "isometric"});
+        sbMapOrientation.setItems((Object[]) new String[]{"orthogonal", "isometric"});
 
 
         cbUseTsx = new CheckBox(z.usetsxfile, skin);
@@ -20634,6 +20635,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         selLayer = layers.size() - 1;
                     }
                     updateObjectCollision();
+                    resetCaches();
                     adjustTileset();
                     return true;
                     //'812398BB9

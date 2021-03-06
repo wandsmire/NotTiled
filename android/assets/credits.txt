@@ -3,6 +3,8 @@ m>Developer
 s>WandsMire
 m>Patrons
 s>Luke (Rusted Warfare developer)
+m>Supporter
+s>Mortimer
 m>Contributors
 s>Reik-RTS
 s>Jose
