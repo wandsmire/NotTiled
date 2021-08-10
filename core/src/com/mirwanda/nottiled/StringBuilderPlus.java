@@ -63,7 +63,7 @@ public class StringBuilderPlus extends com.badlogic.gdx.utils.StringBuilder
 				{
 					property.addChild("type", new JsonValue(p.getType()));
 				}
-				property.addChild("type", new JsonValue(p.getValue()));
+				property.addChild("value", new JsonValue(p.getValue()));
 			}
 		}
 		wl("\"properties\":"+properties.toJson(JsonWriter.OutputType.json));

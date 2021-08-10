@@ -20,17 +20,25 @@ public class ATGraph implements IndexedGraph<AutoTile> {
     private int lastNodeIndex = 0;
 
     public void addAT(AutoTile myAT){
-        myAT.index = lastNodeIndex;
-        lastNodeIndex++;
-        autotiles.add(myAT);
+        try {
+            myAT.index = lastNodeIndex;
+            lastNodeIndex++;
+            autotiles.add( myAT );
+        }catch (Exception e){
+
+        }
     }
 
     public AutoTile getAT(int ATName){
-        for (int i=0;i<autotiles.size;i++) {
-            AutoTile at = autotiles.get( i );
-            if (at.name == ATName) {
-                return at;
+        try {
+            for (int i = 0; i < autotiles.size; i++) {
+                AutoTile at = autotiles.get( i );
+                if (at.name == ATName) {
+                    return at;
+                }
             }
+        }catch (Exception e){
+
         }
         return null;
     }
