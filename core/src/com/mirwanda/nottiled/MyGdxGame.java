@@ -11609,7 +11609,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 int dep = ltsetlist.getSelectedIndex();
                 if (dep > -1) {
                     tileset t = tilesets.get(dep);
-                    t.setUsetsx(true);
+                    //t.setUsetsx(true);
                     t.setTsxfile(t.getName() + ".tsx");
                     saveTsx(dep);
                     msgbox(z.filesaved);
@@ -13286,7 +13286,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             if (properties.get(m).getType()=="boolean") {
                                 srz.attribute( "", "value", txx );
                             }else{
-                                srz.attribute( "", "value", 12 );
+                                srz.attribute( "", "value", txx );
                             }
                         }
                     }
@@ -13715,8 +13715,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     srz.startTag(null, "property");
                     if (t.getProperties().get(m).getName() != null)
                         srz.attribute("", "name", t.getProperties().get(m).getName());
-                    if (!t.getProperties().get(m).getType().equalsIgnoreCase("") && !t.getProperties().get(m).getType().equalsIgnoreCase("string"))
-                    if (t.getProperties().get(m).getValue() != "")
+                    //if (!t.getProperties().get(m).getType().equalsIgnoreCase("") && !t.getProperties().get(m).getType().equalsIgnoreCase("string"))
+                    //if (!t.getProperties().get(m).getValue().isEmpty())
                         srz.attribute("", "value", t.getProperties().get(m).getValue());
                     srz.endTag(null, "property");
                 }
@@ -15341,6 +15341,49 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             v = myParser.getAttributeValue(null, "value");
                             tempe = new property(n, t, v);
                             isi = "";
+
+
+                            if (tempe.getName().equalsIgnoreCase("embedded_png")) {
+
+                                String foredir = "", tempdir = "", combo = "";
+                                try {
+
+                                    Texture bucket;
+                                    String base64 = v;
+                                    byte[] decodedBytes = Base64Coder.decode(base64);
+                                    bucket = new Texture(new Pixmap(decodedBytes, 0, decodedBytes.length));
+
+
+                                    tempTset.setTexture(bucket);
+
+                                    if (tempTset.getTrans() != null) {
+                                        tempTset.setTexture(chromaKey(tempTset.getTexture(), tempTset.getTrans()));
+                                    }
+
+                                    tempTset.setPixmap(pixmapfromtexture(bucket, tempTset.getTrans()));
+
+
+                                    tempTset.setOriginalwidth(bucket.getWidth());
+                                    tempTset.setOriginalheight(bucket.getHeight());
+                                    if (tempTset.getColumns() == 0) {
+                                        tempTset.setColumns((tempTset.getOriginalwidth() - tempTset.getMargin() * 2 + tempTset.getSpacing()) / (tempTset.getTilewidth() + tempTset.getSpacing()));
+                                        tempTset.setWidth(tempTset.getColumns());
+                                        tempTset.setHeight((tempTset.getOriginalheight() - tempTset.getMargin() * 2 + tempTset.getSpacing()) / (tempTset.getTileheight() + tempTset.getSpacing()));
+                                        tempTset.setTilecount(tempTset.getWidth() * tempTset.getHeight());
+                                    }
+
+                                    templastID += tempTset.getWidth() * tempTset.getHeight();
+
+                                    alreadyloaded = true;
+                                } catch (Exception e) {
+                                    ErrorBung(e, "okok.txt");
+                                }
+
+
+                            }
+
+
+
                         }
                         if (name.equals("image")) {
                             tempTset.setTrans(myParser.getAttributeValue(null, "trans"));
@@ -17472,6 +17515,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void updateAT(){
+        if (tilesets.isEmpty()) return;
+
         ATGraph = new ATGraph();
         java.util.List<Vector2> history = new ArrayList<Vector2>();
         java.util.List<Integer> historyA = new ArrayList<Integer>();
