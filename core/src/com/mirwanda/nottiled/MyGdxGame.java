@@ -1249,10 +1249,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
 
 
+
                 autosave += delta;
 
                 if (autosave > 60f * autosaveInterval) {
-
+                    log(autosaveInterval+"");
                     autosave = 0;
                     if (sAutoSave) {
                         status( z.autosaving, 1 );
@@ -1334,15 +1335,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 animate( delta );
 
-                autosave += delta;
 
-                if (autosave > 60f) {
-                    autosave = 0;
-                    if (sAutoSave) {
-                        saveMap( curdir + "/" + curfile );
-                        status( z.autosaving, 1 );
-                    }
-                }
 
                 checkConnectionStatus();
 
@@ -13724,7 +13717,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             srz.startTag(null, "image");
-            srz.attribute("", "source", t.getSource())
+            if (!t.getSource().isEmpty()) srz.attribute("", "source", t.getSource())
                     .attribute("", "width", Integer.toString(t.getOriginalwidth()))
                     .attribute("", "height", Integer.toString(t.getOriginalheight()));
             if (t.getTrans() != null && t.getTrans() != "")
@@ -15221,6 +15214,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             fname = filehand.name();
             InputStream stream = filehand.read();
 
+
             myParser.setInput(stream, null);
             int event = myParser.getEventType();
             tile tempTile = new tile();
@@ -15376,7 +15370,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                                     alreadyloaded = true;
                                 } catch (Exception e) {
-                                    ErrorBung(e, "okok.txt");
+                                    e.printStackTrace();
+                                   // ErrorBung(e, "okok.txt");
                                 }
 
 
@@ -15496,6 +15491,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
             tsxFile = source;
             tempTset = null;
+            stream.close();
         } catch (Exception e) {
 
             ErrorBung(e, "loadingtsxerror.txt");
@@ -16047,6 +16043,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     seltset = 0;
                                 }
                                 recenterpick();
+                                return true;
                             } else if (tapped(touch2, gui.tilesetsleft)) {
 
                                 seltset -= 1;
@@ -16054,6 +16051,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     seltset = tilesets.size() - 1;
                                 }
                                 recenterpick();
+                                return true;
                             }
                             break;
                         case "terraineditor":
@@ -19480,9 +19478,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         if (tapped(touch2, gui.save)) {
             if (mode == "object" || mode == "tile"|| mode == "image") {
-                saveMap(curdir + "/" + curfile);
-                status(z.yourmaphasbeensaved, 2);
-                cue("quicksave");
+
+                try {
+                    autosavePool.execute( new Runnable(  ){
+                        @Override
+                        public void run() {
+                            saveMap( curdir + "/" + curfile );
+                            status(z.yourmaphasbeensaved, 2);
+                            cue("quicksave");
+                        }
+                    });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
                 return true;
 
             }
@@ -22371,7 +22380,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             case "repa":
                             case "repb":
 
-                                t = tilesets.get(selTsetID);
+                                t = tilesets.get(seltset);
                         }
                     }
 
