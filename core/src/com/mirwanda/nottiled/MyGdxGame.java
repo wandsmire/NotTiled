@@ -4765,7 +4765,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 //show macro button in selection tool
 
-                if (activetool==3 && !assemblymode && !stamp){
+                if ((activetool==3 && !assemblymode && !stamp)||kartu=="editor"){
                     uisrect( gui.addmacro, mouse, vis( "addmacro" ) );//add macro
                 }
 
@@ -5120,7 +5120,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     str1draw( ui, rotationName, gui.rotation );
                     uidrawbutton( txtile, z.tile, gui.picker, 0 );
 
-                    if (activetool==3 && !assemblymode && !stamp){
+                    if ((activetool==3 && !assemblymode && !stamp)||kartu=="editor"){
                         uidrawbutton( txadd, z.macro, gui.addmacro, 2 );
 
                     }
@@ -5442,11 +5442,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         String allstr = fileHandl.readString();
         String[] cumi = allstr.split( "\r\n" );
         for (int ad = 0; ad < cumi.length; ad++) {
-            String[] cuma = cumi[ad].split( ":" );
+            String[] cuma = cumi[ad].split( ">>>" );
             vars.put( cuma[0], cuma[1] );
         }
-
-        parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS + vars.get( language );
+        parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS+ vars.get( language );
         parameter.borderColor = new Color( .5f, .5f, .5f, .9f );
         parameter.borderWidth = 0;
         if (ssx < ssy) {
@@ -5457,15 +5456,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         }
         parameter.size = fontsize;
-
-
         parameter.shadowColor = new Color( 0f, 0f, 0f, .9f );
         parameter.shadowOffsetY = 4;
         FreeTypeFontGenerator generator = null;
 
         String filenam = "font.ttf";
         if (language.equalsIgnoreCase( "Chinese" )) {
-            filenam = "noto.otf";
+            filenam = "chinese.ttf";
         }
         if (language.equalsIgnoreCase( "Japanese" )) {
             filenam = "japanese.otf";
@@ -6610,7 +6607,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bWardate.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                Gdx.net.openURI( "https://play.google.com/store/apps/details?id=com.fantasy.final.apps.rustedwardate" );
+                Gdx.net.openURI( "https://play.google.com/store/apps/details?id=com.Black.Label.Apps.Ruster.WarDate" );
             }
         } );
 
@@ -6638,7 +6635,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bUIEditor.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-
+                assemblymode=false;
+                stamp=false;
                 backToMap();
                 loadInterface( "custominterface.json" );
                 kartu = "editor";
@@ -6651,7 +6649,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 switch (language) {
                     case "Chinese":
-                        Gdx.net.openURI( "http://jmjs.ys168.com/" );
+                        Gdx.net.openURI( "https://files.surely.my.id/index.php/s/9WD4DqmgeMoAgMe" );
                         break;
                     default:
                         Gdx.net.openURI( "https://play.google.com/store/apps/details?id=com.mirwanda.nottiled" );
@@ -11734,6 +11732,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 gotoStage(tAutoMgmt);
+                assemblymode=false;
                 refreshAutoMgmt();
             }
         });
@@ -17580,8 +17579,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     break;
                 case 3: //paste, at last.
                     if (movetool==selectTool.PICKER){
-                        curspr=layers.get(selLayer).getStr().get(num).intValue();
-                        addRecentTile( curspr );
+                        this.curspr=layers.get(selLayer).getStr().get(num).intValue();
+                        addRecentTile( this.curspr );
                         setTsetFromCurspr();
                         break;
                     }
@@ -19087,7 +19086,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private void setTsetFromCurspr(){
         for (int ii=0; ii<tilesets.size();ii++){
             tileset ts = tilesets.get(ii);
-            if (curspr >= ts.getFirstgid() && curspr < ts.getFirstgid()+ts.getTilecount()){
+            if (this.curspr >= ts.getFirstgid() && this.curspr < ts.getFirstgid()+ts.getTilecount()){
                 seltset= ii;
                 break;
             }
@@ -19849,7 +19848,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             guis at = new guis();
             at=gui;
             Json json = new Json();
-            writeThisAbs("NotTiled/sample/"+"custominterface.json", json.prettyPrint(at));
+            writeThisAbs(Gdx.files.getExternalStoragePath()+ "NotTiled/sample/"+"custominterface.json", json.prettyPrint(at));
             msgbox(z.saved);
 
             backToMap();
@@ -20025,6 +20024,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 return true;
             }
 
+            if (tapped( touch2, gui.addmacro )) {
+                editGUI( gui.addmacro );
+                return true;
+            }
 
             if (tapped( touch2, gui.info )) {
                 editGUI( gui.info );
