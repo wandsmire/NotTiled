@@ -9469,11 +9469,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         gridOpacity = prefs.getInteger("gridopacity", 5);
         lastpath = prefs.getString("lastpath", basepath+"NotTiled");
         isSampleReloaded = prefs.getBoolean("reloaded", false);
-        if (lastpath.startsWith(Gdx.files.getExternalStoragePath()))
-        {
-            lastpath = lastpath.substring(Gdx.files.getExternalStoragePath().length());
 
-        }
         //language= prefs.getString("language", "english");
         sShowGrid = prefs.getBoolean("grid", true);
 
@@ -13087,6 +13083,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             if (file.path().length() >= 0) {
                                 openedfile = file.path();
                                 lastpath = file.parent().path();
+                                log(lastpath);
                                 prefs.putString("lastpath", lastpath);
                                 prefs.flush();
                                 tujuanDialog(dialog, file);
@@ -13116,6 +13113,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         };
 
         FileHandle fhtest = Gdx.files.absolute( lastpath );
+        log("LP:"+lastpath);
         if (fhtest.exists()){
             fc.setDirectory(Gdx.files.absolute(lastpath));
         }else{
@@ -16255,6 +16253,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (seltset >= tilesets.size()) {
                             seltset = 0;
                         }
+                        curspr = tilesets.get(seltset).getFirstgid();
                         adjustPickAuto();
                         recenterpick();
                         resetMassprops();
@@ -16266,6 +16265,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (seltset <= -1) {
                             seltset = tilesets.size() - 1;
                         }
+                        curspr = tilesets.get(seltset).getFirstgid();
                         adjustPickAuto();
                         recenterpick();
                         resetMassprops();
@@ -16372,12 +16372,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     addRecentTile( curspr );
                     kartu = "world";
                     if (activetool == 1) activetool = 0;
+                    lastpickAuto = true;
                     cue( "tilepickclick" );
 
                 }
                 return true;
             }
         }
+
 
         if (touch.y < ts.getTileheight() && touch.y > -ts.getTileheight() * ts.getHeight() + ts.getTileheight() && touch.x > 0 && touch.x < ts.getTilewidth() * ts.getWidth()) {
             Integer num = ts.getFirstgid() + (ts.getWidth() * ((-ab + ts.getTileheight()) / ts.getTileheight()) + (ae / ts.getTilewidth()));
@@ -16388,6 +16390,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     curspr = num;
                     adjustLayer( ts );
                     addRecentTile( curspr );
+                    lastpickAuto=false;
                     kartu = "world";
                     if (activetool == 1) activetool = 0;
                     cue( "tilepickclick" );
@@ -17175,6 +17178,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     }
 
+    boolean lastpickAuto = false;
+
     public void tapTile(int num, boolean follower, boolean terra, boolean smartStamp, int curspr) {
         if (cammode == "View only") return;
         if (layers.size()==0) return;
@@ -17449,6 +17454,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (t == null) return;
                     if (!terra) return;
                     if (smartStamp) return;
+                    if (!lastpickAuto) return;
 
                     if (t.isTerrainForEditor() && t.isCenter()) {
                         //means aa will alwyas be the center
@@ -17970,6 +17976,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         findBestTile( aa[0], against );
                         //log( ATPath.getCount() + "" );
+                        if (ATPath==null) continue;
                         if (ATPath.getCount() <= 1) continue;
                         int ATid = ATPath.get( 1 ).name;
                         //log("Result="+ATid+"");
@@ -22970,13 +22977,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                             final int yyy = yy;
                                             final int Ttw = Tw;
                                             final int newcurspr = curspr;
+                                            final boolean stampy = stamp;
 
                                         try {
                                                 autotilePool.execute( new Runnable() {
                                                     @Override
                                                     public void run() {
-                                                        tapTile( numa + xxx + (yyy * Ttw), !firstonex, ft ,true,newcurspr);
+                                                        if (stampy) {
+                                                            tapTile( numa + xxx + (yyy * Ttw), !firstonex, ft, true, newcurspr );
+                                                        }else{
+                                                            tapTile( numa + xxx + (yyy * Ttw), !firstonex, ft, false, newcurspr );
 
+                                                        }
                                                     }
                                                 } );
                                             } catch (Exception e) {
