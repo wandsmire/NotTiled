@@ -81,6 +81,8 @@ public class guis
 	gui sw5=new gui();
 	gui sw6=new gui();
 
+	gui addmacro=new gui();
+
 	public guis(){
 		menu.setp(0,20,0,10);
 		map.setp(0,15,10,19);
@@ -135,6 +137,7 @@ public class guis
 		center.setp(85,100,81,90);
 		save.setp(0,15,19,28);
 		play.setp(0,15,28,37);
+		addmacro.setp(0,15,37,46);
 		minimap.setp(0,30,70,89);
 
 		canceltutorial.setp(30,70,20,30);
@@ -176,6 +179,8 @@ public class guis
 		map.setl(0,10,15,25);
 		save.setl(0,10,25,35);
 		play.setl(0,10,35,45);
+		addmacro.setl(0,10,45,55);
+
 		layerpick.setl(90,100,0,15);
 		center.setl(10,20,0,10);
 		picker.setl(45,55,0,15);
