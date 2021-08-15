@@ -1,0 +1,62 @@
+{
+vars: [
+	{
+		key: cave
+	}
+	{
+		key: win
+	}
+	{
+		key: defuse
+		value: 2
+		hud: true
+		iconx: 1
+		hasicon: true
+		keephud: true
+		icony: 4
+	}
+	{
+		key: energy
+		value: 100
+		hud: true
+		iconx: 3
+		hasicon: true
+		keephud: true
+	}
+	{
+		key: cave1
+	}
+	{
+		key: cave2
+	}
+	{
+		key: cave3
+	}
+	{
+		key: cave4
+		value: 1
+	}
+	{
+		key: cave5
+		value: 1
+	}
+	{
+		key: welcome
+		value: 1
+	}
+	{
+		key: nothing
+	}
+	{
+		key: killcave3
+		value: 1
+		hud: true
+		iconx: 2
+		hasicon: true
+		icony: 1
+	}
+]
+x: 4.052988
+y: 0.4049999
+mapname: cave3.tmx
+}

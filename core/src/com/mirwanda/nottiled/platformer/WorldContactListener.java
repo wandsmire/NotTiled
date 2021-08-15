@@ -103,6 +103,9 @@ public class WorldContactListener implements ContactListener {
 
             if (o.get( "load" ) != null) {
                 mygame.load();
+                mygame.gc.position.set( mygame.player.getX()+8/100f,mygame.player.getY(),0 );
+                mygame.gc.update();
+
             }
             if (o.get( "save" ) != null) {
                 mygame.save();
@@ -130,6 +133,10 @@ public class WorldContactListener implements ContactListener {
                     mygame.bgm.stop();
                     mygame.loadingmap = true;
                     mygame.initialise( mygame.path, o.get( "transfer" ).toString() );
+                    mygame.gc.position.set( mygame.player.getX()+8/100f,mygame.player.getY()+8/100f,0 );
+                    mygame.gc.update();
+
+
 
                 }
             }

@@ -1,5 +1,7 @@
 package com.mirwanda.nottiled;
 
+import java.io.InputStream;
+
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 
@@ -26,9 +28,25 @@ public class nullInterface implements Interface {
 
     @Override
     public String getVersione() {
-        return "1.6.9a";
+        return "1.7.0";
     }
 
+    @Override
+    public String getFilename() {
+        return null;
+    }
+
+    @Override
+    public String getStatus() {
+        return null;
+    }
+
+    @Override
+    public byte[] getData() {
+        return null;
+    }
+
+    /*
     @Override
     public String openDialog() {
         pet="";
@@ -86,17 +104,8 @@ public class nullInterface implements Interface {
         } ).start();
         return null;
     }
+*/
 
-    String pet="";
-    @Override
-    public String opet() {
-        return pet;
-    }
-
-    @Override
-    public String saveDialog() {
-        return null;
-    }
 
     @Override
     public void speak(String s) {
@@ -105,6 +114,31 @@ public class nullInterface implements Interface {
 
     @Override
     public void changelanguage(String lang) {
+
+    }
+
+    @Override
+    public void saveFile(String data) {
+
+    }
+
+    @Override
+    public void saveasFile(String data, String aaa) {
+
+    }
+
+    @Override
+    public void saveasFile(byte[] data, String aaa) {
+
+    }
+
+    @Override
+    public void openFile() {
+
+    }
+
+    @Override
+    public void newFile() {
 
     }
 }

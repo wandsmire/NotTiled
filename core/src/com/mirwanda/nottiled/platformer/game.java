@@ -243,6 +243,7 @@ public class game {
 
             }
 
+
             nextlevel = (String) mpa.get( "nextlevel" );
             debriefing = (String) mpa.get( "debriefing" );
             died = "GAME OVER";
@@ -257,6 +258,7 @@ public class game {
 
             return true;
         }
+
 
 
         victory=false;
@@ -674,6 +676,7 @@ public class game {
 
     public void respawn(){
         load();
+
     }
 
     public void keyinput(){
@@ -855,6 +858,10 @@ public class game {
             bgm.stop();
             loadingmap = true;
             initialise( path, at.mapname );
+            gc.position.set( player.getX()+8/100f,player.getY()-8/100f,0 );
+            gc.update();
+
+
 
             Gdx.app.postRunnable( new Runnable() {
 
@@ -999,6 +1006,7 @@ public class game {
 
                     newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLAYER, objx, t, over );
                     player = newbrick;
+
                     break;
                 case "brick":
                     newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.BRICK, objx, t, over );

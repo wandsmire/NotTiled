@@ -1,6 +1,6 @@
 android {
-    buildToolsVersion "29.0.2"
-    compileSdkVersion 29
+    buildToolsVersion "30.0.3"
+    compileSdkVersion 30
     sourceSets {
         main {
             manifest.srcFile 'AndroidManifest.xml'
@@ -19,9 +19,9 @@ android {
     defaultConfig {
         applicationId "com.mirwanda.nottiled"
         minSdkVersion 19
-        targetSdkVersion 29
+        targetSdkVersion 30
         versionCode 73
-        versionName "1.6.9a"
+        versionName "1.7.0 aplha 14/08/21"
     }
     buildTypes {
         release {
@@ -47,7 +47,7 @@ task copyAndroidNatives {
             def outputDir = null
             if (jar.name.endsWith("natives-arm64-v8a.jar")) outputDir = file("libs/arm64-v8a")
             if (jar.name.endsWith("natives-armeabi-v7a.jar")) outputDir = file("libs/armeabi-v7a")
-            if(jar.name.endsWith("natives-armeabi.jar")) outputDir = file("libs/armeabi")
+//            if(jar.name.endsWith("natives-armeabi.jar")) outputDir = file("libs/armeabi")
             if(jar.name.endsWith("natives-x86_64.jar")) outputDir = file("libs/x86_64")
             if(jar.name.endsWith("natives-x86.jar")) outputDir = file("libs/x86")
             if(outputDir != null) {
