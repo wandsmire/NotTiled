@@ -106,7 +106,7 @@ public class gameobject extends Sprite {
 
         ///
         meledak = new ParticleEffect();
-        meledak.load( mygame.getFile( mygame.path + "/died.p" ), mygame.getFile( mygame.path ) );
+        meledak.load( Gdx.files.internal("platformer/died.p"), Gdx.files.internal("platformer"));
         meledak.getEmitters().first().setPosition( Gdx.graphics.getWidth() / 2, Gdx.graphics.getHeight() / 2);
         meledak.scaleEffect(0.001f, 0.001f); //kudu disini
         ///
@@ -132,7 +132,7 @@ public class gameobject extends Sprite {
 
         }
 
-        if(anim.size()!=0){
+        if(anim.size()>0){
             setSize(anim.get( 0 ).getKeyFrame( 0 ).getRegionWidth()/100f, anim.get( 0 ).getKeyFrame( 0 ).getRegionWidth()/100f );
         }
 
@@ -254,6 +254,10 @@ public class gameobject extends Sprite {
                 break;
             case CHECKPOINT:
             case FLOATER: case SINKER:
+
+            case TRANSFER:
+            case ITEM:
+            case LISTENER:
                 fdef.filter.categoryBits = game.COIN_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 bdef.type = type;
@@ -283,22 +287,8 @@ public class gameobject extends Sprite {
 
                 break;
 
-            case TRANSFER: case ITEM: case LISTENER:
-                fdef.filter.categoryBits = game.COIN_BIT;
-                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
-                bdef.type = type;
-                bdef.position.set((xx + Tpx) / 100f, (yy + Tpy) / 100f);
-                body = world.createBody(bdef);
-                shape.setAsBox(Tswh / 100f, Tshh / 100f);
-                fdef.shape = shape;
-                fdef.isSensor = true;
-                fixture = body.createFixture(fdef);
-                fixture.setUserData(this);
+            //setCategoryFilter(game.COIN_BIT);
 
-                //setCategoryFilter(game.COIN_BIT);
-
-
-                break;
 
             case PLAYERPROJECTILE:
                 fdef.filter.categoryBits = game.PLAYERPROJECTILE_BIT;
@@ -588,7 +578,10 @@ public class gameobject extends Sprite {
 
        if (body!=null) setPosition(body.getPosition().x-getWidth()/2f,body.getPosition().y-getHeight()/2f);
         if (HP>maxHP) HP=maxHP;
-        if (rotating) rotate(5f);
+        if (rotating) {
+            setOriginCenter();
+            rotate(10f);
+        }
         if (cooldown >=0) cooldown-=dt;
         if (destructible){
             assert body != null;
@@ -645,34 +638,6 @@ public class gameobject extends Sprite {
                 break;
 
             case PLAYERPROJECTILE:
-
-                switch(dir){
-                    case 0://bawah
-                        body.setLinearVelocity(spread, -speed);
-                        break;
-                    case 1://kanan
-                        body.setLinearVelocity(speed, spread);
-                        break;
-                    case 2://kiri
-                        body.setLinearVelocity(-speed, spread);
-                        break;
-                    case 3://atas
-                        body.setLinearVelocity(spread, speed);
-                        break;
-                }
-                distance+=speed;
-                if (distance>maxdistance){
-                    setCategoryFilter(game.DESTROYED_BIT);
-                    body.setLinearVelocity( 0,0 );
-                    state=states.DEAD;
-
-                }
-                if (anim!=null) {
-                    TextureRegion currentFrame = anim.get( dir ).getKeyFrame( mygame.stateTime, true );
-                    setRegion( currentFrame );
-                }
-
-                break;
             case ENEMYPROJECTILE:
 
                 switch(dir){
@@ -693,20 +658,52 @@ public class gameobject extends Sprite {
                 if (distance>maxdistance){
                     setCategoryFilter(game.DESTROYED_BIT);
                     body.setLinearVelocity( 0,0 );
-
                     state=states.DEAD;
 
-
                 }
-
-                //if (moving) {
-                if (anim!=null) {
+                if (anim.size()>0) {
                     TextureRegion currentFrame = anim.get( dir ).getKeyFrame( mygame.stateTime, true );
                     setRegion( currentFrame );
+                }else{
+                    if (!rotating) {
+                        if (mygame.rpg) {
+                            setOriginCenter();
+                            switch (dir) {
+                                case 0: //down
+                                    setRotation( 180 );
+                                    break;
+                                case 1: //right
+                                    setRotation( 270 );
+                                    break;
+                                case 2: //left
+                                    setRotation( 90 );
+                                    break;
+                                case 3: //up
+                                    setRotation( 0 );
+                                    break;
+                            }
+                        } else {
+                            switch (dir) {
+                                case 0: //down
+                                    break;
+                                case 1: //right
+                                    setFlip( true, false );
+                                    break;
+                                case 2: //left
+                                    setFlip( false, false );
+                                    break;
+                                case 3: //up
+                                    break;
+                            }
+                        }
+                    }
+
                 }
-                //}
 
                 break;
+
+            //if (moving) {
+            //}
 
             case MONSTER:
 
@@ -741,6 +738,40 @@ public class gameobject extends Sprite {
                         setRegion( currentFrame );
 
                     }
+                }else{
+                    if (!rotating) {
+                        if (mygame.rpg) {
+                            setOriginCenter();
+                            switch (dir) {
+                                case 0: //down
+                                    setRotation( 180 );
+                                    break;
+                                case 1: //right
+                                    setRotation( 270 );
+                                    break;
+                                case 2: //left
+                                    setRotation( 90 );
+                                    break;
+                                case 3: //up
+                                    setRotation( 0 );
+                                    break;
+                            }
+                        } else {
+                            switch (dir) {
+                                case 0: //down
+                                    break;
+                                case 1: //right
+                                    setFlip( true, false );
+                                    break;
+                                case 2: //left
+                                    setFlip( false, false );
+                                    break;
+                                case 3: //up
+                                    break;
+                            }
+                        }
+                    }
+
                 }
 
 
@@ -828,8 +859,46 @@ public class gameobject extends Sprite {
 
                     }
                 }else{
-                    if (mygame.rpg || stepping)  body.setLinearVelocity( 0, 0 );
-                    body.setLinearVelocity(body.getLinearVelocity().x, body.getLinearVelocity().y);
+
+
+                    if (anim.size()>0) {
+                        if (mygame.rpg || stepping) body.setLinearVelocity( 0, 0 );
+                        body.setLinearVelocity( body.getLinearVelocity().x, body.getLinearVelocity().y );
+                    }else{
+                        if (!rotating) {
+                            if (mygame.rpg) {
+                                setOriginCenter();
+                                switch (dir) {
+                                    case 0: //down
+                                        setRotation( 180 );
+                                        break;
+                                    case 1: //right
+                                        setRotation( 270 );
+                                        break;
+                                    case 2: //left
+                                        setRotation( 90 );
+                                        break;
+                                    case 3: //up
+                                        setRotation( 0 );
+                                        break;
+                                }
+                            } else {
+                                switch (dir) {
+                                    case 0: //down
+                                        break;
+                                    case 1: //right
+                                        setFlip( true, false );
+                                        break;
+                                    case 2: //left
+                                        setFlip( false, false );
+                                        break;
+                                    case 3: //up
+                                        break;
+                                }
+                            }
+                        }
+
+                    }
                 }
 
                 break;

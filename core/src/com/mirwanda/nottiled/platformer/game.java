@@ -136,12 +136,12 @@ public class game {
         particles.clear();
 
 
-        Texture tmp = new Texture( getFile( path + "/hpbar.png") );
+        Texture tmp = new Texture( Gdx.files.internal("platformer/hpbar.png"));
         hpbar = TextureRegion.split( tmp,
                 tmp.getWidth(),
                 tmp.getHeight() / 2 );
 
-        tmp = new Texture( getFile( path + "/icons.png") );
+        tmp = new Texture(Gdx.files.internal("platformer/icons.png") );
         icons = TextureRegion.split( tmp,
                 tmp.getWidth() / 5,
                 tmp.getHeight() / 5 );
@@ -176,9 +176,9 @@ public class game {
 
 
         for (MapLayer mlayer: map.getLayers()){
-            if (mlayer.getName().startsWith( "Tile" )) {
+            if (mlayer.getName().toLowerCase().startsWith( "tile" )) {
                 boolean over = false;
-                if (mlayer.getName().equalsIgnoreCase( "Tile 3" )){
+                if (mlayer.getName().contains( "*" )){
                     over=true;
                 }
                 TiledMapTileLayer tlayer = (TiledMapTileLayer) mlayer;
@@ -197,7 +197,7 @@ public class game {
                         setGameObject(false, cece,xx*Tsw,yy*Tsh,ww,hh,over, null);
                     }
                 }
-            } else if (mlayer.getName().startsWith( "Object" )) {
+            } else if (mlayer.getName().toLowerCase().startsWith( "object" )) {
                 MapObjects objects = map.getLayers().get(mlayer.getName()).getObjects();
                 for (MapObject o: objects){
                     Rectangle rect;
@@ -251,7 +251,7 @@ public class game {
         } else {
             RectangleMapObject o = new RectangleMapObject(  );
             o.getProperties().put( "name","player" );
-            o.getProperties().put( "anim",": \nPlease add one player object" );
+            //o.getProperties().put( "anim",": \nPlease add one player object" );
             RectangleMapObject obj = (RectangleMapObject) o;
             Rectangle rect = obj.getRectangle();
             setGameObject(true,null,rect.x,rect.y,rect.width,rect.height,false,o);
@@ -453,34 +453,89 @@ public class game {
 
         stateTime += delta;
         if (starting){
-            TextureRegion currentFramea = player.anim.get(player.dir).getKeyFrame(0, true);
-            player.setRegion(currentFramea);
+            if (player.anim.size()>0) {
+                TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( 0, true );
+                player.setRegion( currentFramea );
+            }
 
         }
+
+        //moving
         else if (player.moving && (!jumping || onplatformv) && (!ladder && !floater && !sinker))
         {
             playerTime +=delta;
-            TextureRegion currentFramea = player.anim.get(player.dir).getKeyFrame(playerTime, true);
-            player.setRegion(currentFramea);
+            if (player.anim.size()>0) {
+
+                TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( playerTime, true );
+                player.setRegion( currentFramea );
+            }else{
+
+
+                if (rpg){
+                    player.setOriginCenter();
+                    switch (player.dir){
+                        case 0: //down
+                            player.setRotation( 180);
+                            break;
+                        case 1: //right
+                            player.setRotation( 270);
+                            break;
+                        case 2: //left
+                            player.setRotation( 90);
+                            break;
+                        case 3: //up
+                            player.setRotation( 0);
+                            break;
+                    }
+                }else{
+                    switch (player.dir){
+                        case 0: //down
+                            break;
+                        case 1: //right
+                            player.setFlip( true,false );
+                            break;
+                        case 2: //left
+                            player.setFlip( false,false );
+                            break;
+                        case 3: //up
+                            break;
+                    }
+                }
+
+            }
         }
+
+        //jumping
         else if (jumping && !ladder && !floater && !sinker && !onplatformv) {
-            TextureRegion currentFramea = player.anim.get(player.dir).getKeyFrame(0.5f, true);
-            player.setRegion(currentFramea);
+            if (player.anim.size()>0) {
+
+                TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( 0.5f, true );
+                player.setRegion( currentFramea );
+
+            }
+            if (rpg) jumping=false;
+
         }
         else if ((ladder || floater || sinker) && player.moving )
         {
             if (ladder) player.dir=3;
 
             playerTime +=delta;
+            if (player.anim.size()>0) {
 
-            TextureRegion currentFramea = player.anim.get(player.dir).getKeyFrame(playerTime, true);
-            player.setRegion(currentFramea);
+                TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( playerTime, true );
+                player.setRegion( currentFramea );
+            }
 
         }else
         {
             //idle animation if you will...
-            TextureRegion currentFramea = player.anim.get(player.dir).getKeyFrame(0, true);
-            player.setRegion(currentFramea);
+
+            if (player.anim.size()>0) {
+
+                TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( 0, true );
+                player.setRegion( currentFramea );
+            }
         }
 
 
@@ -855,10 +910,10 @@ public class game {
             at = json.fromJson( savegame.class, f );
             save = at;
 
-            bgm.stop();
+            if (bgm!=null) bgm.stop();
             loadingmap = true;
             initialise( path, at.mapname );
-            gc.position.set( player.getX()+8/100f,player.getY()-8/100f,0 );
+            gc.position.set( player.getX(),player.getY(),0 );
             gc.update();
 
 
@@ -872,7 +927,7 @@ public class game {
                 }
             } );
         }catch(Exception e){
-
+            e.printStackTrace();
         }
 
     }
@@ -988,24 +1043,29 @@ public class game {
         if (o.containsKey( "name" )) {
             switch (o.get( "name" ).toString()) {
                 case "player":
+                    if (o.containsKey( "anim" )){
                     String anim = o.get( "anim" ).toString();
-                    Texture txPlayer = new Texture( getFile( path + "/" + anim ) );
-                    TextureRegion[][] tmp = TextureRegion.split( txPlayer,
-                            txPlayer.getWidth() / 4,
-                            txPlayer.getHeight() / 4 );
 
-                    for (int i = 0; i < 4; i++) {
-                        TextureRegion[] walkFrames = new TextureRegion[4];
-                        int index = 0;
-                        for (int j = 0; j < 4; j++) {
-                            walkFrames[index++] = tmp[i][j];
+                        Texture txPlayer = new Texture( getFile( path + "/" + anim ) );
+                        TextureRegion[][] tmp = TextureRegion.split( txPlayer,
+                                txPlayer.getWidth() / 4,
+                                txPlayer.getHeight() / 4 );
+
+                        for (int i = 0; i < 4; i++) {
+                            TextureRegion[] walkFrames = new TextureRegion[4];
+                            int index = 0;
+                            for (int j = 0; j < 4; j++) {
+                                walkFrames[index++] = tmp[i][j];
+                            }
+                            Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
+                            newbrick.anim.add( tempAnim );
                         }
-                        Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
-                        newbrick.anim.add( tempAnim );
                     }
 
+                    log("setupping game object");
                     newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLAYER, objx, t, over );
                     player = newbrick;
+                    log("player set");
 
                     break;
                 case "brick":
@@ -1123,9 +1183,9 @@ public class game {
                     Vector2 pimgsize = new Vector2( 16f, 16f );
 
                     if (o.containsKey( "anim" )) {
-                        anim = o.get( "anim" ).toString();
+                        String anim = o.get( "anim" ).toString();
                         Texture txMonster = new Texture( getFile( path + "/" + anim ) );
-                        tmp = TextureRegion.split( txMonster,
+                        TextureRegion[][] tmp = TextureRegion.split( txMonster,
                                 txMonster.getWidth() / 4,
                                 txMonster.getHeight() / 4 );
                         imgsize = new Vector2( txMonster.getWidth() / 4, txMonster.getHeight() / 4 );
@@ -1138,12 +1198,14 @@ public class game {
                             Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
                             newbrick.anim.add( tempAnim );
                         }
+
+
                     }
 
                     if (o.containsKey( "panim" )) {
-                        anim = o.get( "panim" ).toString();
+                        String anim = o.get( "panim" ).toString();
                         Texture txMonster = new Texture( getFile( path + "/" + anim ) );
-                        tmp = TextureRegion.split( txMonster,
+                        TextureRegion[][] tmp = TextureRegion.split( txMonster,
                                 txMonster.getWidth() / 4,
                                 txMonster.getHeight() / 4 );
                         newbrick.pimagesize = new Vector2( txMonster.getWidth() / 4, txMonster.getHeight() / 4 );

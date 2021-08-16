@@ -1392,7 +1392,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             if (mygame.debugmode)
                                 mygame.b2dr.render( mygame.world, gamecam.combined );
 
-
                             batch.end();
                         }else{
                             batch.setProjectionMatrix( gamecam.combined );
@@ -1802,6 +1801,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void escapegame() {
         kartu = "world";
+        if (mygame.bgm==null) return;
         if (mygame.bgm.isPlaying()) mygame.bgm.stop();
     }
 
@@ -9599,7 +9599,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void loadPreferences() {
         swatches = prefs.getBoolean("swatches", true);
-        nativefilechooser = true;//prefs.getBoolean( "nativefc", true );
+
+        switch(Gdx.app.getType()) {
+            case Android:
+                nativefilechooser = true;//prefs.getBoolean( "nativefc", true );
+                break;
+            case Desktop:
+                nativefilechooser = false;//prefs.getBoolean( "nativefc", true );
+        }
         rwpath = prefs.getString("rwpath", basepath+"RustedWarfare");
         if (rwpath.equalsIgnoreCase( "/RustedWarfare" )) rwpath = basepath+"RustedWarfare";
         autosaveInterval = prefs.getInteger("interval", 1);
@@ -13608,7 +13615,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (cocos.endsWith("/")) cocos = cocos.substring(0, cocos.length() - 1);
 
 
-            t.setSource(cocos);
+            t.setSource(f.name());
             int Tswa = s.getWidth();
             int Tsha = s.getHeight();
             if (!fImportWidth.getText().equalsIgnoreCase( "" )) {
@@ -22644,7 +22651,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             gamecam.position.set(mygame.player.body.getPosition().x,mygame.player.body.getPosition().y,0);
             gamecam.update();
         }catch(Exception e){
-            msgbox(e.toString().substring( e.toString().indexOf( ":" )+2 ));
+            e.printStackTrace();
         }
 
     }
