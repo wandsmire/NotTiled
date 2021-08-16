@@ -9599,7 +9599,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void loadPreferences() {
         swatches = prefs.getBoolean("swatches", true);
-        nativefilechooser = prefs.getBoolean( "nativefc", true );
+        nativefilechooser = true;//prefs.getBoolean( "nativefc", true );
         rwpath = prefs.getString("rwpath", basepath+"RustedWarfare");
         if (rwpath.equalsIgnoreCase( "/RustedWarfare" )) rwpath = basepath+"RustedWarfare";
         autosaveInterval = prefs.getInteger("interval", 1);
@@ -14431,6 +14431,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void loadmap(String filepath) {
         stamp=false;
         assemblymode=false;
+        lastpickAuto=true;
         FileHandle ffx = Gdx.files.absolute(filepath);
 
         log("loading map :"+filepath);
