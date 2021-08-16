@@ -112,6 +112,12 @@ public class game {
 
     public float jumpinterval=0;
     public float stompinterval=0;
+    public float fade=0;
+    public float fadein=0;
+    public float fadeinmax=20;
+    public float fadeout=0;
+    public float fadeoutmax=10;
+
     float stateTime, playerTime;
 
     public static final short DEFAULT_BIT = 1;
@@ -132,6 +138,7 @@ public class game {
     public boolean initialise(String path, String filename){
         this.path = path;
         this.file = filename;
+        fade=10;
         rpg=false;
         particles.clear();
 
@@ -173,6 +180,49 @@ public class game {
         stateTime = 0f;
         playerTime = 0f;
 
+        ////
+        MapProperties mpa = map.getProperties();
+        if (mpa != null) {
+            String bgms = (String) mpa.get( "bgm" );
+            if (bgms != null) {
+
+                if (getFile( path + "/" + bgms ).exists()) {
+                    bgm = Gdx.audio.newMusic( getFile( path + "/" + bgms ) );
+                    bgm.setLooping( true );
+                    bgm.play();
+                }
+            }
+
+            String type = (String) mpa.get( "type" );
+            if (type != null) {
+                if (type.equalsIgnoreCase( "NotTiled platformer" )) {
+                    rpg = false;
+                }
+                if (type.equalsIgnoreCase( "NotTiled rpg" )) {
+                    rpg = true;
+                }
+            } else {
+                rpg = true;
+            }
+
+
+            String bgc = (String) mpa.get( "background" );
+            if (bgc != null) {
+
+                if (getFile( path + "/" + bgc ).exists()) {
+                    txBackground = new Texture( getFile( path + "/" + bgc ) );
+                } else {
+                    txBackground = null;
+                }
+
+            }
+
+
+            nextlevel = (String) mpa.get( "nextlevel" );
+            debriefing = (String) mpa.get( "debriefing" );
+            died = "GAME OVER";
+        }
+            ////
 
 
         for (MapLayer mlayer: map.getLayers()){
@@ -217,38 +267,8 @@ public class game {
             }
         }
 
-        if (player!=null){
+        if (player==null){
 
-        MapProperties mpa = map.getProperties();
-        if (mpa != null) {
-            String bgms = (String) mpa.get( "bgm" );
-            if (bgms != null) {
-
-                if (getFile( path + "/" + bgms ).exists()) {
-                    bgm = Gdx.audio.newMusic( getFile( path + "/" + bgms ) );
-                    bgm.setLooping( true );
-                    bgm.play();
-                }
-            }
-
-
-            String bgc = (String) mpa.get( "background" );
-            if (bgc != null) {
-
-                if (getFile( path + "/" + bgc ).exists()) {
-                    txBackground = new Texture( getFile( path + "/" + bgc ) );
-                } else {
-                    txBackground = null;
-                }
-
-            }
-
-
-            nextlevel = (String) mpa.get( "nextlevel" );
-            debriefing = (String) mpa.get( "debriefing" );
-            died = "GAME OVER";
-        }
-        } else {
             RectangleMapObject o = new RectangleMapObject(  );
             o.getProperties().put( "name","player" );
             //o.getProperties().put( "anim",": \nPlease add one player object" );
@@ -259,11 +279,10 @@ public class game {
             return true;
         }
 
-
-
         victory=false;
         loadingmap=false;
         //save();
+        fadein=fadeinmax;
         return false;
 
 
@@ -403,12 +422,14 @@ public class game {
     public void update(SpriteBatch batch, float delta, OrthographicCamera gamecam) {
         gc=gamecam;
         if (!starting && player.state!=DEAD) world.step(1/60f,6,2);
+
         if (player.HP<=0){
             killPlayer();
         }
         if (player.HP>player.maxHP){
             player.HP=player.maxHP;
         }
+
 
         checkHUD();
 
@@ -442,14 +463,48 @@ public class game {
         float posex = player.body.getPosition().x;
         float posey = player.body.getPosition().y;
 
-        float lerp = 5f;
-        Vector3 position = gamecam.position;
-        position.x += (posex - position.x) * lerp * delta;
-        position.y += (posey - position.y) * lerp * delta;
-        position.x = Math.round( position.x *500)/500f;
-        position.y = Math.round( position.y *500)/500f;
+        if (fade==0) {
+            float lerp = 5f;
+            Vector3 position = gamecam.position;
+            position.x += (posex - position.x) * lerp * delta;
+            position.y += (posey - position.y) * lerp * delta;
+            position.x = Math.round( position.x * 500 ) / 500f;
+            position.y = Math.round( position.y * 500 ) / 500f;
 
-        gamecam.update();
+            gamecam.update();
+        }else{
+            Vector3 position = gamecam.position;
+            position.x = posex;
+            position.y=posey;
+            gamecam.update();
+        }
+
+        //log(fadeout+"");
+        if (fadeout>0){
+            fadeout--;
+            if (fadeout == 0) {
+                initialise( fadepath,fademapname );
+                Gdx.app.postRunnable( new Runnable() {
+
+                    @Override
+                    public void run() {
+                        player.body.setTransform( save.x, save.y, 0 );
+                        player.body.setLinearVelocity( 0, 0 );
+                    }
+                } );
+
+            }
+        }
+
+
+        if (fade>0){
+            fade--;
+            if (fade > 0) {
+                return;
+            }
+        }
+
+        if (fadein>0) fadein--;
 
         stateTime += delta;
         if (starting){
@@ -902,6 +957,17 @@ public class game {
         file.writeString(json.prettyPrint(save), false);
     }
 
+
+    public String fadepath;
+    public String fademapname;
+    public void fadeinitialise(String path, String mapname){
+        if (fadeout>0) return;
+        fadepath=path;
+        fademapname=mapname;
+        fadeout=fadeoutmax;
+        log(fadeout+"");
+    }
+
     public void load(){
         try {
             savegame at = new savegame();
@@ -912,20 +978,8 @@ public class game {
 
             if (bgm!=null) bgm.stop();
             loadingmap = true;
-            initialise( path, at.mapname );
-            gc.position.set( player.getX(),player.getY(),0 );
-            gc.update();
+            fadeinitialise( path, at.mapname );
 
-
-
-            Gdx.app.postRunnable( new Runnable() {
-
-                @Override
-                public void run() {
-                    player.body.setTransform( save.x, save.y, 0 );
-                    player.body.setLinearVelocity( 0, 0 );
-                }
-            } );
         }catch(Exception e){
             e.printStackTrace();
         }

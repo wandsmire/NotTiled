@@ -1379,7 +1379,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         batch.end();
 
                         mygame.renderer.setView( gamecam );
-                        if (!mygame.loadingmap) {
+
                             mygame.renderer.render();
                             batch.setProjectionMatrix( gamecam.combined );
                             batch.begin();
@@ -1393,13 +1393,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 mygame.b2dr.render( mygame.world, gamecam.combined );
 
                             batch.end();
-                        }else{
-                            batch.setProjectionMatrix( gamecam.combined );
-                            batch.begin();
-                            Gdx.gl.glClear( GL20.GL_COLOR_BUFFER_BIT );
-                            batch.end();
 
-                        }
                         postProcessor.render();
 
 
@@ -1413,7 +1407,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         uis.begin( ShapeRenderer.ShapeType.Filled );
                         uis.setColor( 0f, 0f, 0, 0.6f );
                         if (Gdx.app.getType() != Application.ApplicationType.Desktop || mygame.uitest) {
-                            if (!mygame.starting && mygame.player.state != gameobject.states.DEAD) {
+                            if (!mygame.starting && mygame.player.state != gameobject.states.DEAD && mygame.fade==0) {
 
                                 uisrect( gui.left, mouse, null );
                                 uisrect( gui.right, mouse, null );
@@ -1428,7 +1422,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         //uisrect(gui.restart,mouse,null);
                         if (mygame.player.state == gameobject.states.DEAD || (mygame.victory && mygame.nextlevel != null) || mygame.starting)
                             uisrect( gui.respawn, mouse, new Color( 0, 1f, 0, 1f ) );
-                        if (mygame.playtest) uisrect( gui.exit, mouse, null );
+                        if (mygame.playtest  && mygame.fade==0) uisrect( gui.exit, mouse, null );
                         if (mygame.victory || mygame.player.state == gameobject.states.DEAD || mygame.starting)
                             uisrect( gui.gamestatus, mouse, null );
                         uis.end();
@@ -1465,7 +1459,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         //str1draw(ui,"Keys : "+mygame.key+" | Items Left : "+mygame.coin , gui.layer);
                         if (Gdx.app.getType() != Application.ApplicationType.Desktop || mygame.uitest) {
-                            if (!mygame.starting && mygame.player.state != gameobject.states.DEAD) {
+                            if (!mygame.starting && mygame.player.state != gameobject.states.DEAD  && mygame.fade==0) {
                                 uidrawbutton( txLeft, "Left", gui.left, 3 );
                                 uidrawbutton( txDown, "Down", gui.down, 3 );
                                 uidrawbutton( txRight, "Right", gui.right, 3 );
@@ -1487,9 +1481,31 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (mygame.victory && mygame.nextlevel != null)
                             str1draw( ui, "Next Level", gui.respawn );
                         if (mygame.starting) str1draw( ui, "OK", gui.respawn );
-                        if (mygame.playtest) str1draw( ui, "Exit", gui.exit );
-                        ui.end();
+                        if (mygame.playtest && mygame.fade==0) str1draw( ui, "Exit", gui.exit );
+                        if (mygame.fade>0) str1draw( ui, "Loading...", gui.respawn );
 
+                        ui.end();
+                        if (mygame.fadein>0) {
+                            uis.begin( ShapeRenderer.ShapeType.Filled );
+                            Gdx.gl.glEnable( GL20.GL_BLEND );
+                            Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
+
+                            uis.setColor( 0f, 0f, 0, mygame.fadein / mygame.fadeinmax );
+                            if (landscape) uis.rect( 0, 0, ssy, ssx );
+                            if (!landscape) uis.rect( 0, 0, ssx, ssy );
+                            uis.end();
+                        }
+
+                        if (mygame.fadeout>0) {
+                            uis.begin( ShapeRenderer.ShapeType.Filled );
+                            Gdx.gl.glEnable( GL20.GL_BLEND );
+                            Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
+
+                            uis.setColor( 0f, 0f, 0, 1-((mygame.fadeout-1) / mygame.fadeoutmax) );
+                            if (landscape) uis.rect( 0, 0, ssy, ssx );
+                            if (!landscape) uis.rect( 0, 0, ssx, ssy );
+                            uis.end();
+                        }
 
                         break;
                     case "world":

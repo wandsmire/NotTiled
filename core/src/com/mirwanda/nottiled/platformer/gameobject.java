@@ -60,7 +60,6 @@ public class gameobject extends Sprite {
     public float light;
     public Color lightColor = Color.WHITE;
 
-
     ////
     public boolean chase;
     public float chaseRadius;
@@ -573,6 +572,8 @@ public class gameobject extends Sprite {
     public boolean rotating;
     public void update(float dt){
         if (state==states.DEAD) return;
+
+
 
 
 
