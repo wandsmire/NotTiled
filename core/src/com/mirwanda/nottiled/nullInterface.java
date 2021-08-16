@@ -1,6 +1,7 @@
 package com.mirwanda.nottiled;
 
 import java.io.InputStream;
+import java.util.List;
 
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -37,12 +38,27 @@ public class nullInterface implements Interface {
     }
 
     @Override
+    public String getUri() {
+        return null;
+    }
+
+    @Override
     public String getStatus() {
         return null;
     }
 
     @Override
     public byte[] getData() {
+        return null;
+    }
+
+    @Override
+    public List<byte[]> getDatas() {
+        return null;
+    }
+
+    @Override
+    public List<String> getFilenames() {
         return null;
     }
 
@@ -141,4 +157,16 @@ public class nullInterface implements Interface {
     public void newFile() {
 
     }
+
+    @Override
+    public void selectFolder() {
+
+    }
+
+    @Override
+    public String getdatafromURI(String URI) {
+        return null;
+    }
+
+
 }

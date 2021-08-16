@@ -1,11 +1,13 @@
 package com.mirwanda.nottiled;
 
 import android.*;
+import android.annotation.TargetApi;
 import android.content.*;
 import android.content.pm.*;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.*;
+import android.provider.DocumentsContract;
 import android.provider.OpenableColumns;
 import android.speech.tts.*;
 
@@ -35,6 +37,7 @@ public class MainActivity extends AndroidApplication implements Interface
 	private static final int SAVE_REQUEST_CODE = 42;
 	private static final int SAVEAS_REQUEST_CODE = 43;
 	private static final int BINARY_CREATE_CODE = 39;
+	private static final int REQUEST_TREE_CODE = 45;
 	Uri currentMAP = null;
 	SharedPreferences myPrefs;
 	SharedPreferences.Editor prefs;
@@ -112,8 +115,23 @@ public class MainActivity extends AndroidApplication implements Interface
 	}
 
 	@Override
+	public java.util.List<byte[]> getDatas() {
+		return SAFdatas;
+	}
+
+	@Override
 	public String getFilename() {
 		return SAFfilename;
+	}
+
+	@Override
+	public String getUri() {
+		return SAFuri;
+	}
+
+	@Override
+	public java.util.List<String> getFilenames() {
+		return SAFfilenames;
 	}
 
 	@Override
@@ -393,6 +411,31 @@ public class MainActivity extends AndroidApplication implements Interface
 	}
 
 	@Override
+	public void selectFolder()
+	{
+		SAFstatus="";
+		SAFdata=null;
+		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+		startActivityForResult(intent, REQUEST_TREE_CODE);
+	}
+
+	@Override
+	public String getdatafromURI(String URI)
+	{
+		currentMAP = Uri.parse(URI);
+		//
+		prefs.putString("url", currentMAP.toString());
+		prefs.commit();
+		try {
+			String s = readFileContent( currentMAP );
+			return s;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	@Override
 	public void saveFile(String data)
 	{
 		if (currentMAP ==null) {
@@ -441,9 +484,15 @@ public class MainActivity extends AndroidApplication implements Interface
 		startActivityForResult(intent, BINARY_CREATE_CODE);
 	}
 
+
+	java.util.List<byte[]> SAFdatas = new ArrayList<byte[]>();
+	java.util.List<String> SAFfilenames = new ArrayList<String>();
+
 	byte[] SAFdata;
 	String SAFfilename="";
+	String SAFuri="";
 	String SAFstatus="";
+
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent resultData) {
 		//mCheckout.onActivityResult(requestCode, resultCode, data);
@@ -455,10 +504,18 @@ public class MainActivity extends AndroidApplication implements Interface
 				if (resultData != null) {
 					Uri uri = resultData.getData();
 					writeFileContent( uri, tmpdata);
+					SAFuri = uri.toString();
+					SAFfilename = getFileName( uri );
+
 					if (SAFfilename.endsWith( "tmx" )){
 						currentMAP = resultData.getData();
 						prefs.putString("url", currentMAP.toString());
 						prefs.commit();
+
+						final int takeFlags = resultData.getFlags()
+								& (Intent.FLAG_GRANT_READ_URI_PERMISSION
+								| Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+						getContentResolver().takePersistableUriPermission(uri, takeFlags);
 					}
 				}
 			}
@@ -475,7 +532,27 @@ public class MainActivity extends AndroidApplication implements Interface
 					currentMAP = resultData.getData();
 					writeFileContent( currentMAP, "test");
 				}
-			} else if (requestCode == OPEN_REQUEST_CODE) {
+			}
+			else if (requestCode == REQUEST_TREE_CODE) {
+
+				if (resultData != null) {
+					java.util.List<Uri> docs = readFiles( this,resultData );
+					SAFdatas.clear(); SAFfilenames.clear();
+					for (Uri u : docs){
+						try {
+							byte[] b = readBytes( u );
+							String s = getFileName( u );
+							SAFdatas.add( b );
+							SAFfilenames.add( s );
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+
+					}
+					SAFstatus = "OK";
+				}
+			}
+			else if (requestCode == OPEN_REQUEST_CODE) {
 
 				if (resultData != null) {
 
@@ -483,10 +560,17 @@ public class MainActivity extends AndroidApplication implements Interface
 						Uri uri = resultData.getData();
 						SAFdata = readBytes( uri );
 						SAFfilename = getFileName( uri );
+						SAFuri = uri.toString();
+
 						if (SAFfilename.endsWith( "tmx" )){
 							currentMAP = uri;
 							prefs.putString("url", currentMAP.toString());
 							prefs.commit();
+							final int takeFlags = resultData.getFlags()
+									& (Intent.FLAG_GRANT_READ_URI_PERMISSION
+									| Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+							getContentResolver().takePersistableUriPermission(uri, takeFlags);
+
 						}
 
 						SAFstatus = "OK";
@@ -498,6 +582,7 @@ public class MainActivity extends AndroidApplication implements Interface
 
 				if (resultData != null) {
 					currentMAP = resultData.getData();
+					SAFuri = currentMAP.toString();
 					writeFileContent( currentMAP, tmpdata);
 				}
 			}else{
@@ -610,5 +695,41 @@ public class MainActivity extends AndroidApplication implements Interface
 			}
 		}
 		return result;
+	}
+
+	@TargetApi(Build.VERSION_CODES.LOLLIPOP)
+	private List<Uri> readFiles(Context context, Intent intent) {
+		List<Uri> uriList = new ArrayList<>();
+
+		// the uri returned by Intent.ACTION_OPEN_DOCUMENT_TREE
+		Uri uriTree = intent.getData();
+		// the uri from which we query the files
+		Uri uriFolder = DocumentsContract.buildChildDocumentsUriUsingTree(uriTree, DocumentsContract.getTreeDocumentId(uriTree));
+
+		Cursor cursor = null;
+		try {
+			// let's query the files
+			cursor = context.getContentResolver().query(uriFolder,
+					new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID},
+					null, null, null);
+
+			if (cursor != null && cursor.moveToFirst()) {
+				do {
+					// build the uri for the file
+					Uri uriFile = DocumentsContract.buildDocumentUriUsingTree(uriTree, cursor.getString(0));
+					//add to the list
+					uriList.add(uriFile);
+
+				} while (cursor.moveToNext());
+			}
+
+		} catch (Exception e) {
+			// TODO: handle error
+		} finally {
+			if (cursor!=null) cursor.close();
+		}
+
+		//return the list
+		return uriList;
 	}
 }
