@@ -77,6 +77,7 @@ import com.bitfire.postprocessing.PostProcessor;
 import com.bitfire.postprocessing.effects.Bloom;
 import com.bitfire.postprocessing.effects.CrtMonitor;
 import com.bitfire.postprocessing.effects.Curvature;
+import com.bitfire.postprocessing.effects.MotionBlur;
 import com.bitfire.postprocessing.effects.Vignette;
 import com.bitfire.postprocessing.effects.Zoomer;
 import com.bitfire.postprocessing.filters.Combine;
@@ -317,7 +318,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     TextButton bNew, bOpen, bSave, bSaveAs, bExit, bBack, bLicense, bReload, bTutorial, bCopyto;
     ImageButton bcc;
     TextButton btiled, bCollaboration, bPatreon2, bTools, bBackground;
-    TextButton bTutorOK, bTutorBack, bPatreon, bExporter, credito;
+    TextButton bTutorOK, bTutorBack, bPatreon, bExporter, bImporter, credito;
     Table tMap, tLayerMgmt, tTileMgmt, tObjMgmt, tFrameMgmt, tPropsMgmt, tPreference, tProperties, tTsetMgmt, tAutoMgmt, tAutoform;
     Table tMap1, tMap2;
     TextButton bTileMgmt, bTileSettingsMgmt, bPreference, bProperties, bTsetMgmt, bBack2, bAutoMgmt, bFeedback;
@@ -801,16 +802,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     nativeFilename=face.getFilename();
                     nativeUri = face.getUri();
 
-                    FileHandle file = Gdx.files.absolute( basepath+"NotTiled/Temp/"+nativeFilename );
-                    file.writeBytes( nativeData,false );
 
-                    FileHandle ff = Gdx.files.absolute( basepath+"NotTiled/Temp/"+nativeFilename );
-                    if (ff.extension().equalsIgnoreCase( "tmx" )){
-                        addandsaverecent( nativeUri,nativeFilename );
-                    }
+                        FileHandle file = Gdx.files.absolute( basepath + "NotTiled/Temp/" + nativeFilename );
+                        file.writeBytes( nativeData, false );
+
+                        FileHandle ff = Gdx.files.absolute( basepath + "NotTiled/Temp/" + nativeFilename );
+                        if (ff.extension().equalsIgnoreCase( "tmx" )) {
+                            addandsaverecent( nativeUri, nativeFilename );
+                        }
 
                     exitDialog( T );
-                    tujuanDialog( tujuan, ff);
+                    tujuanDialog( tujuan, ff );
+
                 }
                 log("here");
 
@@ -1161,6 +1164,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
 
+
     public void uiAnim() {
         panOriginZoom2 = 1f;
         panTargetZoom2 = 1;
@@ -1367,7 +1371,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         //crt.setEnabled(true);
                         //vignette.setEnabled(true);
                         //curvature.setEnabled(true);
-                        bloom.setEnabled( false );
+
+                        //bloom.setEnabled( true );
+                        //bloom.setBlurAmount( 0f );
+                        //bloom.setBloomIntesity( 0.5f );
+                        //bloom.setBaseIntesity( 1f );
+
 
                         postProcessor.capture();
                         mygame.keyinput();
@@ -1421,7 +1430,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
                         //uisrect(gui.restart,mouse,null);
                         if (mygame.player.state == gameobject.states.DEAD || (mygame.victory && mygame.nextlevel != null) || mygame.starting)
-                            uisrect( gui.respawn, mouse, new Color( 0, 1f, 0, 1f ) );
+                           // uisrect( gui.respawn, mouse, new Color( 0, 1f, 0, 1f ) );
                         if (mygame.playtest  && mygame.fade==0) uisrect( gui.exit, mouse, null );
                         if (mygame.victory || mygame.player.state == gameobject.states.DEAD || mygame.starting)
                             uisrect( gui.gamestatus, mouse, null );
@@ -1476,13 +1485,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         }
                         //str1draw(ui,"Restart", gui.restart);
-                        if (mygame.player.state == gameobject.states.DEAD)
-                            str1draw( ui, "Respawn", gui.respawn );
-                        if (mygame.victory && mygame.nextlevel != null)
-                            str1draw( ui, "Next Level", gui.respawn );
-                        if (mygame.starting) str1draw( ui, "OK", gui.respawn );
-                        if (mygame.playtest && mygame.fade==0) str1draw( ui, "Exit", gui.exit );
-                        if (mygame.fade>0) str1draw( ui, "Loading...", gui.respawn );
+                        //if (mygame.player.state == gameobject.states.DEAD)
+                           // str1draw( ui, "Respawn", gui.respawn );
+                        //if (mygame.victory && mygame.nextlevel != null)
+                            //str1draw( ui, "Next Level", gui.respawn );
+                        //if (mygame.starting) str1draw( ui, "OK", gui.respawn );
+                        if (mygame.playtest && mygame.fade==0) str1draw( ui, "X", gui.exit );
+                       // if (mygame.fade>0) str1draw( ui, "Loading...", gui.respawn );
 
                         ui.end();
                         if (mygame.fadein>0) {
@@ -2112,6 +2121,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                         System.out.println( "result " + obj );
                                         if ((boolean) obj) Gdx.app.exit();
                                         Gdx.input.setInputProcessor( im );
+                                        backToMap();
                                         asked = false;
                                     }
                                 };
@@ -4773,7 +4783,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 for (property p : properties) {
                     if (p.getName().equalsIgnoreCase( "type" ) && p.getValue().equalsIgnoreCase( "NotTiled platformer" )) {
-                        uisrect( gui.play, mouse, vis( "play" ) );//redo
+                        uisrect( gui.play, mouse, vis( "play" ) );
+                    } else if (p.getName().equalsIgnoreCase( "type" ) && p.getValue().equalsIgnoreCase( "NotTiled rpg" )) {
+                        uisrect( gui.play, mouse, vis( "play" ) );
                     } else if (p.getName().equalsIgnoreCase( "type" ) && p.getValue().equalsIgnoreCase( "NotTiled music" )) {
                         uisrect( gui.play, mouse, vis( "play" ) );//redo
                     } else if (p.getName().equalsIgnoreCase( "type" ) && p.getValue().equalsIgnoreCase( "Pixel Editor" )) {
@@ -5127,6 +5139,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                     for (property p : properties) {
                         if (p.getName().equalsIgnoreCase( "type" ) && p.getValue().equalsIgnoreCase( "NotTiled platformer" )) {
+                            uidrawbutton( txplay, z.play, gui.play, 2 );
+                        } else if (p.getName().equalsIgnoreCase( "type" ) && p.getValue().equalsIgnoreCase( "NotTiled rpg" )) {
                             uidrawbutton( txplay, z.play, gui.play, 2 );
                         } else if (p.getName().equalsIgnoreCase( "type" ) && p.getValue().equalsIgnoreCase( "NotTiled music" )) {
                             if (midiplaying) {
@@ -5719,7 +5733,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         layer l = new layer();
         l.setType( layer.Type.TILE );
         l.setVisible( true );
-        l.setName( z.layer + " 1" );
+        l.setName( "Tile 1" );
         java.util.List<Long> ls = new ArrayList<Long>();
         java.util.List<Integer> lts = new ArrayList<Integer>();
 
@@ -6390,6 +6404,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bTutorOK = new TextButton( z.ok, skin );
 
         bExporter = new TextButton( z.export, skin );
+        bImporter = new TextButton( z.importfolder, skin);
         bDiscord = new TextButton( z.discordserver, skin );
         bWhatsapp = new TextButton( z.whatsappgroup, skin );
         bPatreon = new TextButton( z.supportnottiled, skin );
@@ -6542,6 +6557,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 gotoStage( tTutorial );
             }
         } );
+
+        bImporter.addListener( new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (nativefilechooser)
+                FileDialog(z.selectfolder, "importassets", "dir", new String[]{}, tTsetMgmt);
+            }
+        } );
+
 
         bNew.addListener( new ChangeListener() {
             @Override
@@ -6986,12 +7010,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tMenu2.defaults().width( btnx ).height( btny * 2 );
 
             if (!face.ispro()) tMenu1.add( bPatreon ).row();
+            tMenu1.add( bPatreon ).row();
             tMenu1.add( bNew ).row();
             tMenu1.add( bOpen ).row();
             tMenu1.add( bRecent ).row();
             tMenu1.add( bSave ).row();
             tMenu1.add( bSaveAs ).row();
             tMenu1.add( bExporter ).row();
+            if(nativefilechooser) tMenu2.add( bImporter).row();
             tMenu2.add( bTutorial ).row();
             tMenu2.add( bPreference ).row();
             tMenu2.add( bLinks ).row();
@@ -7013,6 +7039,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tMenu.add( bSave ).row();
             tMenu.add( bSaveAs ).row();
             tMenu.add( bExporter ).row();
+            if(nativefilechooser) tMenu.add( bImporter).row();
             tMenu.add( bTutorial ).row();
             tMenu.add( bPreference ).row();
             tMenu.add( bLinks ).row();
@@ -13477,6 +13504,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 break;
 
+            case "importassets":
+                status(z.filesaved,4);
+                break;
             case "selfolder":
 
                 if (nativefilechooser){
@@ -14174,8 +14204,31 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     alldata = tempfile.readString();
                     String nfn = fNFilename.getText();
                     if (nfn.equalsIgnoreCase( "" )) nfn="newfile.tmx";
+                    nativeStatus="";
                     face.saveasFile( alldata, nfn );
-                    newfile = false;
+                    ////////////////
+                    while (nativeStatus.equalsIgnoreCase( "" )){
+                        nativeStatus = face.getStatus();
+                    }
+
+
+                    if (nativeStatus.equalsIgnoreCase( "cancel" )){
+
+                    }else if (nativeStatus.equalsIgnoreCase( "ok" )){
+                        nativeFilename=face.getFilename();
+                        nativeUri=face.getUri();
+                        curdir= basepath+"NotTiled/Temp/";
+                        curfile=nativeFilename;
+                        FileHandle file = Gdx.files.absolute( basepath+"NotTiled/Temp/"+nativeFilename );
+                        file.writeString( alldata,false );
+
+                        FileHandle ff = Gdx.files.absolute( basepath+"NotTiled/Temp/"+nativeFilename );
+                        if (ff.extension().equalsIgnoreCase( "tmx" )){
+                            addandsaverecent( nativeUri,nativeFilename );
+                        }
+                        newfile = false;
+                    }
+
                 } else { //just save
                     alldata = tempfile.readString();
                     face.saveFile( alldata );
@@ -19528,6 +19581,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (tapped(touch2, gui.play)) {
             for (property p : properties) {
                 if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled platformer")) {
+                    for (layer l : layers){
+                        if (!l.isVisible() && l.getType()== layer.Type.OBJECT) l.setVisible( true );
+                    }
+                    saveMap(curdir + "/" + curfile);
+                    playgame(curdir, curfile);
+                    return true;
+                }
+                else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled rpg")) {
+                    for (layer l : layers){
+                        if (!l.isVisible() && l.getType()== layer.Type.OBJECT) l.setVisible( true );
+                    }
+
                     saveMap(curdir + "/" + curfile);
                     playgame(curdir, curfile);
                     return true;
@@ -22658,17 +22723,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void playgame(final String curdir, final String filex){
 
-        try{
             mygame = new com.mirwanda.nottiled.platformer.game();
-            mygame.initialise(curdir, filex);
-            kartu="game";
-            Gdx.input.setInputProcessor(im);
-            gamecam.zoom = 0.2f;
-            gamecam.position.set(mygame.player.body.getPosition().x,mygame.player.body.getPosition().y,0);
-            gamecam.update();
-        }catch(Exception e){
-            e.printStackTrace();
-        }
+            if (mygame.initialise(curdir, filex)) {
+                kartu = "game";
+                Gdx.input.setInputProcessor( im );
+                gamecam.zoom = 0.2f;
+                gamecam.position.set( mygame.player.body.getPosition().x, mygame.player.body.getPosition().y, 0 );
+                gamecam.update();
+            }else{
+                msgbox("Cannot play.\nPlease make sure:\n1. There is a player tile.\n2. No image layer is used.");
+            }
 
     }
 

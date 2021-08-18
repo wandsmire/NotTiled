@@ -53,7 +53,12 @@ public class MainActivity extends AndroidApplication implements Interface
 		
 		// TODO: Implement this method
 	}
-	
+
+	@Override
+	public AndroidAudio createAudio(Context context, AndroidApplicationConfiguration config){
+	return new AsynchronousAndroidAudio( context, config );
+	}
+
 	@Override
 	public void changelanguage(String lang)
 	{
@@ -465,6 +470,7 @@ public class MainActivity extends AndroidApplication implements Interface
 	{
 		tmpdata = data;
 		SAFdata = null;
+		SAFstatus="";
 		Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
 		intent.addCategory(Intent.CATEGORY_OPENABLE);
 		intent.setType("*/*");
@@ -516,7 +522,11 @@ public class MainActivity extends AndroidApplication implements Interface
 								& (Intent.FLAG_GRANT_READ_URI_PERMISSION
 								| Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 						getContentResolver().takePersistableUriPermission(uri, takeFlags);
+						SAFstatus="ok";
 					}
+
+				}else{
+					SAFstatus="cancel";
 				}
 			}
 			if (requestCode == BINARY_CREATE_CODE)
@@ -597,7 +607,7 @@ public class MainActivity extends AndroidApplication implements Interface
 		try{
 			ParcelFileDescriptor pfd =
 					this.getContentResolver().
-							openFileDescriptor(uri, "w");
+							openFileDescriptor(uri, "rwt");
 
 			FileOutputStream fileOutputStream =
 					new FileOutputStream(
@@ -621,7 +631,7 @@ public class MainActivity extends AndroidApplication implements Interface
 		try{
 			ParcelFileDescriptor pfd =
 					this.getContentResolver().
-							openFileDescriptor(uri, "w");
+							openFileDescriptor(uri, "rwt");
 
 			FileOutputStream fileOutputStream =
 					new FileOutputStream(

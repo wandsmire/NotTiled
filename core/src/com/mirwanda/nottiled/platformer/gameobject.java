@@ -29,6 +29,7 @@ import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ENEMYPROJEC
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.MONSTER;
 
 public class gameobject extends Sprite {
+    public String id="";
     public String name="";
     public game mygame;
     public gameobject(){}
@@ -78,8 +79,8 @@ public class gameobject extends Sprite {
     PolygonShape shape = new PolygonShape();
     FixtureDef fdef = new FixtureDef();
     public Fixture fixture;
-    public int ts=16;
-    public int tso=8;
+    public int ts;
+    public int tso;
     public java.util.List<TextureRegion> animations;
     public states state;
     public boolean destructible;
@@ -92,8 +93,10 @@ public class gameobject extends Sprite {
         LEFTSLOPE, RIGHTSLOPE, TRANSFER, BLOCK, ITEM, ENEMY, PLAYERPROJECTILE, ENEMYPROJECTILE, LISTENER
     }
 
-    public void setupGameObject(World world, TiledMapTile tlcece, float xx, float yy, float width, float height, BodyDef.BodyType type, gameobject.objecttype objecttype, MapObject obj, TextureRegion tt, boolean over)
+    public void setupGameObject(World world, TiledMapTile tlcece, float xx, float yy, float width, float height, BodyDef.BodyType type, gameobject.objecttype objecttype, MapObject obj, TextureRegion tt, boolean over, float opacity)
     {
+        ts = (int) mygame.Tsw;
+        tso = ts/2;
         this.tlcece=tlcece;
         objtype = objecttype;
         this.obj=obj;
@@ -114,25 +117,25 @@ public class gameobject extends Sprite {
         if (tlcece!=null) {
             TextureRegion region = tlcece.getTextureRegion();
             setRegion( region );
-            setColor( 1, 1, 1, 1 );
-            setSize( getRegionWidth() / 100f, getRegionHeight() / 100f );
-            setOrigin( Tswh/ 100f, Tshh / 100f );
+            setColor( 1, 1, 1, opacity );
+            setSize( getRegionWidth() /mygame.scale, getRegionHeight() /mygame.scale );
+            setOrigin( Tswh/mygame.scale, Tshh /mygame.scale );
              Tpx = getRegionWidth()/2;
              Tpy = getRegionHeight()/2;
 
         }
         if (tt!=null) {
             setRegion( tt );
-            setColor( 1, 1, 1, 1 );
-            setSize( getRegionWidth() / 100f, getRegionHeight() / 100f );
-            setOrigin( Tswh/ 100f, Tshh / 100f );
+            setColor( 1, 1, 1, opacity );
+            setSize( getRegionWidth() /mygame.scale, getRegionHeight() /mygame.scale );
+            setOrigin( Tswh/mygame.scale, Tshh /mygame.scale );
              Tpx = getRegionWidth()/2;
              Tpy = getRegionHeight()/2;
 
         }
 
         if(anim.size()>0){
-            setSize(anim.get( 0 ).getKeyFrame( 0 ).getRegionWidth()/100f, anim.get( 0 ).getKeyFrame( 0 ).getRegionWidth()/100f );
+            setSize(anim.get( 0 ).getKeyFrame( 0 ).getRegionWidth()/mygame.scale, anim.get( 0 ).getKeyFrame( 0 ).getRegionWidth()/mygame.scale );
         }
 
 
@@ -148,11 +151,11 @@ public class gameobject extends Sprite {
                 objtype=MONSTER;
             case BLOCK: case ITEM:
 
-                setPosition( xx / 100f, yy / 100f );
+                setPosition( xx /mygame.scale, yy /mygame.scale );
                 break;
             //tile position
             default:
-                setPosition( xx / 100f, yy / 100f );
+                setPosition( xx /mygame.scale, yy /mygame.scale );
         }
 
         this.over=over;
@@ -166,9 +169,9 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 bdef.type = type;
-                bdef.position.set((xx + Tpx) / 100f, (yy + Tpy) / 100f);
+                bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
-                float sz = Tswh/100f;
+                float sz = Tswh/mygame.scale;
                 //top line
                 shaper.set(-sz,sz,sz, sz);
                 fdef.shape = shaper;
@@ -200,9 +203,9 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 bdef.type = type;
-                bdef.position.set((xx + Tpx) / 100f, (yy + Tpy) / 100f);
+                bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
-                sz = 8/100f;
+                sz = 8/mygame.scale;
                 //top line
                 shaper.set(-sz,sz,sz, sz);
                 fdef.shape = shaper;
@@ -233,11 +236,11 @@ public class gameobject extends Sprite {
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 bdef.type = type;
                 bdef.linearDamping = 2f;
-                bdef.position.set((xx + Tpx) / 100f, (yy + Tpy) / 100f);
+                bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
-                shape.setAsBox(width / 100f, width / 100f);
+                shape.setAsBox(width /mygame.scale, width /mygame.scale);
 
-                //shape.setRadius(8/100f);
+                //shape.setRadius(8/mygame.scale);
                 // shape.set(0,0,0,0);
                 fdef.shape = shape;
 
@@ -260,9 +263,9 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.COIN_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 bdef.type = type;
-                bdef.position.set((xx + Tpx) / 100f, (yy + Tpy) / 100f);
+                bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
-                shape.setAsBox(Tswh / 100f, Tshh / 100f);
+                shape.setAsBox(Tswh /mygame.scale, Tshh /mygame.scale);
                 fdef.shape = shape;
                 fdef.isSensor = true;
                 fixture = body.createFixture(fdef);
@@ -273,9 +276,9 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.COIN_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 bdef.type = type;
-                bdef.position.set((xx + Tpx) / 100f, (yy + Tpy) / 100f);
+                bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
-                shape.setAsBox(Tswh / 500f, Tshh / 100f);
+                shape.setAsBox(Tswh / 500f, Tshh /mygame.scale);
                 fdef.shape = shape;
                 fdef.isSensor = true;
                 fixture = body.createFixture(fdef);
@@ -295,7 +298,7 @@ public class gameobject extends Sprite {
                 bdef.type = type;
                 bdef.position.set(xx, yy);
                 body = world.createBody(bdef);
-                shape.setAsBox(width / 100f, width / 100f);
+                shape.setAsBox(width /mygame.scale, width /mygame.scale);
                 fdef.shape = shape;
                 fdef.isSensor = true;
                 fixture = body.createFixture(fdef);
@@ -328,9 +331,9 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.MARKER_BIT;
                 fdef.filter.maskBits = game.PLATFORM_BIT;
                 bdef.type = type;
-                bdef.position.set((xx + Tpx) / 100f, (yy + Tpy) / 100f);
+                bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
-                shape.setAsBox(width / 100f, width / 100f);
+                shape.setAsBox(width /mygame.scale, width /mygame.scale);
                 fdef.shape = shape;
                 fdef.isSensor = true;
                 fixture = body.createFixture(fdef);
@@ -346,9 +349,9 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.DESTROYED_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 bdef.type = type;
-                    bdef.position.set((xx + Tpx) / 100f, (yy + Tpy) / 100f);
+                    bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
-                shape.setAsBox(width / 100f, width / 100f);
+                shape.setAsBox(width /mygame.scale, width /mygame.scale);
                 fdef.shape = shape;
                 fixture = body.createFixture(fdef);
                     fixture.setUserData(this);
@@ -364,14 +367,14 @@ public class gameobject extends Sprite {
                 fdef.filter.maskBits = game.MARKER_BIT | game.PLAYER_BIT;
                 /////
                 bdef.type = type;
-                bdef.position.set((xx + Tpx) / 100f, (yy + Tpy) / 100f);
-                setPosition(xx*ts/100f,yy*ts/100f);
+                bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
+                setPosition(xx*ts/mygame.scale,yy*ts/mygame.scale);
                 body = world.createBody(bdef);
                 body.setGravityScale(0);
                 MassData md = new MassData();
                 md.mass=999999;
                 body.setMassData(md);
-                shape.setAsBox(width / 100f, width / 100f);
+                shape.setAsBox(width /mygame.scale, width /mygame.scale);
                 fdef.shape = shape;
                 fixture = body.createFixture(fdef);
                 //setCategoryFilter(fixture,game.DEFAULT_BIT);
@@ -383,10 +386,10 @@ public class gameobject extends Sprite {
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.PLAYERPROJECTILE_BIT | game.ENEMYPROJECTILE_BIT;
                 /////
                 bdef.type = type;
-                bdef.position.set((xx + Tpx) / 100f, (yy + Tpy) / 100f);
+                bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
 
-                shape.setAsBox(Tswh / 100f, Tshh / 100f);
+                shape.setAsBox(Tswh /mygame.scale, Tshh /mygame.scale);
                 fdef.shape = shape;
                 fixture = body.createFixture(fdef);
                 //setCategoryFilter(fixture,game.DEFAULT_BIT);
@@ -398,10 +401,10 @@ public class gameobject extends Sprite {
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.COIN_BIT | game.BRICK_BIT | game.ENEMYPROJECTILE_BIT;
                 /////
                 bdef.type = type;
-                bdef.position.set((xx + Tpx) / 100f, (yy + Tpy) / 100f);
+                bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
 
-                shape.setAsBox(Tswh / 100f, Tshh / 100f);
+                shape.setAsBox(Tswh /mygame.scale, Tshh /mygame.scale);
                 fdef.shape = shape;
                 fixture = body.createFixture(fdef);
                 //setCategoryFilter(fixture,game.DEFAULT_BIT);
@@ -414,7 +417,7 @@ public class gameobject extends Sprite {
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.PLAYERPROJECTILE_BIT;
                 /////
                 bdef.type = type;
-                bdef.position.set((xx + Tpx) / 100f, (yy + Tpy) / 100f);
+                bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
 
                 shape.setAsBox(width / 200f, height / 200f);
@@ -432,15 +435,15 @@ public class gameobject extends Sprite {
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 /////
                 bdef.type = type;
-                bdef.position.set((xx + Tpx) / 100f, (yy + Tpy) / 100f);
-                setPosition(xx*ts/100f,yy*ts/100f);
+                bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
+                setPosition(xx*ts/mygame.scale,yy*ts/mygame.scale);
                 body = world.createBody(bdef);
                 //top line
 
 
 
                 EdgeShape shape = new EdgeShape();
-                float size =tso/100f;
+                float size =tso/mygame.scale;
                 shape.set(-size,-size,size, size);
                 fdef.shape = shape;
                 fixture = body.createFixture(fdef);
@@ -469,15 +472,15 @@ public class gameobject extends Sprite {
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 /////
                 bdef.type = type;
-                bdef.position.set((xx + Tpx) / 100f, (yy + Tpy) / 100f);
-                setPosition(xx*ts/100f,yy*ts/100f);
+                bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
+                setPosition(xx*ts/mygame.scale,yy*ts/mygame.scale);
                 body = world.createBody(bdef);
                 //top line
 
 
 
                 shape = new EdgeShape();
-                size =tso/100f;
+                size =tso/mygame.scale;
                 shape.set(-size,size,size, -size);
                 fdef.shape = shape;
                 fixture = body.createFixture(fdef);
@@ -505,15 +508,15 @@ public class gameobject extends Sprite {
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 /////
                 bdef.type = type;
-                bdef.position.set((xx + Tpx) / 100f, (yy + Tpy) / 100f);
-                setPosition(xx*ts/100f,yy*ts/100f);
+                bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
+                setPosition(xx*ts/mygame.scale,yy*ts/mygame.scale);
                 body = world.createBody(bdef);
                 //top line
 
 
 
                 shape = new EdgeShape();
-                size =tso/100f;
+                size =tso/mygame.scale;
                 shape.set(-size,size,size, size);
                 fdef.shape = shape;
                 fixture = body.createFixture(fdef);
@@ -542,7 +545,7 @@ public class gameobject extends Sprite {
                 /////
                 PolygonShape shap = new PolygonShape();
 
-                shap.setAsBox(5 / 100f, 5 / 100f);
+                shap.setAsBox(5 /mygame.scale, 5 /mygame.scale);
                 fdef.shape = shap;
                 fdef.isSensor=true;
                 fixture5 = body.createFixture(fdef);
@@ -554,8 +557,8 @@ public class gameobject extends Sprite {
             case MISC:
         }
 
-        //setSize( width/ 100f, height / 100f );
-        //setOrigin( width / 100f, height / 100f );
+        //setSize( width/mygame.scale, height /mygame.scale );
+        //setOrigin( width /mygame.scale, height /mygame.scale );
 
         if (light>0 && mygame.night) {
             myLight = new PointLight( mygame.rayHandler, 100, lightColor, light, 0, 0 );
@@ -725,7 +728,7 @@ public class gameobject extends Sprite {
                     }
                 }
 
-                if (body.getPosition().dst( mygame.player.body.getPosition()) <chaseRadius/100f) {
+                if (body.getPosition().dst( mygame.player.body.getPosition()) <chaseRadius/mygame.scale) {
                    if (mygame.player.state!= states.DEAD) enemyshoot();
                }
 
@@ -777,29 +780,89 @@ public class gameobject extends Sprite {
 
 
                 if (path==null && !dirlocked) {
-                    if (body.getPosition().dst( mygame.player.body.getPosition() ) < chaseRadius / 100f) {
+                    if (body.getPosition().dst( mygame.player.body.getPosition() ) < chaseRadius /mygame.scale) {
                         if (chase &&!tame) moving = true;
 
-                        if (Math.abs( body.getPosition().x - mygame.player.body.getPosition().x ) >= speed * 10 / 100f) {
 
-                            if (body.getPosition().x > mygame.player.body.getPosition().x) {
-                                dir = 2;
-                            } else {
-                                dir = 1;
-                            }
-                        } else {
-                            if (Math.abs( body.getPosition().y - mygame.player.body.getPosition().y ) >= speed * 10 / 100f) {
-                                if (body.getPosition().y > mygame.player.body.getPosition().y) {
-                                    dir = 0;
+                        if (!mygame.rpg){
+                            if (Math.abs( body.getPosition().x - mygame.player.body.getPosition().x ) >= speed * 10 /mygame.scale) {
+
+                                if (body.getPosition().x > mygame.player.body.getPosition().x) {
+                                    dir = 2;
                                 } else {
-                                    dir = 3;
+                                    dir = 1;
                                 }
                             } else {
-                                moving = false;
+                                if (Math.abs( body.getPosition().y - mygame.player.body.getPosition().y ) >= speed * 10 /mygame.scale) {
+                                    if (body.getPosition().y > mygame.player.body.getPosition().y) {
+                                        dir = 0;
+                                    } else {
+                                        dir = 3;
+                                    }
+                                } else {
+                                    moving = false;
+                                }
+                            }
+                        }else{
+                            float ppx = mygame.player.body.getPosition().x;
+                            float ppy = mygame.player.body.getPosition().y;
+                            float opx = body.getPosition().x;
+                            float opy = body.getPosition().y;
+                            float gapx = Math.abs(ppx-opx);
+                            float gapy = Math.abs(ppy-opy);
+
+                            //left down up right
+                            // means mending ke atas/bawah dulu karena lebih dekat
+                            if (gapx > gapy){
+                                if (gapx < 16/mygame.scale){
+                                    if (opx > ppx){
+                                        //lihat kiri
+                                        dir = 0;
+                                    }else{
+                                        //lihat kanan
+                                        dir=3;
+                                    }
+                                    //menghadap ke player
+
+                                }else{
+                                    //reposisi
+                                    if (opy > ppy){
+                                        //liat bawah
+                                        dir = 1;
+                                    }else{
+                                        //liat atas
+                                        dir=2;
+                                    }
+                                }
+
+                                // means mending ke kiri/kanan dulu karena lebih dekat
+                            }else{
+                                if (gapy < 16/mygame.scale){
+                                    //menghadap ke player
+                                    if (opy > ppy){
+                                        //lihat atas
+                                        dir = 2;
+                                    }else{
+                                        //lihat bawah
+                                        dir=1;
+                                    }
+
+                                }else{
+                                    //reposisi
+                                    if (opx > ppx){
+                                        //lihat atas
+                                        dir = 3;
+                                    }else{
+                                        //lihat bawah
+                                        dir=0;
+                                    }
+                                }
                             }
 
 
                         }
+
+
                     } else {
                         //dir=0;
                         moving = false;
@@ -816,7 +879,7 @@ public class gameobject extends Sprite {
                         moving=true;
                     }
 
-                    if(lastPos.dst(body.getPosition().x,body.getPosition().y) >=16/100f){
+                    if(lastPos.dst(body.getPosition().x,body.getPosition().y) >=mygame.Tsw/mygame.scale){
                         currentPath+=1;
                         if (currentPath>=path.length) currentPath=0;
                         dir = path[currentPath];
@@ -946,25 +1009,25 @@ public class gameobject extends Sprite {
         switch (dir){
             case 0:
               //  newbrick.setRotation( 180 );
-                posy-=16/100f;
+                posy-=mygame.Tsw/mygame.scale;
 
                 break;
             case 1:
                // newbrick.setRotation( -90 );
-                posx+=16/100f;
+                posx+=mygame.Tsw/mygame.scale;
 
                 break;
             case 2:
-                posx-=16/100f;
+                posx-=mygame.Tsw/mygame.scale;
 
               //  newbrick.setRotation( 90 );
                 break;
             case 3:
-                posy+=16/100f;
+                posy+=mygame.Tsw/mygame.scale;
 
                 break;
         }
-        newbrick.setupGameObject( mygame.world,null,posx, posy, pimagesize.x, pimagesize.y, BodyDef.BodyType.DynamicBody, ENEMYPROJECTILE, null ,null ,false);
+        newbrick.setupGameObject( mygame.world,null,posx, posy, pimagesize.x, pimagesize.y, BodyDef.BodyType.DynamicBody, ENEMYPROJECTILE, null ,null ,false,1);
         mygame.objects.add( newbrick );
         cooldown= pcooldown;
 

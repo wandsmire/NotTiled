@@ -1,6 +1,7 @@
 package com.mirwanda.nottiled.platformer;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -103,10 +104,8 @@ public class WorldContactListener implements ContactListener {
 
             if (o.get( "load" ) != null) {
                 mygame.load();
-                mygame.gc.position.set( mygame.player.getX()+8/100f,mygame.player.getY(),0 );
-                mygame.gc.update();
-
             }
+
             if (o.get( "save" ) != null) {
                 mygame.save();
             }
@@ -128,18 +127,54 @@ public class WorldContactListener implements ContactListener {
             }
 
             if (o.get( "transfer" ) != null) {
+
                 if (o.get( "transfer" ).toString().equalsIgnoreCase( "" )) {
+                    mygame.fadeinitialise( mygame.path,mygame.file );
                 } else {
-                    mygame.bgm.stop();
-                    mygame.loadingmap = true;
-                    mygame.initialise( mygame.path, o.get( "transfer" ).toString() );
-                    mygame.gc.position.set( mygame.player.getX()+8/100f,mygame.player.getY()+8/100f,0 );
-                    mygame.gc.update();
+                    if (mygame.bgm!=null) {
+                        if (!mygame.file.equalsIgnoreCase( o.get( "transfer" ).toString() ))  {
+                            mygame.bgm.stop();
+                        }
+                    }
 
-
+                    FileHandle tgt = Gdx.files.absolute( mygame.path+o.get( "transfer" ).toString() );
+                    if (tgt.exists()){
+                        mygame.fadeinitialise( mygame.path, o.get( "transfer" ).toString() );
+                    }else{
+                        mygame.fadeinitialise( mygame.path,mygame.file );
+                    }
 
                 }
             }
+
+            if (o.containsKey( "move")) {
+                String tgt = of.get( "move" ).toString();
+                float px =0;
+                float py =0;
+                if (tgt.equalsIgnoreCase( "," )) {
+                    String[] xy = of.get( "move" ).toString().split( "," );
+                    px = Float.parseFloat( xy[0] );
+                    py = Float.parseFloat( xy[1] );
+                    px = (px + mygame.Tsw/2) /mygame.scale;
+                    py = (mygame.Th * mygame.Tsh /mygame.scale) - (py + mygame.Tsw/2) /mygame.scale;
+                }else{
+                    for (gameobject go : mygame.objects){
+                        if (go.id.equalsIgnoreCase( tgt )){
+                            px = go.body.getPosition().x;
+                            py = go.body.getPosition().y;
+
+                        }
+                    }
+                }
+                if (o.containsKey( "transfer" )) {
+                    mygame.move = new Vector2( px, py );
+                }else{
+                    //box2d is locked when contact.
+                    mygame.requesttransform( px,py );
+
+                }
+            }
+
 
             if (o.get( "sethud" )!=null) {
                 boolean keep =  (o.get( "keephud" ) !=null) ? true: false;
@@ -167,8 +202,14 @@ public class WorldContactListener implements ContactListener {
                         newbrick.sfx = Gdx.audio.newSound( mygame.getFile( mygame.path + "/" + sfx ) );
                 }
 
-
-                switch (o.get( "action" ).toString()){
+                String act = null;
+                if (o.containsKey( "action" )){
+                    act = o.get( "action" ).toString();
+                }
+                if (act==null){
+                    act = o.get( "setaction" ).toString();
+                }
+                switch (act){
                     case "jump":
                         newbrick.action = gameobject.actions.JUMP;
                         newbrick.impulse = (o.containsKey( "impulse" )) ? Float.parseFloat( o.get( "impulse" ).toString() ) : 3f;
@@ -228,22 +269,6 @@ public class WorldContactListener implements ContactListener {
 
             }
 
-            if (o.get( "move" ) != null) {
-
-                Gdx.app.postRunnable( new Runnable() {
-
-                    @Override
-                    public void run() {
-                        String[] xy = of.get( "move" ).toString().split( "," );
-
-                        Float px = Float.parseFloat( xy[0] );
-                        Float py = Float.parseFloat( xy[1] );
-                        mygame.player.body.setTransform( (px + 8) / 100f, (mygame.Th * mygame.Tsh / 100f) - (py + 8) / 100f, 0 );
-                        mygame.player.body.setLinearVelocity( 0, 0 );
-                        //mygame.gc.position.set(mygame.player.body.getPosition().x,mygame.player.body.getPosition().y,0);
-                    }
-                } );
-            }
             if (o.get( "once" ) != null) {
                 myobject.setCategoryFilter( game.DESTROYED_BIT );
                 mygame.objects.remove( myobject );
