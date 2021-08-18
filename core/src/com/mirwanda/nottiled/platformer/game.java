@@ -189,10 +189,43 @@ public class game {
 
             MapProperties mpa = map.getProperties();
             if (mpa != null) {
-                String bgms = (String) mpa.get( "bgm" );
-                if (bgms != null) {
 
-                    if (getFile( path + "/" + bgms ).exists()) {
+                if (mpa.containsKey( "type" )) {
+                    String type = (String) mpa.get( "type" );
+                    if (type.equalsIgnoreCase( "NotTiled platformer" )) {
+                        rpg = false;
+                    }
+                    if (type.equalsIgnoreCase( "NotTiled rpg" )) {
+                        rpg = true;
+                        world.setGravity( new Vector2( 0f, 0f ) );
+                        jumping = false;
+                        rpg = true;
+                    }
+                } else {
+                    rpg = true;
+                }
+
+                if (mpa.containsKey( "scale" )) {
+                    try {
+                        String scl = (String) mpa.get( "scale" );
+                        scale = Float.parseFloat( scl );
+                    }catch(Exception f){
+                        scale=100f;
+                    }
+                }
+
+                if (mpa.containsKey( "background" )) {
+                    String bgc = (String) mpa.get( "background" );
+                    if (getFile( path + "/" + bgc ).exists() && !bgc.equalsIgnoreCase( "" )) {
+                        txBackground = new Texture( getFile( path + "/" + bgc ) );
+                    } else {
+                        txBackground = null;
+                    }
+                }
+
+                if (mpa.containsKey( "bgm" )) {
+                    String bgms = (String) mpa.get( "bgm" );
+                    if (getFile( path + "/" + bgms ).exists() && !bgms.equalsIgnoreCase( "" )) {
                         if (bgm == null) {
                             bgm = Gdx.audio.newMusic( getFile( path + "/" + bgms ) );
                             bgm.setLooping( true );
@@ -204,39 +237,6 @@ public class game {
                         }
                     }
                 }
-
-                String type = (String) mpa.get( "type" );
-                if (type != null) {
-                    if (type.equalsIgnoreCase( "NotTiled platformer" )) {
-                        rpg = false;
-                    }
-                    if (type.equalsIgnoreCase( "NotTiled rpg" )) {
-                        rpg = true;
-                        world.setGravity( new Vector2( 0f, 0f ) );
-                        jumping = false;
-                        rpg = true;
-
-                    }
-                } else {
-                    rpg = true;
-                }
-
-                String scl = (String) mpa.get( "scale" );
-                if (scl != null) {
-                    scale = Float.parseFloat( scl );
-                }
-
-                String bgc = (String) mpa.get( "background" );
-                if (bgc != null) {
-
-                    if (getFile( path + "/" + bgc ).exists()) {
-                        txBackground = new Texture( getFile( path + "/" + bgc ) );
-                    } else {
-                        txBackground = null;
-                    }
-
-                }
-
 
                 nextlevel = (String) mpa.get( "nextlevel" );
                 debriefing = (String) mpa.get( "debriefing" );

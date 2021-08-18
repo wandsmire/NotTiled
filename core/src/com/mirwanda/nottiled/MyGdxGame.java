@@ -418,7 +418,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (input == "") {
                 return;
             }
-            writeThis("NotTiled/sample/json/"+input+".json",clipProp);
+            writeThis(basepath+"NotTiled/sample/json/"+input+".json",clipProp);
             msgbox(z.filesaved);
         }
 
@@ -11727,7 +11727,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 dirHandle = Gdx.files.absolute(basepath+"NotTiled/sample/json/");
                 for (FileHandle entry : dirHandle.list()) {
 
-                    srr.add(entry.file().getName());
+                    String name = entry.file().getName();
+                    if (name.contains( "_"+sender )) {
+                        srr.add(name);
+                    }
+
+                    boolean none = true;
+                    if (name.contains( "_object" )) none = false;
+                    if (name.contains( "_tile" )) none = false;
+                    if (name.contains( "_tilesettings" )) none = false;
+                    if (name.contains( "_tset" )) none = false;
+                    if (name.contains( "_layer" )) none = false;
+                    if (name.contains( "_map" )) none = false;
+                    if (name.contains( "_auto" )) none = false;
+
+                    if (none) srr.add(name); //jadi yang ga masuk kategori gak ilang.
                 }
                 java.util.Collections.sort(srr);
                 lptlist.setItems(srr.toArray(new String[0]));
