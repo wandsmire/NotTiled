@@ -1378,7 +1378,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         //bloom.setBaseIntesity( 1f );
 
 
-                        postProcessor.capture();
+                 //       postProcessor.capture();
                         mygame.keyinput();
                         Gdx.gl.glClearColor( mygame.bgcolor.r,mygame.bgcolor.g,mygame.bgcolor.b,mygame.bgcolor.a);
                         Gdx.gl.glClear( GL20.GL_COLOR_BUFFER_BIT );
@@ -1395,7 +1395,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             batch.begin();
 
                             ///
-                            if (mygame.night) mygame.rayHandler.setCombinedMatrix( gamecam );
 
                             mygame.update( batch, delta, gamecam );
 
@@ -1404,7 +1403,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                             batch.end();
 
-                        postProcessor.render();
+                      //  postProcessor.render();
+                        if (mygame.night) {
+                            mygame.rayHandler.setCombinedMatrix( gamecam);
+                            mygame.rayHandler.updateAndRender();
+                        }
 
 
                         Vector3 mouse = new Vector3( Gdx.input.getX(), Gdx.input.getY(), 0 );

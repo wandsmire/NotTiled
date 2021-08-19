@@ -14,6 +14,8 @@ import com.badlogic.gdx.physics.box2d.ContactListener;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.Manifold;
 
+import java.util.ArrayList;
+
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ACTION;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BLOCK;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BRICK;
@@ -21,6 +23,7 @@ import static com.mirwanda.nottiled.platformer.gameobject.objecttype.CHECKPOINT;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ENEMY;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ENEMYPROJECTILE;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ITEM;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ITEMSENSOR;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.LADDER;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.MONSTER;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYER;
@@ -198,6 +201,55 @@ public class WorldContactListener implements ContactListener {
                     mygame.requesttransform( px,py );
 
                 }
+            }
+
+            if (o.containsKey( "kill")) {
+                String tgt = of.get( "kill" ).toString();
+                for (gameobject go : mygame.objects){
+                    if (go.id.equalsIgnoreCase( tgt )){
+                        go.setCategoryFilter(game.DESTROYED_BIT);
+                        go.state= gameobject.states.DEAD;
+                        go.body.setLinearVelocity( 0,0 );
+                        go.bumbum();
+                        go.playSfx( go.sfxdead );
+                    }
+                }
+            }
+
+
+            if (o.containsKey( "delayedkill")) {
+                String tgt = of.get( "delayedkill" ).toString();
+                mygame.requestkill=new ArrayList<gameobject>();
+                for (gameobject go : mygame.objects){
+                    if (go.id.equalsIgnoreCase( tgt )){
+                        mygame.requestkill.add( go );
+                    }
+                }
+                mygame.killtimer=1.5f;
+            }
+
+            if (o.containsKey( "peek")) {
+                String tgt = of.get( "peek" ).toString();
+                for (gameobject go : mygame.objects){
+                    if (go.id.equalsIgnoreCase( tgt )){
+                        mygame.peektarget=go;
+                    }
+                }
+                if (o.containsKey( "peektime")) {
+                    String pt = of.get( "peektime" ).toString();
+                    try{
+                        mygame.peektimer=Float.parseFloat(pt);
+                    }catch(Exception e){
+                        mygame.peektimer=3f;
+
+                    }
+                }else{
+                    mygame.peektimer=3f;
+                }
+            }
+
+            if (o.containsKey( "return")) {
+                mygame.peektarget=null;
             }
 
 
@@ -462,6 +514,13 @@ public class WorldContactListener implements ContactListener {
             pl.HP-=it.damage;
             eventobject(it);
         }
+
+        if (check(ITEM,gameobject.objecttype.ITEMSENSOR,o1,o2)){
+            gameobject it = select( ITEM,o1,o2 );
+            gameobject is = select( ITEMSENSOR,o1,o2 );
+            eventobject(is);
+        }
+
 
         if (check(PLAYER,BLOCK,o1,o2)){
             gameobject bl = select( BLOCK,o1,o2 );

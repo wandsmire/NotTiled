@@ -43,6 +43,7 @@ import com.badlogic.gdx.utils.Json;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import box2dLight.PointLight;
 import box2dLight.RayHandler;
@@ -50,6 +51,7 @@ import box2dLight.RayHandler;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BLOCK;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.CHECKPOINT;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ITEM;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ITEMSENSOR;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.LISTENER;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYERPROJECTILE;
 import static com.mirwanda.nottiled.platformer.gameobject.states.DEAD;
@@ -110,6 +112,8 @@ public class game {
     public boolean onplatformv;
     public gameobject currentplatform;
     public int msgindex=0;
+    public List<gameobject> requestkill;
+    public gameobject peektarget;
 
     public int touchedsinker;
 
@@ -132,6 +136,7 @@ public class game {
     public static final short PLATFORM_BIT = 64;
     public static final short PLAYERPROJECTILE_BIT = 128;
     public static final short ENEMYPROJECTILE_BIT = 256;
+    public static final short ITEMSENSOR_BIT = 512;
     public int Tw;
     public int Th;
     public float Tsw;
@@ -496,6 +501,8 @@ public class game {
 
     public float anima;
     public int animet;
+    public float killtimer;
+    public float peektimer;
     public int salto=0;
     public boolean recoil;
     public OrthographicCamera gc;
@@ -512,6 +519,19 @@ public class game {
             player.HP = player.maxHP;
         }
 
+        if (requestkill!=null){
+            killtimer-=delta;
+            if (killtimer<=0) {
+                for (gameobject go : requestkill){
+                    go.setCategoryFilter( game.DESTROYED_BIT );
+                    go.state = gameobject.states.DEAD;
+                    go.body.setLinearVelocity( 0, 0 );
+                    go.bumbum();
+                    go.playSfx( go.sfxdead );
+                }
+                requestkill = null;
+            }
+        }
         if (recoil){
             salto=360;
             player.body.applyLinearImpulse( player.body.getLinearVelocity().x,3f,player.body.getPosition().x,player.body.getPosition().y,true );
@@ -582,16 +602,25 @@ public class game {
         float posex = player.body.getPosition().x;
         float posey = player.body.getPosition().y;
 
-
-        if (fade==0) {
-            float lerp = 5f;
-            Vector3 position = gamecam.position;
-            position.x += (posex - position.x) * lerp * delta;
-            position.y += (posey - position.y) * lerp * delta;
-            position.x = Math.round( position.x * 500 ) / 500f;
-            position.y = Math.round( position.y * 500 ) / 500f;
-            gamecam.update();
+        if (peektarget!=null){
+            if (peektimer!=-1) peektimer-=delta;
+            posex = peektarget.body.getPosition().x;
+            posey = peektarget.body.getPosition().y;
+            if (peektimer<=0 && peektimer!=-1){
+                peektarget=null;
+            }
         }
+            if (fade==0) {
+
+                float lerp = 5f;
+                Vector3 position = gamecam.position;
+                position.x += (posex - position.x) * lerp * delta;
+                position.y += (posey - position.y) * lerp * delta;
+                position.x = Math.round( position.x * 500 ) / 500f;
+                position.y = Math.round( position.y * 500 ) / 500f;
+                gamecam.update();
+            }
+
 
         //log(fadeout+"");
         if (fadeout>0){
@@ -1342,8 +1371,8 @@ public class game {
 
         if (o.containsKey( "night" )) {
             night=true;
-            rayHandler=new RayHandler( world );
-            rayHandler.setAmbientLight( .9f );
+            rayHandler=new RayHandler( world);
+            rayHandler.setAmbientLight( 1,1,1,0.3f);
 
         }
 
@@ -1448,6 +1477,11 @@ public class game {
                 case "item":
                     if (checkQual( o)) {
                         newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.KinematicBody, ITEM, objx, t, over  ,opacity);
+                    }
+                    break;
+                case "itemsensor":
+                    if (checkQual( o)) {
+                        newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.DynamicBody, ITEMSENSOR, objx, t, over  ,opacity);
                     }
                     break;
                 case "block":

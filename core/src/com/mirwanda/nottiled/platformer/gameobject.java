@@ -92,7 +92,7 @@ public class gameobject extends Sprite {
         PLAYER,
         WALLLEFT,WALLTOP,WALLBOTTOM,WALLRIGHT, WALLCENTER, LADDER, FLOATER, SINKER,
         BRICK, HALFBRICK, BOX, CHECKPOINT,  BREAKABLE, SPRING,ACTION,
-        SWITCH, SWITCHON, SWITCHOFF, PLATFORMH, PLATFORMV, PLATFORMS, MONSTER, MISC,
+        SWITCH, SWITCHON, SWITCHOFF, PLATFORMH, PLATFORMV, PLATFORMS, MONSTER, MISC, ITEMSENSOR,
         LEFTSLOPE, RIGHTSLOPE, TRANSFER, BLOCK, ITEM, ENEMY, PLAYERPROJECTILE, ENEMYPROJECTILE, LISTENER
     }
 
@@ -264,7 +264,7 @@ public class gameobject extends Sprite {
             case ITEM:
             case LISTENER:
                 fdef.filter.categoryBits = game.COIN_BIT;
-                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT |game.ITEMSENSOR_BIT;
                 bdef.type = type;
                 bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
@@ -274,6 +274,24 @@ public class gameobject extends Sprite {
                 fixture = body.createFixture(fdef);
                 fixture.setUserData(this);
                 break;
+            case ITEMSENSOR:
+                fdef.filter.categoryBits = game.ITEMSENSOR_BIT;
+                fdef.filter.maskBits = game.COIN_BIT;
+                /////
+                bdef.type = type;
+                bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
+                body = world.createBody(bdef);
+                body.setGravityScale( 0 );
+
+                shape.setAsBox(Tswh /mygame.scale, Tshh /mygame.scale);
+                fdef.shape = shape;
+                fdef.friction=0;
+                fixture = body.createFixture(fdef);
+                //setCategoryFilter(fixture,game.DEFAULT_BIT);
+                fixture.setUserData(this);
+                break;
+            //interact with environment & player
+
             case LADDER:
 
                 fdef.filter.categoryBits = game.COIN_BIT;
@@ -398,6 +416,7 @@ public class gameobject extends Sprite {
                 //setCategoryFilter(fixture,game.DEFAULT_BIT);
                 fixture.setUserData(this);
                 break;
+
 
             case PLAYER:
                 fdef.filter.categoryBits = game.PLAYER_BIT;
@@ -565,7 +584,7 @@ public class gameobject extends Sprite {
         //setOrigin( width /mygame.scale, height /mygame.scale );
 
         if (light>0 && mygame.night) {
-            myLight = new PointLight( mygame.rayHandler, 100, lightColor, light, 0, 0 );
+            myLight = new PointLight( mygame.rayHandler, 500, lightColor, light, 0, 0 );
             myLight.setSoftnessLength( 0.3f );
             myLight.attachToBody( body );
         }
