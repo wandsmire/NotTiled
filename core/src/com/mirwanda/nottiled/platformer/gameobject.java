@@ -409,6 +409,7 @@ public class gameobject extends Sprite {
 
                 shape.setAsBox(Tswh /mygame.scale, Tshh /mygame.scale);
                 fdef.shape = shape;
+                fdef.friction=0;
                 fixture = body.createFixture(fdef);
                 //setCategoryFilter(fixture,game.DEFAULT_BIT);
                 fixture.setUserData(this);
@@ -1085,10 +1086,10 @@ public class gameobject extends Sprite {
                                     case 0: //down
                                         break;
                                     case 1: //right
-                                        setFlip( true, false );
+                                     //   setFlip( true, false );
                                         break;
                                     case 2: //left
-                                        setFlip( false, false );
+                                     //   setFlip( false, false );
                                         break;
                                     case 3: //up
                                         break;

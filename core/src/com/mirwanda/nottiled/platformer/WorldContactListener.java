@@ -60,12 +60,37 @@ public class WorldContactListener implements ContactListener {
             qual=false;
             int rq=0;
             for (int i=0;i<ss.length;i++) {
-                String[] sv = ss[i].split( "=" );
-                for (KV var : mygame.save.vars) {
-                    if (sv[0].equalsIgnoreCase( var.key )) {
-                        if (Integer.parseInt(sv[1]) == var.value) {
-                            rq+=1;
-                            break;
+
+                if (ss[i].contains( "=" )) {
+                    String[] sv = ss[i].split( "=" );
+                    for (KV var : mygame.save.vars) {
+                        if (sv[0].equalsIgnoreCase( var.key )) {
+                            if (Integer.parseInt( sv[1] ) == var.value) {
+                                rq += 1;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (ss[i].contains( "&lt;" )) {
+                    String[] sv = ss[i].split( "&lt;" );
+                    for (KV var : mygame.save.vars) {
+                        if (sv[0].equalsIgnoreCase( var.key )) {
+                            if ( var.value < Integer.parseInt( sv[1] )) {
+                                rq += 1;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (ss[i].contains( "&gt;" )) {
+                    String[] sv = ss[i].split( "&gt;" );
+                    for (KV var : mygame.save.vars) {
+                        if (sv[0].equalsIgnoreCase( var.key )) {
+                            if (var.value > Integer.parseInt( sv[1] )) {
+                                rq += 1;
+                                break;
+                            }
                         }
                     }
                 }
@@ -389,18 +414,29 @@ public class WorldContactListener implements ContactListener {
 
         if (check(BLOCK,ENEMYPROJECTILE,o1,o2)){
             gameobject bl = select( BLOCK,o1,o2 );
-            gameobject pp = select( ENEMYPROJECTILE,o1,o2 );
+            gameobject ep = select( ENEMYPROJECTILE,o1,o2 );
             //Gdx.app.log( bl.HP+"",pp.damage+"");
-            pp.bumbum();
+            ep.bumbum();
 
-            bl.HP-=pp.damage;
-            pp.body.setLinearVelocity( 0,0 );
-            pp.setCategoryFilter(game.DESTROYED_BIT);
-            pp.state= gameobject.states.DEAD;
+            bl.HP-=ep.damage;
+            ep.body.setLinearVelocity( 0,0 );
+            ep.setCategoryFilter(game.DESTROYED_BIT);
+            ep.state= gameobject.states.DEAD;
 
         }
 
-        if (check(PLAYER,ENEMYPROJECTILE,o1,o2)){
+        if (check(BRICK,ENEMYPROJECTILE,o1,o2)) {
+            gameobject bl = select( BRICK, o1, o2 );
+            gameobject ep = select( ENEMYPROJECTILE, o1, o2 );
+            //Gdx.app.log( bl.HP+"",pp.damage+"");
+            ep.bumbum();
+
+            ep.body.setLinearVelocity( 0, 0 );
+            ep.setCategoryFilter( game.DESTROYED_BIT );
+            ep.state = gameobject.states.DEAD;
+
+        }
+            if (check(PLAYER,ENEMYPROJECTILE,o1,o2)){
             gameobject ep = select( ENEMYPROJECTILE,o1,o2 );
             gameobject pl = select( PLAYER,o1,o2 );
             ep.bumbum();
@@ -414,10 +450,10 @@ public class WorldContactListener implements ContactListener {
         if (check(PLAYER,MONSTER,o1,o2)){
             gameobject en = select( MONSTER,o1,o2 );
             gameobject pl = select( PLAYER,o1,o2 );
-            pl.bumbum();
+            //pl.bumbum();
             pl.HP-=en.damage;
             eventobject(en);
-            mygame.recoil=true;
+            if (en.damage>0) mygame.recoil=true;
         }
 
         if (check(PLAYER,ITEM,o1,o2)){

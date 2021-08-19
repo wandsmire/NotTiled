@@ -155,11 +155,6 @@ public class game {
                     tmp.getWidth(),
                     tmp.getHeight() / 2 );
 
-            tmp = new Texture( Gdx.files.internal( "platformer/icons.png" ) );
-            icons = TextureRegion.split( tmp,
-                    tmp.getWidth() / 5,
-                    tmp.getHeight() / 5 );
-
             objects = new ArrayList<gameobject>();
 
             try {
@@ -238,6 +233,43 @@ public class game {
                         }
                     }
                 }
+
+                boolean customicons = false;
+                if (mpa.containsKey( "icons" )) {
+                    String ico = (String) mpa.get( "icons" );
+                    if (getFile( path + "/" + ico ).exists() && !ico.equalsIgnoreCase( "" )) {
+
+                        if (mpa.containsKey( "iconsize" )) {
+                            String isz = (String) mpa.get( "iconsize" );
+                            try {
+                                String isza[] = isz.split( "," );
+                                int isx = Integer.parseInt( isza[0] );
+                                int isy = Integer.parseInt( isza[1] );
+                                tmp = new Texture( Gdx.files.absolute( path + "/" + ico ) );
+                                icons = TextureRegion.split( tmp,
+                                        tmp.getWidth() / isx,
+                                        tmp.getHeight() / isy );
+                                customicons=true;
+
+                            }catch (Exception e){
+                                customicons=false;
+                            }
+                        }else{
+                            customicons=false;
+                        }
+                    } else {
+                        customicons=false;
+                    }
+                }
+
+                if (!customicons){
+                    tmp = new Texture( Gdx.files.internal( "platformer/icons.png" ) );
+                    icons = TextureRegion.split( tmp,
+                            tmp.getWidth() / 16,
+                            tmp.getHeight() / 19 );
+
+                }
+
 
                 nextlevel = (String) mpa.get( "nextlevel" );
                 debriefing = (String) mpa.get( "debriefing" );
@@ -428,11 +460,14 @@ public class game {
         for (KV vr: save.vars){
             if (vr.hud){
                 if (vr.hasicon) {
-                    str1.draw( b, " x " + vr.value, 90,ssy-20-50*index);
-                    b.draw( icons[vr.iconx][vr.icony],50,ssy-50-50*index,32,32 );
+                    try {
+                        str1.draw( b, "  :  " + vr.value, 90, ssy - 20 - 60 * index );
+                        b.draw( icons[vr.icony][vr.iconx], 50, ssy - 65 - 60 * index, 48, 48 );
+                    }catch(Exception e){
+                    }
                    // str1.draw( b, vr.value, ssy-10-10*index)
                 }else{
-                    str1.draw( b, vr.key+" x " + vr.value, 50,ssy-20-50*index);
+                    str1.draw( b, vr.key+" : " + vr.value, 50,ssy-20-60*index);
                 }
                 index++;
             }
@@ -832,9 +867,12 @@ public class game {
 
     }
 
+
+
     public void pressleft(){
         player.moving=true;
         player.dir=2;
+
         if (ladder || floater || sinker) {player.body.setLinearVelocity(-player.speed/2f,player.body.getLinearVelocity().y);}
         if (player.body.getLinearVelocity().x >=-player.speed) {
             if (!rpg){

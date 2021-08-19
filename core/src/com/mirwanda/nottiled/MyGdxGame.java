@@ -11779,7 +11779,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-
+                try {
+                    FileHandle fh = Gdx.files.absolute( basepath + "NotTiled/sample/json/" + lptlist.getSelected() );
+                    if (fh.exists()) fh.delete();
+                }catch(Exception e){}
                 if (lptlist.getSelectedIndex()==-1) return;
                 lptlist.setItems();
                 java.util.List<String> srr = new ArrayList<String>();
