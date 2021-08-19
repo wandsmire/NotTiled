@@ -47,8 +47,9 @@ public class gameobject extends Sprite {
     public float pspread=0, spread=0;
     public boolean heavy;
     public actions action;
-    public enum actions{JUMP,DASH,SHOOT,NONE}
+    public enum actions{JUMP,DASH,SHOOT,JETPACK,NONE}
     public float impulse;
+    public float wait;
     public String bindvar;
     public TiledMapTile tlcece;
     public float maxdistance;
@@ -59,7 +60,9 @@ public class gameobject extends Sprite {
     public ParticleEffect meledak;
     public PointLight myLight;
     public float light;
+    public Color bgcolor;
     public Color lightColor = Color.WHITE;
+    public Color color;
 
     ////
     public boolean chase;
@@ -161,13 +164,13 @@ public class gameobject extends Sprite {
         this.over=over;
 
 
-
+        //pastikan 2 hal, bukan sensor, sama kedua objek saling filter.
         switch (objtype) {
             //dorongable
             case BRICK:
                 EdgeShape shaper = new EdgeShape();
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
-                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.PLAYERPROJECTILE_BIT | game.ENEMYPROJECTILE_BIT;
                 bdef.type = type;
                 bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
@@ -300,7 +303,7 @@ public class gameobject extends Sprite {
                 body = world.createBody(bdef);
                 shape.setAsBox(width /mygame.scale, width /mygame.scale);
                 fdef.shape = shape;
-                fdef.isSensor = true;
+                fdef.isSensor = false;
                 fixture = body.createFixture(fdef);
                 fixture.setUserData(this);
 
@@ -317,7 +320,7 @@ public class gameobject extends Sprite {
                 body = world.createBody(bdef);
                 shape.setAsBox(width / 200f, height / 200f);
                 fdef.shape = shape;
-                fdef.isSensor = true;
+                fdef.isSensor = false;
                 fixture = body.createFixture(fdef);
                 fixture.setUserData(this);
 
@@ -573,12 +576,14 @@ public class gameobject extends Sprite {
 
     public Vector2 lastPos;
     public boolean rotating;
+    public float waitTime;
     public void update(float dt){
         if (state==states.DEAD) return;
 
-
-
-
+        if (color!=null){
+            setColor( color.r,color.g,color.b,getColor().a );
+            color=null;
+        }
 
        if (body!=null) setPosition(body.getPosition().x-getWidth()/2f,body.getPosition().y-getHeight()/2f);
         if (HP>maxHP) HP=maxHP;
@@ -649,10 +654,10 @@ public class gameobject extends Sprite {
                         body.setLinearVelocity(spread, -speed);
                         break;
                     case 1://kanan
-                        body.setLinearVelocity(speed, spread);
+                        body.setLinearVelocity(speed, 0.2f+spread);
                         break;
                     case 2://kiri
-                        body.setLinearVelocity(-speed, spread);
+                        body.setLinearVelocity(-speed, 0.2f+spread);
                         break;
                     case 3://atas
                         body.setLinearVelocity(spread, speed);
@@ -727,9 +732,14 @@ public class gameobject extends Sprite {
                         tame=false;
                     }
                 }
-
+                boolean shooting = false;
                 if (body.getPosition().dst( mygame.player.body.getPosition()) <chaseRadius/mygame.scale) {
-                   if (mygame.player.state!= states.DEAD) enemyshoot();
+                   if (mygame.player.state!= states.DEAD && canshoot)
+                   {
+                       shooting=true;
+                       enemyshoot();
+                   }
+
                }
 
 
@@ -778,10 +788,9 @@ public class gameobject extends Sprite {
 
                 }
 
-
                 if (path==null && !dirlocked) {
                     if (body.getPosition().dst( mygame.player.body.getPosition() ) < chaseRadius /mygame.scale) {
-                        if (chase &&!tame) moving = true;
+                        if (chase &&!tame && !shooting) moving = true;
 
 
                         if (!mygame.rpg){
@@ -965,7 +974,131 @@ public class gameobject extends Sprite {
                     }
                 }
 
+
+
                 break;
+
+                //make sure the object is kinematic and not static.
+            case ITEM:
+            case BLOCK:
+            default:
+                ///
+                if (path!=null){
+
+                    if (lastPos==null){
+                        currentPath=0;
+                        dir = path[0];
+                        lastPos=new Vector2(body.getPosition().x,body.getPosition().y);
+                        moving=true;
+                    }
+
+                    if (dir!=4){
+                    if(lastPos.dst(body.getPosition().x,body.getPosition().y) >=mygame.Tsw/mygame.scale){
+                        currentPath+=1;
+                        if (currentPath>=path.length) currentPath=0;
+                        dir = path[currentPath];
+                        lastPos=new Vector2(body.getPosition().x,body.getPosition().y);
+                        if (dir==4) waitTime=wait;
+
+                    }
+                    }else{
+                        if(waitTime>0){
+                            waitTime-=dt;
+                            if (waitTime<=0) {
+                                currentPath += 1;
+                                if (currentPath >= path.length) currentPath = 0;
+                                dir = path[currentPath];
+                                lastPos = new Vector2( body.getPosition().x, body.getPosition().y );
+                                if (dir==4) waitTime=wait;
+
+                            }
+                        }
+
+                    }
+                }
+
+
+                if (mygame.player.state == states.DEAD) moving=false;
+
+                if (moving) {
+                    if (mygame.rpg||heavy||objtype== objecttype.BLOCK||objtype== objecttype.ITEM) {
+                        switch (dir) {
+                            case 0://bawah
+                                body.setLinearVelocity( 0, -speed );
+                                break;
+                            case 1://kanan
+                                body.setLinearVelocity( speed, 0 );
+                                break;
+                            case 2://kiri
+                                body.setLinearVelocity( -speed, 0 );
+                                break;
+                            case 3://atas
+                                body.setLinearVelocity( 0, speed );
+                                break;
+                            case 4://wait
+                                body.setLinearVelocity( 0, 0 );
+                                break;
+
+                        }
+                    }else{
+                        switch (dir) {
+
+                            case 1://kanan
+                                body.setLinearVelocity( speed, body.getLinearVelocity().y );
+                                break;
+                            case 2://kiri
+                                body.setLinearVelocity( -speed, body.getLinearVelocity().y );
+                                break;
+                            default:
+                                body.setLinearVelocity( 0, 0 );
+
+                                moving=false;
+                        }
+
+                    }
+                }else{
+
+
+                    if (anim.size()>0) {
+                        if (mygame.rpg || stepping) body.setLinearVelocity( 0, 0 );
+                        body.setLinearVelocity( body.getLinearVelocity().x, body.getLinearVelocity().y );
+                    }else{
+                        if (!rotating) {
+                            if (mygame.rpg) {
+                                setOriginCenter();
+                                switch (dir) {
+                                    case 0: //down
+                                        setRotation( 180 );
+                                        break;
+                                    case 1: //right
+                                        setRotation( 270 );
+                                        break;
+                                    case 2: //left
+                                        setRotation( 90 );
+                                        break;
+                                    case 3: //up
+                                        setRotation( 0 );
+                                        break;
+                                }
+                            } else {
+                                switch (dir) {
+                                    case 0: //down
+                                        break;
+                                    case 1: //right
+                                        setFlip( true, false );
+                                        break;
+                                    case 2: //left
+                                        setFlip( false, false );
+                                        break;
+                                    case 3: //up
+                                        break;
+                                }
+                            }
+                        }
+
+                    }
+                }
+                ///
         }
 
     }

@@ -1380,6 +1380,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         postProcessor.capture();
                         mygame.keyinput();
+                        Gdx.gl.glClearColor( mygame.bgcolor.r,mygame.bgcolor.g,mygame.bgcolor.b,mygame.bgcolor.a);
                         Gdx.gl.glClear( GL20.GL_COLOR_BUFFER_BIT );
                         batch.setProjectionMatrix( gamecam.combined );
                         batch.begin();
@@ -1417,15 +1418,23 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         uis.setColor( 0f, 0f, 0, 0.6f );
                         if (Gdx.app.getType() != Application.ApplicationType.Desktop || mygame.uitest) {
                             if (!mygame.starting && mygame.player.state != gameobject.states.DEAD && mygame.fade==0) {
+                                if (!mygame.disablecontrol) {
 
-                                uisrect( gui.left, mouse, null );
-                                uisrect( gui.right, mouse, null );
-                                uisrect( gui.up, mouse, null );
-                                uisrect( gui.down, mouse, null );
-                                if (mygame.action1 != null) uisrect( gui.action1, mouse, null );
-                                if (mygame.action2 != null) uisrect( gui.action2, mouse, null );
-                                if (mygame.action3 != null) uisrect( gui.action3, mouse, null );
-                                if (mygame.action4 != null) uisrect( gui.action4, mouse, null );
+                                    if (!mygame.disabledpad) {
+                                        if (!mygame.disableXaxis) {
+                                            uisrect( gui.left, mouse, null );
+                                            uisrect( gui.right, mouse, null );
+                                        }
+                                        if (!mygame.disableYaxis) {
+                                            uisrect( gui.up, mouse, null );
+                                            uisrect( gui.down, mouse, null );
+                                        }
+                                    }
+                                    if (mygame.action1 != null) uisrect( gui.action1, mouse, null );
+                                    if (mygame.action2 != null) uisrect( gui.action2, mouse, null );
+                                    if (mygame.action3 != null) uisrect( gui.action3, mouse, null );
+                                    if (mygame.action4 != null) uisrect( gui.action4, mouse, null );
+                                }
                             }
                         }
                         //uisrect(gui.restart,mouse,null);
@@ -1469,18 +1478,30 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         //str1draw(ui,"Keys : "+mygame.key+" | Items Left : "+mygame.coin , gui.layer);
                         if (Gdx.app.getType() != Application.ApplicationType.Desktop || mygame.uitest) {
                             if (!mygame.starting && mygame.player.state != gameobject.states.DEAD  && mygame.fade==0) {
-                                uidrawbutton( txLeft, "Left", gui.left, 3 );
-                                uidrawbutton( txDown, "Down", gui.down, 3 );
-                                uidrawbutton( txRight, "Right", gui.right, 3 );
-                                uidrawbutton( txUp, "Up", gui.up, 3 );
-                                if (mygame.action1 != null)
-                                    uidrawbutton( txRight, mygame.action1.name, gui.action1, 3 );
-                                if (mygame.action2 != null)
-                                    uidrawbutton( txDown, mygame.action2.name, gui.action2, 3 );
-                                if (mygame.action3 != null)
-                                    uidrawbutton( txLeft, mygame.action3.name, gui.action3, 3 );
-                                if (mygame.action4 != null)
-                                    uidrawbutton( txUp, mygame.action4.name, gui.action4, 3 );
+                                if (!mygame.disablecontrol) {
+                                    if (!mygame.disabledpad) {
+
+                                        if (!mygame.disabledpad) {
+                                            if (!mygame.disableXaxis) {
+                                                uidrawbutton( txLeft, "Left", gui.left, 3 );
+                                                uidrawbutton( txRight, "Right", gui.right, 3 );
+                                            }
+                                            if (!mygame.disableYaxis) {
+                                                uidrawbutton( txUp, "Up", gui.up, 3 );
+                                                uidrawbutton( txDown, "Down", gui.down, 3 );
+                                            }
+                                        }
+
+                                    }
+                                    if (mygame.action1 != null)
+                                        uidrawbutton( txRight, mygame.action1.name, gui.action1, 3 );
+                                    if (mygame.action2 != null)
+                                        uidrawbutton( txDown, mygame.action2.name, gui.action2, 3 );
+                                    if (mygame.action3 != null)
+                                        uidrawbutton( txLeft, mygame.action3.name, gui.action3, 3 );
+                                    if (mygame.action4 != null)
+                                        uidrawbutton( txUp, mygame.action4.name, gui.action4, 3 );
+                                }
                             }
 
                         }
@@ -1958,18 +1979,27 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (mygame.player.state == com.mirwanda.nottiled.platformer.gameobject.states.DEAD)
                             return;
                         pressed = true;
-                        if (tapped( touch2, gui.up )) mygame.pressup();
-                        if (tapped( touch2, gui.left )) mygame.pressleft();
-                        if (tapped( touch2, gui.down )) mygame.pressdown();
-                        if (tapped( touch2, gui.right )) mygame.pressright();
-                        if (mygame.action1 != null && tapped( touch2, gui.action1 ))
-                            mygame.act( mygame.action1 );
-                        if (mygame.action2 != null && tapped( touch2, gui.action2 ))
-                            mygame.act( mygame.action2 );
-                        if (mygame.action3 != null && tapped( touch2, gui.action3 ))
-                            mygame.act( mygame.action3 );
-                        if (mygame.action4 != null && tapped( touch2, gui.action4 ))
-                            mygame.act( mygame.action4 );
+                        if (!mygame.disablecontrol) {
+
+                            if (!mygame.disabledpad) {
+                                if (!mygame.disableYaxis) {
+                                    if (tapped( touch2, gui.up )) mygame.pressup();
+                                    if (tapped( touch2, gui.down )) mygame.pressdown();
+                                }
+                                if (!mygame.disableXaxis) {
+                                    if (tapped( touch2, gui.left )) mygame.pressleft();
+                                    if (tapped( touch2, gui.right )) mygame.pressright();
+                                }
+                            }
+                            if (mygame.action1 != null && tapped( touch2, gui.action1 ))
+                                mygame.act( mygame.action1 );
+                            if (mygame.action2 != null && tapped( touch2, gui.action2 ))
+                                mygame.act( mygame.action2 );
+                            if (mygame.action3 != null && tapped( touch2, gui.action3 ))
+                                mygame.act( mygame.action3 );
+                            if (mygame.action4 != null && tapped( touch2, gui.action4 ))
+                                mygame.act( mygame.action4 );
+                        }
                     }
 
                 }
@@ -10920,12 +10950,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     bPropValfile.setVisible(false);
                     sbPropValbool.setVisible(false);
                     switch (sbPropType.getSelected().toString()) {
-                        case "String":
-                            fPropVal.setVisible(true);
-                            fPropVal.setText("");
-                            fPropVal.setTextFieldFilter(null);
-                            fPropVal.setText(pp.get(dex).getValue());
-                            break;
                         case "Integer":
                             fPropVal.setVisible(true);
                             fPropVal.setText("");
@@ -10952,6 +10976,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             bPropValfile.setVisible(true);
                             bPropValfile.setText(pp.get(dex).getValue());
                             break;
+                        case "String":
                         default:
                             fPropVal.setVisible(true);
                             fPropVal.setText("");
@@ -11756,16 +11781,27 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
 
                 if (lptlist.getSelectedIndex()==-1) return;
-                FileHandle todel;
-                todel = Gdx.files.absolute(basepath+"NotTiled/sample/json/"+lptlist.getSelected());
-                todel.delete();
-
+                lptlist.setItems();
                 java.util.List<String> srr = new ArrayList<String>();
                 FileHandle dirHandle;
                 dirHandle = Gdx.files.absolute(basepath+"NotTiled/sample/json/");
                 for (FileHandle entry : dirHandle.list()) {
 
-                    srr.add(entry.file().getName());
+                    String name = entry.file().getName();
+                    if (name.contains( "_"+sender )) {
+                        srr.add(name);
+                    }
+
+                    boolean none = true;
+                    if (name.contains( "_object" )) none = false;
+                    if (name.contains( "_tile" )) none = false;
+                    if (name.contains( "_tilesettings" )) none = false;
+                    if (name.contains( "_tset" )) none = false;
+                    if (name.contains( "_layer" )) none = false;
+                    if (name.contains( "_map" )) none = false;
+                    if (name.contains( "_auto" )) none = false;
+
+                    if (none) srr.add(name); //jadi yang ga masuk kategori gak ilang.
                 }
                 java.util.Collections.sort(srr);
                 lptlist.setItems(srr.toArray(new String[0]));
@@ -11805,6 +11841,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         tilesets.get(selTsetID).getTiles().get(selTileID).setProperties(at.getProperties());
 
                         break;
+                    case "tilesettings":
+                        tilesets.get(seltset).getTiles().get(selTileID).setProperties(at.getProperties());
+
+                        break;
+                    case "layer":
+                        layers.get(selLayer).setProperties(at.getProperties());
+
+                        break;
+                    case "tset":
+                        tilesets.get(seltset).setProperties(at.getProperties());
+
+                        break;
+
                     case "map":
                         properties = at.getProperties();
                         break;

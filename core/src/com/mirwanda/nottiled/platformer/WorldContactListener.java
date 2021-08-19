@@ -189,6 +189,42 @@ public class WorldContactListener implements ContactListener {
 
             }
 
+            if (o.containsKey( "disabledpad" )){
+                mygame.disabledpad = true;
+            }
+            if (o.containsKey( "enabledpad" )){
+                mygame.disabledpad = false;
+            }
+
+            if (o.containsKey( "disableXaxis" )){
+                mygame.disableXaxis = true;
+            }
+            if (o.containsKey( "enabledXaxis" )){
+                mygame.disableXaxis = false;
+            }
+
+            if (o.containsKey( "disableYaxis" )){
+                mygame.disableYaxis = true;
+            }
+            if (o.containsKey( "enableYaxis" )){
+                mygame.disableYaxis = false;
+            }
+            if (o.containsKey( "disablecontrol" )){
+                mygame.disablecontrol = true;
+            }
+            if (o.containsKey( "enablecontrol" )){
+                mygame.disablecontrol = false;
+            }
+
+            if (o.containsKey( "zoom" )) {
+                mygame.zoom = Float.parseFloat( o.get( "zoom" ).toString() );
+            }
+
+            if (o.containsKey( "gravity" )) {
+                mygame.world.setGravity( new Vector2(0, -Float.parseFloat( o.get( "gravity" ).toString()) ));
+            }
+
+
             if (o.get( "setaction" ) != null) {
                 gameobject newbrick = new gameobject();
                 newbrick.mygame = mygame;
@@ -216,6 +252,13 @@ public class WorldContactListener implements ContactListener {
                         newbrick.pcooldown = (o.containsKey( "cooldown" )) ? Float.parseFloat( o.get( "cooldown" ).toString() ) : 0.8f;
 
                         break;
+                    case "jetpack":
+                        newbrick.action = gameobject.actions.JETPACK;
+                        newbrick.impulse = (o.containsKey( "impulse" )) ? Float.parseFloat( o.get( "impulse" ).toString() ) : 3f;
+                        newbrick.pcooldown = (o.containsKey( "cooldown" )) ? Float.parseFloat( o.get( "cooldown" ).toString() ) : 0.8f;
+
+                        break;
+
                     case "dash":
                         newbrick.action = gameobject.actions.DASH;
                         newbrick.impulse = (o.containsKey( "impulse" )) ? Float.parseFloat( o.get( "impulse" ).toString() ) : 1;
@@ -232,13 +275,22 @@ public class WorldContactListener implements ContactListener {
                         newbrick.pspeed = (o.containsKey( "pspeed" )) ? Float.parseFloat( o.get( "pspeed" ).toString() ) : 4;
                         newbrick.pmaxdistance = (o.containsKey( "pmaxdistance" )) ? Integer.parseInt( o.get( "pmaxdistance" ).toString() ) : 300;
                         newbrick.pdamage = (o.containsKey( "pdamage" )) ? Integer.parseInt( o.get( "pdamage" ).toString() ) : 1;
-                        if (o.containsKey( "panim" )) {
+
+                        Texture txMonster;
+                        try{
                             String anim = o.get( "panim" ).toString();
-                            Texture txMonster = new Texture( mygame.getFile( mygame.path + "/" + anim ) );
+
+
+                                txMonster = new Texture( mygame.getFile( mygame.path + "/" + anim ) );
+                            }catch(Exception e){
+                                txMonster = new Texture(Gdx.files.internal( "platformer/shoot.png" ));
+                            }
+
                             TextureRegion[][] tmp = TextureRegion.split( txMonster,
                                     txMonster.getWidth() / 4,
                                     txMonster.getHeight() / 4 );
                             newbrick.pimagesize=new Vector2(txMonster.getWidth()/4,txMonster.getHeight() / 4);
+                            mygame.log("NOGHE"+newbrick.pimagesize);
                             for (int i = 0; i < 4; i++) {
                                 TextureRegion[] walkFrames = new TextureRegion[4];
                                 int index = 0;
@@ -248,7 +300,7 @@ public class WorldContactListener implements ContactListener {
                                 Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
                                 newbrick.panim.add( tempAnim );
                             }
-                        }
+
 
                         break;
                 }
@@ -273,6 +325,11 @@ public class WorldContactListener implements ContactListener {
                 myobject.setCategoryFilter( game.DESTROYED_BIT );
                 mygame.objects.remove( myobject );
             }
+
+            if (o.get( "bgcolor" ) != null) {
+                mygame.bgcolor=myobject.bgcolor;
+            }
+
         }else{ //!qual
             if (o.get( "premessage" ) != null) {
                 mygame.msgindex = 0;
@@ -319,6 +376,17 @@ public class WorldContactListener implements ContactListener {
 
         }
 
+        if (check(BRICK,PLAYERPROJECTILE,o1,o2)){
+            gameobject bl = select( BLOCK,o1,o2 );
+            gameobject pp = select( PLAYERPROJECTILE,o1,o2 );
+            //Gdx.app.log( bl.HP+"",pp.damage+"");
+            pp.bumbum();
+            pp.body.setLinearVelocity( 0,0 );
+            pp.setCategoryFilter(game.DESTROYED_BIT);
+            pp.state= gameobject.states.DEAD;
+
+        }
+
         if (check(BLOCK,ENEMYPROJECTILE,o1,o2)){
             gameobject bl = select( BLOCK,o1,o2 );
             gameobject pp = select( ENEMYPROJECTILE,o1,o2 );
@@ -349,6 +417,7 @@ public class WorldContactListener implements ContactListener {
             pl.bumbum();
             pl.HP-=en.damage;
             eventobject(en);
+            mygame.recoil=true;
         }
 
         if (check(PLAYER,ITEM,o1,o2)){

@@ -138,6 +138,7 @@ public class game {
     public float Tsh;
     public RayHandler rayHandler;
     public float scale=100f;
+    public Color bgcolor=Color.LIGHT_GRAY;
 
     public boolean initialise(String path, String filename){
         try {
@@ -460,34 +461,61 @@ public class game {
 
     public float anima;
     public int animet;
+    public int salto=0;
+    public boolean recoil;
     public OrthographicCamera gc;
     public float zoom=0.2f;
     public void update(SpriteBatch batch, float delta, OrthographicCamera gamecam) {
-        gc=gamecam;
-        if (gc.zoom!=zoom) gc.zoom=zoom;
-        if (!starting && player.state!=DEAD) world.step(1/60f,6,2);
+        gc = gamecam;
+        if (gc.zoom != zoom) gc.zoom = zoom;
+        if (!starting && player.state != DEAD) world.step( 1 / 60f, 6, 2 );
 
-        if (player.HP<=0){
+        if (player.HP <= 0) {
             killPlayer();
         }
-        if (player.HP>player.maxHP){
-            player.HP=player.maxHP;
+        if (player.HP > player.maxHP) {
+            player.HP = player.maxHP;
         }
 
+        if (recoil){
+            salto=360;
+            player.body.applyLinearImpulse( player.body.getLinearVelocity().x,3f,player.body.getPosition().x,player.body.getPosition().y,true );
+            recoil=false;
+        }
+
+        if (!rpg){
+            if (world.getGravity().y!=0) gravity = -world.getGravity().y/Math.abs( world.getGravity().y);
+            if (jetpack) {
+                if (Math.abs(player.body.getLinearVelocity().y)>player.speed){
+                    player.body.setLinearVelocity( player.body.getLinearVelocity().x,gravity*player.speed );
+                }
+
+                jetpackcooldown -= delta;
+                if (jetpackcooldown<=0) jetpack=false;
+            }
+
+            if (player.body.getLinearVelocity().x >player.speed && !jumping) {
+                player.body.setLinearVelocity( player.speed,player.body.getLinearVelocity().y );
+            }
+            if (player.body.getLinearVelocity().x <-player.speed && !jumping) {
+                player.body.setLinearVelocity( -player.speed,player.body.getLinearVelocity().y );
+            }
+
+        }
 
         checkHUD();
         if (transformrequest) fullfilltransformrequest();
 
         if (!rpg) {
-            if (Math.abs( player.body.getLinearVelocity().y ) >= 0.2f) {
+            if (Math.abs( player.body.getLinearVelocity().y ) > 0f) {
                 jumping = true;
                 jumpinterval = 0;
             } else {
                 jumpinterval += delta;
             }
 
-            if (jumpinterval >= 0.1f) {
-                jumping = false;
+            if (jumpinterval >= 0.02f) {
+                jumping = false; dashed=false;
             }
             stompinterval -= delta;
             if (stompinterval < 0) stompinterval = 0;
@@ -498,6 +526,17 @@ public class game {
             dead+=1;
             player.state = DEAD;
 
+        }
+
+        if (salto>0) salto-=20;
+
+        if (salto>=0){
+            if (player.dir==1){
+                player.setRotation( salto );
+            }
+            else {
+                player.setRotation( 360-salto );
+            }
         }
 
 
@@ -662,12 +701,11 @@ public class game {
         }else if (ladder){
             player.body.setLinearVelocity(player.body.getLinearVelocity().x,0);
             player.body.setGravityScale(0f);
-        }else if (sinker){
+        }else if (sinker) {
 
-            player.body.setLinearVelocity(player.body.getLinearVelocity().x,0);
-            player.body.setGravityScale(0.7f);
-        } else
-        {
+            player.body.setLinearVelocity( player.body.getLinearVelocity().x, 0 );
+            player.body.setGravityScale( 0.7f );
+        }else{
             player.body.setGravityScale(1);
         }
 
@@ -759,6 +797,9 @@ public class game {
             if (ladder || floater || sinker) {
                 player.body.setLinearVelocity( 0, player.speed/2f );
             }
+            if (jetpack) {
+                player.body.setLinearVelocity( player.body.getLinearVelocity().x, player.speed/2f );
+            }
         }else{
             if (ladder || floater || sinker) {player.body.setLinearVelocity(player.body.getLinearVelocity().x,player.speed/2f);}
                 player.body.setLinearVelocity(0,player.speed);
@@ -778,6 +819,10 @@ public class game {
             if (ladder || floater || sinker) {
                 player.body.setLinearVelocity( player.body.getLinearVelocity().x, -player.speed/2f );
             }
+            if (jetpack) {
+                player.body.setLinearVelocity( player.body.getLinearVelocity().x, -player.speed/2f );
+            }
+
         }else{
             if (ladder || floater || sinker) {player.body.setLinearVelocity(player.body.getLinearVelocity().x,-player.speed/2f);}
             player.body.setLinearVelocity(0,-player.speed);
@@ -798,6 +843,8 @@ public class game {
                 player.body.setLinearVelocity(-player.speed,0);
 
             }
+        }else{
+            if (!jumping) player.body.setLinearVelocity(-player.speed,player.body.getLinearVelocity().y);
         }
     }
     public void pressright(){
@@ -813,6 +860,8 @@ public class game {
 
             }
 
+        }else{
+            if (!jumping) player.body.setLinearVelocity(player.speed,player.body.getLinearVelocity().y);
         }
 
     }
@@ -921,10 +970,17 @@ public class game {
 
     }
 
+    public boolean disablecontrol = false;
+    public boolean disabledpad = false;
+    public boolean disableXaxis = false;
+    public boolean disableYaxis = false;
+    boolean dashed = false;
+    boolean jetpack = false;
+    float jetpackcooldown =0;
+    float gravity;
     public void act(gameobject go){
 //        Gdx.app.log(go.pcooldown+"", go.cooldown+"");
         if (go==null) return;
-        if (go.cooldown>0) return;
 
         //Gdx.app.log(go.bindvar, getVar( go.bindvar )+"");
         if (go.bindvar!=null){
@@ -934,37 +990,56 @@ public class game {
 
         }
         playSfx( go.sfx );
-
         switch (go.action){
             case NONE:
                 break;
-            case JUMP:
-                player.body.applyLinearImpulse( 0f, go.impulse, player.getX(), player.getY(), true );
+            case JUMP: //jumping ga usah pakai cooldown
+                if (!jumping) {
+                    player.body.applyLinearImpulse( 0f, gravity*go.impulse, player.getX(), player.getY(), true );
+                    jumping = true;
+                }
+
+                break;
+            case JETPACK: //jumping ga usah pakai cooldown
+                if (go.cooldown>0) return;
+
+                jetpack = true;
+                //    jetpackcooldown = 0.1f;
+                player.body.applyLinearImpulse( 0f, gravity*go.impulse, player.getX(), player.getY(), true );
                 jumping = true;
                 go.cooldown=go.pcooldown;
 
+
                 break;
             case DASH:
-                switch (player.dir){
-                    case 0:
-                        player.body.applyLinearImpulse( 0f, -go.impulse, player.getX(), player.getY(), true );
-                        break;
-                    case 1:
-                        player.body.applyLinearImpulse( go.impulse, 0f, player.getX(), player.getY(), true );
-                        break;
-                    case 2:
-                        player.body.applyLinearImpulse( -go.impulse, 0f, player.getX(), player.getY(), true );
-                        break;
-                    case 3:
-                        player.body.applyLinearImpulse( 0f, go.impulse, player.getX(), player.getY(), true );
-                        break;
+                if (jumping) {
+                    if (!dashed){
+                    dashed=true;
+                    switch (player.dir) {
+                        case 0:
+                            player.body.applyLinearImpulse( 0f, -go.impulse, player.getX(), player.getY(), true );
+                            break;
+                        case 1:
+                            player.body.applyLinearImpulse( go.impulse, 0f, player.getX(), player.getY(), true );
+                            break;
+                        case 2:
+                            player.body.applyLinearImpulse( -go.impulse, 0f, player.getX(), player.getY(), true );
+                            break;
+                        case 3:
+                            player.body.applyLinearImpulse( 0f, go.impulse, player.getX(), player.getY(), true );
+                            break;
 
+                    }
+                    salto=360;
+                    }
                 }
-                jumping = true;
+                //jumping = true;
                 go.cooldown=go.pcooldown;
 
                 break;
             case SHOOT:
+                if (go.cooldown>0) return;
+
                 gameobject newbrick = new gameobject();
                 newbrick.mygame = this;
                 newbrick.speed=go.pspeed;
@@ -1119,12 +1194,38 @@ public class game {
 
         if (o.containsKey( "lightcolor" )){
             String cs = o.get( "lightcolor" ).toString();
-            float bgr = (float) Integer.parseInt(cs.substring(0, 2), 16) / 256;
-            float bgg = (float) Integer.parseInt(cs.substring(2, 4), 16) / 256;
-            float bgb = (float) Integer.parseInt(cs.substring(4, 6), 16) / 256;
-            newbrick.lightColor = new Color(bgr,bgg,bgb,1f);
+            try {
+                float bgr = (float) Integer.parseInt( cs.substring( 0, 2 ), 16 ) / 256;
+                float bgg = (float) Integer.parseInt( cs.substring( 2, 4 ), 16 ) / 256;
+                float bgb = (float) Integer.parseInt( cs.substring( 4, 6 ), 16 ) / 256;
+                newbrick.lightColor = new Color( bgr, bgg, bgb, 1f );
+            }catch(Exception e){
+                newbrick.lightColor = Color.WHITE;
+            }
 
         }
+        if (o.containsKey( "bgcolor" )){
+            String cs = o.get( "bgcolor" ).toString();
+            try {
+                float bgr = (float) Integer.parseInt(cs.substring(0, 2), 16) / 256;
+                float bgg = (float) Integer.parseInt(cs.substring(2, 4), 16) / 256;
+                float bgb = (float) Integer.parseInt(cs.substring(4, 6), 16) / 256;
+                newbrick.bgcolor = new Color(bgr,bgg,bgb,1f);
+            }catch(Exception e){
+            }
+        }
+        if (o.containsKey( "color" )){
+            String cs = o.get( "color" ).toString();
+            try {
+                float bgr = (float) Integer.parseInt( cs.substring( 0, 2 ), 16 ) / 256;
+                float bgg = (float) Integer.parseInt( cs.substring( 2, 4 ), 16 ) / 256;
+                float bgb = (float) Integer.parseInt( cs.substring( 4, 6 ), 16 ) / 256;
+                newbrick.color = new Color( bgr, bgg, bgb, 1f );
+            }catch(Exception e){
+            }
+
+        }
+
 
 
         newbrick.HP = (o.containsKey( "HP" )) ? Integer.parseInt( o.get( "HP" ).toString() ) : 1;
@@ -1186,6 +1287,9 @@ public class game {
                     case "up":
                         k = 3;
                         break;
+                    case "wait":
+                        k = 4;
+                        break;
                     default:
                         k = Integer.parseInt( ss[i] );
                 }
@@ -1216,6 +1320,7 @@ public class game {
         newbrick.dir = (o.containsKey( "dir" )) ? Integer.parseInt( o.get( "dir" ).toString() ) : 1;
         newbrick.tameif = (o.containsKey( "tameif" )) ?  o.get( "tameif" ).toString() : "";
 
+        newbrick.wait = (o.containsKey( "wait" )) ? Float.parseFloat( o.get( "wait" ).toString() ) : 1f;
         newbrick.speed = (o.containsKey( "speed" )) ? Float.parseFloat( o.get( "speed" ).toString() ) : 1f;
         newbrick.chase = o.containsKey( "chase" );
         newbrick.chaseRadius = (o.containsKey( "chaseRadius" )) ? Float.parseFloat( o.get( "chaseRadius" ).toString() ) : 100f;
@@ -1223,7 +1328,7 @@ public class game {
         newbrick.canshoot = o.containsKey( "canshoot" );
         newbrick.dirlocked = o.containsKey( "dirlocked" );
         newbrick.pspread = (o.containsKey( "pspread" )) ? Float.parseFloat( o.get( "pspread" ).toString() ) : 0;
-        newbrick.pcooldown = (o.containsKey( "pcooldown" )) ? Float.parseFloat( o.get( "pcooldown" ).toString() ) : 1;
+        newbrick.pcooldown = (o.containsKey( "pcooldown" )) ? Float.parseFloat( o.get( "pcooldown" ).toString() ) : 1f;
         newbrick.pspeed = (o.containsKey( "pspeed" )) ? Float.parseFloat( o.get( "pspeed" ).toString() ) : 4;
         newbrick.pmaxdistance = (o.containsKey( "pmaxdistance" )) ? Integer.parseInt( o.get( "pmaxdistance" ).toString() ) : 300;
         newbrick.pdamage = (o.containsKey( "pdamage" )) ? Integer.parseInt( o.get( "pdamage" ).toString() ) : 1;
@@ -1304,12 +1409,12 @@ public class game {
                     break;
                 case "item":
                     if (checkQual( o)) {
-                        newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, ITEM, objx, t, over  ,opacity);
+                        newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.KinematicBody, ITEM, objx, t, over  ,opacity);
                     }
                     break;
                 case "block":
                     if (checkQual( o )) {
-                        newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, BLOCK, objx, t, over  ,opacity);
+                        newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.KinematicBody, BLOCK, objx, t, over  ,opacity);
                     }
                     break;
                 case "listener":
@@ -1322,8 +1427,10 @@ public class game {
 
                     return;
 
+                case "enemy": case "monster":
+                    newbrick.destructible=true;
+                default: //other names, including the old
 
-                default: //other names, including the old monster
                     Vector2 imgsize = new Vector2( Tsw, Tsh );
                     Vector2 pimgsize = new Vector2( Tsw, Tsh );
 
@@ -1347,23 +1454,27 @@ public class game {
 
                     }
 
-                    if (o.containsKey( "panim" )) {
+                    Texture txMonster;
+                    try {
                         String anim = o.get( "panim" ).toString();
-                        Texture txMonster = new Texture( getFile( path + "/" + anim ) );
-                        TextureRegion[][] tmp = TextureRegion.split( txMonster,
-                                txMonster.getWidth() / 4,
-                                txMonster.getHeight() / 4 );
-                        newbrick.pimagesize = new Vector2( txMonster.getWidth() / 4, txMonster.getHeight() / 4 );
-                        for (int i = 0; i < 4; i++) {
-                            TextureRegion[] walkFrames = new TextureRegion[4];
-                            int index = 0;
-                            for (int j = 0; j < 4; j++) {
-                                walkFrames[index++] = tmp[i][j];
-                            }
-                            Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
-                            newbrick.panim.add( tempAnim );
-                        }
+                        txMonster = new Texture( getFile( path + "/" + anim ) );
+                    }catch(Exception e){
+                        txMonster = new Texture(Gdx.files.internal( "platformer/eshoot.png" ) );
                     }
+                    TextureRegion[][] tmp = TextureRegion.split( txMonster,
+                            txMonster.getWidth() / 4,
+                            txMonster.getHeight() / 4 );
+                    newbrick.pimagesize = new Vector2( txMonster.getWidth() / 4, txMonster.getHeight() / 4 );
+                    for (int i = 0; i < 4; i++) {
+                        TextureRegion[] walkFrames = new TextureRegion[4];
+                        int index = 0;
+                        for (int j = 0; j < 4; j++) {
+                            walkFrames[index++] = tmp[i][j];
+                        }
+                        Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
+                        newbrick.panim.add( tempAnim );
+                    }
+
 
                     newbrick.mygame = this;
                     if (newbrick.heavy) {
