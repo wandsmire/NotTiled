@@ -32,12 +32,15 @@ public class gameobject extends Sprite {
     public String id="";
     public String name="";
     public game mygame;
+
     public gameobject(){}
     public gameobject.objecttype objtype;
+    public String type;
     public MapObject obj;
     public Sound sfx,sfxdead,psfx;
     public enum move {RIGHT,LEFT,UP,DOWN}
     public int dir;
+    public int face;
     public boolean moving, dirlocked;
     public float damage=0;
     public float HP=1;
@@ -178,6 +181,8 @@ public class gameobject extends Sprite {
                 //top line
                 shaper.set(-sz,sz,sz, sz);
                 fdef.shape = shaper;
+                fdef.friction=0;
+
                 body.createFixture(fdef).setUserData(this);
 
                 //left line
@@ -598,6 +603,7 @@ public class gameobject extends Sprite {
     public boolean rotating;
     public float waitTime;
     public void update(float dt){
+
         if (state==states.DEAD) return;
 
         if (color!=null){
@@ -765,9 +771,11 @@ public class gameobject extends Sprite {
 
                 if (anim.size()>0) {
                     if (moving || stepping) {
+                        if (anim.size()==1) dir=0;
                         TextureRegion currentFrame = anim.get( dir ).getKeyFrame( mygame.stateTime, true );
                         setRegion( currentFrame );
                     } else {
+                        if (anim.size()==1) dir=0;
                         TextureRegion currentFrame = anim.get( dir ).getKeyFrame( 0f, true );
                         setRegion( currentFrame );
 
@@ -1040,7 +1048,7 @@ public class gameobject extends Sprite {
 
                 if (mygame.player.state == states.DEAD) moving=false;
 
-                if (moving) {
+                if (moving && this!=mygame.player) {
                     if (mygame.rpg||heavy||objtype== objecttype.BLOCK||objtype== objecttype.ITEM) {
                         switch (dir) {
                             case 0://bawah
@@ -1078,26 +1086,33 @@ public class gameobject extends Sprite {
                     }
                 }else{
 
-
                     if (anim.size()>0) {
+                        //mygame.log("HERE");
                         if (mygame.rpg || stepping) body.setLinearVelocity( 0, 0 );
                         body.setLinearVelocity( body.getLinearVelocity().x, body.getLinearVelocity().y );
+
+                        if (anim.size()==1) dir=0;
+                        TextureRegion currentFrame = anim.get( dir ).getKeyFrame( mygame.stateTime, true );
+                        setRegion( currentFrame );
+
+
                     }else{
                         if (!rotating) {
                             if (mygame.rpg) {
+
                                 setOriginCenter();
                                 switch (dir) {
                                     case 0: //down
-                                        setRotation( 180 );
+                                        //setRotation( 180 );
                                         break;
                                     case 1: //right
-                                        setRotation( 270 );
+                                        //setRotation( 270 );
                                         break;
                                     case 2: //left
-                                        setRotation( 90 );
+                                        //setRotation( 90 );
                                         break;
                                     case 3: //up
-                                        setRotation( 0 );
+                                        //setRotation( 0 );
                                         break;
                                 }
                             } else {
@@ -1118,6 +1133,7 @@ public class gameobject extends Sprite {
 
                     }
                 }
+
                 ///
         }
 
@@ -1156,7 +1172,7 @@ public class gameobject extends Sprite {
         newbrick.maxdistance=pmaxdistance;
         newbrick.damage=pdamage;
         newbrick.anim=panim;
-        newbrick.dir=dir;
+        newbrick.dir=face;
         float posx=body.getPosition().x;
         float posy=body.getPosition().y;
         switch (dir){

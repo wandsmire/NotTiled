@@ -48,7 +48,7 @@ project(":desktop") {
     dependencies {
         implementation project(":core")
         //api "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
-
+        implementation 'org.bouncycastle:bcpkix-jdk15on:1.56'
         api "com.badlogicgames.gdx:gdx-backend-lwjgl:$gdxVersion"
         api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
         api "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
@@ -71,6 +71,7 @@ project(":android") {
     dependencies {
         implementation project(":core")
         api "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
+        implementation 'org.bouncycastle:bcpkix-jdk15on:1.56'
 //        natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi"
         natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a"
         natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a"
@@ -132,6 +133,7 @@ project(":core") {
         api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
         api "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
         api "com.badlogicgames.gdx:gdx-ai:$aiVersion"
+        implementation 'org.bouncycastle:bcpkix-jdk15on:1.56'
         implementation (group: 'kryonet', name: 'kryonet', version: '2.21') {
             exclude group: 'com.esotericsoftware.reflectasm', module: 'reflectasm'
             exclude group: 'com.esotericsoftware.minlog', module: 'minlog'

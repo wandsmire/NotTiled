@@ -138,6 +138,10 @@ public class WorldContactListener implements ContactListener {
                 mygame.save();
             }
 
+            if (o.get( "notice" ) != null) {
+                mygame.message = o.get( "notice" ).toString();
+            }
+
             if (o.get( "message" ) != null) {
                 mygame.msgindex = 0;
                 String mbr = mygame.replaceVars(o.get( "message" ).toString());
@@ -165,7 +169,7 @@ public class WorldContactListener implements ContactListener {
                         }
                     }
 
-                    FileHandle tgt = Gdx.files.absolute( mygame.path+o.get( "transfer" ).toString() );
+                    FileHandle tgt = Gdx.files.absolute( mygame.path+"/"+o.get( "transfer" ).toString() );
                     if (tgt.exists()){
                         mygame.fadeinitialise( mygame.path, o.get( "transfer" ).toString() );
                     }else{
@@ -245,6 +249,25 @@ public class WorldContactListener implements ContactListener {
                     }
                 }else{
                     mygame.peektimer=3f;
+                }
+            }
+
+            if (o.containsKey( "cam")) {
+                String tgt = of.get( "cam" ).toString();
+                for (gameobject go : mygame.objects){
+                    if (go.id.equalsIgnoreCase( tgt )){
+                        mygame.peektarget=go;
+                    }
+                }
+                    mygame.peektimer=-1f;
+            }
+
+            if (o.containsKey( "transfercam")) {
+                String tgt = of.get( "transfercam" ).toString();
+                for (gameobject go : mygame.objects){
+                    if (go.id.equalsIgnoreCase( tgt )){
+                        mygame.transfercam=go;
+                    }
                 }
             }
 
@@ -398,7 +421,7 @@ public class WorldContactListener implements ContactListener {
 
             }
 
-            if (o.get( "once" ) != null) {
+            if (o.containsKey( "once" )) {
                 myobject.setCategoryFilter( game.DESTROYED_BIT );
                 mygame.objects.remove( myobject );
             }

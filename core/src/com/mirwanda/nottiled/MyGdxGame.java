@@ -105,6 +105,7 @@ import org.xmlpull.v1.XmlSerializer;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -128,9 +129,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+
+import sun.misc.IOUtils;
 
 import static java.lang.Thread.sleep;
 import static org.jfugue.midi.MidiFileManager.savePatternToMidi;
@@ -1373,12 +1378,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         //curvature.setEnabled(true);
 
                         //bloom.setEnabled( true );
-                        //bloom.setBlurAmount( 0f );
-                        //bloom.setBloomIntesity( 0.5f );
+                        //bloom.setBlurAmount( 2f );
+                        //bloom.setBloomIntesity( 1f );
                         //bloom.setBaseIntesity( 1f );
 
 
-                 //       postProcessor.capture();
+                        //postProcessor.capture();
                         mygame.keyinput();
                         Gdx.gl.glClearColor( mygame.bgcolor.r,mygame.bgcolor.g,mygame.bgcolor.b,mygame.bgcolor.a);
                         Gdx.gl.glClear( GL20.GL_COLOR_BUFFER_BIT );
@@ -1396,14 +1401,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                             ///
 
-                            mygame.update( batch, delta, gamecam );
+                            if (!mygame.loadingmap) mygame.update( batch, delta, gamecam );
 
                             if (mygame.debugmode)
                                 mygame.b2dr.render( mygame.world, gamecam.combined );
 
                             batch.end();
 
-                      //  postProcessor.render();
+                        //postProcessor.render();
                         if (mygame.night) {
                             mygame.rayHandler.setCombinedMatrix( gamecam);
                             mygame.rayHandler.updateAndRender();
@@ -1433,10 +1438,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                             uisrect( gui.down, mouse, null );
                                         }
                                     }
-                                    if (mygame.action1 != null) uisrect( gui.action1, mouse, null );
-                                    if (mygame.action2 != null) uisrect( gui.action2, mouse, null );
-                                    if (mygame.action3 != null) uisrect( gui.action3, mouse, null );
-                                    if (mygame.action4 != null) uisrect( gui.action4, mouse, null );
+                                    if (mygame.action1 != null && mygame.action1.action!= gameobject.actions.NONE) uisrect( gui.action1, mouse, null );
+                                    if (mygame.action2 != null && mygame.action2.action!= gameobject.actions.NONE) uisrect( gui.action2, mouse, null );
+                                    if (mygame.action3 != null && mygame.action3.action!= gameobject.actions.NONE) uisrect( gui.action3, mouse, null );
+                                    if (mygame.action4 != null && mygame.action4.action!= gameobject.actions.NONE) uisrect( gui.action4, mouse, null );
                                 }
                             }
                         }
@@ -1455,9 +1460,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             mygame.drawHUD( ui, str1, ssy, ssx );
                         } else {
                             mygame.drawHUD( ui, str1, ssx, ssy );
+                        }
+                        str1.getData().setScale( 0.8f );
+                        if (mygame.message!=null){
+                            if (!landscape) {
+                                str1.draw( ui, mygame.message, 0, ssy-20, ssx, Align.center, true );
+                            }else{
+                                str1.draw( ui, mygame.message, 0, ssx-20, ssy, Align.center, true );
+                            }
 
                         }
-                        str1.getData().setScale( 4f );
 
                         if (mygame.victory) {
                             String msg = mygame.debriefing;
@@ -1478,6 +1490,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
 
 
+
+
                         //str1draw(ui,"Keys : "+mygame.key+" | Items Left : "+mygame.coin , gui.layer);
                         if (Gdx.app.getType() != Application.ApplicationType.Desktop || mygame.uitest) {
                             if (!mygame.starting && mygame.player.state != gameobject.states.DEAD  && mygame.fade==0) {
@@ -1496,13 +1510,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                         }
 
                                     }
-                                    if (mygame.action1 != null)
+                                    if (mygame.action1 != null && mygame.action1.action!= gameobject.actions.NONE)
                                         uidrawbutton( txRight, mygame.action1.name, gui.action1, 3 );
-                                    if (mygame.action2 != null)
+                                    if (mygame.action2 != null && mygame.action2.action!= gameobject.actions.NONE)
                                         uidrawbutton( txDown, mygame.action2.name, gui.action2, 3 );
-                                    if (mygame.action3 != null)
+                                    if (mygame.action3 != null && mygame.action3.action!= gameobject.actions.NONE)
                                         uidrawbutton( txLeft, mygame.action3.name, gui.action3, 3 );
-                                    if (mygame.action4 != null)
+                                    if (mygame.action4 != null && mygame.action4.action!= gameobject.actions.NONE)
                                         uidrawbutton( txUp, mygame.action4.name, gui.action4, 3 );
                                 }
                             }
@@ -1518,6 +1532,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                        // if (mygame.fade>0) str1draw( ui, "Loading...", gui.respawn );
 
                         ui.end();
+                        if (mygame.loadingmap || mygame.transitioning) {
+                            uis.begin( ShapeRenderer.ShapeType.Filled );
+                            Gdx.gl.glEnable( GL20.GL_BLEND );
+                            Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
+
+                            uis.setColor( 0f, 0f, 0, 1f );
+                            if (landscape) uis.rect( 0, 0, ssy, ssx );
+                            if (!landscape) uis.rect( 0, 0, ssx, ssy );
+                            uis.end();
+                        }
+
                         if (mygame.fadein>0) {
                             uis.begin( ShapeRenderer.ShapeType.Filled );
                             Gdx.gl.glEnable( GL20.GL_BLEND );
@@ -5399,9 +5424,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         System.out.println( exceptionAsString );
         file.writeString( "\n\n" + exceptionAsString, true );
 
-        saveMap( curdir + "/" + curfile + "_re.tmx" );
-        prefs.putString( "lof", basepath+"NotTiled/" + "sample/island.tmx" );
-        prefs.putString( "lastpath", basepath+"NotTiled/" );
+        saveMap( curdir + "/" + curfile );
+        //refs.putString( "lof", basepath+"NotTiled/" + "sample/island.tmx" );
+        //prefs.putString( "lastpath", basepath+"NotTiled/" );
         prefs.flush();
 
     }
@@ -6773,7 +6798,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bVideos.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                Gdx.net.openURI( "https://www.youtube.com/playlist?list=PLaZhehDwQZIKlNPsMKqR3YRYxvdWctWt9" );
+                switch (language) {
+                    case "Chinese":
+                        Gdx.net.openURI( "https://b23.tv/FzXVKG" );
+                        break;
+                    default:
+                        Gdx.net.openURI( "https://www.youtube.com/playlist?list=PLaZhehDwQZIKlNPsMKqR3YRYxvdWctWt9" );
+
+                }
+
             }
         } );
 
@@ -23694,5 +23727,26 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
 
+
+    public void signapk() throws IOException {
+        /*
+        SignedJar bcApk = new SignedJar(
+                new FileOutputStream("out.apk"), signChain, signCert, signKey);
+        JarFile jsApk = new JarFile(new File("in.apk"));
+        Enumeration<JarEntry> entries = jsApk.entries();
+        while (entries.hasMoreElements()) {
+            JarEntry entry = entries.nextElement();
+            String name = entry.getName();
+            if (!entry.isDirectory() && !name.startsWith("META-INF/")) {
+                InputStream eis = jsApk.getInputStream(entry);
+                bcApk.addFileContents(name, IOUtils.toByteArray(eis));
+                eis.close();
+            }
+        }
+        jsApk.close();
+        bcApk.close();
+
+         */
+    }
 
 }

@@ -11,10 +11,12 @@ s>Jose
 s>Ralsei (General Airon)
 s>Tstis
 s>PoLLeN
-s>CN-MiFan_Department
 s>KusVoSlavuSatane
 s>Mark
 s>Gato
+m>CN-MiFan_Department:
+s>RT1_JMJS
+s>[ECM]HamSter
 m>Translators
 s>WandsMire (English & Bahasa)
 s>Paon (Japanese)

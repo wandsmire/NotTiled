@@ -41,7 +41,7 @@ public class MainActivity extends AndroidApplication implements Interface
 	Uri currentMAP = null;
 	SharedPreferences myPrefs;
 	SharedPreferences.Editor prefs;
-	TextToSpeech tts;
+	//TextToSpeech tts;
 	PackageInfo pInfo;
 	String version;
 	@Override
@@ -49,7 +49,7 @@ public class MainActivity extends AndroidApplication implements Interface
 	{
 		
 			
-		tts.speak(s, TextToSpeech.QUEUE_FLUSH, null);
+		//tts.speak(s, TextToSpeech.QUEUE_FLUSH, null);
 		
 		// TODO: Implement this method
 	}
@@ -65,6 +65,7 @@ public class MainActivity extends AndroidApplication implements Interface
 
 	switch (lang)
 	{
+		/*
 		case "English":
 			tts.setLanguage(Locale.ENGLISH);
 			break;
@@ -92,6 +93,8 @@ public class MainActivity extends AndroidApplication implements Interface
 		case "Tagalog":
 			tts.setLanguage(new Locale("fil_PH"));
 			break;
+
+		 */
 	}
 		
 		// TODO: Implement this method
@@ -275,6 +278,7 @@ public class MainActivity extends AndroidApplication implements Interface
 		} catch (PackageManager.NameNotFoundException e) {
 			e.printStackTrace();
 		}
+		/*
 		tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
 
 				@Override
@@ -287,6 +291,8 @@ public class MainActivity extends AndroidApplication implements Interface
 					}
 				}
 			});
+
+		 */
 
 
 //		final Billing billing = Aplikasi.get().getBilling();

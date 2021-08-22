@@ -27,12 +27,16 @@ import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapImageLayer;
 import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
+import com.badlogic.gdx.maps.tiled.TiledMapTileSet;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.objects.TiledMapTileMapObject;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
+import com.badlogic.gdx.maps.tiled.tiles.AnimatedTiledMapTile;
+import com.badlogic.gdx.maps.tiled.tiles.StaticTiledMapTile;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.math.collision.BoundingBox;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.Box2D;
@@ -68,6 +72,7 @@ public class game {
     public Box2DDebugRenderer b2dr;
     public World world;
     public String path,file;
+    public String message;
     public boolean loadingmap;
     public boolean rpg=false;
     public Vector2 move;
@@ -88,6 +93,8 @@ public class game {
     public Texture txBackground;
     public TextureRegion[][] hpbar;
     public TextureRegion[][] icons;
+    public java.util.List<Animation<TextureRegion>> anims;
+    public java.util.List<Integer> animids;
 
     //SOUND
     public Music bgm;
@@ -114,6 +121,7 @@ public class game {
     public int msgindex=0;
     public List<gameobject> requestkill;
     public gameobject peektarget;
+    public gameobject transfercam;
 
     public int touchedsinker;
 
@@ -121,10 +129,10 @@ public class game {
     public float stompinterval=0;
     public float fade=0;
     public float fadein=0;
-    public float fadeinmax=20;
+    public float fadeinmax=10;
     public float fadeout=0;
     public float fadeoutmax=10;
-
+    public boolean transitioning;
     float stateTime, playerTime;
 
     public static final short DEFAULT_BIT = 1;
@@ -145,12 +153,13 @@ public class game {
     public float scale=100f;
     public Color bgcolor=Color.LIGHT_GRAY;
 
+
     public boolean initialise(String path, String filename){
         try {
+
             loadingmap = true;
             this.path = path;
             this.file = filename;
-            fade = 10;
             rpg = false;
             particles.clear();
 
@@ -197,7 +206,6 @@ public class game {
                         rpg = false;
                     }
                     if (type.equalsIgnoreCase( "NotTiled rpg" )) {
-                        rpg = true;
                         world.setGravity( new Vector2( 0f, 0f ) );
                         jumping = false;
                         rpg = true;
@@ -214,6 +222,8 @@ public class game {
                         scale=100f;
                     }
                 }
+
+
 
                 if (mpa.containsKey( "background" )) {
                     String bgc = (String) mpa.get( "background" );
@@ -236,6 +246,21 @@ public class game {
                                 bgm.setLooping( true );
                             }
                         }
+                    }
+                }
+
+                if (mpa.containsKey( "zoom" )) {
+                    zoom = Float.parseFloat( mpa.get( "zoom" ).toString() );
+                }
+
+                if (mpa.containsKey( "bgcolor" )){
+                    String cs = mpa.get( "bgcolor" ).toString();
+                    try {
+                        float bgr = (float) Integer.parseInt(cs.substring(0, 2), 16) / 256;
+                        float bgg = (float) Integer.parseInt(cs.substring(2, 4), 16) / 256;
+                        float bgb = (float) Integer.parseInt(cs.substring(4, 6), 16) / 256;
+                        bgcolor = new Color(bgr,bgg,bgb,1f);
+                    }catch(Exception e){
                     }
                 }
 
@@ -282,24 +307,49 @@ public class game {
             }
             ////
 
-            log( "ROTATING..." );
+            int total=0;
+            anims = new ArrayList<>();
+            animids = new ArrayList<>();
+            for (TiledMapTileSet tset : map.getTileSets()){
+                tset.size();
+                for (int i=0;i<tset.size();i++){
+
+                    try {
+                        AnimatedTiledMapTile at = (AnimatedTiledMapTile) tset.getTile( total+i+1 );
+
+                            StaticTiledMapTile[] frames = at.getFrameTiles().clone();
+                            TextureRegion[] walkFrames = new TextureRegion[frames.length];
+                            //log(frames.length+"FL");
+                            for (int j=0;j<frames.length;j++) {
+                                walkFrames[j]=frames[j].getTextureRegion();
+                            }
+
+                            Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( at.getAnimationIntervals()[0]/1000f, walkFrames );
+                            anims.add( tempAnim );
+                            animids.add( total+i+1  );
+
+                    }catch(Exception e){
+//                        e.printStackTrace();
+                    }
+                }
+                total+=tset.size();
+            }
+
+
+
+            ////
 
             for (MapLayer mlayer : map.getLayers()) {
                 boolean tilelayer = false;
-                boolean imagelayer = false;
                 boolean objectlayer = false;
                 float opacity = mlayer.getOpacity();
 
-                log( mlayer.getName() + tilelayer + imagelayer + objectlayer );
-
-                boolean visible = mlayer.isVisible();
                 try {
                     TiledMapTileLayer tlayer = (TiledMapTileLayer) mlayer;
                     tilelayer = true;
                 } catch (Exception e) {
                     try {
                         TiledMapImageLayer tlayer = (TiledMapImageLayer) mlayer;
-                        imagelayer = true;
                     } catch (Exception f) {
                         objectlayer = true;
                     }
@@ -321,6 +371,7 @@ public class game {
                     for (int yy = 0; yy < tlayer.getHeight(); yy++) {
                         for (int xx = 0; xx < tlayer.getWidth(); xx++) {
                             TiledMapTileLayer.Cell cece = tlayer.getCell( xx, yy );
+
                             float ww = 0;
                             float hh = 0;
                             try {
@@ -353,15 +404,16 @@ public class game {
                 }
             }
 
-            //no player object
+            //no player object, ga bisa main
             if (player == null) return false;
-
+            fade=5;
             //save(); //'saving on current map makes load useless.
             victory = false;
             loadingmap = false;
             fadein = fadeinmax;
             return true;
         }catch(Exception e){
+            e.printStackTrace();
             return false;
         }
 
@@ -372,39 +424,76 @@ public class game {
     public void log(String s){
         Gdx.app.log( "LOJ",s );
     }
+
     public boolean checkQual(MapProperties o){
         boolean qual=true;
-        if (o.get( "requires" )!=null){
+
+        if (o.containsKey( "requires")){
             String[] ss = o.get( "requires" ).toString().split( "," );
             qual=false;
             int rq=0;
-            boolean recheck=true;
-            while (recheck) {
-                recheck=false;
+            boolean recheck = false;
                 for (int i = 0; i < ss.length; i++) {
-                    String[] sv = ss[i].split( "=" );
-                    //Gdx.app.log( sv[0]+"",sv[1]+"" );
+                    while (recheck) {
+                        recheck = false;
                     boolean ada = false;
-                    for (KV var : save.vars) {
-                        if (sv[0].equalsIgnoreCase( var.key )) {
-                            ada = true;
-                            //Gdx.app.log( sv[1]+"",var.value+"" );
-                            //var.value
-                            if (sv[1].equalsIgnoreCase(var.value+"")) {
-                                rq += 1;
-                                break;
+                    String varname="";
+                    //////
+                    if (ss[i].contains( "=" )) {
+
+                        String[] sv = ss[i].split( "=" );
+                        varname = sv[0];
+                        for (KV var : save.vars) {
+                            if (sv[0].equalsIgnoreCase( var.key )) {
+                                ada = true;
+                                if (Integer.parseInt( sv[1] ) == var.value) {
+                                    rq += 1;
+                                    break;
+                                }
                             }
                         }
                     }
-                    if (!ada) {
-                        setOrAddVars( sv[0], 0, VAROP.SET );
-                        recheck=true;
+                    if (ss[i].contains( "&lt;" )) {
+                        String[] sv = ss[i].split( "&lt;" );
+                        varname = sv[0];
+
+                        for (KV var : save.vars) {
+                            if (sv[0].equalsIgnoreCase( var.key )) {
+                                ada = true;
+                                if (var.value < Integer.parseInt( sv[1] )) {
+                                    rq += 1;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (ss[i].contains( "&gt;" )) {
+                        String[] sv = ss[i].split( "&gt;" );
+                        varname = sv[0];
+
+                        for (KV var : save.vars) {
+                            if (sv[0].equalsIgnoreCase( var.key )) {
+                                ada=true;
+                                if (var.value > Integer.parseInt( sv[1] )) {
+                                    rq += 1;
+                                    break;
+                                }
+                            }
+                        }
                     }
 
+                    if (!ada){
+
+                        setOrAddVars(varname,0,VAROP.SET);
+                        recheck=true;
+                    }
                 }
             }
             if (rq==ss.length) qual=true;
+
         }
+
+
 
         return qual;
 
@@ -507,7 +596,11 @@ public class game {
     public boolean recoil;
     public OrthographicCamera gc;
     public float zoom=0.2f;
+    public List<gameobject> overs = new ArrayList<>();
+    public List<gameobject> deads = new ArrayList<>();
     public void update(SpriteBatch batch, float delta, OrthographicCamera gamecam) {
+        if(loadingmap) return; //agar tidak concurrent.
+
         gc = gamecam;
         if (gc.zoom != zoom) gc.zoom = zoom;
         if (!starting && player.state != DEAD) world.step( 1 / 60f, 6, 2 );
@@ -602,38 +695,20 @@ public class game {
         float posex = player.body.getPosition().x;
         float posey = player.body.getPosition().y;
 
-        if (peektarget!=null){
-            if (peektimer!=-1) peektimer-=delta;
-            posex = peektarget.body.getPosition().x;
-            posey = peektarget.body.getPosition().y;
-            if (peektimer<=0 && peektimer!=-1){
-                peektarget=null;
-            }
-        }
-            if (fade==0) {
-
-                float lerp = 5f;
-                Vector3 position = gamecam.position;
-                position.x += (posex - position.x) * lerp * delta;
-                position.y += (posey - position.y) * lerp * delta;
-                position.x = Math.round( position.x * 500 ) / 500f;
-                position.y = Math.round( position.y * 500 ) / 500f;
-                gamecam.update();
-            }
 
 
-        //log(fadeout+"");
+        //Menggelap hingga hitam, lalu pindah map.
         if (fadeout>0){
             fadeout--;
             if (fadeout == 0) {
-
                 initialise( fadepath,fademapname );
+                return;
             }
         }
 
 
         if (fade>0){
-            if (!loadingmap) fade--;
+            fade--;
             if (fade == 0) {
                 if (move!=null){
                     player.body.setTransform( move.x, move.y, 0 );
@@ -647,7 +722,13 @@ public class game {
 
                 Vector3 position = gamecam.position;
                 position.x = posex;
-                position.y=posey;
+                position.y = posey;
+
+                if (transfercam!=null){
+                    gamecam.position.set( transfercam.body.getPosition().x,transfercam.body.getPosition().y,0 );
+                    peektarget=transfercam;
+                    peektimer=-1;
+                }
                 gamecam.update();
 
             }else{
@@ -655,7 +736,28 @@ public class game {
             }
         }
 
+        if (peektarget!=null){
+            if (peektimer!=-1 && peektimer!=-2) peektimer-=delta;
+            posex = peektarget.body.getPosition().x;
+            posey = peektarget.body.getPosition().y;
+            if (peektimer<=0 && peektimer!=-1 && peektimer!=-2){
+                peektarget=null;
+            }
+        }
+        if (fade==0) {
+
+            float lerp = 5f;
+            Vector3 position = gamecam.position;
+            position.x += (posex - position.x) * lerp * delta;
+            position.y += (posey - position.y) * lerp * delta;
+            position.x = Math.round( position.x * 500 ) / 500f;
+            position.y = Math.round( position.y * 500 ) / 500f;
+            gamecam.update();
+        }
+
+
         if (fadein>0) {
+            transitioning=false;
             fadein--;
             if (fadein==0){
                 if (bgm != null) {
@@ -748,8 +850,12 @@ public class game {
             //idle animation if you will...
 
             if (player.anim.size()>0) {
-
-                TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( 0, true );
+                TextureRegion currentFramea;
+                if (player.anim.size()==1){
+                     currentFramea = player.anim.get( 0 ).getKeyFrame( 0, true );
+                }else{
+                     currentFramea = player.anim.get( player.dir ).getKeyFrame( 0, true );
+                }
                 player.setRegion( currentFramea );
             }
         }
@@ -773,7 +879,7 @@ public class game {
             player.body.setGravityScale(1);
         }
 
-
+        /*
         for (int i = objects.size() - 1; i >= 0; i--){
             gameobject go = objects.get( i );
             go.update(delta);
@@ -782,47 +888,58 @@ public class game {
                 if (world.getBodyCount()>0) world.destroyBody( go.body );
                 objects.remove( go );
 
+            }else{
+                if (go.over) continue;
+                if (go.getTexture()!=null ){
+                    go.draw(batch);
+
+                }
             }
 
         }
 
-        for (gameobject sboxes:objects)
-        {
-            if (sboxes.over) continue;
+         */
+        overs.clear();deads.clear();
+        for (int i=0;i<objects.size();i++){
+            gameobject go = objects.get(i);
+            if(loadingmap) return;
+            go.update(delta);
+            if (go.state==DEAD) {
+                //deads.add( go );
+            }else{
 
-            if (sboxes.getTexture()!=null ) sboxes.draw(batch);
 
+                if (!go.over) {
+                    if (go.getTexture() != null) go.draw( batch );
+                } else {
+                  //  overs.add( go );
+                }
+                if (go.HP > 0 && go.HP !=go.maxHP) {
+                    batch.draw( hpbar[1][0], go.getX(), go.getY() + go.getHeight() + 0.01f, go.getWidth(), hpbar[1][0].getRegionHeight() / scale );
+                    batch.draw( hpbar[0][0], go.getX(), go.getY() + go.getHeight() + 0.01f, go.HP / go.maxHP * go.getWidth(), hpbar[0][0].getRegionHeight() / scale );
+                }
+            }
         }
-
 
         player.update(delta);
         if (player.state != DEAD){
             player.draw(batch);
         }else
         {
-            player.body.setActive(false);
-            objects.remove( player );
+            deads.add( player );
         }
 
-        for (gameobject sboxes:objects)
+        for (gameobject go:deads)
         {
-            if (!sboxes.over) continue;
+            if (world.getBodyCount()>0) world.destroyBody( go.body );
+            objects.remove( go );
+        }
 
-
+        for (gameobject sboxes:overs)
+        {
             if (sboxes.getTexture()!=null ) sboxes.draw(batch);
         }
-        //batch.end();
 
-
-        for (gameobject sboxes:objects) {
-            if (sboxes.HP > 0 && sboxes.HP !=sboxes.maxHP) {
-                batch.draw( hpbar[1][0], sboxes.getX(), sboxes.getY() + sboxes.getHeight() + 0.01f, sboxes.getWidth(), hpbar[1][0].getRegionHeight() / scale );
-                batch.draw( hpbar[0][0], sboxes.getX(), sboxes.getY() + sboxes.getHeight() + 0.01f, sboxes.HP / sboxes.maxHP * sboxes.getWidth(), hpbar[0][0].getRegionHeight() / scale );
-            }
-
-           // sboxes.meledak.update( Gdx.graphics.getDeltaTime() );
-           // sboxes.meledak.draw( batch );
-        }
 
         for (int i = particles.size() - 1; i >= 0; i--){
             ParticleEffect pe = particles.get(i);
@@ -1050,26 +1167,25 @@ public class game {
         if (go==null) return;
 
         //Gdx.app.log(go.bindvar, getVar( go.bindvar )+"");
-        if (go.bindvar!=null){
-            if (getVar( go.bindvar )<=0) {return;}else{
-                setOrAddVars( go.bindvar,1,VAROP.SUB );
-            }
-
-        }
-        playSfx( go.sfx );
         switch (go.action){
             case NONE:
                 break;
             case JUMP: //jumping ga usah pakai cooldown
+                if (go.cooldown>0) return;
+
                 if (!jumping) {
                     player.body.applyLinearImpulse( 0f, gravity*go.impulse, player.getX(), player.getY(), true );
+                    playSfx( go.sfx );
+
                     jumping = true;
+                    go.cooldown=go.pcooldown;
+
                 }
 
                 break;
             case JETPACK: //jumping ga usah pakai cooldown
                 if (go.cooldown>0) return;
-
+                playSfx( go.sfx );
                 jetpack = true;
                 //    jetpackcooldown = 0.1f;
                 player.body.applyLinearImpulse( 0f, gravity*go.impulse, player.getX(), player.getY(), true );
@@ -1079,10 +1195,14 @@ public class game {
 
                 break;
             case DASH:
+
                 if (jumping) {
                     if (!dashed){
+                        if (go.cooldown>0) return;
                     dashed=true;
-                    switch (player.dir) {
+                        playSfx( go.sfx );
+
+                        switch (player.dir) {
                         case 0:
                             player.body.applyLinearImpulse( 0f, -go.impulse, player.getX(), player.getY(), true );
                             break;
@@ -1096,16 +1216,18 @@ public class game {
                             player.body.applyLinearImpulse( 0f, go.impulse, player.getX(), player.getY(), true );
                             break;
 
-                    }
-                    salto=360;
+                        }
+                        salto=360;
+                        go.cooldown=go.pcooldown;
+
                     }
                 }
                 //jumping = true;
-                go.cooldown=go.pcooldown;
 
                 break;
             case SHOOT:
                 if (go.cooldown>0) return;
+                playSfx( go.sfx );
 
                 gameobject newbrick = new gameobject();
                 newbrick.mygame = this;
@@ -1140,6 +1262,16 @@ public class game {
                 break;
         }
 
+        if (go.bindvar!=null){
+            if (getVar( go.bindvar )<=0) {
+                go.action= gameobject.actions.NONE;
+            }else{
+                setOrAddVars( go.bindvar,1,VAROP.SUB );
+            }
+
+        }
+
+
 
     }
 
@@ -1162,7 +1294,7 @@ public class game {
         fadepath=path;
         fademapname=mapname;
         fadeout=fadeoutmax;
-        log(fadeout+"");
+        //log(fadeout+"");
     }
 
     public void load(){
@@ -1230,14 +1362,13 @@ public class game {
     public void setGameObject(boolean object, TiledMapTileLayer.Cell cece, float xx, float yy, float ww, float hh, boolean over, MapObject obj, float opacity){
 
         if (!object && cece==null) return; //empty tile
-
         MapProperties o;
         MapObject objx = null;
         TextureRegion t = null;
         TiledMapTile tlcece=null;
+        gameobject newbrick = new gameobject();
         boolean flip=false;
         float rota=0f;
-
 
         if (!object) { //tile
             tlcece = cece.getTile();
@@ -1246,14 +1377,35 @@ public class game {
             rota = cece.getRotation();
         }else { //object
             objx=obj;
+            if (obj.getName()!=null){
+                newbrick.id = obj.getName();
+               // log(newbrick.id);
+            }
             o = obj.getProperties();
             if (obj instanceof TiledMapTileMapObject) {
                 t = ((TiledMapTileMapObject) obj).getTextureRegion();
             }
         }
 
-        gameobject newbrick = new gameobject();
+
+
+        /////
+
+        try {
+            for (int i=0;i<animids.size();i++) {
+                if (animids.get( i ) == tlcece.getId()) {
+                    newbrick.anim.add( anims.get( i )) ;
+                }
+            }
+        }catch(Exception e){
+           // e.printStackTrace();
+        }
+
+
+        /////
+
         newbrick.mygame = this;
+
         newbrick.damage = (o.containsKey( "damage" )) ? Float.parseFloat( o.get( "damage" ).toString() ) : 0f;
         newbrick.rotating = o.containsKey( "rotating" );
         newbrick.destructible = o.containsKey( "destructible" );
@@ -1323,8 +1475,8 @@ public class game {
             hh=Float.parseFloat(sz[1]);
         }
 
-        if (o.containsKey( "id" )) {
-            newbrick.id=o.get("id").toString();
+        if (o.get("name")!=null) {
+            newbrick.id=o.get("name").toString();
         }
 
         if (o.containsKey( "mode" )) {
@@ -1384,7 +1536,28 @@ public class game {
             world.setGravity( new Vector2(0, -Float.parseFloat( o.get( "gravity" ).toString()) ));
         }
 
-        newbrick.dir = (o.containsKey( "dir" )) ? Integer.parseInt( o.get( "dir" ).toString() ) : 1;
+        if (o.containsKey( "dir" )) {
+            String dir = o.get( "dir" ).toString();
+            switch (dir){
+                case "down":
+                    newbrick.dir =1;
+                    break;
+                case "left":
+                    newbrick.dir =2;
+                    break;
+                case "right":
+                    newbrick.dir =3;
+                    break;
+                case "up":
+                    newbrick.dir =4;
+                    break;
+                default:
+                    newbrick.dir = Integer.parseInt( o.get( "dir" ).toString());
+                    break;
+            }
+            newbrick.face = newbrick.dir;
+        }
+
         newbrick.tameif = (o.containsKey( "tameif" )) ?  o.get( "tameif" ).toString() : "";
 
         newbrick.wait = (o.containsKey( "wait" )) ? Float.parseFloat( o.get( "wait" ).toString() ) : 1f;
@@ -1401,12 +1574,12 @@ public class game {
         newbrick.pdamage = (o.containsKey( "pdamage" )) ? Integer.parseInt( o.get( "pdamage" ).toString() ) : 1;
 
 
-        if (o.containsKey( "name" )) {
-            switch (o.get( "name" ).toString()) {
+        if (o.containsKey( "object" )) {
+            switch (o.get( "object" ).toString()) {
                 case "player":
                     if (o.containsKey( "anim" )){
                     String anim = o.get( "anim" ).toString();
-
+                        newbrick.anim.clear();
                         Texture txPlayer = new Texture( getFile( path + "/" + anim ) );
                         TextureRegion[][] tmp = TextureRegion.split( txPlayer,
                                 txPlayer.getWidth() / 4,
@@ -1423,10 +1596,8 @@ public class game {
                         }
                     }
 
-                    log("setupping game object");
                     newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLAYER, objx, t, over ,opacity);
                     player = newbrick;
-                    log("player set");
 
                     break;
                 case "brick":
@@ -1506,9 +1677,15 @@ public class game {
                     Vector2 imgsize = new Vector2( Tsw, Tsh );
                     Vector2 pimgsize = new Vector2( Tsw, Tsh );
 
+
+
                     if (o.containsKey( "anim" )) {
+
+
+
                         String anim = o.get( "anim" ).toString();
                         Texture txMonster = new Texture( getFile( path + "/" + anim ) );
+                        newbrick.anim.clear();
                         TextureRegion[][] tmp = TextureRegion.split( txMonster,
                                 txMonster.getWidth() / 4,
                                 txMonster.getHeight() / 4 );
@@ -1559,8 +1736,12 @@ public class game {
             }
 
 
-        }else{ //no name properties, decoration tile.
-            newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.MISC, objx, t, over  ,opacity);
+        }else{ //n tile info.
+            if (!o.getKeys().hasNext()) {
+                newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.StaticBody, gameobject.objecttype.MISC, objx, t, over, opacity );
+            }else{
+                newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.KinematicBody, ITEM, objx, t, over  ,opacity);
+            }
         }
 
         if (flip) newbrick.rotate( 180 );
