@@ -1367,13 +1367,14 @@ public class game {
         TextureRegion t = null;
         TiledMapTile tlcece=null;
         gameobject newbrick = new gameobject();
-        boolean flip=false;
+        boolean flipX=false,flipY=false;
         float rota=0f;
 
         if (!object) { //tile
             tlcece = cece.getTile();
             o=tlcece.getProperties();
-            flip = cece.getFlipVertically();
+            flipX = cece.getFlipHorizontally();
+            flipY = cece.getFlipVertically();
             rota = cece.getRotation();
         }else { //object
             objx=obj;
@@ -1744,8 +1745,8 @@ public class game {
             }
         }
 
-        if (flip) newbrick.rotate( 180 );
-        if (rota != 0) newbrick.rotate( rota * 90 );
+        newbrick.flip( flipX,flipY );
+        if (rota != 0) newbrick.setRotation( rota * 90 );
         objects.add( newbrick );
         if (!object) cece.setTile( null );
 

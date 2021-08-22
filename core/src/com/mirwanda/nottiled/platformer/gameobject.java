@@ -262,6 +262,7 @@ public class gameobject extends Sprite {
 
 
                 break;
+
             case CHECKPOINT:
             case FLOATER: case SINKER:
 
