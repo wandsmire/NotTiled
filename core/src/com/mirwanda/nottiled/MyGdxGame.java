@@ -8626,7 +8626,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 face.saveasFile( b, filenamenya+".png" );
             }
 
-            msgbox(z.exportfinished);
+            status(z.exportfinished,3);
         } catch (Exception e) {
             msgbox(z.error);
             ErrorBung(e, "errorlog.txt");
@@ -8797,7 +8797,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 face.saveasFile( b, "tileset.png" );
             }
 
-            msgbox(z.exportfinished);
+            status(z.exportfinished,3);
         } catch (Exception e) {
             msgbox(z.error);
             ErrorBung(e, "errorlog.txt");

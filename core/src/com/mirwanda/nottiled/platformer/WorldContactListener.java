@@ -207,6 +207,62 @@ public class WorldContactListener implements ContactListener {
                 }
             }
 
+            if (o.containsKey( "moveX")) {
+                String tgt = of.get( "moveX" ).toString();
+                float px =0;
+                float py =0;
+                if (tgt.equalsIgnoreCase( "," )) {
+                    String[] xy = of.get( "moveX" ).toString().split( "," );
+                    px = Float.parseFloat( xy[0] );
+                    py = Float.parseFloat( xy[1] );
+                    px = (px + mygame.Tsw/2) /mygame.scale;
+                    py = mygame.player.body.getPosition().y;
+                }else{
+                    for (gameobject go : mygame.objects){
+                        if (go.id.equalsIgnoreCase( tgt )){
+                            px = go.body.getPosition().x;
+                            py = mygame.player.body.getPosition().y;
+
+                        }
+                    }
+                }
+                if (o.containsKey( "transfer" )) {
+                    mygame.move = new Vector2( px, py );
+                }else{
+                    //box2d is locked when contact.
+                    mygame.requesttransform( px,py );
+
+                }
+            }
+
+            if (o.containsKey( "moveY")) {
+                String tgt = of.get( "moveY" ).toString();
+                float px =0;
+                float py =0;
+                if (tgt.equalsIgnoreCase( "," )) {
+                    String[] xy = of.get( "moveY" ).toString().split( "," );
+                    px = Float.parseFloat( xy[0] );
+                    py = Float.parseFloat( xy[1] );
+                    px = mygame.player.body.getPosition().x;
+                    py = (mygame.Th * mygame.Tsh /mygame.scale) - (py + mygame.Tsw/2) /mygame.scale;
+                }else{
+                    for (gameobject go : mygame.objects){
+                        if (go.id.equalsIgnoreCase( tgt )){
+                            px = mygame.player.body.getPosition().x;
+                            py = go.body.getPosition().y;
+
+                        }
+                    }
+                }
+                if (o.containsKey( "transfer" )) {
+                    mygame.move = new Vector2( px, py );
+                }else{
+                    //box2d is locked when contact.
+                    mygame.requesttransform( px,py );
+
+                }
+            }
+
             if (o.containsKey( "kill")) {
                 String tgt = of.get( "kill" ).toString();
                 for (gameobject go : mygame.objects){
@@ -233,12 +289,8 @@ public class WorldContactListener implements ContactListener {
             }
 
             if (o.containsKey( "peek")) {
-                String tgt = of.get( "peek" ).toString();
-                for (gameobject go : mygame.objects){
-                    if (go.id.equalsIgnoreCase( tgt )){
-                        mygame.peektarget=go;
-                    }
-                }
+                mygame.peektarget = of.get( "peek" ).toString();
+
                 if (o.containsKey( "peektime")) {
                     String pt = of.get( "peektime" ).toString();
                     try{
@@ -253,22 +305,12 @@ public class WorldContactListener implements ContactListener {
             }
 
             if (o.containsKey( "cam")) {
-                String tgt = of.get( "cam" ).toString();
-                for (gameobject go : mygame.objects){
-                    if (go.id.equalsIgnoreCase( tgt )){
-                        mygame.peektarget=go;
-                    }
-                }
-                    mygame.peektimer=-1f;
+                mygame.peektarget = of.get( "cam" ).toString();
+                mygame.peektimer=-1f;
             }
 
             if (o.containsKey( "transfercam")) {
-                String tgt = of.get( "transfercam" ).toString();
-                for (gameobject go : mygame.objects){
-                    if (go.id.equalsIgnoreCase( tgt )){
-                        mygame.transfercam=go;
-                    }
-                }
+                mygame.transfercam = of.get( "transfercam" ).toString();
             }
 
             if (o.containsKey( "return")) {

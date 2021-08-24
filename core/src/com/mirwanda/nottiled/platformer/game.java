@@ -120,8 +120,8 @@ public class game {
     public gameobject currentplatform;
     public int msgindex=0;
     public List<gameobject> requestkill;
-    public gameobject peektarget;
-    public gameobject transfercam;
+    public String peektarget;
+    public String transfercam;
 
     public int touchedsinker;
 
@@ -184,6 +184,11 @@ public class game {
             renderer = new OrthogonalTiledMapRenderer( map );
 
             Box2D.init();
+            if (world!=null) world.dispose();
+            objects = new ArrayList<gameobject>();
+            if (particles.size()>0) particles.clear();
+
+
             world = new World( new Vector2( 0, -10 ), true );
 
             b2dr = new Box2DDebugRenderer();
@@ -432,68 +437,60 @@ public class game {
             String[] ss = o.get( "requires" ).toString().split( "," );
             qual=false;
             int rq=0;
-            boolean recheck = false;
                 for (int i = 0; i < ss.length; i++) {
-                    while (recheck) {
-                        recheck = false;
-                    boolean ada = false;
-                    String varname="";
-                    //////
-                    if (ss[i].contains( "=" )) {
-
-                        String[] sv = ss[i].split( "=" );
-                        varname = sv[0];
-                        for (KV var : save.vars) {
-                            if (sv[0].equalsIgnoreCase( var.key )) {
-                                ada = true;
-                                if (Integer.parseInt( sv[1] ) == var.value) {
-                                    rq += 1;
-                                    break;
+                    boolean repeat=true;
+                    while (repeat) {
+                        repeat=false;
+                        boolean ada = false;
+                        String varname = "";
+                        if (ss[i].contains( "=" )) {
+                            String[] sv = ss[i].split( "=" );
+                            varname = sv[0];
+                            for (KV var : save.vars) {
+                                if (sv[0].equalsIgnoreCase( var.key )) {
+                                    ada = true;
+                                    if (Integer.parseInt( sv[1] ) == var.value) {
+                                        rq += 1;
+                                        break;
+                                    }
                                 }
                             }
                         }
-                    }
-                    if (ss[i].contains( "&lt;" )) {
-                        String[] sv = ss[i].split( "&lt;" );
-                        varname = sv[0];
-
-                        for (KV var : save.vars) {
-                            if (sv[0].equalsIgnoreCase( var.key )) {
-                                ada = true;
-                                if (var.value < Integer.parseInt( sv[1] )) {
-                                    rq += 1;
-                                    break;
+                        if (ss[i].contains( "&lt;" )) {
+                            String[] sv = ss[i].split( "&lt;" );
+                            varname = sv[0];
+                            for (KV var : save.vars) {
+                                if (sv[0].equalsIgnoreCase( var.key )) {
+                                    ada = true;
+                                    if (var.value < Integer.parseInt( sv[1] )) {
+                                        rq += 1;
+                                        break;
+                                    }
                                 }
                             }
                         }
-                    }
-                    if (ss[i].contains( "&gt;" )) {
-                        String[] sv = ss[i].split( "&gt;" );
-                        varname = sv[0];
-
-                        for (KV var : save.vars) {
-                            if (sv[0].equalsIgnoreCase( var.key )) {
-                                ada=true;
-                                if (var.value > Integer.parseInt( sv[1] )) {
-                                    rq += 1;
-                                    break;
+                        if (ss[i].contains( "&gt;" )) {
+                            String[] sv = ss[i].split( "&gt;" );
+                            varname = sv[0];
+                            for (KV var : save.vars) {
+                                if (sv[0].equalsIgnoreCase( var.key )) {
+                                    ada = true;
+                                    if (var.value > Integer.parseInt( sv[1] )) {
+                                        rq += 1;
+                                        break;
+                                    }
                                 }
                             }
                         }
+                        if (!ada) {
+                            setOrAddVars( varname, 0, VAROP.SET );
+                            repeat=true;
+                        }
                     }
 
-                    if (!ada){
-
-                        setOrAddVars(varname,0,VAROP.SET);
-                        recheck=true;
-                    }
-                }
             }
             if (rq==ss.length) qual=true;
-
         }
-
-
 
         return qual;
 
@@ -725,9 +722,18 @@ public class game {
                 position.y = posey;
 
                 if (transfercam!=null){
-                    gamecam.position.set( transfercam.body.getPosition().x,transfercam.body.getPosition().y,0 );
+                    gameobject gj =null;
+                    for (gameobject go : objects){
+                        if (go.id.equalsIgnoreCase( transfercam )){
+                            gj=go;
+                        }
+                    }
+                    if (gj!=null){
+                        gamecam.position.set( gj.body.getPosition().x,gj.body.getPosition().y,0 );
+                    }
                     peektarget=transfercam;
                     peektimer=-1;
+                    transfercam=null;
                 }
                 gamecam.update();
 
@@ -738,8 +744,20 @@ public class game {
 
         if (peektarget!=null){
             if (peektimer!=-1 && peektimer!=-2) peektimer-=delta;
-            posex = peektarget.body.getPosition().x;
-            posey = peektarget.body.getPosition().y;
+
+            gameobject gj =null;
+            for (gameobject go : objects){
+                if (go.id.equalsIgnoreCase( peektarget )){
+                    gj=go;
+                }
+            }
+            if (gj!=null){
+                posex = gj.body.getPosition().x;
+                posey = gj.body.getPosition().y;
+
+               // gamecam.position.set( gj.body.getPosition().x,gj.body.getPosition().y,0 );
+            }
+
             if (peektimer<=0 && peektimer!=-1 && peektimer!=-2){
                 peektarget=null;
             }
@@ -769,10 +787,14 @@ public class game {
 
         stateTime += delta;
         if (starting){
-            if (player.anim.size()>0) {
+            if (player.anim.size()>1) {
                 TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( 0, true );
                 player.setRegion( currentFramea );
+            }else if (player.anim.size()==1) {
+                TextureRegion currentFramea = player.anim.get(0).getKeyFrame( 0, true );
+                player.setRegion( currentFramea );
             }
+
 
         }
 
@@ -780,11 +802,32 @@ public class game {
         else if (player.moving && (!jumping || onplatformv) && (!ladder && !floater && !sinker))
         {
             playerTime +=delta;
-            if (player.anim.size()>0) {
+            if (player.anim.size()>1) {
 
                 TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( playerTime, true );
                 player.setRegion( currentFramea );
-            }else{
+            }else if (player.anim.size()==1) { //just one anim
+
+                    TextureRegion currentFramea = player.anim.get(0).getKeyFrame( playerTime, true );
+                    player.setRegion( currentFramea );
+                player.setOriginCenter();
+
+                    if (!rpg){
+
+                        switch (player.dir) {
+                            case 0: //down
+                                break;
+                            case 1: //right
+                                player.setFlip( false, false );
+                                break;
+                            case 2: //left
+                                player.setFlip( true, false );
+                                break;
+                            case 3: //up
+                                break;
+                        }
+                    }
+            }else{ //no anim
 
 
                 if (!player.dirlocked) {
@@ -809,10 +852,10 @@ public class game {
                             case 0: //down
                                 break;
                             case 1: //right
-                                player.setFlip( true, false );
+                                player.setFlip( false, false );
                                 break;
                             case 2: //left
-                                player.setFlip( false, false );
+                                player.setFlip( true, false );
                                 break;
                             case 3: //up
                                 break;
@@ -825,10 +868,32 @@ public class game {
 
         //jumping
         else if (jumping && !ladder && !floater && !sinker && !onplatformv) {
-            if (player.anim.size()>0) {
+            if (player.anim.size()>1) {
 
                 TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( 0.5f, true );
                 player.setRegion( currentFramea );
+
+            }
+            else if (player.anim.size()==1) {
+
+                TextureRegion currentFramea = player.anim.get(0).getKeyFrame( 0.5f, true );
+                player.setRegion( currentFramea );
+
+                if (!rpg){
+
+                    switch (player.dir) {
+                        case 0: //down
+                            break;
+                        case 1: //right
+                            player.setFlip( false, false );
+                            break;
+                        case 2: //left
+                            player.setFlip( true, false );
+                            break;
+                        case 3: //up
+                            break;
+                    }
+                }
 
             }
             if (rpg) jumping=false;
@@ -839,9 +904,14 @@ public class game {
             if (ladder) player.dir=3;
 
             playerTime +=delta;
-            if (player.anim.size()>0) {
+            if (player.anim.size()>1) {
 
                 TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( playerTime, true );
+                player.setRegion( currentFramea );
+            }
+            else if (player.anim.size()==1) {
+
+                TextureRegion currentFramea = player.anim.get(0).getKeyFrame( playerTime, true );
                 player.setRegion( currentFramea );
             }
 
@@ -849,7 +919,7 @@ public class game {
         {
             //idle animation if you will...
 
-            if (player.anim.size()>0) {
+            if (player.anim.size()>1) {
                 TextureRegion currentFramea;
                 if (player.anim.size()==1){
                      currentFramea = player.anim.get( 0 ).getKeyFrame( 0, true );
@@ -869,7 +939,9 @@ public class game {
             player.body.setLinearVelocity(player.body.getLinearVelocity().x,0);
             player.body.setGravityScale(-0.7f);
         }else if (ladder){
-            player.body.setLinearVelocity(player.body.getLinearVelocity().x,0);
+            if (player.body.getLinearVelocity().y<0) {
+                player.body.setLinearVelocity( player.body.getLinearVelocity().x, 0 );
+            }
             player.body.setGravityScale(0f);
         }else if (sinker) {
 
@@ -879,6 +951,7 @@ public class game {
             player.body.setGravityScale(1);
         }
 
+        if (player.body.getLinearVelocity().y<-player.speed*3) player.body.setLinearVelocity( player.body.getLinearVelocity().x,-player.speed*3 );
         /*
         for (int i = objects.size() - 1; i >= 0; i--){
             gameobject go = objects.get( i );
@@ -1369,7 +1442,7 @@ public class game {
         gameobject newbrick = new gameobject();
         boolean flipX=false,flipY=false;
         float rota=0f;
-
+        TiledMapTileMapObject tmo = null;
         if (!object) { //tile
             tlcece = cece.getTile();
             o=tlcece.getProperties();
@@ -1384,7 +1457,8 @@ public class game {
             }
             o = obj.getProperties();
             if (obj instanceof TiledMapTileMapObject) {
-                t = ((TiledMapTileMapObject) obj).getTextureRegion();
+                tmo = ((TiledMapTileMapObject) obj);
+                t = tmo.getTextureRegion();
             }
         }
 
@@ -1399,7 +1473,15 @@ public class game {
                 }
             }
         }catch(Exception e){
-           // e.printStackTrace();
+            try {
+                for (int i=0;i<animids.size();i++) {
+                    if (animids.get( i ) == tmo.getTile().getId()) {
+                        newbrick.anim.add( anims.get( i )) ;
+                    }
+                }
+            }catch(Exception f){
+                // e.printStackTrace();
+            }
         }
 
 

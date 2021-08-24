@@ -27,6 +27,7 @@ import box2dLight.PointLight;
 
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ENEMYPROJECTILE;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.MONSTER;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYER;
 
 public class gameobject extends Sprite {
     public String id="";
@@ -113,10 +114,10 @@ public class gameobject extends Sprite {
 
 
         ///
-        meledak = new ParticleEffect();
-        meledak.load( Gdx.files.internal("platformer/died.p"), Gdx.files.internal("platformer"));
-        meledak.getEmitters().first().setPosition( Gdx.graphics.getWidth() / 2, Gdx.graphics.getHeight() / 2);
-        meledak.scaleEffect(0.001f, 0.001f); //kudu disini
+      //  meledak = new ParticleEffect();
+      //  meledak.load( Gdx.files.internal("platformer/died.p"), Gdx.files.internal("platformer"));
+      //  meledak.getEmitters().first().setPosition( Gdx.graphics.getWidth() / 2, Gdx.graphics.getHeight() / 2);
+      //  meledak.scaleEffect(0.001f, 0.001f); //kudu disini
         ///
 
 
@@ -1011,7 +1012,10 @@ public class gameobject extends Sprite {
             case ITEM:
             case BLOCK:
             default:
+
+                if (objtype==PLAYER) return;
                 ///
+
                 if (path!=null){
 
                     if (lastPos==null){
@@ -1047,9 +1051,11 @@ public class gameobject extends Sprite {
                 }
 
 
+
+
                 if (mygame.player.state == states.DEAD) moving=false;
 
-                if (moving && this!=mygame.player) {
+                if (moving) {
                     if (mygame.rpg||heavy||objtype== objecttype.BLOCK||objtype== objecttype.ITEM) {
                         switch (dir) {
                             case 0://bawah
@@ -1085,54 +1091,24 @@ public class gameobject extends Sprite {
                         }
 
                     }
-                }else{
+                }
 
-                    if (anim.size()>0) {
-                        //mygame.log("HERE");
-                        if (mygame.rpg || stepping) body.setLinearVelocity( 0, 0 );
-                        body.setLinearVelocity( body.getLinearVelocity().x, body.getLinearVelocity().y );
+                if (anim.size()>0) {
+                    //mygame.log("HERE");
+                    if (mygame.rpg || stepping) body.setLinearVelocity( 0, 0 );
+                    body.setLinearVelocity( body.getLinearVelocity().x, body.getLinearVelocity().y );
 
-                        if (anim.size()==1) dir=0;
+                    if (anim.size()==1) {
+                        TextureRegion currentFrame = anim.get( 0 ).getKeyFrame( mygame.stateTime, true );
+                        setRegion( currentFrame );
+                    }else{
                         TextureRegion currentFrame = anim.get( dir ).getKeyFrame( mygame.stateTime, true );
                         setRegion( currentFrame );
 
-
-                    }else{
-                        if (!rotating) {
-                            if (mygame.rpg) {
-
-                                setOriginCenter();
-                                switch (dir) {
-                                    case 0: //down
-                                        //setRotation( 180 );
-                                        break;
-                                    case 1: //right
-                                        //setRotation( 270 );
-                                        break;
-                                    case 2: //left
-                                        //setRotation( 90 );
-                                        break;
-                                    case 3: //up
-                                        //setRotation( 0 );
-                                        break;
-                                }
-                            } else {
-                                switch (dir) {
-                                    case 0: //down
-                                        break;
-                                    case 1: //right
-                                     //   setFlip( true, false );
-                                        break;
-                                    case 2: //left
-                                     //   setFlip( false, false );
-                                        break;
-                                    case 3: //up
-                                        break;
-                                }
-                            }
-                        }
-
                     }
+
+
+
                 }
 
                 ///
@@ -1212,10 +1188,10 @@ public class gameobject extends Sprite {
     }
 
     public void bumbum(){
-        mygame.particles.add( meledak );
-        meledak.setPosition( body.getPosition().x, body.getPosition().y );
-        meledak.reset(false);
-        meledak.start();
+      // mygame.particles.add( meledak );
+      //  meledak.setPosition( body.getPosition().x, body.getPosition().y );
+      //  meledak.reset(false);
+      //  meledak.start();
     }
 
 }
