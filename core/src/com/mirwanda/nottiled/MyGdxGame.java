@@ -32,7 +32,7 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.input.GestureDetector;
-import com.badlogic.gdx.input.GestureDetector.*;
+import com.badlogic.gdx.input.GestureDetector.GestureListener;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Polyline;
@@ -77,7 +77,6 @@ import com.bitfire.postprocessing.PostProcessor;
 import com.bitfire.postprocessing.effects.Bloom;
 import com.bitfire.postprocessing.effects.CrtMonitor;
 import com.bitfire.postprocessing.effects.Curvature;
-import com.bitfire.postprocessing.effects.MotionBlur;
 import com.bitfire.postprocessing.effects.Vignette;
 import com.bitfire.postprocessing.effects.Zoomer;
 import com.bitfire.postprocessing.filters.Combine;
@@ -105,7 +104,6 @@ import org.xmlpull.v1.XmlSerializer;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -126,19 +124,13 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
-import sun.misc.IOUtils;
-
 import static java.lang.Thread.sleep;
-import static org.jfugue.midi.MidiFileManager.savePatternToMidi;
 
 
 public class MyGdxGame extends ApplicationAdapter implements GestureListener {
@@ -1468,7 +1460,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             }else{
                                 str1.draw( ui, mygame.message, 0, ssx-20, ssy, Align.center, true );
                             }
+                        }
 
+                        if (mygame.orientation!=0){
+                            face.setOrientation( mygame.orientation );
+                            mygame.orientation=0;
                         }
 
                         if (mygame.victory) {
@@ -1874,6 +1870,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
     public void escapegame() {
+        face.setOrientation( 0 );
         kartu = "world";
         if (mygame.bgm==null) return;
         if (mygame.bgm.isPlaying()) mygame.bgm.stop();

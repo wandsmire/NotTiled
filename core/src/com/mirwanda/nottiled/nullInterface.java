@@ -168,5 +168,10 @@ public class nullInterface implements Interface {
         return null;
     }
 
+    @Override
+    public void setOrientation(int ori) {
+
+    }
+
 
 }

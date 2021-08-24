@@ -24,4 +24,6 @@ public interface Interface
 	public void newFile();
 	public void selectFolder();
 	public String getdatafromURI(String URI);
+	public void setOrientation(int ori);
+
 }

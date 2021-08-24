@@ -447,6 +447,21 @@ public class MainActivity extends AndroidApplication implements Interface
 	}
 
 	@Override
+	public void setOrientation(int ori) {
+		switch (ori){
+			case 0: //both
+				setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
+				break;
+			case 1: //landscape
+				setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+				break;
+			case 2: //portrait
+				setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+				break;
+		}
+	}
+
+	@Override
 	public void saveFile(String data)
 	{
 		if (currentMAP ==null) {

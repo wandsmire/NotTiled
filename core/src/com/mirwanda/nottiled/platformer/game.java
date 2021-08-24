@@ -4,7 +4,6 @@ import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.loaders.resolvers.AbsoluteFileHandleResolver;
-import com.badlogic.gdx.assets.loaders.resolvers.ExternalFileHandleResolver;
 import com.badlogic.gdx.assets.loaders.resolvers.InternalFileHandleResolver;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
@@ -17,7 +16,6 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.ParticleEffect;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.maps.MapGroupLayer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.MapObjects;
@@ -36,8 +34,6 @@ import com.badlogic.gdx.maps.tiled.tiles.StaticTiledMapTile;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.math.collision.BoundingBox;
-import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.Box2D;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
@@ -46,10 +42,8 @@ import com.badlogic.gdx.utils.Json;
 
 import java.io.StringWriter;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
-import box2dLight.PointLight;
 import box2dLight.RayHandler;
 
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BLOCK;
@@ -65,7 +59,7 @@ public class game {
     public boolean debugmode = false;
     public boolean playtest=true;
     public boolean uitest=false;
-
+    public int orientation;
     public boolean night=false;
     public TiledMap map;
     public OrthogonalTiledMapRenderer renderer;
@@ -237,6 +231,20 @@ public class game {
                     } else {
                         txBackground = null;
                     }
+                }
+
+                if (mpa.containsKey( "orientation" )) {
+                    String orien = (String) mpa.get( "orientation" );
+                    switch (orien){
+                        case "landscape":
+                            orientation=1;break;
+                        case "portrait":
+                            orientation=2;break;
+                        default:
+                            orientation=0;break;
+
+                    }
+
                 }
 
                 if (mpa.containsKey( "bgm" )) {
@@ -802,6 +810,7 @@ public class game {
         else if (player.moving && (!jumping || onplatformv) && (!ladder && !floater && !sinker))
         {
             playerTime +=delta;
+            if (jetpack) return;
             if (player.anim.size()>1) {
 
                 TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( playerTime, true );
@@ -870,13 +879,13 @@ public class game {
         else if (jumping && !ladder && !floater && !sinker && !onplatformv) {
             if (player.anim.size()>1) {
 
-                TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( 0.5f, true );
+                TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( 0.3f, true );
                 player.setRegion( currentFramea );
 
             }
             else if (player.anim.size()==1) {
 
-                TextureRegion currentFramea = player.anim.get(0).getKeyFrame( 0.5f, true );
+                TextureRegion currentFramea = player.anim.get(0).getKeyFrame( 0.3f, true );
                 player.setRegion( currentFramea );
 
                 if (!rpg){
