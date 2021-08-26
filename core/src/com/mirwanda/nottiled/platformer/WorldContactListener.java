@@ -5,13 +5,11 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Contact;
 import com.badlogic.gdx.physics.box2d.ContactImpulse;
 import com.badlogic.gdx.physics.box2d.ContactListener;
-import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.Manifold;
 
 import java.util.ArrayList;
@@ -20,7 +18,6 @@ import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ACTION;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BLOCK;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BRICK;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.CHECKPOINT;
-import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ENEMY;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ENEMYPROJECTILE;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ITEM;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ITEMSENSOR;
@@ -28,7 +25,6 @@ import static com.mirwanda.nottiled.platformer.gameobject.objecttype.LADDER;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.MONSTER;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYER;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYERPROJECTILE;
-import static com.mirwanda.nottiled.platformer.gameobject.objecttype.WALLCENTER;
 
 public class WorldContactListener implements ContactListener {
 
@@ -40,8 +36,7 @@ public class WorldContactListener implements ContactListener {
 
     public boolean check(gameobject.objecttype type1, gameobject.objecttype type2, gameobject obj1, gameobject obj2){
         if (obj1.objtype==type1 && obj2.objtype==type2) return true;
-        if (obj2.objtype==type1 && obj1.objtype==type2) return true;
-        return false;
+        return obj2.objtype == type1 && obj1.objtype == type2;
     }
 
     public gameobject select(gameobject.objecttype type1, gameobject obj1, gameobject obj2){
@@ -62,10 +57,10 @@ public class WorldContactListener implements ContactListener {
             String[] ss = o.get( "condition" ).toString().split( "," );
             qual=false;
             int rq=0;
-            for (int i=0;i<ss.length;i++) {
+            for (String s : ss) {
 
-                if (ss[i].contains( "=" )) {
-                    String[] sv = ss[i].split( "=" );
+                if (s.contains( "=" )) {
+                    String[] sv = s.split( "=" );
                     for (KV var : mygame.save.vars) {
                         if (sv[0].equalsIgnoreCase( var.key )) {
                             if (Integer.parseInt( sv[1] ) == var.value) {
@@ -75,19 +70,19 @@ public class WorldContactListener implements ContactListener {
                         }
                     }
                 }
-                if (ss[i].contains( "&lt;" )) {
-                    String[] sv = ss[i].split( "&lt;" );
+                if (s.contains( "&lt;" )) {
+                    String[] sv = s.split( "&lt;" );
                     for (KV var : mygame.save.vars) {
                         if (sv[0].equalsIgnoreCase( var.key )) {
-                            if ( var.value < Integer.parseInt( sv[1] )) {
+                            if (var.value < Integer.parseInt( sv[1] )) {
                                 rq += 1;
                                 break;
                             }
                         }
                     }
                 }
-                if (ss[i].contains( "&gt;" )) {
-                    String[] sv = ss[i].split( "&gt;" );
+                if (s.contains( "&gt;" )) {
+                    String[] sv = s.split( "&gt;" );
                     for (KV var : mygame.save.vars) {
                         if (sv[0].equalsIgnoreCase( var.key )) {
                             if (var.value > Integer.parseInt( sv[1] )) {
@@ -104,24 +99,24 @@ public class WorldContactListener implements ContactListener {
 
             if (o.get( "setvar" ) != null) {
                 String[] ss = o.get( "setvar" ).toString().split( "," );
-                for (int i = 0; i < ss.length; i++) {
-                    String[] sv = ss[i].split( "=" );
+                for (String s : ss) {
+                    String[] sv = s.split( "=" );
                     mygame.setOrAddVars( sv[0], Integer.parseInt( sv[1] ), game.VAROP.SET );
                 }
             }
 
             if (o.get( "addvar" ) != null) {
                 String[] ss = o.get( "addvar" ).toString().split( "," );
-                for (int i = 0; i < ss.length; i++) {
-                    String[] sv = ss[i].split( "=" );
+                for (String s : ss) {
+                    String[] sv = s.split( "=" );
                     mygame.setOrAddVars( sv[0], Integer.parseInt( sv[1] ), game.VAROP.ADD );
                 }
             }
 
             if (o.get( "subvar" ) != null) {
                 String[] ss = o.get( "subvar" ).toString().split( "," );
-                for (int i = 0; i < ss.length; i++) {
-                    String[] sv = ss[i].split( "=" );
+                for (String s : ss) {
+                    String[] sv = s.split( "=" );
                     mygame.setOrAddVars( sv[0], Integer.parseInt( sv[1] ), game.VAROP.SUB );
                 }
             }
@@ -169,7 +164,7 @@ public class WorldContactListener implements ContactListener {
                         }
                     }
 
-                    FileHandle tgt = Gdx.files.absolute( mygame.path+"/"+o.get( "transfer" ).toString() );
+                    FileHandle tgt = mygame.getFile( mygame.path+"/"+o.get( "transfer" ).toString() );
                     if (tgt.exists()){
                         mygame.fadeinitialise( mygame.path, o.get( "transfer" ).toString() );
                     }else{
@@ -214,7 +209,6 @@ public class WorldContactListener implements ContactListener {
                 if (tgt.equalsIgnoreCase( "," )) {
                     String[] xy = of.get( "moveX" ).toString().split( "," );
                     px = Float.parseFloat( xy[0] );
-                    py = Float.parseFloat( xy[1] );
                     px = (px + mygame.Tsw/2) /mygame.scale;
                     py = mygame.player.body.getPosition().y;
                 }else{
@@ -241,7 +235,6 @@ public class WorldContactListener implements ContactListener {
                 float py =0;
                 if (tgt.equalsIgnoreCase( "," )) {
                     String[] xy = of.get( "moveY" ).toString().split( "," );
-                    px = Float.parseFloat( xy[0] );
                     py = Float.parseFloat( xy[1] );
                     px = mygame.player.body.getPosition().x;
                     py = (mygame.Th * mygame.Tsh /mygame.scale) - (py + mygame.Tsw/2) /mygame.scale;
@@ -279,7 +272,7 @@ public class WorldContactListener implements ContactListener {
 
             if (o.containsKey( "delayedkill")) {
                 String tgt = of.get( "delayedkill" ).toString();
-                mygame.requestkill=new ArrayList<gameobject>();
+                mygame.requestkill=new ArrayList<>();
                 for (gameobject go : mygame.objects){
                     if (go.id.equalsIgnoreCase( tgt )){
                         mygame.requestkill.add( go );
@@ -319,7 +312,7 @@ public class WorldContactListener implements ContactListener {
 
 
             if (o.get( "sethud" )!=null) {
-                boolean keep =  (o.get( "keephud" ) !=null) ? true: false;
+                boolean keep = o.get( "keephud" ) != null;
 
                 if (o.get( "icon" ) !=null) {
                     String[] ss = o.get( "icon" ).toString().split( "," );
@@ -431,7 +424,7 @@ public class WorldContactListener implements ContactListener {
                             TextureRegion[][] tmp = TextureRegion.split( txMonster,
                                     txMonster.getWidth() / 4,
                                     txMonster.getHeight() / 4 );
-                            newbrick.pimagesize=new Vector2(txMonster.getWidth()/4,txMonster.getHeight() / 4);
+                            newbrick.pimagesize=new Vector2(txMonster.getWidth()/4f,txMonster.getHeight() / 4f);
                             mygame.log("NOGHE"+newbrick.pimagesize);
                             for (int i = 0; i < 4; i++) {
                                 TextureRegion[] walkFrames = new TextureRegion[4];
@@ -439,7 +432,7 @@ public class WorldContactListener implements ContactListener {
                                 for (int j = 0; j < 4; j++) {
                                     walkFrames[index++] = tmp[i][j];
                                 }
-                                Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
+                                Animation<TextureRegion> tempAnim = new Animation<>( 0.1f, walkFrames );
                                 newbrick.panim.add( tempAnim );
                             }
 
@@ -519,7 +512,7 @@ public class WorldContactListener implements ContactListener {
         }
 
         if (check(BRICK,PLAYERPROJECTILE,o1,o2)){
-            gameobject bl = select( BLOCK,o1,o2 );
+            //gameobject bl = select( BLOCK,o1,o2 );
             gameobject pp = select( PLAYERPROJECTILE,o1,o2 );
             //Gdx.app.log( bl.HP+"",pp.damage+"");
             pp.bumbum();
@@ -543,7 +536,7 @@ public class WorldContactListener implements ContactListener {
         }
 
         if (check(BRICK,ENEMYPROJECTILE,o1,o2)) {
-            gameobject bl = select( BRICK, o1, o2 );
+            //gameobject bl = select( BRICK, o1, o2 );
             gameobject ep = select( ENEMYPROJECTILE, o1, o2 );
             //Gdx.app.log( bl.HP+"",pp.damage+"");
             ep.bumbum();
@@ -581,7 +574,7 @@ public class WorldContactListener implements ContactListener {
         }
 
         if (check(ITEM,gameobject.objecttype.ITEMSENSOR,o1,o2)){
-            gameobject it = select( ITEM,o1,o2 );
+            //gameobject it = select( ITEM,o1,o2 );
             gameobject is = select( ITEMSENSOR,o1,o2 );
             eventobject(is);
         }

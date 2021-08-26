@@ -308,7 +308,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     SelectBox sbMapFormat;
     SelectBox sbMapRenderOrder;
     SelectBox sbMapOrientation;
-    CheckBox cbUseTsx, cb1, cb2;
+    CheckBox cbUseTsx, cb1, cb2, cbAdjustObjects;
     TextButton bUseTsx, bApplyMP, bCancelMP, bPropertiesMap;
     ChangeListener listBack;
     Table tMenu, tMenu1, tMenu2, tOpen, tNewFile, tSaveAs, tLicense, tTutorial;
@@ -1402,8 +1402,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         //postProcessor.render();
                         if (mygame.night) {
-                            mygame.rayHandler.setCombinedMatrix( gamecam);
-                            mygame.rayHandler.updateAndRender();
+                            //mygame.rayHandler.setCombinedMatrix( gamecam);
+                            //mygame.rayHandler.updateAndRender();
                         }
 
 
@@ -1449,9 +1449,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         ui.begin();
                         str1.getData().setScale( 0.8f );
                         if (landscape) {
-                            mygame.drawHUD( ui, str1, ssy, ssx );
+                            mygame.drawHUD( ui, str1, ssx );
                         } else {
-                            mygame.drawHUD( ui, str1, ssx, ssy );
+                            mygame.drawHUD( ui, str1, ssy );
                         }
                         str1.getData().setScale( 0.8f );
                         if (mygame.message!=null){
@@ -1735,6 +1735,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     void drawCoordinates() {
+
         if (sShowCoords) {
             str1.getData().setScale( 0.01f + Tsw / 160f );
             for (int yy = 0; yy < Th; yy++) {
@@ -1753,27 +1754,36 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
             str1.getData().setScale( 1f );
         }
-        if (sShowGIDmap) {
-            str1.getData().setScale( 0.01f + Tsw / 160f );
-            for (int yy = 0; yy < Th; yy++) {
-                for (int xx = 0; xx < Tw; xx++) {
-                    int num = yy*Tw+xx;
-                    long spr = layers.get(selLayer).getStr().get(num);
 
-                    if (orientation.equalsIgnoreCase( "isometric" )) {
-                        float offsetx = (xx * Tsw / 2) + (yy * Tsw / 2);
-                        float offsety = (xx * Tsh / 2) - (yy * Tsh / 2);
+        if (layers.size()>0) {
+            for (int l=0;l<layers.size();l++) {
+                if (layers.get( l).getType()== layer.Type.TILE) {
+                    if (sShowGIDmap) {
+                        str1.getData().setScale( 0.01f + Tsw / 160f );
+                        for (int yy = 0; yy < Th; yy++) {
+                            for (int xx = 0; xx < Tw; xx++) {
+                                int num = yy * Tw + xx;
+                                long spr = layers.get( l ).getStr().get( num );
+
+                                if (orientation.equalsIgnoreCase( "isometric" )) {
+                                    float offsetx = (xx * Tsw / 2) + (yy * Tsw / 2);
+                                    float offsety = (xx * Tsh / 2) - (yy * Tsh / 2);
 
 
-                        if (spr!=0) str1.draw( batch, spr+"", (xx * Tsw + Tsw / 8f) - offsetx, (-yy * Tsh + Tsh ) - offsety );
+                                    if (spr != 0)
+                                        str1.draw( batch, spr + "", (xx * Tsw + Tsw / 8f) - offsetx, (-yy * Tsh + Tsh) - offsety );
 
-                    } else {
-                        if (spr!=0) str1.draw( batch, spr+"", xx * Tsw + Tsw / 8f, -yy * Tsh + Tsh  );
+                                } else {
+                                    if (spr != 0)
+                                        str1.draw( batch, spr + "", xx * Tsw + Tsw / 8f, -yy * Tsh + Tsh );
+                                }
+                            }
+
+                        }
+                        str1.getData().setScale( 1f );
                     }
                 }
-
             }
-            str1.getData().setScale( 1f );
         }
 
 
@@ -12569,8 +12579,28 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                     Tw = nTw;
 
-                    Tsh = Integer.parseInt(fTsh.getText());
-                    Tsw = Integer.parseInt(fTsw.getText());
+                    int newTsh = Integer.parseInt(fTsh.getText());
+                    int newTsw = Integer.parseInt(fTsw.getText());
+
+                    if (cbAdjustObjects.isChecked()) {
+                        if (Tsw != newTsw || Tsh != newTsh) {
+                            float scaleX = (float) newTsw / (float) Tsw;
+                            float scaleY = (float) newTsh / (float) Tsh;
+                            for (layer lay : layers) {
+                                if (lay.getType() == layer.Type.OBJECT) {
+                                    for (obj ob : lay.getObjects()) {
+                                        ob.setX( ob.getX() * scaleX );
+                                        ob.setY( ob.getY() * scaleY );
+                                        ob.setW( ob.getW() * scaleX );
+                                        ob.setH( ob.getH() * scaleY );
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Tsh = newTsh;
+                    Tsw = newTsw;
                     mapFormat = sbMapFormat.getSelected().toString();
                     renderorder = sbMapRenderOrder.getSelected().toString();
                     orientation = sbMapOrientation.getSelected().toString();
@@ -12633,6 +12663,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
         cbUseTsx = new CheckBox(z.usetsxfile, skin);
+        cbAdjustObjects = new CheckBox("Adjust objects", skin);
 
         tProperties = new Table();
         tProperties.setFillParent(true);
@@ -12662,8 +12693,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tProperties.add(new Label(z.renderorder, skin)).width(btnx / 2 - 2);
         tProperties.add(sbMapRenderOrder).padBottom(2).width(btnx / 2).row();
         tProperties.add(new Label(z.orientation, skin)).width(btnx / 2 - 2);
-        tProperties.add(sbMapOrientation).padBottom(5).width(btnx / 2).row();
-
+        tProperties.add(sbMapOrientation).padBottom(2).width(btnx / 2).row();
+        tProperties.add(cbAdjustObjects).padBottom(5).width(btnx / 2).row();
         tProperties.add(bPropertiesMap).padBottom(2).colspan(2).row();
         tProperties.add(bApplyMP).padBottom(2).colspan(2).row();
         tProperties.add(bCancelMP).padBottom(2).colspan(2).row();
@@ -22823,7 +22854,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private void playgame(final String curdir, final String filex){
 
             mygame = new com.mirwanda.nottiled.platformer.game();
-            if (mygame.initialise(curdir, filex)) {
+            if (mygame.initialise(curdir, filex,true)) {
                 kartu = "game";
                 Gdx.input.setInputProcessor( im );
                 gamecam.zoom = 0.2f;

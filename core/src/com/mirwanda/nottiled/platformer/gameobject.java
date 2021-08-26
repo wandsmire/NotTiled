@@ -1,10 +1,8 @@
 package com.mirwanda.nottiled.platformer;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Animation;
-import com.badlogic.gdx.graphics.g2d.ParticleEffect;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.MapObject;
@@ -22,8 +20,6 @@ import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
 
 import java.util.ArrayList;
-
-import box2dLight.PointLight;
 
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ENEMYPROJECTILE;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.MONSTER;
@@ -61,8 +57,8 @@ public class gameobject extends Sprite {
     java.util.List<Animation<TextureRegion>> anim = new ArrayList<>(); // Must declare frame type (TextureRegion)
     java.util.List<Animation<TextureRegion>> panim = new ArrayList<>(); // Must declare frame type (TextureRegion)
     public Vector2 pimagesize;
-    public ParticleEffect meledak;
-    public PointLight myLight;
+    //public ParticleEffect meledak;
+    //public PointLight myLight;
     public float light;
     public Color bgcolor;
     public Color lightColor = Color.WHITE;
@@ -127,8 +123,8 @@ public class gameobject extends Sprite {
             setColor( 1, 1, 1, opacity );
             setSize( getRegionWidth() /mygame.scale, getRegionHeight() /mygame.scale );
             setOrigin( Tswh/mygame.scale, Tshh /mygame.scale );
-             Tpx = getRegionWidth()/2;
-             Tpy = getRegionHeight()/2;
+             Tpx = getRegionWidth()/2f;
+             Tpy = getRegionHeight()/2f;
 
         }
         if (tt!=null) {
@@ -136,8 +132,8 @@ public class gameobject extends Sprite {
             setColor( 1, 1, 1, opacity );
             setSize( getRegionWidth() /mygame.scale, getRegionHeight() /mygame.scale );
             setOrigin( Tswh/mygame.scale, Tshh /mygame.scale );
-             Tpx = getRegionWidth()/2;
-             Tpy = getRegionHeight()/2;
+             Tpx = getRegionWidth()/2f;
+             Tpy = getRegionHeight()/2f;
 
         }
 
@@ -579,7 +575,7 @@ public class gameobject extends Sprite {
                 fdef.shape = shap;
                 fdef.isSensor=true;
                 fixture5 = body.createFixture(fdef);
-                fixture5.setUserData(objecttype.WALLCENTER);
+                fixture5.setUserData( gameobject.objecttype.WALLCENTER );
                 break;
 
 
@@ -590,11 +586,14 @@ public class gameobject extends Sprite {
         //setSize( width/mygame.scale, height /mygame.scale );
         //setOrigin( width /mygame.scale, height /mygame.scale );
 
+        /*
         if (light>0 && mygame.night) {
             myLight = new PointLight( mygame.rayHandler, 500, lightColor, light, 0, 0 );
             myLight.setSoftnessLength( 0.3f );
             myLight.attachToBody( body );
         }
+
+         */
 
 
 
@@ -637,26 +636,27 @@ public class gameobject extends Sprite {
                 if (obj!=null) o=obj.getProperties();
                 if (tlcece!=null) o=tlcece.getProperties();
 
+                assert o != null;
                 if (o.get( "xsetvar" ) != null) {
                     String[] ss = o.get( "xsetvar" ).toString().split( "," );
-                    for (int i = 0; i < ss.length; i++) {
-                        String[] sv = ss[i].split( "=" );
+                    for (String s : ss) {
+                        String[] sv = s.split( "=" );
                         mygame.setOrAddVars( sv[0], Integer.parseInt( sv[1] ), game.VAROP.SET );
                     }
                 }
 
                 if (o.get( "xaddvar" ) != null) {
                     String[] ss = o.get( "xaddvar" ).toString().split( "," );
-                    for (int i = 0; i < ss.length; i++) {
-                        String[] sv = ss[i].split( "=" );
+                    for (String s : ss) {
+                        String[] sv = s.split( "=" );
                         mygame.setOrAddVars( sv[0], Integer.parseInt( sv[1] ), game.VAROP.ADD );
                     }
                 }
 
                 if (o.get( "xsubvar" ) != null) {
                     String[] ss = o.get( "xsubvar" ).toString().split( "," );
-                    for (int i = 0; i < ss.length; i++) {
-                        String[] sv = ss[i].split( "=" );
+                    for (String s : ss) {
+                        String[] sv = s.split( "=" );
                         mygame.setOrAddVars( sv[0], Integer.parseInt( sv[1] ), game.VAROP.SUB );
                     }
                 }
@@ -677,15 +677,16 @@ public class gameobject extends Sprite {
             case PLAYERPROJECTILE:
             case ENEMYPROJECTILE:
 
+                assert body != null;
                 switch(dir){
                     case 0://bawah
                         body.setLinearVelocity(spread, -speed);
                         break;
                     case 1://kanan
-                        body.setLinearVelocity(speed, 0.2f+spread);
+                        body.setLinearVelocity(speed, 0.01f+spread);
                         break;
                     case 2://kiri
-                        body.setLinearVelocity(-speed, 0.2f+spread);
+                        body.setLinearVelocity(-speed, 0.01f+spread);
                         break;
                     case 3://atas
                         body.setLinearVelocity(spread, speed);
@@ -744,7 +745,7 @@ public class gameobject extends Sprite {
 
             case MONSTER:
 
-                if (tameif!=""){
+                if (!tameif.equals( "" )){
                     String[] ss= tameif.split( "," );
                     int met=0;
 
@@ -754,13 +755,10 @@ public class gameobject extends Sprite {
                             met++;
                         }
                     }
-                    if (met==ss.length){
-                        tame=true;
-                    }else{
-                        tame=false;
-                    }
+                    tame= met == ss.length;
                 }
                 boolean shooting = false;
+                assert body != null;
                 if (body.getPosition().dst( mygame.player.body.getPosition()) <chaseRadius/mygame.scale) {
                    if (mygame.player.state!= states.DEAD && canshoot)
                    {
@@ -1021,12 +1019,14 @@ public class gameobject extends Sprite {
                     if (lastPos==null){
                         currentPath=0;
                         dir = path[0];
+                        assert body != null;
                         lastPos=new Vector2(body.getPosition().x,body.getPosition().y);
                         moving=true;
                     }
 
                     if (dir!=4){
-                    if(lastPos.dst(body.getPosition().x,body.getPosition().y) >=mygame.Tsw/mygame.scale){
+                        assert body != null;
+                        if(lastPos.dst(body.getPosition().x,body.getPosition().y) >=mygame.Tsw/mygame.scale){
                         currentPath+=1;
                         if (currentPath>=path.length) currentPath=0;
                         dir = path[currentPath];
@@ -1041,6 +1041,7 @@ public class gameobject extends Sprite {
                                 currentPath += 1;
                                 if (currentPath >= path.length) currentPath = 0;
                                 dir = path[currentPath];
+                                assert body != null;
                                 lastPos = new Vector2( body.getPosition().x, body.getPosition().y );
                                 if (dir==4) waitTime=wait;
 
@@ -1056,6 +1057,7 @@ public class gameobject extends Sprite {
                 if (mygame.player.state == states.DEAD) moving=false;
 
                 if (moving) {
+                    assert body != null;
                     if (mygame.rpg||heavy||objtype== objecttype.BLOCK||objtype== objecttype.ITEM) {
                         switch (dir) {
                             case 0://bawah
@@ -1076,6 +1078,7 @@ public class gameobject extends Sprite {
 
                         }
                     }else{
+
                         switch (dir) {
 
                             case 1://kanan
@@ -1095,18 +1098,18 @@ public class gameobject extends Sprite {
 
                 if (anim.size()>0) {
                     //mygame.log("HERE");
+                    assert body!=null;
                     if (mygame.rpg || stepping) body.setLinearVelocity( 0, 0 );
                     body.setLinearVelocity( body.getLinearVelocity().x, body.getLinearVelocity().y );
 
+                    TextureRegion currentFrame;
                     if (anim.size()==1) {
-                        TextureRegion currentFrame = anim.get( 0 ).getKeyFrame( mygame.stateTime, true );
-                        setRegion( currentFrame );
+                        currentFrame = anim.get( 0 ).getKeyFrame( mygame.stateTime, true );
                     }else{
-                        TextureRegion currentFrame = anim.get( dir ).getKeyFrame( mygame.stateTime, true );
-                        setRegion( currentFrame );
+                        currentFrame = anim.get( dir ).getKeyFrame( mygame.stateTime, true );
 
                     }
-
+                    setRegion( currentFrame );
 
 
                 }
@@ -1182,7 +1185,7 @@ public class gameobject extends Sprite {
     public void playSfx(Sound s){
        try{
            s.play(1.0f);
-       }catch(Exception e){
+       }catch(Exception ignored){
 
        }
     }

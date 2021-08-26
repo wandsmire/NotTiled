@@ -21,7 +21,7 @@ android {
         minSdkVersion 19
         targetSdkVersion 30
         versionCode 73
-        versionName "1.7.0 aplha 14/08/21"
+        versionName "1.7.0 aplha 25/08/21"
     }
     buildTypes {
         release {

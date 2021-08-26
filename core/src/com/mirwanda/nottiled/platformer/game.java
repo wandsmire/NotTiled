@@ -13,7 +13,6 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.ParticleEffect;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.MapLayer;
@@ -40,11 +39,11 @@ import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.utils.Json;
 
-import java.io.StringWriter;
+//import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 
-import box2dLight.RayHandler;
+//import box2dLight.RayHandler;
 
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BLOCK;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.CHECKPOINT;
@@ -81,8 +80,8 @@ public class game {
     public gameobject action3;
     public gameobject action4;
 
-    public java.util.List<gameobject> objects = new ArrayList<gameobject>();
-    public java.util.List<ParticleEffect> particles = new ArrayList<>();
+    public java.util.List<gameobject> objects = new ArrayList<>();
+//    public java.util.List<ParticleEffect> particles = new ArrayList<>();
 
     public Texture txBackground;
     public TextureRegion[][] hpbar;
@@ -107,7 +106,6 @@ public class game {
     public boolean ladder;
     public int touchedladder;
     public boolean floater;
-    public int touchedfloater;
     public boolean sinker;
     public boolean onplatformh;
     public boolean onplatformv;
@@ -117,7 +115,6 @@ public class game {
     public String peektarget;
     public String transfercam;
 
-    public int touchedsinker;
 
     public float jumpinterval=0;
     public float stompinterval=0;
@@ -143,19 +140,19 @@ public class game {
     public int Th;
     public float Tsw;
     public float Tsh;
-    public RayHandler rayHandler;
+    //public RayHandler rayHandler;
     public float scale=100f;
     public Color bgcolor=Color.LIGHT_GRAY;
 
 
-    public boolean initialise(String path, String filename){
+    public boolean initialise(String path, String filename, boolean playtest){
         try {
-
+            this.playtest=playtest;
             loadingmap = true;
             this.path = path;
             this.file = filename;
             rpg = false;
-            particles.clear();
+            //particles.clear();
 
 
             Texture tmp = new Texture( Gdx.files.internal( "platformer/hpbar.png" ) );
@@ -163,7 +160,7 @@ public class game {
                     tmp.getWidth(),
                     tmp.getHeight() / 2 );
 
-            objects = new ArrayList<gameobject>();
+            objects = new ArrayList<>();
 
             try {
                 if (playtest) {
@@ -179,8 +176,8 @@ public class game {
 
             Box2D.init();
             if (world!=null) world.dispose();
-            objects = new ArrayList<gameobject>();
-            if (particles.size()>0) particles.clear();
+            objects = new ArrayList<>();
+            //if (particles.size()>0) particles.clear();
 
 
             world = new World( new Vector2( 0, -10 ), true );
@@ -273,8 +270,7 @@ public class game {
                         float bgg = (float) Integer.parseInt(cs.substring(2, 4), 16) / 256;
                         float bgb = (float) Integer.parseInt(cs.substring(4, 6), 16) / 256;
                         bgcolor = new Color(bgr,bgg,bgb,1f);
-                    }catch(Exception e){
-                    }
+                    }catch(Exception e){ e.printStackTrace();}
                 }
 
                 boolean customicons = false;
@@ -285,10 +281,10 @@ public class game {
                         if (mpa.containsKey( "iconsize" )) {
                             String isz = (String) mpa.get( "iconsize" );
                             try {
-                                String isza[] = isz.split( "," );
+                                String[] isza = isz.split( "," );
                                 int isx = Integer.parseInt( isza[0] );
                                 int isy = Integer.parseInt( isza[1] );
-                                tmp = new Texture( Gdx.files.absolute( path + "/" + ico ) );
+                                tmp = new Texture( getFile( path + "/" + ico ) );
                                 icons = TextureRegion.split( tmp,
                                         tmp.getWidth() / isx,
                                         tmp.getHeight() / isy );
@@ -337,7 +333,7 @@ public class game {
                                 walkFrames[j]=frames[j].getTextureRegion();
                             }
 
-                            Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( at.getAnimationIntervals()[0]/1000f, walkFrames );
+                            Animation<TextureRegion> tempAnim = new Animation<>( at.getAnimationIntervals()[0]/1000f, walkFrames );
                             anims.add( tempAnim );
                             animids.add( total+i+1  );
 
@@ -353,24 +349,24 @@ public class game {
             ////
 
             for (MapLayer mlayer : map.getLayers()) {
-                boolean tilelayer = false;
-                boolean objectlayer = false;
                 float opacity = mlayer.getOpacity();
 
-                try {
-                    TiledMapTileLayer tlayer = (TiledMapTileLayer) mlayer;
+                boolean tilelayer = false;
+                boolean objectlayer = false;
+                boolean imagelayer = false;
+
+
+                if (mlayer instanceof  TiledMapTileLayer){
                     tilelayer = true;
-                } catch (Exception e) {
-                    try {
-                        TiledMapImageLayer tlayer = (TiledMapImageLayer) mlayer;
-                    } catch (Exception f) {
-                        objectlayer = true;
-                    }
+
+                }else if (mlayer instanceof TiledMapImageLayer){
+
+                }else{
+                    objectlayer=true;
                 }
 
-
                 if (tilelayer) {
-                    if (mlayer.isVisible() == false) continue;
+                    if (!mlayer.isVisible()) continue;
 
                     boolean over = false;
                     if (mlayer.getName().contains( "*" )) {
@@ -390,14 +386,13 @@ public class game {
                             try {
                                 ww = cece.getTile().getTextureRegion().getRegionWidth();
                                 hh = cece.getTile().getTextureRegion().getRegionHeight();
-                            } catch (Exception e) {
-                            }
+                            } catch (Exception ignored) {}
                             setGameObject( false, cece, xx * Tsw, yy * Tsh, ww, hh, over, null, opacity );
                         }
                     }
                 }
                 if (objectlayer) {
-                    if (mlayer.isVisible() == false) continue;
+                    if (!mlayer.isVisible()) continue;
                     MapObjects objects = map.getLayers().get( mlayer.getName() ).getObjects();
                     for (MapObject o : objects) {
                         Rectangle rect;
@@ -445,56 +440,56 @@ public class game {
             String[] ss = o.get( "requires" ).toString().split( "," );
             qual=false;
             int rq=0;
-                for (int i = 0; i < ss.length; i++) {
-                    boolean repeat=true;
-                    while (repeat) {
-                        repeat=false;
-                        boolean ada = false;
-                        String varname = "";
-                        if (ss[i].contains( "=" )) {
-                            String[] sv = ss[i].split( "=" );
-                            varname = sv[0];
-                            for (KV var : save.vars) {
-                                if (sv[0].equalsIgnoreCase( var.key )) {
-                                    ada = true;
-                                    if (Integer.parseInt( sv[1] ) == var.value) {
-                                        rq += 1;
-                                        break;
-                                    }
+            for (String s : ss) {
+                boolean repeat = true;
+                while (repeat) {
+                    repeat = false;
+                    boolean ada = false;
+                    String varname = "";
+                    if (s.contains( "=" )) {
+                        String[] sv = s.split( "=" );
+                        varname = sv[0];
+                        for (KV var : save.vars) {
+                            if (sv[0].equalsIgnoreCase( var.key )) {
+                                ada = true;
+                                if (Integer.parseInt( sv[1] ) == var.value) {
+                                    rq += 1;
+                                    break;
                                 }
                             }
-                        }
-                        if (ss[i].contains( "&lt;" )) {
-                            String[] sv = ss[i].split( "&lt;" );
-                            varname = sv[0];
-                            for (KV var : save.vars) {
-                                if (sv[0].equalsIgnoreCase( var.key )) {
-                                    ada = true;
-                                    if (var.value < Integer.parseInt( sv[1] )) {
-                                        rq += 1;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        if (ss[i].contains( "&gt;" )) {
-                            String[] sv = ss[i].split( "&gt;" );
-                            varname = sv[0];
-                            for (KV var : save.vars) {
-                                if (sv[0].equalsIgnoreCase( var.key )) {
-                                    ada = true;
-                                    if (var.value > Integer.parseInt( sv[1] )) {
-                                        rq += 1;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        if (!ada) {
-                            setOrAddVars( varname, 0, VAROP.SET );
-                            repeat=true;
                         }
                     }
+                    if (s.contains( "&lt;" )) {
+                        String[] sv = s.split( "&lt;" );
+                        varname = sv[0];
+                        for (KV var : save.vars) {
+                            if (sv[0].equalsIgnoreCase( var.key )) {
+                                ada = true;
+                                if (var.value < Integer.parseInt( sv[1] )) {
+                                    rq += 1;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (s.contains( "&gt;" )) {
+                        String[] sv = s.split( "&gt;" );
+                        varname = sv[0];
+                        for (KV var : save.vars) {
+                            if (sv[0].equalsIgnoreCase( var.key )) {
+                                ada = true;
+                                if (var.value > Integer.parseInt( sv[1] )) {
+                                    rq += 1;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (!ada) {
+                        setOrAddVars( varname, 0, VAROP.SET );
+                        repeat = true;
+                    }
+                }
 
             }
             if (rq==ss.length) qual=true;
@@ -554,7 +549,7 @@ public class game {
         }
     }
 
-    public void drawHUD(SpriteBatch b, BitmapFont str1, int ssx, int ssy){
+    public void drawHUD(SpriteBatch b, BitmapFont str1, int ssy){
         int index=0;
         for (KV vr: save.vars){
             if (vr.hud){
@@ -563,6 +558,7 @@ public class game {
                         str1.draw( b, "  :  " + vr.value, 90, ssy - 20 - 60 * index );
                         b.draw( icons[vr.icony][vr.iconx], 50, ssy - 65 - 60 * index, 48, 48 );
                     }catch(Exception e){
+                        e.printStackTrace();
                     }
                    // str1.draw( b, vr.value, ssy-10-10*index)
                 }else{
@@ -574,7 +570,6 @@ public class game {
     }
     public float getVar(String key){
         if (key==null) return 0;
-        KV varnya=null;
         for (KV vr: save.vars){
             if (key.equalsIgnoreCase( vr.key )){
                 return vr.value;
@@ -593,8 +588,6 @@ public class game {
         return k;
     }
 
-    public float anima;
-    public int animet;
     public float killtimer;
     public float peektimer;
     public int salto=0;
@@ -706,7 +699,7 @@ public class game {
         if (fadeout>0){
             fadeout--;
             if (fadeout == 0) {
-                initialise( fadepath,fademapname );
+                initialise( fadepath,fademapname ,playtest);
                 return;
             }
         }
@@ -879,13 +872,13 @@ public class game {
         else if (jumping && !ladder && !floater && !sinker && !onplatformv) {
             if (player.anim.size()>1) {
 
-                TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( 0.3f, true );
+                TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( 0.25f, true );
                 player.setRegion( currentFramea );
 
             }
             else if (player.anim.size()==1) {
 
-                TextureRegion currentFramea = player.anim.get(0).getKeyFrame( 0.3f, true );
+                TextureRegion currentFramea = player.anim.get(0).getKeyFrame( 0.25f, true );
                 player.setRegion( currentFramea );
 
                 if (!rpg){
@@ -928,14 +921,26 @@ public class game {
         {
             //idle animation if you will...
 
-            if (player.anim.size()>1) {
+            if (player.anim.size()>0) {
                 TextureRegion currentFramea;
                 if (player.anim.size()==1){
-                     currentFramea = player.anim.get( 0 ).getKeyFrame( 0, true );
+                    currentFramea = player.anim.get( 0 ).getKeyFrame( 0, true );
+                    player.setRegion( currentFramea );
+
+                    switch (player.dir){
+                        case 0: case 3:
+                            break;
+                        case 1:
+                            player.setFlip( false,false );
+                            break;
+                        case 2:
+                            player.setFlip( true,false );
+                            break;
+                    }
                 }else{
                      currentFramea = player.anim.get( player.dir ).getKeyFrame( 0, true );
+                    player.setRegion( currentFramea );
                 }
-                player.setRegion( currentFramea );
             }
         }
 
@@ -986,14 +991,10 @@ public class game {
             gameobject go = objects.get(i);
             if(loadingmap) return;
             go.update(delta);
-            if (go.state==DEAD) {
-                //deads.add( go );
-            }else{
-
-
+            if (go.state!=DEAD) {
                 if (!go.over) {
                     if (go.getTexture() != null) go.draw( batch );
-                } else {
+                //} else {
                   //  overs.add( go );
                 }
                 if (go.HP > 0 && go.HP !=go.maxHP) {
@@ -1023,6 +1024,7 @@ public class game {
         }
 
 
+        /*
         for (int i = particles.size() - 1; i >= 0; i--){
             ParticleEffect pe = particles.get(i);
             pe.update( Gdx.graphics.getDeltaTime() );
@@ -1031,12 +1033,14 @@ public class game {
             if (pe.isComplete()) {particles.remove( pe );pe.dispose();}
         }
 
+         */
+
         if (action1!=null) action1.update( delta );
         if (action2!=null) action2.update( delta );
         if (action3!=null) action3.update( delta );
         if (action4!=null) action4.update( delta );
 
-        if (night) rayHandler.updateAndRender();
+        //if (night) rayHandler.updateAndRender();
 
     }
 
@@ -1138,7 +1142,7 @@ public class game {
             player.body.setLinearVelocity( 0, player.body.getLinearVelocity().y );
             if (onplatformh) {
                 player.body.setLinearVelocity( currentplatform.body.getLinearVelocity().x, player.body.getLinearVelocity().y );
-            } else if (onplatformv) {
+           // } else if (onplatformv) {
                 //player.body.setLinearVelocity(player.body.getLinearVelocity().x, currentplatform.body.getLinearVelocity().y);
             }
         }else
@@ -1147,7 +1151,7 @@ public class game {
             player.body.setLinearVelocity( 0, 0 );
             if (onplatformh) {
                 player.body.setLinearVelocity( currentplatform.body.getLinearVelocity().x, player.body.getLinearVelocity().y );
-            } else if (onplatformv) {
+            //} else if (onplatformv) {
                 //player.body.setLinearVelocity(player.body.getLinearVelocity().x, currentplatform.body.getLinearVelocity().y);
             }
 
@@ -1342,6 +1346,8 @@ public class game {
                 this.objects.add( newbrick );
                 go.cooldown=go.pcooldown;
                 break;
+            default:
+                throw new IllegalStateException( "Unexpected value: " + go.action );
         }
 
         if (go.bindvar!=null){
@@ -1364,7 +1370,6 @@ public class game {
         save.y=player.body.getPosition().y;
         Json json = new Json();
         FileHandle file = Gdx.files.local(path + "/save.json");
-        StringWriter sw = new StringWriter();
         file.writeString(json.prettyPrint(save), false);
     }
 
@@ -1477,6 +1482,7 @@ public class game {
 
         try {
             for (int i=0;i<animids.size();i++) {
+                //assert tlcece != null;
                 if (animids.get( i ) == tlcece.getId()) {
                     newbrick.anim.add( anims.get( i )) ;
                 }
@@ -1484,12 +1490,13 @@ public class game {
         }catch(Exception e){
             try {
                 for (int i=0;i<animids.size();i++) {
+                    //assert tmo != null;
                     if (animids.get( i ) == tmo.getTile().getId()) {
                         newbrick.anim.add( anims.get( i )) ;
                     }
                 }
-            }catch(Exception f){
-                // e.printStackTrace();
+            }catch(Exception ignored){
+                 //e.printStackTrace();
             }
         }
 
@@ -1523,6 +1530,7 @@ public class game {
                 float bgb = (float) Integer.parseInt(cs.substring(4, 6), 16) / 256;
                 newbrick.bgcolor = new Color(bgr,bgg,bgb,1f);
             }catch(Exception e){
+                e.printStackTrace();
             }
         }
         if (o.containsKey( "color" )){
@@ -1533,6 +1541,7 @@ public class game {
                 float bgb = (float) Integer.parseInt( cs.substring( 4, 6 ), 16 ) / 256;
                 newbrick.color = new Color( bgr, bgg, bgb, 1f );
             }catch(Exception e){
+                e.printStackTrace();
             }
 
         }
@@ -1584,7 +1593,7 @@ public class game {
             int[] myArray = new int[ss.length];
 
             for (int i = 0; i < myArray.length; i++) {
-                int k = 0;
+                int k;
                 switch (ss[i]) {
                     case "down":
                         k = 0;
@@ -1615,8 +1624,8 @@ public class game {
 
         if (o.containsKey( "night" )) {
             night=true;
-            rayHandler=new RayHandler( world);
-            rayHandler.setAmbientLight( 1,1,1,0.3f);
+            //rayHandler=new RayHandler( world);
+            //rayHandler.setAmbientLight( 1,1,1,0.3f);
 
         }
 
@@ -1683,7 +1692,7 @@ public class game {
                             for (int j = 0; j < 4; j++) {
                                 walkFrames[index++] = tmp[i][j];
                             }
-                            Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
+                            Animation<TextureRegion> tempAnim = new Animation<>( 0.1f, walkFrames );
                             newbrick.anim.add( tempAnim );
                         }
                     }
@@ -1767,9 +1776,6 @@ public class game {
                 default: //other names, including the old
 
                     Vector2 imgsize = new Vector2( Tsw, Tsh );
-                    Vector2 pimgsize = new Vector2( Tsw, Tsh );
-
-
 
                     if (o.containsKey( "anim" )) {
 
@@ -1781,14 +1787,14 @@ public class game {
                         TextureRegion[][] tmp = TextureRegion.split( txMonster,
                                 txMonster.getWidth() / 4,
                                 txMonster.getHeight() / 4 );
-                        imgsize = new Vector2( txMonster.getWidth() / 4, txMonster.getHeight() / 4 );
+                        imgsize = new Vector2( txMonster.getWidth() / 4f, txMonster.getHeight() / 4f );
                         for (int i = 0; i < 4; i++) {
                             TextureRegion[] walkFrames = new TextureRegion[4];
                             int index = 0;
                             for (int j = 0; j < 4; j++) {
                                 walkFrames[index++] = tmp[i][j];
                             }
-                            Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
+                            Animation<TextureRegion> tempAnim = new Animation<>( 0.1f, walkFrames );
                             newbrick.anim.add( tempAnim );
                         }
 
@@ -1805,14 +1811,14 @@ public class game {
                     TextureRegion[][] tmp = TextureRegion.split( txMonster,
                             txMonster.getWidth() / 4,
                             txMonster.getHeight() / 4 );
-                    newbrick.pimagesize = new Vector2( txMonster.getWidth() / 4, txMonster.getHeight() / 4 );
+                    newbrick.pimagesize = new Vector2( txMonster.getWidth() / 4f, txMonster.getHeight() / 4f );
                     for (int i = 0; i < 4; i++) {
                         TextureRegion[] walkFrames = new TextureRegion[4];
                         int index = 0;
                         for (int j = 0; j < 4; j++) {
                             walkFrames[index++] = tmp[i][j];
                         }
-                        Animation<TextureRegion> tempAnim = new Animation<TextureRegion>( 0.1f, walkFrames );
+                        Animation<TextureRegion> tempAnim = new Animation<>( 0.1f, walkFrames );
                         newbrick.panim.add( tempAnim );
                     }
 
