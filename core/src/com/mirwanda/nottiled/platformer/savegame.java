@@ -1,8 +1,5 @@
 package com.mirwanda.nottiled.platformer;
 
-import com.badlogic.gdx.utils.Json;
-import com.mirwanda.nottiled.autotiles;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,7 +39,7 @@ public class savegame {
         this.mapname = mapname;
     }
 
-    public java.util.List<KV> vars = new ArrayList<KV>();
+    public List<KV> vars = new ArrayList<KV>();
     public float x;
     public float y;
 

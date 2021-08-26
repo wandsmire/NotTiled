@@ -260,7 +260,7 @@ public class WorldContactListener implements ContactListener {
                 String tgt = of.get( "kill" ).toString();
                 for (gameobject go : mygame.objects){
                     if (go.id.equalsIgnoreCase( tgt )){
-                        go.setCategoryFilter(game.DESTROYED_BIT);
+                        go.setCategoryFilter( game.DESTROYED_BIT);
                         go.state= gameobject.states.DEAD;
                         go.body.setLinearVelocity( 0,0 );
                         go.bumbum();
@@ -410,22 +410,21 @@ public class WorldContactListener implements ContactListener {
                         newbrick.pspeed = (o.containsKey( "pspeed" )) ? Float.parseFloat( o.get( "pspeed" ).toString() ) : 4;
                         newbrick.pmaxdistance = (o.containsKey( "pmaxdistance" )) ? Integer.parseInt( o.get( "pmaxdistance" ).toString() ) : 300;
                         newbrick.pdamage = (o.containsKey( "pdamage" )) ? Integer.parseInt( o.get( "pdamage" ).toString() ) : 1;
-
+                        newbrick.pdeadanim = (o.containsKey( "pdeadanim" )) ? Integer.parseInt( o.get( "pdeadanim" ).toString() ) : 0;
                         Texture txMonster;
-                        try{
-                            String anim = o.get( "panim" ).toString();
+                            try {
+                                String anim = o.get( "panim" ).toString();
 
 
                                 txMonster = new Texture( mygame.getFile( mygame.path + "/" + anim ) );
-                            }catch(Exception e){
-                                txMonster = new Texture(Gdx.files.internal( "platformer/shoot.png" ));
+                            } catch (Exception f) {
+                                txMonster = new Texture( Gdx.files.internal( "platformer/shoot.png" ) );
                             }
 
                             TextureRegion[][] tmp = TextureRegion.split( txMonster,
                                     txMonster.getWidth() / 4,
                                     txMonster.getHeight() / 4 );
-                            newbrick.pimagesize=new Vector2(txMonster.getWidth()/4f,txMonster.getHeight() / 4f);
-                            mygame.log("NOGHE"+newbrick.pimagesize);
+                            newbrick.pimagesize = new Vector2( txMonster.getWidth() / 4f, txMonster.getHeight() / 4f );
                             for (int i = 0; i < 4; i++) {
                                 TextureRegion[] walkFrames = new TextureRegion[4];
                                 int index = 0;
@@ -436,8 +435,23 @@ public class WorldContactListener implements ContactListener {
                                 newbrick.panim.add( tempAnim );
                             }
 
+                        try {
+                            int panimID = Integer.parseInt(o.get( "panim" ).toString());
+                            if (mygame.animids.size()>0){
+                                for (int i=0; i< mygame.animids.size();i++){
+                                    if (mygame.animids.get( i )==panimID){
+                                        newbrick.panim.clear();
+                                        newbrick.panim.add(mygame.anims.get( i ));
+                                        break;
+                                    }
+                                }
+                            }
 
-                        break;
+                        }catch(Exception ignored) {}
+
+
+
+                            break;
                 }
                 switch (o.get( "slot" ).toString()){
                     case "1":
@@ -457,6 +471,7 @@ public class WorldContactListener implements ContactListener {
             }
 
             if (o.containsKey( "once" )) {
+                myobject.bumbum();
                 myobject.setCategoryFilter( game.DESTROYED_BIT );
                 mygame.objects.remove( myobject );
             }
@@ -495,7 +510,7 @@ public class WorldContactListener implements ContactListener {
             pp.bumbum();
             mo.playSfx( mo.sfx );
             mo.HP-=pp.damage;
-            pp.setCategoryFilter(game.DESTROYED_BIT);
+            pp.setCategoryFilter( game.DESTROYED_BIT);
             pp.state= gameobject.states.DEAD;
         }
 
@@ -506,7 +521,7 @@ public class WorldContactListener implements ContactListener {
             pp.bumbum();
             bl.HP-=pp.damage;
             pp.body.setLinearVelocity( 0,0 );
-            pp.setCategoryFilter(game.DESTROYED_BIT);
+            pp.setCategoryFilter( game.DESTROYED_BIT);
             pp.state= gameobject.states.DEAD;
 
         }
@@ -517,7 +532,7 @@ public class WorldContactListener implements ContactListener {
             //Gdx.app.log( bl.HP+"",pp.damage+"");
             pp.bumbum();
             pp.body.setLinearVelocity( 0,0 );
-            pp.setCategoryFilter(game.DESTROYED_BIT);
+            pp.setCategoryFilter( game.DESTROYED_BIT);
             pp.state= gameobject.states.DEAD;
 
         }
@@ -530,7 +545,7 @@ public class WorldContactListener implements ContactListener {
 
             bl.HP-=ep.damage;
             ep.body.setLinearVelocity( 0,0 );
-            ep.setCategoryFilter(game.DESTROYED_BIT);
+            ep.setCategoryFilter( game.DESTROYED_BIT);
             ep.state= gameobject.states.DEAD;
 
         }
@@ -552,7 +567,7 @@ public class WorldContactListener implements ContactListener {
             ep.bumbum();
             pl.playSfx( pl.sfx );
             pl.HP-=ep.damage;
-            ep.setCategoryFilter(game.DESTROYED_BIT);
+            ep.setCategoryFilter( game.DESTROYED_BIT);
             ep.state= gameobject.states.DEAD;
 
         }
@@ -573,7 +588,7 @@ public class WorldContactListener implements ContactListener {
             eventobject(it);
         }
 
-        if (check(ITEM,gameobject.objecttype.ITEMSENSOR,o1,o2)){
+        if (check(ITEM, gameobject.objecttype.ITEMSENSOR,o1,o2)){
             //gameobject it = select( ITEM,o1,o2 );
             gameobject is = select( ITEMSENSOR,o1,o2 );
             eventobject(is);

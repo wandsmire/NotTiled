@@ -31,7 +31,7 @@ public class gameobject extends Sprite {
     public game mygame;
 
     public gameobject(){}
-    public gameobject.objecttype objtype;
+    public objecttype objtype;
     public String type;
     public MapObject obj;
     public Sound sfx,sfxdead,psfx;
@@ -69,6 +69,7 @@ public class gameobject extends Sprite {
     public float chaseRadius;
     public int[] path;
     public int currentPath;
+    public int deadtileID;
     ////
     public boolean over;
     public boolean status;
@@ -96,7 +97,7 @@ public class gameobject extends Sprite {
         LEFTSLOPE, RIGHTSLOPE, TRANSFER, BLOCK, ITEM, ENEMY, PLAYERPROJECTILE, ENEMYPROJECTILE, LISTENER
     }
 
-    public void setupGameObject(World world, TiledMapTile tlcece, float xx, float yy, float width, float height, BodyDef.BodyType type, gameobject.objecttype objecttype, MapObject obj, TextureRegion tt, boolean over, float opacity)
+    public void setupGameObject(World world, TiledMapTile tlcece, float xx, float yy, float width, float height, BodyDef.BodyType type, objecttype objecttype, MapObject obj, TextureRegion tt, boolean over, float opacity)
     {
         ts = (int) mygame.Tsw;
         tso = ts/2;
@@ -267,7 +268,7 @@ public class gameobject extends Sprite {
             case ITEM:
             case LISTENER:
                 fdef.filter.categoryBits = game.COIN_BIT;
-                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT |game.ITEMSENSOR_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.ITEMSENSOR_BIT;
                 bdef.type = type;
                 bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
@@ -605,7 +606,7 @@ public class gameobject extends Sprite {
     public float waitTime;
     public void update(float dt){
 
-        if (state==states.DEAD) return;
+        if (state== states.DEAD) return;
 
         if (color!=null){
             setColor( color.r,color.g,color.b,getColor().a );
@@ -624,8 +625,8 @@ public class gameobject extends Sprite {
 
 
             if (HP<=0 || body.getPosition().y<=-0.5f){
-                setCategoryFilter(game.DESTROYED_BIT);
-                state=states.DEAD;
+                setCategoryFilter( game.DESTROYED_BIT);
+                state= states.DEAD;
                 body.setLinearVelocity( 0,0 );
                 bumbum();
                 playSfx( sfxdead );
@@ -694,49 +695,45 @@ public class gameobject extends Sprite {
                 }
                 distance+=speed;
                 if (distance>maxdistance){
-                    setCategoryFilter(game.DESTROYED_BIT);
+                    setCategoryFilter( game.DESTROYED_BIT);
                     body.setLinearVelocity( 0,0 );
-                    state=states.DEAD;
+                    state= states.DEAD;
 
                 }
                 if (anim.size()>0) {
-                    TextureRegion currentFrame = anim.get( dir ).getKeyFrame( mygame.stateTime, true );
-                    setRegion( currentFrame );
-                }else{
-                    if (!rotating) {
-                        if (mygame.rpg) {
-                            setOriginCenter();
-                            switch (dir) {
-                                case 0: //down
-                                    setRotation( 180 );
-                                    break;
-                                case 1: //right
-                                    setRotation( 270 );
-                                    break;
-                                case 2: //left
-                                    setRotation( 90 );
-                                    break;
-                                case 3: //up
-                                    setRotation( 0 );
-                                    break;
-                            }
-                        } else {
-                            switch (dir) {
-                                case 0: //down
-                                    break;
-                                case 1: //right
-                                    setFlip( true, false );
-                                    break;
-                                case 2: //left
-                                    setFlip( false, false );
-                                    break;
-                                case 3: //up
-                                    break;
-                            }
-                        }
-                    }
+                    if (anim.size()==1){
+                        TextureRegion currentFrame = anim.get( 0 ).getKeyFrame( mygame.stateTime, true );
+                        setRegion( currentFrame );
 
+                    }else{
+                        TextureRegion currentFrame = anim.get( dir ).getKeyFrame( mygame.stateTime, true );
+                        setRegion( currentFrame );
+
+                    }
                 }
+
+                if (!rotating) {
+                        setOriginCenter();
+                        switch (dir) {
+                            case 0: //down
+                                setFlip( false, false );
+                                setRotation( -90 );
+                                break;
+                            case 1: //right
+                                setFlip( false, false );
+                                setRotation(0 );
+                                break;
+                            case 2: //left
+                                setFlip( true, false );
+                                setRotation(0 );
+                                break;
+                            case 3: //up
+                                setFlip( false, false );
+                                setRotation( 90 );
+                                break;
+                    }
+                }
+
 
                 break;
 
@@ -770,13 +767,14 @@ public class gameobject extends Sprite {
 
 
                 if (anim.size()>0) {
+                    float time;
+                    int fc=dir;
+                    if (anim.size()==1) fc=0;
                     if (moving || stepping) {
-                        if (anim.size()==1) dir=0;
-                        TextureRegion currentFrame = anim.get( dir ).getKeyFrame( mygame.stateTime, true );
+                        TextureRegion currentFrame = anim.get( fc ).getKeyFrame( mygame.stateTime, true );
                         setRegion( currentFrame );
                     } else {
-                        if (anim.size()==1) dir=0;
-                        TextureRegion currentFrame = anim.get( dir ).getKeyFrame( 0f, true );
+                        TextureRegion currentFrame = anim.get( fc ).getKeyFrame( 0f, true );
                         setRegion( currentFrame );
 
                     }
@@ -1110,8 +1108,6 @@ public class gameobject extends Sprite {
 
                     }
                     setRegion( currentFrame );
-
-
                 }
 
                 ///
@@ -1136,6 +1132,7 @@ public class gameobject extends Sprite {
     public float pspeed =4;
     public float pmaxdistance =300;
     public int pdamage =1;
+    public int pdeadanim;
     public boolean canshoot=false;
     public boolean tame;
     public String tameif;
@@ -1147,6 +1144,7 @@ public class gameobject extends Sprite {
         playSfx( psfx );
         gameobject newbrick = new gameobject();
         newbrick.mygame = mygame;
+        newbrick.deadtileID = pdeadanim;
         newbrick.spread=pspread-(2*(float)Math.random()*pspread);
         newbrick.speed=pspeed;
         newbrick.maxdistance=pmaxdistance;
@@ -1191,10 +1189,19 @@ public class gameobject extends Sprite {
     }
 
     public void bumbum(){
-      // mygame.particles.add( meledak );
-      //  meledak.setPosition( body.getPosition().x, body.getPosition().y );
-      //  meledak.reset(false);
-      //  meledak.start();
+        particle p = new particle(mygame);
+
+        p.setPosition( body.getPosition().x-0.5f*mygame.Tsw/mygame.scale,body.getPosition().y -0.5f*mygame.Tsh/mygame.scale);
+        if (mygame.animids.size()>0){
+            for (int i=0; i< mygame.animids.size();i++){
+                if (mygame.animids.get( i )==deadtileID){
+                    p.anim = mygame.anims.get( i );
+                    mygame.particles.add( p );
+                    break;
+                }
+            }
+        }
+
     }
 
 }

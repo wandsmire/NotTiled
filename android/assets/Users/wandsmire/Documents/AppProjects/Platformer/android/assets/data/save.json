@@ -12,14 +12,28 @@ vars: [
 	}
 	{
 		key: score
+		value: 19100
 		hud: true
 		keephud: true
 	}
 	{
 		key: jetpack
+		iconx: 6
+		hasicon: true
+	}
+	{
+		key: trophy
+		iconx: 3
+		hasicon: true
+	}
+	{
+		key: gun
+		iconx: 6
+		hasicon: true
+		icony: 2
 	}
 ]
 x: 0.4032258
-y: 30.886263
+y: 14.758064
 mapname: index.tmx
 }

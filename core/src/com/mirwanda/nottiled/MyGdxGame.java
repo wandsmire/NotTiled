@@ -1525,7 +1525,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             //str1draw( ui, "Next Level", gui.respawn );
                         //if (mygame.starting) str1draw( ui, "OK", gui.respawn );
                         if (mygame.playtest && mygame.fade==0) str1draw( ui, "X", gui.exit );
-                       // if (mygame.fade>0) str1draw( ui, "Loading...", gui.respawn );
+                        // if (mygame.fade>0) str1draw( ui, "Loading...", gui.respawn );
 
                         ui.end();
                         if (mygame.loadingmap || mygame.transitioning) {
