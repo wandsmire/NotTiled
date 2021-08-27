@@ -47,6 +47,8 @@ import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Button;
 import com.badlogic.gdx.scenes.scene2d.ui.CheckBox;
@@ -62,7 +64,9 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextArea;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.TextField;
+import com.badlogic.gdx.scenes.scene2d.ui.Touchpad;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.SpriteDrawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
@@ -269,7 +273,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     boolean drag, roll, stamp = false;
     BitmapFont str1;
     decoder decoder = new decoder();
-    Skin skin;
+    Skin skin,skin2;
     java.util.List<property> properties = new ArrayList<property>();
     java.util.List<layer> layers = new ArrayList<layer>();
     layer cliplayer = new layer();
@@ -547,7 +551,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private float nofling;
     private Stage stage;
     private Texture txpencil;
-    private Texture txline, txcircle;
+    private Texture txline, txcircle, txA, txB, txX, txY;
     private Texture txeraser;
     private Texture txfill;
     private Texture txcopy, txmove, txflip, txpicker;
@@ -706,6 +710,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         initSD();
         initBox2D();
         loadGdxStuff();
+        loadTouchpad();
         loadExport();
         loadListener();
         loadMenuMap();
@@ -1418,6 +1423,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         uis.setColor( 0f, 0f, 0, 0.6f );
                         if (Gdx.app.getType() != Application.ApplicationType.Desktop || mygame.uitest) {
                             if (!mygame.starting && mygame.player.state != gameobject.states.DEAD && mygame.fade==0) {
+                                /*
                                 if (!mygame.disablecontrol) {
 
                                     if (!mygame.disabledpad) {
@@ -1435,6 +1441,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     if (mygame.action3 != null && mygame.action3.action!= gameobject.actions.NONE) uisrect( gui.action3, mouse, null );
                                     if (mygame.action4 != null && mygame.action4.action!= gameobject.actions.NONE) uisrect( gui.action4, mouse, null );
                                 }
+
+                                 */
                             }
                         }
                         //uisrect(gui.restart,mouse,null);
@@ -1491,6 +1499,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         //str1draw(ui,"Keys : "+mygame.key+" | Items Left : "+mygame.coin , gui.layer);
                         if (Gdx.app.getType() != Application.ApplicationType.Desktop || mygame.uitest) {
                             if (!mygame.starting && mygame.player.state != gameobject.states.DEAD  && mygame.fade==0) {
+                                /*
                                 if (!mygame.disablecontrol) {
                                     if (!mygame.disabledpad) {
 
@@ -1515,7 +1524,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     if (mygame.action4 != null && mygame.action4.action!= gameobject.actions.NONE)
                                         uidrawbutton( txUp, mygame.action4.name, gui.action4, 3 );
                                 }
+
+                                 */
                             }
+
+
+
 
                         }
                         //str1draw(ui,"Restart", gui.restart);
@@ -1528,6 +1542,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         // if (mygame.fade>0) str1draw( ui, "Loading...", gui.respawn );
 
                         ui.end();
+
+                        if (!mygame.disablecontrol) {
+                            stage.act( delta );
+                            stage.draw();
+                        }
+
                         if (mygame.loadingmap || mygame.transitioning) {
                             uis.begin( ShapeRenderer.ShapeType.Filled );
                             Gdx.gl.glEnable( GL20.GL_BLEND );
@@ -1882,6 +1902,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void escapegame() {
         face.setOrientation( 0 );
         kartu = "world";
+        backToMap();
         if (mygame.bgm==null) return;
         if (mygame.bgm.isPlaying()) mygame.bgm.stop();
     }
@@ -2014,6 +2035,32 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (mygame.player.state == com.mirwanda.nottiled.platformer.gameobject.states.DEAD)
                             return;
                         pressed = true;
+
+
+                        if (tslot1 && mygame.action1 != null && mygame.action1.action!= gameobject.actions.NONE) mygame.act( mygame.action1 );
+                        if (tslot2 && mygame.action2 != null && mygame.action2.action!= gameobject.actions.NONE) mygame.act( mygame.action2 );
+                        if (tslot3 && mygame.action3 != null && mygame.action3.action!= gameobject.actions.NONE) mygame.act( mygame.action3 );
+                        if (tslot4 && mygame.action4 != null && mygame.action4.action!= gameobject.actions.NONE) mygame.act( mygame.action4 );
+
+                        if (tanalog){
+                            float deltaX = tpad.getKnobPercentX();
+                            float deltaY = tpad.getKnobPercentY();
+                            if (deltaY>0.4f){
+                                mygame.pressup();
+                            }
+                            if (deltaY<-0.4f){
+                                mygame.pressdown();
+                            }
+
+                            if (deltaX>0.4f){
+                                mygame.pressright();
+                            }
+                            if (deltaX<-0.4f){
+                                mygame.pressleft();
+                            }
+
+                        }
+                        /*
                         if (!mygame.disablecontrol) {
 
                             if (!mygame.disabledpad) {
@@ -2035,6 +2082,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             if (mygame.action4 != null && tapped( touch2, gui.action4 ))
                                 mygame.act( mygame.action4 );
                         }
+
+                         */
                     }
 
                 }
@@ -4433,6 +4482,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         //minicam.update();
         //uicam.position.set(tx2,ty2,tz2);
         //uicam.update();
+        if (kartu == "game") {
+            this.stage.clear();
+            this.stage.addActor(this.control);
+            Gdx.input.setInputProcessor(this.stage);
+
+        }
     }
 
     @Override
@@ -5472,6 +5527,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             btny = 100 * ssy / 1080;
         }
 
+        txA= new Texture( Gdx.files.internal( "images/A.png" ) );
+        txX = new Texture( Gdx.files.internal( "images/X.png" ) );
+        txB = new Texture( Gdx.files.internal( "images/B.png" ) );
+        txY = new Texture( Gdx.files.internal( "images/Y.png" ) );
+
         txline = new Texture( Gdx.files.internal( "images/line.png" ) );
         txcircle = new Texture( Gdx.files.internal( "images/circle.png" ) );
         txpencil = new Texture( Gdx.files.internal( "images/pencil.png" ) );
@@ -5603,6 +5663,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         generator.dispose();
 
         skin = new Skin();
+        skin2 = new Skin( Gdx.files.internal( "skins/skin/skin.json" ));
         skin.add( "font", str1, BitmapFont.class );
 
         FileHandle fileHandle = Gdx.files.internal( "skins/holo/Holo-dark-hdpi.json" );
@@ -5849,6 +5910,120 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
     }
+
+
+    private Table control,action;
+    private Touchpad tpad;
+    private Button slot1, slot2, slot3, slot4;
+    private boolean tanalog;
+    private boolean tslot1,tslot2,tslot3,tslot4;
+    private void loadTouchpad(){
+
+        slot1 = new Button( skin2 );
+        slot2 = new Button( skin2 );
+        slot3 = new Button( skin2 );
+        slot4 = new Button( skin2 );
+
+        slot1.addListener( new InputListener() {
+            @Override
+            public void touchUp(InputEvent event, float x, float y,
+                                int pointer, int button) {
+                tslot1 = false;
+            }
+
+            public boolean touchDown(InputEvent event, float x, float y,
+                                     int pointer, int button) {
+                tslot1 = true;
+                return true;
+            }
+
+        });
+
+        slot2.addListener( new InputListener() {
+            @Override
+            public void touchUp(InputEvent event, float x, float y,
+                                int pointer, int button) {
+                tslot2 = false;
+            }
+
+            public boolean touchDown(InputEvent event, float x, float y,
+                                     int pointer, int button) {
+                tslot2 = true;
+                return true;
+            }
+
+        });
+
+        slot3.addListener( new InputListener() {
+            @Override
+            public void touchUp(InputEvent event, float x, float y,
+                                int pointer, int button) {
+                tslot3 = false;
+            }
+
+            public boolean touchDown(InputEvent event, float x, float y,
+                                     int pointer, int button) {
+                tslot3 = true;
+                return true;
+            }
+
+        });
+
+        slot4.addListener( new InputListener() {
+            @Override
+            public void touchUp(InputEvent event, float x, float y,
+                                int pointer, int button) {
+                tslot4 = false;
+            }
+
+            public boolean touchDown(InputEvent event, float x, float y,
+                                     int pointer, int button) {
+                tslot4 = true;
+                return true;
+            }
+
+        });
+
+
+        tpad = new Touchpad(20, skin2);
+        tpad.setBounds(15, 15, 100, 100);
+
+        tpad.addListener( new InputListener() {
+            @Override
+            public void touchUp(InputEvent event, float x, float y,
+                                int pointer, int button) {
+                tanalog = false;
+            }
+
+            public boolean touchDown(InputEvent event, float x, float y,
+                                     int pointer, int button) {
+                tanalog = true;
+                return true;
+            }
+
+        });
+
+        control = new Table();
+        control.setFillParent( true );
+        action = new Table();
+        control.padTop(600);
+        control.add( tpad );
+        control.add().pad(750);
+        action.add();
+        action.add(slot4);
+        action.add();
+        action.row();
+        action.add(slot3);
+        action.add();
+        action.add(slot1);
+        action.row();
+        action.add();
+        action.add(slot2);
+        action.add();
+        control.add( action );
+    }
+
+
 
     private void showtsetselection(final java.util.List<tileset> tset) {
         bigman = new Table();
@@ -22860,6 +23035,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 gamecam.zoom = 0.2f;
                 gamecam.position.set( mygame.player.body.getPosition().x, mygame.player.body.getPosition().y, 0 );
                 gamecam.update();
+                stage.clear();
+                stage.addActor(control);
+                Gdx.input.setInputProcessor(stage);
             }else{
                 msgbox("Cannot play.\nPlease make sure:\n1. There is a player tile.\n2. No image layer is used.");
             }

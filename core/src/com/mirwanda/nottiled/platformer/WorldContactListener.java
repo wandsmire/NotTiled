@@ -15,6 +15,7 @@ import com.badlogic.gdx.physics.box2d.Manifold;
 import java.util.ArrayList;
 
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ACTION;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ALLSENSOR;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BLOCK;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BRICK;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.CHECKPOINT;
@@ -70,6 +71,18 @@ public class WorldContactListener implements ContactListener {
                         }
                     }
                 }
+                if (s.contains( "!" )) {
+                    String[] sv = s.split( "!" );
+                    for (KV var : mygame.save.vars) {
+                        if (sv[0].equalsIgnoreCase( var.key )) {
+                            if (Integer.parseInt( sv[1] ) != var.value) {
+                                rq += 1;
+                                break;
+                            }
+                        }
+                    }
+                }
+
                 if (s.contains( "&lt;" )) {
                     String[] sv = s.split( "&lt;" );
                     for (KV var : mygame.save.vars) {
@@ -369,8 +382,8 @@ public class WorldContactListener implements ContactListener {
 
                 if (o.containsKey( "asfx" )) {
                     String sfx = o.get("asfx").toString();
-                    if (mygame.getFile( mygame.path + "/" + sfx ).exists())
-                        newbrick.sfx = Gdx.audio.newSound( mygame.getFile( mygame.path + "/" + sfx ) );
+
+                        newbrick.sfx = mygame.addSfx(mygame.path + "/" + sfx);
                 }
 
                 String act = null;
@@ -605,6 +618,28 @@ public class WorldContactListener implements ContactListener {
         if (check(PLAYER,LADDER,o1,o2)){
             mygame.touchedladder+=1;
         }
+
+        if (check(ALLSENSOR,BRICK,o1,o2)){
+            gameobject cp = select( BRICK,o1,o2 );
+            cp.state = gameobject.states.DEAD;
+        }
+        if (check(ALLSENSOR,ITEM,o1,o2)){
+            gameobject cp = select( ITEM,o1,o2 );
+            cp.state = gameobject.states.DEAD;
+        }
+        if (check(ALLSENSOR,BLOCK,o1,o2)){
+            gameobject cp = select( BLOCK,o1,o2 );
+            cp.state = gameobject.states.DEAD;
+        }
+        if (check(ALLSENSOR,LADDER,o1,o2)){
+            gameobject cp = select( LADDER,o1,o2 );
+            cp.state = gameobject.states.DEAD;
+        }
+        if (check(ALLSENSOR,MONSTER,o1,o2)){
+            gameobject cp = select( MONSTER,o1,o2 );
+            cp.state = gameobject.states.DEAD;
+        }
+
 
         // if (myobject.objtype==PLAYER && myobject2.objtype==BRICK)
         /*

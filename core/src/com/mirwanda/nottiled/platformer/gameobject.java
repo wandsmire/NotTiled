@@ -93,9 +93,20 @@ public class gameobject extends Sprite {
         PLAYER,
         WALLLEFT,WALLTOP,WALLBOTTOM,WALLRIGHT, WALLCENTER, LADDER, FLOATER, SINKER,
         BRICK, HALFBRICK, BOX, CHECKPOINT,  BREAKABLE, SPRING,ACTION,
-        SWITCH, SWITCHON, SWITCHOFF, PLATFORMH, PLATFORMV, PLATFORMS, MONSTER, MISC, ITEMSENSOR,
+        SWITCH, SWITCHON, SWITCHOFF, PLATFORMH, PLATFORMV, PLATFORMS, MONSTER, MISC, ITEMSENSOR, ALLSENSOR,
         LEFTSLOPE, RIGHTSLOPE, TRANSFER, BLOCK, ITEM, ENEMY, PLAYERPROJECTILE, ENEMYPROJECTILE, LISTENER
     }
+
+    float Tswh;
+    float Tshh;
+    float Tpx;
+    float Tpy;
+    float xx;
+    float yy;
+    float width;
+    float height;
+    BodyDef.BodyType collisiontype;
+    World world;
 
     public void setupGameObject(World world, TiledMapTile tlcece, float xx, float yy, float width, float height, BodyDef.BodyType type, objecttype objecttype, MapObject obj, TextureRegion tt, boolean over, float opacity)
     {
@@ -104,11 +115,16 @@ public class gameobject extends Sprite {
         this.tlcece=tlcece;
         objtype = objecttype;
         this.obj=obj;
-        float Tswh=width/2f;
-        float Tshh=height/2f;
-        float Tpx = Tswh;
-        float Tpy = Tshh;
-
+        Tswh=width/2f;
+        Tshh=height/2f;
+        Tpx = Tswh;
+        Tpy = Tshh;
+        this.xx=xx;
+        this.yy=yy;
+        this.width=width;
+        this.height=height;
+        this.collisiontype = type;
+        this.world = world;
 
         ///
       //  meledak = new ParticleEffect();
@@ -166,13 +182,451 @@ public class gameobject extends Sprite {
 
 
         //pastikan 2 hal, bukan sensor, sama kedua objek saling filter.
+        addBody();
+        addFixtures();
+
+        //setSize( width/mygame.scale, height /mygame.scale );
+        //setOrigin( width /mygame.scale, height /mygame.scale );
+
+        /*
+        if (light>0 && mygame.night) {
+            myLight = new PointLight( mygame.rayHandler, 500, lightColor, light, 0, 0 );
+            myLight.setSoftnessLength( 0.3f );
+            myLight.attachToBody( body );
+        }
+
+         */
+
+
+
+
+    }
+
+    public void removeCollision(){
+        if (world.getBodyCount()>0) world.destroyBody( body );
+    }
+
+    public void removeFixtures(){
+       for (Fixture f: body.getFixtureList()){
+           body.destroyFixture( f );
+       }
+    }
+
+    public void addBody(){
+        switch (objtype) {
+            //dorongable
+            case BRICK:
+            case HALFBRICK:
+            case CHECKPOINT:
+            case FLOATER:
+            case SINKER:
+            case TRANSFER:
+            case ITEM:
+            case LISTENER:
+            case PLATFORMS:
+            case SWITCHOFF:
+            case BLOCK:
+            case PLAYER:
+            case SPRING:
+            case SWITCH:
+            case MONSTER:
+            case LEFTSLOPE:
+            case RIGHTSLOPE:
+            case SWITCHON:
+            case LADDER:
+
+                bdef.type = collisiontype;
+                bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
+                body = world.createBody(bdef);
+                break;
+
+            case BOX:
+                bdef.type = collisiontype;
+                bdef.linearDamping = 2f;
+                bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
+                body = world.createBody(bdef);
+                break;
+
+            case ITEMSENSOR:
+            case ALLSENSOR:
+            case PLATFORMH:
+            case PLATFORMV:
+                bdef.type = collisiontype;
+                bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
+                body = world.createBody(bdef);
+                body.setGravityScale( 0 );
+                break;
+
+            case PLAYERPROJECTILE:
+            case ENEMYPROJECTILE:
+                bdef.type = collisiontype;
+                bdef.position.set(xx, yy);
+                body = world.createBody(bdef);
+                break;
+
+            case MISC:
+        }
+    }
+
+    public void addFixtures(){
+        switch (objtype) {
+            //dorongable
+            case BRICK:
+                EdgeShape shaper = new EdgeShape();
+                fdef.filter.categoryBits = game.DEFAULT_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.PLAYERPROJECTILE_BIT | game.ENEMYPROJECTILE_BIT | game.ALLSENSOR_BIT;
+                float sz = Tswh/mygame.scale;
+                //top line
+                shaper.set(-sz,sz,sz, sz);
+                fdef.shape = shaper;
+                fdef.friction=0;
+
+                body.createFixture(fdef).setUserData(this);
+
+                //left line
+                shaper.set(-sz,-sz,-sz, sz);
+                fdef.shape = shaper;
+                fdef.friction=0;
+                body.createFixture(fdef).setUserData(this);
+
+                //right line
+                shaper.set(sz,sz,sz, -sz);
+                fdef.shape = shaper;
+                fdef.friction=0;
+                body.createFixture(fdef).setUserData(this);
+
+                //bottom line
+                shaper.set(-sz,-sz,sz, -sz);
+                fdef.shape = shaper;
+                body.createFixture(fdef).setUserData(this);
+
+
+
+                break;
+
+            case HALFBRICK:
+                shaper = new EdgeShape();
+                fdef.filter.categoryBits = game.DEFAULT_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.ALLSENSOR_BIT;
+                sz = 8/mygame.scale;
+                //top line
+                shaper.set(-sz,sz,sz, sz);
+                fdef.shape = shaper;
+                body.createFixture(fdef).setUserData(this);
+
+                //left line
+                shaper.set(-sz,0,-sz, sz);
+                fdef.shape = shaper;
+                fdef.friction=0;
+                body.createFixture(fdef).setUserData(this);
+
+                //right line
+                shaper.set(sz,sz,sz, 0);
+                fdef.shape = shaper;
+                fdef.friction=0;
+                body.createFixture(fdef).setUserData(this);
+
+                //bottom line
+                shaper.set(-sz,0,sz, 0);
+                fdef.shape = shaper;
+                body.createFixture(fdef).setUserData(this);
+
+
+                break;
+
+            case BOX:
+                fdef.filter.categoryBits = game.DEFAULT_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.ALLSENSOR_BIT;
+                shape.setAsBox(width /mygame.scale, width /mygame.scale);
+
+                //shape.setRadius(8/mygame.scale);
+                // shape.set(0,0,0,0);
+                fdef.shape = shape;
+
+                MassData mas = new MassData();
+                mas.mass = 10;
+                body.setMassData(mas);
+                fixture = body.createFixture(fdef);
+                fixture.setUserData(this);
+
+                //setCategoryFilter(game.DEFAULT_BIT);
+
+
+                break;
+
+            case CHECKPOINT:
+            case FLOATER: case SINKER:
+
+            case TRANSFER:
+            case ITEM:
+            case LISTENER:
+                fdef.filter.categoryBits = game.COIN_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.ITEMSENSOR_BIT | game.ALLSENSOR_BIT;
+                shape.setAsBox(Tswh /mygame.scale, Tshh /mygame.scale);
+                fdef.shape = shape;
+                fdef.isSensor = true;
+                fixture = body.createFixture(fdef);
+                fixture.setUserData(this);
+                break;
+            case ITEMSENSOR:
+                fdef.filter.categoryBits = game.ITEMSENSOR_BIT;
+                fdef.filter.maskBits = game.COIN_BIT;
+                /////
+                shape.setAsBox(Tswh /mygame.scale, Tshh /mygame.scale);
+                fdef.shape = shape;
+                fdef.friction=0;
+                fixture = body.createFixture(fdef);
+                //setCategoryFilter(fixture,game.DEFAULT_BIT);
+                fixture.setUserData(this);
+                break;
+
+            case ALLSENSOR:
+                fdef.filter.categoryBits = game.ALLSENSOR_BIT;
+                fdef.filter.maskBits = game.COIN_BIT | game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;;
+                /////
+                shape.setAsBox(Tswh /mygame.scale, Tshh /mygame.scale);
+                fdef.shape = shape;
+                fdef.isSensor = true;
+                fdef.friction=0;
+                fixture = body.createFixture(fdef);
+                //setCategoryFilter(fixture,game.DEFAULT_BIT);
+                fixture.setUserData(this);
+                break;
+
+            //interact with environment & player
+
+            case LADDER:
+
+                fdef.filter.categoryBits = game.COIN_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.ALLSENSOR_BIT;
+                shape.setAsBox(Tswh / 500f, Tshh /mygame.scale);
+                fdef.shape = shape;
+                fdef.isSensor = true;
+                fixture = body.createFixture(fdef);
+                fixture.setUserData(this);
+
+                //setCategoryFilter(game.COIN_BIT);
+
+
+                break;
+
+            //setCategoryFilter(game.COIN_BIT);
+
+
+            case PLAYERPROJECTILE:
+                fdef.filter.categoryBits = game.PLAYERPROJECTILE_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.ALLSENSOR_BIT;
+                shape.setAsBox(width /mygame.scale, width /mygame.scale);
+                fdef.shape = shape;
+                fdef.isSensor = false;
+                fixture = body.createFixture(fdef);
+                fixture.setUserData(this);
+
+                //setCategoryFilter(game.COIN_BIT);
+
+
+                break;
+
+            case ENEMYPROJECTILE:
+                fdef.filter.categoryBits = game.ENEMYPROJECTILE_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.ALLSENSOR_BIT;
+                shape.setAsBox(width / 200f, height / 200f);
+                fdef.shape = shape;
+                fdef.isSensor = false;
+                fixture = body.createFixture(fdef);
+                fixture.setUserData(this);
+
+                //setCategoryFilter(game.COIN_BIT);
+
+
+                break;
+
+            case PLATFORMS:
+
+                fdef.filter.categoryBits = game.MARKER_BIT;
+                fdef.filter.maskBits = game.PLATFORM_BIT | game.ALLSENSOR_BIT;
+                shape.setAsBox(width /mygame.scale, width /mygame.scale);
+                fdef.shape = shape;
+                fdef.isSensor = true;
+                fixture = body.createFixture(fdef);
+                fixture.setUserData(this);
+
+                //setCategoryFilter(game.COIN_BIT);
+
+
+                break;
+
+            //lewatable SENSOR
+            case SWITCHOFF:
+                fdef.filter.categoryBits = game.DESTROYED_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.ALLSENSOR_BIT;
+                shape.setAsBox(width /mygame.scale, width /mygame.scale);
+                fdef.shape = shape;
+                fixture = body.createFixture(fdef);
+                fixture.setUserData(this);
+
+                //setCategoryFilter(game.COIN_BIT);
+
+
+                break;
+
+
+            case PLATFORMH: case PLATFORMV:
+                fdef.filter.categoryBits = game.PLATFORM_BIT;
+                fdef.filter.maskBits = game.MARKER_BIT | game.PLAYER_BIT | game.ALLSENSOR_BIT;
+                shape.setAsBox(width /mygame.scale, width /mygame.scale);
+                fdef.shape = shape;
+                fixture = body.createFixture(fdef);
+                //setCategoryFilter(fixture,game.DEFAULT_BIT);
+                fixture.setUserData(this);
+                break;
+
+            case BLOCK:
+                fdef.filter.categoryBits = game.DEFAULT_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.PLAYERPROJECTILE_BIT | game.ENEMYPROJECTILE_BIT | game.ALLSENSOR_BIT;
+                shape.setAsBox(Tswh /mygame.scale, Tshh /mygame.scale);
+                fdef.shape = shape;
+                fixture = body.createFixture(fdef);
+                //setCategoryFilter(fixture,game.DEFAULT_BIT);
+                fixture.setUserData(this);
+                break;
+
+
+            case PLAYER:
+                fdef.filter.categoryBits = game.PLAYER_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.COIN_BIT | game.BRICK_BIT | game.ENEMYPROJECTILE_BIT | game.ALLSENSOR_BIT;
+                shape.setAsBox(Tswh /mygame.scale, Tshh /mygame.scale);
+                fdef.shape = shape;
+                fdef.friction=0;
+                fixture = body.createFixture(fdef);
+                //setCategoryFilter(fixture,game.DEFAULT_BIT);
+                fixture.setUserData(this);
+                break;
+            //interact with environment & player
+            case SPRING:
+            case SWITCH: case MONSTER:
+                fdef.filter.categoryBits = game.DEFAULT_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.PLAYERPROJECTILE_BIT | game.ALLSENSOR_BIT;
+                shape.setAsBox(width / 200f, height / 200f);
+                fdef.shape = shape;
+                fixture = body.createFixture(fdef);
+                //setCategoryFilter(fixture,game.DEFAULT_BIT);
+                fixture.setUserData(this);
+                break;
+
+
+            //FULL STATIC MODE
+
+            case LEFTSLOPE:
+                fdef.filter.categoryBits = game.DEFAULT_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.ALLSENSOR_BIT;
+                EdgeShape shape = new EdgeShape();
+                float size =tso/mygame.scale;
+                shape.set(-size,-size,size, size);
+                fdef.shape = shape;
+                fixture = body.createFixture(fdef);
+                fixture.setUserData(this);
+                //setCategoryFilter(fixture,game.DEFAULT_BIT);
+                //left line
+
+                shape.set(size,size,size, -size);
+                fdef.shape = shape;
+                fdef.friction=0;
+                fixture3 = body.createFixture(fdef);
+                fixture.setUserData(this);
+                //setCategoryFilter(fixture3,game.DEFAULT_BIT);
+                //bottom line
+                shape.set(-size,-size,size, -size);
+                fdef.shape = shape;
+                fixture4 = body.createFixture(fdef);
+                fixture.setUserData(this);
+                //setCategoryFilter(fixture4,game.DEFAULT_BIT);
+                /////
+
+                break;
+
+            case RIGHTSLOPE:
+                fdef.filter.categoryBits = game.DEFAULT_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.ALLSENSOR_BIT;
+                shape = new EdgeShape();
+                size =tso/mygame.scale;
+                shape.set(-size,size,size, -size);
+                fdef.shape = shape;
+                fixture = body.createFixture(fdef);
+                fixture.setUserData(this);
+                //setCategoryFilter(fixture,game.DEFAULT_BIT);
+
+                shape.set(-size,size,-size, -size);
+                fdef.shape = shape;
+                fdef.friction=0;
+                fixture3 = body.createFixture(fdef);
+                fixture.setUserData(this);
+                //setCategoryFilter(fixture3,game.DEFAULT_BIT);
+                //bottom line
+                shape.set(-size,-size,size, -size);
+                fdef.shape = shape;
+                fixture4 = body.createFixture(fdef);
+                fixture.setUserData(this);
+                //setCategoryFilter(fixture4,game.DEFAULT_BIT);
+
+                break;
+
+
+            case SWITCHON:
+                fdef.filter.categoryBits = game.DEFAULT_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.ALLSENSOR_BIT;
+                shape = new EdgeShape();
+                size =tso/mygame.scale;
+                shape.set(-size,size,size, size);
+                fdef.shape = shape;
+                fixture = body.createFixture(fdef);
+                fixture.setUserData(this);
+                //setCategoryFilter(fixture,game.DEFAULT_BIT);
+                //left line
+                shape.set(-size,-size,-size, size);
+                fdef.shape = shape;
+                fdef.friction=0;
+                fixture2 = body.createFixture(fdef);
+                fixture.setUserData(this);
+                //setCategoryFilter(fixture2,game.DEFAULT_BIT);
+                //right line
+                shape.set(size,size,size, -size);
+                fdef.shape = shape;
+                fdef.friction=0;
+                fixture3 = body.createFixture(fdef);
+                fixture.setUserData(this);
+                //setCategoryFilter(fixture3,game.DEFAULT_BIT);
+                //bottom line
+                shape.set(-size,-size,size, -size);
+                fdef.shape = shape;
+                fixture4 = body.createFixture(fdef);
+                fixture.setUserData(this);
+                //setCategoryFilter(fixture4,game.DEFAULT_BIT);
+                /////
+                PolygonShape shap = new PolygonShape();
+
+                shap.setAsBox(5 /mygame.scale, 5 /mygame.scale);
+                fdef.shape = shap;
+                fdef.isSensor=true;
+                fixture5 = body.createFixture(fdef);
+                fixture5.setUserData( objecttype.WALLCENTER );
+                break;
+
+
+
+            case MISC:
+        }
+    }
+
+    /*
+    public void addCollision(){
         switch (objtype) {
             //dorongable
             case BRICK:
                 EdgeShape shaper = new EdgeShape();
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.PLAYERPROJECTILE_BIT | game.ENEMYPROJECTILE_BIT;
-                bdef.type = type;
+                bdef.type = collisiontype;
                 bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
                 float sz = Tswh/mygame.scale;
@@ -208,7 +662,7 @@ public class gameobject extends Sprite {
                 shaper = new EdgeShape();
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
-                bdef.type = type;
+                bdef.type = collisiontype;
                 bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
                 sz = 8/mygame.scale;
@@ -240,7 +694,7 @@ public class gameobject extends Sprite {
             case BOX:
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
-                bdef.type = type;
+                bdef.type = collisiontype;
                 bdef.linearDamping = 2f;
                 bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
@@ -269,7 +723,7 @@ public class gameobject extends Sprite {
             case LISTENER:
                 fdef.filter.categoryBits = game.COIN_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.ITEMSENSOR_BIT;
-                bdef.type = type;
+                bdef.type = collisiontype;
                 bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
                 shape.setAsBox(Tswh /mygame.scale, Tshh /mygame.scale);
@@ -282,7 +736,7 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.ITEMSENSOR_BIT;
                 fdef.filter.maskBits = game.COIN_BIT;
                 /////
-                bdef.type = type;
+                bdef.type = collisiontype;
                 bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
                 body.setGravityScale( 0 );
@@ -300,7 +754,7 @@ public class gameobject extends Sprite {
 
                 fdef.filter.categoryBits = game.COIN_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
-                bdef.type = type;
+                bdef.type = collisiontype;
                 bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
                 shape.setAsBox(Tswh / 500f, Tshh /mygame.scale);
@@ -320,7 +774,7 @@ public class gameobject extends Sprite {
             case PLAYERPROJECTILE:
                 fdef.filter.categoryBits = game.PLAYERPROJECTILE_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
-                bdef.type = type;
+                bdef.type = collisiontype;
                 bdef.position.set(xx, yy);
                 body = world.createBody(bdef);
                 shape.setAsBox(width /mygame.scale, width /mygame.scale);
@@ -337,7 +791,7 @@ public class gameobject extends Sprite {
             case ENEMYPROJECTILE:
                 fdef.filter.categoryBits = game.ENEMYPROJECTILE_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
-                bdef.type = type;
+                bdef.type = collisiontype;
                 bdef.position.set(xx, yy);
                 body = world.createBody(bdef);
                 shape.setAsBox(width / 200f, height / 200f);
@@ -355,7 +809,7 @@ public class gameobject extends Sprite {
 
                 fdef.filter.categoryBits = game.MARKER_BIT;
                 fdef.filter.maskBits = game.PLATFORM_BIT;
-                bdef.type = type;
+                bdef.type = collisiontype;
                 bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
                 shape.setAsBox(width /mygame.scale, width /mygame.scale);
@@ -370,18 +824,18 @@ public class gameobject extends Sprite {
                 break;
 
             //lewatable SENSOR
-                case SWITCHOFF:
+            case SWITCHOFF:
                 fdef.filter.categoryBits = game.DESTROYED_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
-                bdef.type = type;
-                    bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
+                bdef.type = collisiontype;
+                bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
                 shape.setAsBox(width /mygame.scale, width /mygame.scale);
                 fdef.shape = shape;
                 fixture = body.createFixture(fdef);
-                    fixture.setUserData(this);
+                fixture.setUserData(this);
 
-                    //setCategoryFilter(game.COIN_BIT);
+                //setCategoryFilter(game.COIN_BIT);
 
 
                 break;
@@ -391,7 +845,7 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.PLATFORM_BIT;
                 fdef.filter.maskBits = game.MARKER_BIT | game.PLAYER_BIT;
                 /////
-                bdef.type = type;
+                bdef.type = collisiontype;
                 bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 setPosition(xx*ts/mygame.scale,yy*ts/mygame.scale);
                 body = world.createBody(bdef);
@@ -410,7 +864,7 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.PLAYERPROJECTILE_BIT | game.ENEMYPROJECTILE_BIT;
                 /////
-                bdef.type = type;
+                bdef.type = collisiontype;
                 bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
 
@@ -426,7 +880,7 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.PLAYER_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.COIN_BIT | game.BRICK_BIT | game.ENEMYPROJECTILE_BIT;
                 /////
-                bdef.type = type;
+                bdef.type = collisiontype;
                 bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
 
@@ -437,13 +891,13 @@ public class gameobject extends Sprite {
                 //setCategoryFilter(fixture,game.DEFAULT_BIT);
                 fixture.setUserData(this);
                 break;
-                //interact with environment & player
+            //interact with environment & player
             case SPRING:
             case SWITCH: case MONSTER:
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.PLAYERPROJECTILE_BIT;
                 /////
-                bdef.type = type;
+                bdef.type = collisiontype;
                 bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 body = world.createBody(bdef);
 
@@ -461,7 +915,7 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 /////
-                bdef.type = type;
+                bdef.type = collisiontype;
                 bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 setPosition(xx*ts/mygame.scale,yy*ts/mygame.scale);
                 body = world.createBody(bdef);
@@ -498,7 +952,7 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 /////
-                bdef.type = type;
+                bdef.type = collisiontype;
                 bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 setPosition(xx*ts/mygame.scale,yy*ts/mygame.scale);
                 body = world.createBody(bdef);
@@ -534,7 +988,7 @@ public class gameobject extends Sprite {
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;
                 /////
-                bdef.type = type;
+                bdef.type = collisiontype;
                 bdef.position.set((xx + Tpx) /mygame.scale, (yy + Tpy) /mygame.scale);
                 setPosition(xx*ts/mygame.scale,yy*ts/mygame.scale);
                 body = world.createBody(bdef);
@@ -583,30 +1037,16 @@ public class gameobject extends Sprite {
 
             case MISC:
         }
-
-        //setSize( width/mygame.scale, height /mygame.scale );
-        //setOrigin( width /mygame.scale, height /mygame.scale );
-
-        /*
-        if (light>0 && mygame.night) {
-            myLight = new PointLight( mygame.rayHandler, 500, lightColor, light, 0, 0 );
-            myLight.setSoftnessLength( 0.3f );
-            myLight.attachToBody( body );
-        }
-
-         */
-
-
-
-
     }
 
+     */
     public Vector2 lastPos;
     public boolean rotating;
     public float waitTime;
     public void update(float dt){
 
         if (state== states.DEAD) return;
+        //if (body==null) return;
 
         if (color!=null){
             setColor( color.r,color.g,color.b,getColor().a );
@@ -1116,6 +1556,7 @@ public class gameobject extends Sprite {
     }
 
     public void setCategoryFilter(short filterBit){
+        if (fixture==null) return;
         Filter filter = new Filter();
         filter.categoryBits = filterBit;
         fixture.setFilterData(filter);

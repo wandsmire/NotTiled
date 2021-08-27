@@ -4,8 +4,6 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
-import java.util.ArrayList;
-
 public class particle extends Sprite {
     boolean complete=false;
     game mygame;

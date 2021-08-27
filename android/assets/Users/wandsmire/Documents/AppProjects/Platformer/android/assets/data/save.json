@@ -11,29 +11,19 @@ vars: [
 		key: warp
 	}
 	{
+		key: level
+		value: 10
+	}
+	{
 		key: score
-		value: 19100
 		hud: true
 		keephud: true
 	}
 	{
 		key: jetpack
-		iconx: 6
-		hasicon: true
-	}
-	{
-		key: trophy
-		iconx: 3
-		hasicon: true
-	}
-	{
-		key: gun
-		iconx: 6
-		hasicon: true
-		icony: 2
 	}
 ]
 x: 0.4032258
-y: 14.758064
+y: 1.8540053
 mapname: index.tmx
 }

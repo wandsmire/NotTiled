@@ -42,6 +42,7 @@ import com.badlogic.gdx.utils.Json;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ALLSENSOR;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BLOCK;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.CHECKPOINT;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ITEM;
@@ -57,7 +58,7 @@ import static com.mirwanda.nottiled.platformer.gameobject.states.DEAD;
 public class game {
     public boolean debugmode = false;
     public boolean playtest=true;
-    public boolean uitest=false;
+    public boolean uitest=true;
     public int orientation;
     public boolean night=false;
     public TiledMap map;
@@ -81,7 +82,10 @@ public class game {
     public gameobject action4;
 
     public List<gameobject> objects = new ArrayList<>();
-    public java.util.List<particle> particles = new ArrayList<>();
+    public List<particle> particles = new ArrayList<>();
+    public List<Sound> sfxs = new ArrayList<>();
+    public List<String> sfxpaths = new ArrayList<>();
+
 
     public Texture txBackground;
     public TextureRegion[][] hpbar;
@@ -136,6 +140,7 @@ public class game {
     public static final short PLAYERPROJECTILE_BIT = 128;
     public static final short ENEMYPROJECTILE_BIT = 256;
     public static final short ITEMSENSOR_BIT = 512;
+    public static final short ALLSENSOR_BIT = 1024;
     public int Tw;
     public int Th;
     public float Tsw;
@@ -147,285 +152,311 @@ public class game {
 
     public boolean initialise(String path, String filename, boolean playtest){
         try {
+            log("initialisation started!");
             this.playtest=playtest;
-            loadingmap = true;
             this.path = path;
             this.file = filename;
-            rpg = false;
 
+            loadingmap = true;
+            rpg = false;
 
             Texture tmp = new Texture( Gdx.files.internal( "platformer/hpbar.png" ) );
             hpbar = TextureRegion.split( tmp,
                     tmp.getWidth(),
                     tmp.getHeight() / 2 );
 
-            objects = new ArrayList<>();
+            initialiseSprites();
+            initialiseBox2D();
+            if (!initialiseTMX()) return false;
+            initialiseMapProperties();
+            initialiseTilesets();
+            initialiseLayers();
 
-            try {
-                if (playtest) {
-                    map = new TmxMapLoader( new AbsoluteFileHandleResolver() ).load( path + "/" + filename );
-                } else {
-                    map = new TmxMapLoader( new InternalFileHandleResolver() ).load( path + "/" + filename );
-
-                }
-            } catch (Exception e) {
-                return false;
-            }
-            renderer = new OrthogonalTiledMapRenderer( map );
-
-            Box2D.init();
-            if (world!=null) world.dispose();
-            objects = new ArrayList<>();
-            if (particles.size()>0) particles.clear();
-
-
-            world = new World( new Vector2( 0, -10 ), true );
-
-            b2dr = new Box2DDebugRenderer();
-
-            mycontactlistener = new WorldContactListener( this );
-            world.setContactListener( mycontactlistener );
-
-
-            stateTime = 0f;
-            playerTime = 0f;
-
-            ////
-
-            MapProperties mpa = map.getProperties();
-            if (mpa != null) {
-
-                if (mpa.containsKey( "type" )) {
-                    String type = (String) mpa.get( "type" );
-                    if (type.equalsIgnoreCase( "NotTiled platformer" )) {
-                        rpg = false;
-                    }
-                    if (type.equalsIgnoreCase( "NotTiled rpg" )) {
-                        world.setGravity( new Vector2( 0f, 0f ) );
-                        jumping = false;
-                        rpg = true;
-                    }
-                } else {
-                    rpg = true;
-                }
-
-                if (mpa.containsKey( "scale" )) {
-                    try {
-                        String scl = (String) mpa.get( "scale" );
-                        scale = Float.parseFloat( scl );
-                    }catch(Exception f){
-                        scale=100f;
-                    }
-                }
-
-
-
-                if (mpa.containsKey( "background" )) {
-                    String bgc = (String) mpa.get( "background" );
-                    if (getFile( path + "/" + bgc ).exists() && !bgc.equalsIgnoreCase( "" )) {
-                        txBackground = new Texture( getFile( path + "/" + bgc ) );
-                    } else {
-                        txBackground = null;
-                    }
-                }
-
-                if (mpa.containsKey( "orientation" )) {
-                    String orien = (String) mpa.get( "orientation" );
-                    switch (orien){
-                        case "landscape":
-                            orientation=1;break;
-                        case "portrait":
-                            orientation=2;break;
-                        default:
-                            orientation=0;break;
-
-                    }
-
-                }
-
-                if (mpa.containsKey( "bgm" )) {
-                    String bgms = (String) mpa.get( "bgm" );
-                    if (getFile( path + "/" + bgms ).exists() && !bgms.equalsIgnoreCase( "" )) {
-                        if (bgm == null) {
-                            bgm = Gdx.audio.newMusic( getFile( path + "/" + bgms ) );
-                            bgm.setLooping( true );
-                        } else {
-                            if (!bgm.isPlaying()) {
-                                bgm = Gdx.audio.newMusic( getFile( path + "/" + bgms ) );
-                                bgm.setLooping( true );
-                            }
-                        }
-                    }
-                }
-
-                if (mpa.containsKey( "zoom" )) {
-                    zoom = Float.parseFloat( mpa.get( "zoom" ).toString() );
-                }
-
-                if (mpa.containsKey( "bgcolor" )){
-                    String cs = mpa.get( "bgcolor" ).toString();
-                    try {
-                        float bgr = (float) Integer.parseInt(cs.substring(0, 2), 16) / 256;
-                        float bgg = (float) Integer.parseInt(cs.substring(2, 4), 16) / 256;
-                        float bgb = (float) Integer.parseInt(cs.substring(4, 6), 16) / 256;
-                        bgcolor = new Color(bgr,bgg,bgb,1f);
-                    }catch(Exception e){ e.printStackTrace();}
-                }
-
-                boolean customicons = false;
-                if (mpa.containsKey( "icons" )) {
-                    String ico = (String) mpa.get( "icons" );
-                    if (getFile( path + "/" + ico ).exists() && !ico.equalsIgnoreCase( "" )) {
-
-                        if (mpa.containsKey( "iconsize" )) {
-                            String isz = (String) mpa.get( "iconsize" );
-                            try {
-                                String[] isza = isz.split( "," );
-                                int isx = Integer.parseInt( isza[0] );
-                                int isy = Integer.parseInt( isza[1] );
-                                tmp = new Texture( getFile( path + "/" + ico ) );
-                                icons = TextureRegion.split( tmp,
-                                        tmp.getWidth() / isx,
-                                        tmp.getHeight() / isy );
-                                customicons=true;
-
-                            }catch (Exception e){
-                                customicons=false;
-                            }
-                        }else{
-                            customicons=false;
-                        }
-                    } else {
-                        customicons=false;
-                    }
-                }
-
-                if (!customicons){
-                    tmp = new Texture( Gdx.files.internal( "platformer/icons.png" ) );
-                    icons = TextureRegion.split( tmp,
-                            tmp.getWidth() / 16,
-                            tmp.getHeight() / 19 );
-
-                }
-
-
-                nextlevel = (String) mpa.get( "nextlevel" );
-                debriefing = (String) mpa.get( "debriefing" );
-                died = "GAME OVER";
-            }
-            ////
-
-            int total=0;
-            anims = new ArrayList<>();
-            animids = new ArrayList<>();
-            for (TiledMapTileSet tset : map.getTileSets()){
-                tset.size();
-                for (int i=0;i<tset.size();i++){
-
-                    try {
-                        AnimatedTiledMapTile at = (AnimatedTiledMapTile) tset.getTile( total+i+1 );
-
-                            StaticTiledMapTile[] frames = at.getFrameTiles().clone();
-                            TextureRegion[] walkFrames = new TextureRegion[frames.length];
-                            //log(frames.length+"FL");
-                            for (int j=0;j<frames.length;j++) {
-                                walkFrames[j]=frames[j].getTextureRegion();
-                            }
-
-                            Animation<TextureRegion> tempAnim = new Animation<>( at.getAnimationIntervals()[0]/1000f, walkFrames );
-                            anims.add( tempAnim );
-                            animids.add( total+i+1  );
-
-                    }catch(Exception e){
-//                        e.printStackTrace();
-                    }
-                }
-                total+=tset.size();
-            }
-
-
-
-            ////
-
-            for (MapLayer mlayer : map.getLayers()) {
-                float opacity = mlayer.getOpacity();
-
-                boolean tilelayer = false;
-                boolean objectlayer = false;
-
-
-                if (mlayer instanceof  TiledMapTileLayer){
-                    tilelayer = true;
-
-                }else {
-                    if (!(mlayer instanceof TiledMapImageLayer)) {
-                        objectlayer=true;
-                    }
-                }
-
-                if (tilelayer) {
-                    if (!mlayer.isVisible()) continue;
-
-                    boolean over = false;
-                    if (mlayer.getName().contains( "*" )) {
-                        over = true;
-                    }
-                    TiledMapTileLayer tlayer = (TiledMapTileLayer) mlayer;
-                    this.Tw = tlayer.getWidth();
-                    this.Th = tlayer.getHeight();
-                    this.Tsw = tlayer.getTileWidth();
-                    this.Tsh = tlayer.getTileHeight();
-                    for (int yy = 0; yy < tlayer.getHeight(); yy++) {
-                        for (int xx = 0; xx < tlayer.getWidth(); xx++) {
-                            TiledMapTileLayer.Cell cece = tlayer.getCell( xx, yy );
-
-                            float ww = 0;
-                            float hh = 0;
-                            try {
-                                ww = cece.getTile().getTextureRegion().getRegionWidth();
-                                hh = cece.getTile().getTextureRegion().getRegionHeight();
-                            } catch (Exception ignored) {}
-                            setGameObject( false, cece, xx * Tsw, yy * Tsh, ww, hh, over, null, opacity );
-                        }
-                    }
-                }
-                if (objectlayer) {
-                    if (!mlayer.isVisible()) continue;
-                    MapObjects objects = map.getLayers().get( mlayer.getName() ).getObjects();
-                    for (MapObject o : objects) {
-                        Rectangle rect;
-                        if (o instanceof TiledMapTileMapObject) {
-                            TiledMapTileMapObject obj = (TiledMapTileMapObject) o;
-                            setGameObject( true, null, obj.getX(), obj.getY(), obj.getTextureRegion().getRegionWidth(), obj.getTextureRegion().getRegionHeight(), false, o, opacity );
-
-                        } else {
-                            RectangleMapObject obj = (RectangleMapObject) o;
-                            rect = obj.getRectangle();
-                            setGameObject( true, null, rect.x, rect.y, rect.width, rect.height, false, o, opacity );
-
-
-                        }
-                    }
-
-                }
-            }
-
-            //no player object, ga bisa main
             if (player == null) return false;
             fade=5;
-            //save(); //'saving on current map makes load useless.
             victory = false;
             loadingmap = false;
             fadein = fadeinmax;
+            log("initialisation finished!");
+
             return true;
+
         }catch(Exception e){
-            e.printStackTrace();
+            log("initialisation failed!");
+
             return false;
         }
+    }
 
+    public boolean initialiseTMX(){
+        log("initialising tmx file...");
 
+        try {
+            if (playtest) {
+                map = new TmxMapLoader( new AbsoluteFileHandleResolver() ).load( path + "/" + file );
+            } else {
+                map = new TmxMapLoader( new InternalFileHandleResolver() ).load( path + "/" + file );
+
+            }
+        } catch (Exception e) {
+            return false;
+        }
+        renderer = new OrthogonalTiledMapRenderer( map );
+        return true;
 
     }
+    public void initialiseBox2D(){
+        log("initialising box2d...");
+        Box2D.init();
+        if (world!=null) world.dispose();
+        world = new World( new Vector2( 0, -10 ), true );
+        b2dr = new Box2DDebugRenderer();
+        mycontactlistener = new WorldContactListener( this );
+        world.setContactListener( mycontactlistener );
+    }
+    public void initialiseSprites(){
+        log("initialising sprites...");
+        objects = new ArrayList<>();
+        if (particles.size()>0) particles.clear();
+        stateTime = 0f;
+        playerTime = 0f;
+    }
+    public void initialiseMapProperties(){
+        log("initialising map properties...");
+        Texture tmp;
+        MapProperties mpa = map.getProperties();
+        if (mpa != null) {
+
+            if (mpa.containsKey( "type" )) {
+                String type = (String) mpa.get( "type" );
+                if (type.equalsIgnoreCase( "NotTiled platformer" )) {
+                    rpg = false;
+                }
+                if (type.equalsIgnoreCase( "NotTiled rpg" )) {
+                    world.setGravity( new Vector2( 0f, 0f ) );
+                    jumping = false;
+                    rpg = true;
+                }
+            } else {
+                rpg = true;
+            }
+
+            if (mpa.containsKey( "scale" )) {
+                try {
+                    String scl = (String) mpa.get( "scale" );
+                    scale = Float.parseFloat( scl );
+                }catch(Exception f){
+                    scale=100f;
+                }
+            }
+
+
+
+            if (mpa.containsKey( "background" )) {
+                String bgc = (String) mpa.get( "background" );
+                if (getFile( path + "/" + bgc ).exists() && !bgc.equalsIgnoreCase( "" )) {
+                    txBackground = new Texture( getFile( path + "/" + bgc ) );
+                } else {
+                    txBackground = null;
+                }
+            }
+
+            if (mpa.containsKey( "orientation" )) {
+                String orien = (String) mpa.get( "orientation" );
+                switch (orien){
+                    case "landscape":
+                        orientation=1;break;
+                    case "portrait":
+                        orientation=2;break;
+                    default:
+                        orientation=0;break;
+
+                }
+
+            }
+
+            if (mpa.containsKey( "bgm" )) {
+                String bgms = (String) mpa.get( "bgm" );
+                if (getFile( path + "/" + bgms ).exists() && !bgms.equalsIgnoreCase( "" )) {
+                    if (bgm == null) {
+                        bgm = Gdx.audio.newMusic( getFile( path + "/" + bgms ) );
+                        bgm.setLooping( true );
+                    } else {
+                        if (!bgm.isPlaying()) {
+                            bgm = Gdx.audio.newMusic( getFile( path + "/" + bgms ) );
+                            bgm.setLooping( true );
+                        }
+                    }
+                }
+            }
+
+            if (mpa.containsKey( "zoom" )) {
+                zoom = Float.parseFloat( mpa.get( "zoom" ).toString() );
+            }
+
+            if (mpa.containsKey( "bgcolor" )){
+                String cs = mpa.get( "bgcolor" ).toString();
+                try {
+                    float bgr = (float) Integer.parseInt(cs.substring(0, 2), 16) / 256;
+                    float bgg = (float) Integer.parseInt(cs.substring(2, 4), 16) / 256;
+                    float bgb = (float) Integer.parseInt(cs.substring(4, 6), 16) / 256;
+                    bgcolor = new Color(bgr,bgg,bgb,1f);
+                }catch(Exception e){ e.printStackTrace();}
+            }
+
+            boolean customicons = false;
+            if (mpa.containsKey( "icons" )) {
+                String ico = (String) mpa.get( "icons" );
+                if (getFile( path + "/" + ico ).exists() && !ico.equalsIgnoreCase( "" )) {
+
+                    if (mpa.containsKey( "iconsize" )) {
+                        String isz = (String) mpa.get( "iconsize" );
+                        try {
+                            String[] isza = isz.split( "," );
+                            int isx = Integer.parseInt( isza[0] );
+                            int isy = Integer.parseInt( isza[1] );
+                            tmp = new Texture( getFile( path + "/" + ico ) );
+                            icons = TextureRegion.split( tmp,
+                                    tmp.getWidth() / isx,
+                                    tmp.getHeight() / isy );
+                            customicons=true;
+
+                        }catch (Exception e){
+                            customicons=false;
+                        }
+                    }else{
+                        customicons=false;
+                    }
+                } else {
+                    customicons=false;
+                }
+            }
+
+            if (!customicons){
+                tmp = new Texture( Gdx.files.internal( "platformer/icons.png" ) );
+                icons = TextureRegion.split( tmp,
+                        tmp.getWidth() / 16,
+                        tmp.getHeight() / 19 );
+
+            }
+
+
+            nextlevel = (String) mpa.get( "nextlevel" );
+            debriefing = (String) mpa.get( "debriefing" );
+            died = "GAME OVER";
+        }
+
+    }
+    public void initialiseTilesets(){
+        log("initialising tilesets...");
+        int total=0;
+        anims = new ArrayList<>();
+        animids = new ArrayList<>();
+        for (TiledMapTileSet tset : map.getTileSets()){
+            tset.size();
+            for (int i=0;i<tset.size();i++){
+
+                try {
+                    AnimatedTiledMapTile at = (AnimatedTiledMapTile) tset.getTile( total+i+1 );
+
+                    StaticTiledMapTile[] frames = at.getFrameTiles().clone();
+                    TextureRegion[] walkFrames = new TextureRegion[frames.length];
+                    //log(frames.length+"FL");
+                    for (int j=0;j<frames.length;j++) {
+                        walkFrames[j]=frames[j].getTextureRegion();
+                    }
+
+                    Animation<TextureRegion> tempAnim = new Animation<>( at.getAnimationIntervals()[0]/1000f, walkFrames );
+                    anims.add( tempAnim );
+                    animids.add( total+i+1  );
+
+                }catch(Exception e){
+//                        e.printStackTrace();
+                }
+            }
+            total+=tset.size();
+        }
+
+    }
+    public void initialiseLayers(){
+        log("initialising layers...");
+
+        for (MapLayer mlayer : map.getLayers()) {
+            log("initialising layer: "+mlayer.getName());
+
+            float opacity = mlayer.getOpacity();
+
+            boolean tilelayer = false;
+            boolean objectlayer = false;
+
+
+            if (mlayer instanceof  TiledMapTileLayer){
+                tilelayer = true;
+
+            }else {
+                if (!(mlayer instanceof TiledMapImageLayer)) {
+                    objectlayer=true;
+                }
+            }
+
+            if (tilelayer) {
+                if (!mlayer.isVisible()) continue;
+
+                boolean over = false;
+                if (mlayer.getName().contains( "*" )) {
+                    over = true;
+                }
+                TiledMapTileLayer tlayer = (TiledMapTileLayer) mlayer;
+                this.Tw = tlayer.getWidth();
+                this.Th = tlayer.getHeight();
+                this.Tsw = tlayer.getTileWidth();
+                this.Tsh = tlayer.getTileHeight();
+                int total = 0;
+                int objec = 0;
+
+                for (int yy = 0; yy < tlayer.getHeight(); yy++) {
+                    for (int xx = 0; xx < tlayer.getWidth(); xx++) {
+                        //total++;
+                        TiledMapTileLayer.Cell cece = tlayer.getCell( xx, yy );
+                        if (cece==null)
+                        {
+                            continue;
+                        }
+                        //objec++;
+                        //log("TOTAL: "+total+" | OBJECT: "+objec);
+
+                        //NOTE: do not put exception in a tight loop.
+                        float ww = 0;
+                        float hh = 0;
+                        ww = cece.getTile().getTextureRegion().getRegionWidth();
+                        hh = cece.getTile().getTextureRegion().getRegionHeight();
+                        setGameObject( false, cece, xx * Tsw, yy * Tsh, ww, hh, over, null, opacity );
+                    }
+                }
+            }
+            if (objectlayer) {
+                if (!mlayer.isVisible()) continue;
+                MapObjects objects = map.getLayers().get( mlayer.getName() ).getObjects();
+                for (MapObject o : objects) {
+                    Rectangle rect;
+                    if (o instanceof TiledMapTileMapObject) {
+                        TiledMapTileMapObject obj = (TiledMapTileMapObject) o;
+                        setGameObject( true, null, obj.getX(), obj.getY(), obj.getTextureRegion().getRegionWidth(), obj.getTextureRegion().getRegionHeight(), false, o, opacity );
+
+                    } else {
+                        RectangleMapObject obj = (RectangleMapObject) o;
+                        rect = obj.getRectangle();
+                        setGameObject( true, null, rect.x, rect.y, rect.width, rect.height, false, o, opacity );
+
+
+                    }
+                }
+
+            }
+        }
+
+    }
+
 
     public void log(String s){
         Gdx.app.log( "LOJ",s );
@@ -456,6 +487,25 @@ public class game {
                                 }
                             }
                         }
+                    }
+                    if (s.contains( "!" )) {
+                        String[] sv = s.split( "!" );
+                        varname = sv[0];
+
+                        String[] plus = sv[1].split( "_" );
+                        boolean qualify=true;
+                        for (String xxx : plus) {
+                            for (KV var : save.vars) {
+                                if (sv[0].equalsIgnoreCase( var.key )) {
+                                    ada = true;
+                                    if (Integer.parseInt(xxx) == var.value) {
+                                        qualify=false;
+                                    }
+                                }
+                            }
+                        }
+                        if (qualify) rq+=1;
+
                     }
                     if (s.contains( "&lt;" )) {
                         String[] sv = s.split( "&lt;" );
@@ -785,6 +835,132 @@ public class game {
 
 
         stateTime += delta;
+
+        updatePlayerSprite(delta);
+        updatePlayerMovement();
+
+        /*
+        for (int i = objects.size() - 1; i >= 0; i--){
+            gameobject go = objects.get( i );
+            go.update(delta);
+            if (go.state==DEAD){
+                //go.myLight.remove( true );
+                if (world.getBodyCount()>0) world.destroyBody( go.body );
+                objects.remove( go );
+
+            }else{
+                if (go.over) continue;
+                if (go.getTexture()!=null ){
+                    go.draw(batch);
+
+                }
+            }
+
+        }
+
+         */
+        overs.clear();deads.clear();
+        for (int i=0;i<objects.size();i++){
+            gameobject go = objects.get(i);
+            if(loadingmap) return;
+
+            //failed attempt at frustum culling
+
+            //if (go.objtype!=null && go.objtype==BRICK) {
+            //}
+
+
+
+
+            go.update(delta);
+            if (go.state!=DEAD) {
+                if (!go.over) {
+
+                    /*
+                    if (gamecam.frustum.pointInFrustum( go.getX(),go.getY(),0 )){
+                        if (!go.body.isActive())  go.body.setActive( true );
+                    }else{
+                        if (go.body.isActive())  go.body.setActive( false );
+                    }
+
+                     */
+
+                    if (go.getTexture() != null) go.draw( batch );
+
+
+                //} else {s
+                  //  overs.add( go );
+                }
+                if (go.HP > 0 && go.HP !=go.maxHP) {
+                    batch.draw( hpbar[1][0], go.getX(), go.getY() + go.getHeight() + 0.01f, go.getWidth(), hpbar[1][0].getRegionHeight() / scale );
+                    batch.draw( hpbar[0][0], go.getX(), go.getY() + go.getHeight() + 0.01f, go.HP / go.maxHP * go.getWidth(), hpbar[0][0].getRegionHeight() / scale );
+                }
+            }else{
+                deads.add( go );
+            }
+        }
+
+        player.update(delta);
+        if (player.state != DEAD){
+            player.draw(batch);
+        }else
+        {
+            deads.add( player );
+        }
+
+        for (gameobject go:deads)
+        {
+            go.removeCollision();
+            objects.remove( go );
+        }
+
+        for (gameobject sboxes:overs)
+        {
+            if (sboxes.getTexture()!=null ) sboxes.draw(batch);
+        }
+
+
+
+        for (int i = particles.size() - 1; i >= 0; i--){
+            particle pe = particles.get(i);
+            pe.update( Gdx.graphics.getDeltaTime() );
+            pe.draw( batch );
+
+            if (pe.isComplete()) particles.remove( pe );
+        }
+
+
+
+        if (action1!=null) action1.update( delta );
+        if (action2!=null) action2.update( delta );
+        if (action3!=null) action3.update( delta );
+        if (action4!=null) action4.update( delta );
+
+        //if (night) rayHandler.updateAndRender();
+
+    }
+
+    public void updatePlayerMovement(){
+        ladder= touchedladder > 0;
+        if (floater){
+            player.body.setLinearVelocity(player.body.getLinearVelocity().x,0);
+            player.body.setGravityScale(-0.7f);
+        }else if (ladder){
+            player.body.setLinearVelocity(player.body.getLinearVelocity().x,0);
+            player.body.setGravityScale(0f);
+        }else if (sinker) {
+
+            player.body.setLinearVelocity( player.body.getLinearVelocity().x, 0 );
+            player.body.setGravityScale( 0.7f );
+        }else{
+            player.body.setGravityScale(1);
+        }
+
+        //reduce
+        if (player.body.getLinearVelocity().y<-player.speed*3) player.body.setLinearVelocity( player.body.getLinearVelocity().x,-player.speed*3 );
+
+    }
+    public void updatePlayerSprite(float delta){
         if (starting){
             if (player.anim.size()>1) {
                 TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( 0, true );
@@ -808,25 +984,25 @@ public class game {
                 player.setRegion( currentFramea );
             }else if (player.anim.size()==1) { //just one anim
 
-                    TextureRegion currentFramea = player.anim.get(0).getKeyFrame( playerTime, true );
-                    player.setRegion( currentFramea );
+                TextureRegion currentFramea = player.anim.get(0).getKeyFrame( playerTime, true );
+                player.setRegion( currentFramea );
                 player.setOriginCenter();
 
-                    if (!rpg){
+                if (!rpg){
 
-                        switch (player.dir) {
-                            case 0: //down
-                                break;
-                            case 1: //right
-                                player.setFlip( false, false );
-                                break;
-                            case 2: //left
-                                player.setFlip( true, false );
-                                break;
-                            case 3: //up
-                                break;
-                        }
+                    switch (player.dir) {
+                        case 0: //down
+                            break;
+                        case 1: //right
+                            player.setFlip( false, false );
+                            break;
+                        case 2: //left
+                            player.setFlip( true, false );
+                            break;
+                        case 3: //up
+                            break;
                     }
+                }
             }else{ //no anim
 
 
@@ -936,112 +1112,13 @@ public class game {
                             break;
                     }
                 }else{
-                     currentFramea = player.anim.get( player.dir ).getKeyFrame( 0, true );
+                    currentFramea = player.anim.get( player.dir ).getKeyFrame( 0, true );
                     player.setRegion( currentFramea );
                 }
             }
         }
 
-
-        ladder= touchedladder > 0;
-
-
-
-        if (floater){
-            player.body.setLinearVelocity(player.body.getLinearVelocity().x,0);
-            player.body.setGravityScale(-0.7f);
-        }else if (ladder){
-            if (player.body.getLinearVelocity().y<0) {
-                player.body.setLinearVelocity( player.body.getLinearVelocity().x, 0 );
-            }
-            player.body.setGravityScale(0f);
-        }else if (sinker) {
-
-            player.body.setLinearVelocity( player.body.getLinearVelocity().x, 0 );
-            player.body.setGravityScale( 0.7f );
-        }else{
-            player.body.setGravityScale(1);
-        }
-
-        if (player.body.getLinearVelocity().y<-player.speed*3) player.body.setLinearVelocity( player.body.getLinearVelocity().x,-player.speed*3 );
-        /*
-        for (int i = objects.size() - 1; i >= 0; i--){
-            gameobject go = objects.get( i );
-            go.update(delta);
-            if (go.state==DEAD){
-                //go.myLight.remove( true );
-                if (world.getBodyCount()>0) world.destroyBody( go.body );
-                objects.remove( go );
-
-            }else{
-                if (go.over) continue;
-                if (go.getTexture()!=null ){
-                    go.draw(batch);
-
-                }
-            }
-
-        }
-
-         */
-        overs.clear();deads.clear();
-        for (int i=0;i<objects.size();i++){
-            gameobject go = objects.get(i);
-            if(loadingmap) return;
-            go.update(delta);
-            if (go.state!=DEAD) {
-                if (!go.over) {
-                    if (go.getTexture() != null) go.draw( batch );
-                //} else {
-                  //  overs.add( go );
-                }
-                if (go.HP > 0 && go.HP !=go.maxHP) {
-                    batch.draw( hpbar[1][0], go.getX(), go.getY() + go.getHeight() + 0.01f, go.getWidth(), hpbar[1][0].getRegionHeight() / scale );
-                    batch.draw( hpbar[0][0], go.getX(), go.getY() + go.getHeight() + 0.01f, go.HP / go.maxHP * go.getWidth(), hpbar[0][0].getRegionHeight() / scale );
-                }
-            }
-        }
-
-        player.update(delta);
-        if (player.state != DEAD){
-            player.draw(batch);
-        }else
-        {
-            deads.add( player );
-        }
-
-        for (gameobject go:deads)
-        {
-            if (world.getBodyCount()>0) world.destroyBody( go.body );
-            objects.remove( go );
-        }
-
-        for (gameobject sboxes:overs)
-        {
-            if (sboxes.getTexture()!=null ) sboxes.draw(batch);
-        }
-
-
-
-        for (int i = particles.size() - 1; i >= 0; i--){
-            particle pe = particles.get(i);
-            pe.update( Gdx.graphics.getDeltaTime() );
-            pe.draw( batch );
-
-            if (pe.isComplete()) particles.remove( pe );
-        }
-
-
-
-        if (action1!=null) action1.update( delta );
-        if (action2!=null) action2.update( delta );
-        if (action3!=null) action3.update( delta );
-        if (action4!=null) action4.update( delta );
-
-        //if (night) rayHandler.updateAndRender();
-
     }
-
     public void playSfx(Sound s){
         if (s!=null) s.play(1.0f);
     }
@@ -1060,7 +1137,9 @@ public class game {
                 onplatformv = false;
             }
             if (ladder || floater || sinker) {
-                player.body.setLinearVelocity( 0, player.speed/2f );
+
+                player.body.setLinearVelocity( 0, player.speed );
+                return;
             }
             if (jetpack) {
                 player.body.setLinearVelocity( player.body.getLinearVelocity().x, player.speed/2f );
@@ -1082,7 +1161,8 @@ public class game {
                 stompinterval = 1;
             }
             if (ladder || floater || sinker) {
-                player.body.setLinearVelocity( player.body.getLinearVelocity().x, -player.speed/2f );
+                player.body.setLinearVelocity( 0, -player.speed );
+                return;
             }
             if (jetpack) {
                 player.body.setLinearVelocity( player.body.getLinearVelocity().x, -player.speed/2f );
@@ -1103,7 +1183,10 @@ public class game {
         player.moving=true;
         player.dir=2;
 
-        if (ladder || floater || sinker) {player.body.setLinearVelocity(-player.speed/2f,player.body.getLinearVelocity().y);}
+        if (ladder || floater || sinker) {
+            player.body.setLinearVelocity(-player.speed,0);
+            return;
+        }
         if (player.body.getLinearVelocity().x >=-player.speed) {
             if (!rpg){
                 player.body.applyLinearImpulse(-walkForce, 0, player.getX(), player.getY(), true);
@@ -1118,7 +1201,10 @@ public class game {
     public void pressright(){
         player.moving=true;
         player.dir=1;
-        if (ladder || floater || sinker) {player.body.setLinearVelocity(player.speed/2f,player.body.getLinearVelocity().y);}
+        if (ladder || floater || sinker) {
+            player.body.setLinearVelocity(player.speed,0);
+            return;
+        }
         if (player.body.getLinearVelocity().x <=player.speed){
             if (!rpg){
 
@@ -1173,6 +1259,9 @@ public class game {
 
 
             if (player.state == DEAD) return;
+
+
+
 
             if (Gdx.input.isKeyPressed( Input.Keys.X )) {
                 act(action1);
@@ -1444,10 +1533,16 @@ public class game {
         player.body.setTransform( reqx, reqy, 0 );
         if (rpg) player.body.setLinearVelocity( 0, 0 );
     }
-
+    int emptytile;
     public void setGameObject(boolean object, TiledMapTileLayer.Cell cece, float xx, float yy, float ww, float hh, boolean over, MapObject obj, float opacity){
 
-        if (!object && cece==null) return; //empty tile
+        if (!object && cece==null)
+        {
+            emptytile+=1;
+            log("Empty tiles:"+ emptytile);
+            return; //empty tile
+
+        }
         MapProperties o;
         MapObject objx = null;
         TextureRegion t = null;
@@ -1462,6 +1557,13 @@ public class game {
             flipX = cece.getFlipHorizontally();
             flipY = cece.getFlipVertically();
             rota = cece.getRotation();
+
+            for (int i=0;i<animids.size();i++) {
+                if (animids.get( i ) == tlcece.getId()) {
+                    newbrick.anim.add( anims.get( i )) ;
+                }
+            }
+
         }else { //object
             objx=obj;
             if (obj.getName()!=null){
@@ -1471,32 +1573,17 @@ public class game {
             o = obj.getProperties();
             if (obj instanceof TiledMapTileMapObject) {
                 tmo = ((TiledMapTileMapObject) obj);
-                t = tmo.getTextureRegion();
-            }
-        }
-
-
-
-        /////
-
-        try {
-            for (int i=0;i<animids.size();i++) {
-                if (animids.get( i ) == tlcece.getId()) {
-                    newbrick.anim.add( anims.get( i )) ;
-                }
-            }
-        }catch(Exception e){
-            try {
                 for (int i=0;i<animids.size();i++) {
                     if (animids.get( i ) == tmo.getTile().getId()) {
                         newbrick.anim.add( anims.get( i )) ;
                     }
                 }
-            }catch(Exception ignored){}
+
+                t = tmo.getTextureRegion();
+            }
         }
 
 
-        /////
 
         newbrick.mygame = this;
 
@@ -1507,37 +1594,25 @@ public class game {
 
         if (o.containsKey( "lightcolor" )){
             String cs = o.get( "lightcolor" ).toString();
-            try {
                 float bgr = (float) Integer.parseInt( cs.substring( 0, 2 ), 16 ) / 256;
                 float bgg = (float) Integer.parseInt( cs.substring( 2, 4 ), 16 ) / 256;
                 float bgb = (float) Integer.parseInt( cs.substring( 4, 6 ), 16 ) / 256;
                 newbrick.lightColor = new Color( bgr, bgg, bgb, 1f );
-            }catch(Exception e){
-                newbrick.lightColor = Color.WHITE;
-            }
-
         }
         if (o.containsKey( "bgcolor" )){
             String cs = o.get( "bgcolor" ).toString();
-            try {
                 float bgr = (float) Integer.parseInt(cs.substring(0, 2), 16) / 256;
                 float bgg = (float) Integer.parseInt(cs.substring(2, 4), 16) / 256;
                 float bgb = (float) Integer.parseInt(cs.substring(4, 6), 16) / 256;
                 newbrick.bgcolor = new Color(bgr,bgg,bgb,1f);
-            }catch(Exception e){
-                e.printStackTrace();
-            }
         }
         if (o.containsKey( "color" )){
             String cs = o.get( "color" ).toString();
-            try {
+
                 float bgr = (float) Integer.parseInt( cs.substring( 0, 2 ), 16 ) / 256;
                 float bgg = (float) Integer.parseInt( cs.substring( 2, 4 ), 16 ) / 256;
                 float bgb = (float) Integer.parseInt( cs.substring( 4, 6 ), 16 ) / 256;
                 newbrick.color = new Color( bgr, bgg, bgb, 1f );
-            }catch(Exception e){
-                e.printStackTrace();
-            }
 
         }
 
@@ -1549,20 +1624,18 @@ public class game {
 
         if (o.containsKey( "sfx" )) {
                 String sfx = o.get("sfx").toString();
-                if (getFile( path + "/" + sfx ).exists())
-                    newbrick.sfx = Gdx.audio.newSound( getFile( path + "/" + sfx ) );
+                newbrick.sfx = addSfx( path + "/" + sfx );
             }
 
         if (o.containsKey( "psfx" )) {
             String sfx = o.get("psfx").toString();
-            if (getFile( path + "/" + sfx ).exists())
-                newbrick.psfx = Gdx.audio.newSound( getFile( path + "/" + sfx ) );
+            newbrick.psfx = addSfx( path + "/" + sfx );
         }
 
         if (o.containsKey( "sfxdead" )) {
             String sfx = o.get("sfxdead").toString();
-            if (getFile( path + "/" + sfx ).exists())
-                newbrick.sfxdead = Gdx.audio.newSound( getFile( path + "/" + sfx ) );
+            newbrick.sfxdead = addSfx( path + "/" + sfx );
+
         }
 
         if (o.containsKey( "size" )) {
@@ -1748,6 +1821,11 @@ public class game {
                         newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.KinematicBody, ITEM, objx, t, over  ,opacity);
                     }
                     break;
+                case "nuke":
+                    if (checkQual( o)) {
+                        newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.DynamicBody, ALLSENSOR, objx, t, over  ,opacity);
+                    }
+                    break;
                 case "itemsensor":
                     if (checkQual( o)) {
                         newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.DynamicBody, ITEMSENSOR, objx, t, over  ,opacity);
@@ -1799,43 +1877,45 @@ public class game {
                     }
 
                     Texture txMonster;
-                    try {
-                        String anim = o.get( "panim" ).toString();
-                        txMonster = new Texture( getFile( path + "/" + anim ) );
-                    } catch (Exception f) {
-                        txMonster = new Texture( Gdx.files.internal( "platformer/eshoot.png" ) );
-                    }
-                    TextureRegion[][] tmp = TextureRegion.split( txMonster,
-                            txMonster.getWidth() / 4,
-                            txMonster.getHeight() / 4 );
-                    newbrick.pimagesize = new Vector2( txMonster.getWidth() / 4f, txMonster.getHeight() / 4f );
-                    for (int i = 0; i < 4; i++) {
-                        TextureRegion[] walkFrames = new TextureRegion[4];
-                        int index = 0;
-                        for (int j = 0; j < 4; j++) {
-                            walkFrames[index++] = tmp[i][j];
-                        }
-                        Animation<TextureRegion> tempAnim = new Animation<>( 0.1f, walkFrames );
-                        newbrick.panim.add( tempAnim );
-                    }
 
-                    try {
-                        int panimID = 0;
+                    if (newbrick.canshoot) {
                         if (o.containsKey( "panim" )) {
-                            panimID = Integer.parseInt( o.get( "panim" ).toString() );
-                            if (animids.size() > 0) {
-                                for (int i = 0; i < animids.size(); i++) {
-                                    if (animids.get( i ) == panimID) {
-                                        newbrick.panim.clear();
-                                        newbrick.panim.add( anims.get( i ) );
-                                        log( "addado" );
-                                        break;
+                            String anim = o.get( "panim" ).toString();
+                            txMonster = new Texture( getFile( path + "/" + anim ) );
+                        } else {
+                            txMonster = new Texture( Gdx.files.internal( "platformer/eshoot.png" ) );
+                        }
+
+                        TextureRegion[][] tmp = TextureRegion.split( txMonster,
+                                txMonster.getWidth() / 4,
+                                txMonster.getHeight() / 4 );
+                        newbrick.pimagesize = new Vector2( txMonster.getWidth() / 4f, txMonster.getHeight() / 4f );
+                        for (int i = 0; i < 4; i++) {
+                            TextureRegion[] walkFrames = new TextureRegion[4];
+                            int index = 0;
+                            for (int j = 0; j < 4; j++) {
+                                walkFrames[index++] = tmp[i][j];
+                            }
+                            Animation<TextureRegion> tempAnim = new Animation<>( 0.1f, walkFrames );
+                            newbrick.panim.add( tempAnim );
+                        }
+
+                        int panimID = 0;
+                        if (o.containsKey( "panim" )){
+                            String pnm=o.get( "panim" ).toString();
+                            if (onlyDigits( pnm,pnm.length() )) {
+                                panimID = Integer.parseInt( o.get( "panim" ).toString() );
+                                if (animids.size() > 0) {
+                                    for (int i = 0; i < animids.size(); i++) {
+                                        if (animids.get( i ) == panimID) {
+                                            newbrick.panim.clear();
+                                            newbrick.panim.add( anims.get( i ) );
+                                            break;
+                                        }
                                     }
                                 }
                             }
                         }
-                    }catch(Exception e){
-                        e.printStackTrace();
                     }
 
 
@@ -1863,6 +1943,53 @@ public class game {
         objects.add( newbrick );
         if (!object) cece.setTile( null );
 
+    }
+
+    public static boolean
+    onlyDigits(String str, int n)
+    {
+        // Traverse the string from
+        // start to end
+        for (int i = 0; i < n; i++) {
+
+            // Check if character is
+            // digit from 0-9
+            // then return true
+            // else false
+            if (str.charAt(i) >= '0'
+                    && str.charAt(i) <= '9') {
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    public Sound addSfx(String path){
+        boolean ada =false;
+        String sfxpath;
+        Sound s = null;
+        for (int i=0;i<sfxpaths.size();i++){
+            sfxpath = sfxpaths.get( i );
+            if (sfxpath.equalsIgnoreCase( path )){
+                ada=true;
+                s=sfxs.get(i);
+            }
+        }
+
+        if (ada){
+            return s;
+        }else{
+            if (getFile(path).exists()){
+                s = Gdx.audio.newSound( getFile( path) );
+                sfxs.add( s );
+                sfxpaths.add( path );
+                return s;
+            }
+            return null;
+        }
     }
 
 }
