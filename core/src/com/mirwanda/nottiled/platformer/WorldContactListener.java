@@ -14,6 +14,7 @@ import com.badlogic.gdx.physics.box2d.Manifold;
 
 import java.util.ArrayList;
 
+import static com.mirwanda.nottiled.platformer.game.onlyDigits;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ACTION;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ALLSENSOR;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BLOCK;
@@ -424,6 +425,38 @@ public class WorldContactListener implements ContactListener {
                         newbrick.action = gameobject.actions.JETPACK;
                         newbrick.impulse = (o.containsKey( "impulse" )) ? Float.parseFloat( o.get( "impulse" ).toString() ) : 3f;
                         newbrick.pcooldown = (o.containsKey( "cooldown" )) ? Float.parseFloat( o.get( "cooldown" ).toString() ) : 0.8f;
+
+                        if (o.containsKey( "equip" )){
+                            String pnm=o.get( "equip" ).toString();
+                            if (onlyDigits( pnm,pnm.length() )) {
+                                int animID = Integer.parseInt( o.get( "equip" ).toString() );
+                                if (mygame.animids.size() > 0) {
+                                    for (int i = 0; i < mygame.animids.size(); i++) {
+                                        if (mygame.animids.get( i ) == animID) {
+                                            mygame.player.anim.add( mygame.anims.get( i ) );
+                                            mygame.player.animID.add( "equip" );
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (o.containsKey( "use" )){
+                            String pnm=o.get( "use" ).toString();
+                            if (onlyDigits( pnm,pnm.length() )) {
+                                int animID = Integer.parseInt( o.get( "use" ).toString() );
+                                if (mygame.animids.size() > 0) {
+                                    for (int i = 0; i < mygame.animids.size(); i++) {
+                                        if (mygame.animids.get( i ) == animID) {
+                                            mygame.player.anim.add( mygame.anims.get( i ) );
+                                            mygame.player.animID.add( "use" );
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
                         break;
 

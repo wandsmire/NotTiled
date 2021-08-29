@@ -56,6 +56,7 @@ public class gameobject extends Sprite {
     public float distance;
     java.util.List<Animation<TextureRegion>> anim = new ArrayList<>(); // Must declare frame type (TextureRegion)
     java.util.List<Animation<TextureRegion>> panim = new ArrayList<>(); // Must declare frame type (TextureRegion)
+    java.util.List<String> animID = new ArrayList<>();
     public Vector2 pimagesize;
     //public ParticleEffect meledak;
     //public PointLight myLight;

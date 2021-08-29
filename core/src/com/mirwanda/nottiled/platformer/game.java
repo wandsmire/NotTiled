@@ -49,6 +49,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.Touchpad;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.mirwanda.nottiled.myShapeRenderer;
@@ -206,7 +207,7 @@ public class game {
         }
         uicamVP.apply(true);
         gamecamVP.apply(true);
-        stage = new Stage( new StretchViewport( 3840 ,2160) );
+        stage = new Stage( new ExtendViewport( 3840 ,2160) );
 
 
         fontsize = 48;
@@ -278,6 +279,9 @@ public class game {
             touchedladder=0;
             player.body.setGravityScale(1);
             fadein = fadeinmax;
+            accumulator=0;
+            objaccumulator=0;
+            varaccumulator=0;
             log("initialisation finished!");
 
             return true;
@@ -696,7 +700,8 @@ public class game {
 
     public void drawHUD(SpriteBatch b, BitmapFont str1){
         int index=0;
-        for (KV vr: save.vars){
+        for (int i=0; i<save.vars.size();i++){
+            KV vr = save.vars.get(i);
             if (vr.hud){
                 if (vr.hasicon) {
                     try {
@@ -988,7 +993,7 @@ public class game {
         if (floater){
             player.body.setLinearVelocity(player.body.getLinearVelocity().x,0);
             player.body.setGravityScale(-0.7f);
-        }else if (ladder){
+        }else if (ladder && !jumping){
             player.body.setLinearVelocity(player.body.getLinearVelocity().x,0);
             player.body.setGravityScale(0f);
         }else if (sinker) {
@@ -1064,33 +1069,28 @@ public class game {
 
     }
     public void updatePlayerSprite(float delta){
-        if (starting){
-            if (player.anim.size()>1) {
-                TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( 0, true );
-                player.setRegion( currentFramea );
-            }else if (player.anim.size()==1) {
-                TextureRegion currentFramea = player.anim.get(0).getKeyFrame( 0, true );
-                player.setRegion( currentFramea );
-            }
-        }
+        playerTime += delta;
 
-        //moving
-        else if (player.moving && (!jumping || onplatformv) && (!ladder && !floater && !sinker))
-        {
-            playerTime +=delta;
-            if (jetpack) return;
-            if (player.anim.size()>1) {
-
-                TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( playerTime, true );
-                player.setRegion( currentFramea );
-            }else if (player.anim.size()==1) { //just one anim
-
-                TextureRegion currentFramea = player.anim.get(0).getKeyFrame( playerTime, true );
-                player.setRegion( currentFramea );
-                player.setOriginCenter();
-
-                if (!rpg){
-
+        //no animation whatsoever
+        if (player.anim.size()==0){
+            if (!player.dirlocked) {
+                if (rpg) {
+                    player.setOriginCenter();
+                    switch (player.dir) {
+                        case 0: //down
+                            player.setRotation( 180 );
+                            break;
+                        case 1: //right
+                            player.setRotation( 270 );
+                            break;
+                        case 2: //left
+                            player.setRotation( 90 );
+                            break;
+                        case 3: //up
+                            player.setRotation( 0 );
+                            break;
+                    }
+                } else {
                     switch (player.dir) {
                         case 0: //down
                             break;
@@ -1104,122 +1104,103 @@ public class game {
                             break;
                     }
                 }
-            }else{ //no anim
+            }
+
+            //has at least 1 animation
 
 
-                if (!player.dirlocked) {
-                    if (rpg) {
-                        player.setOriginCenter();
-                        switch (player.dir) {
-                            case 0: //down
-                                player.setRotation( 180 );
-                                break;
-                            case 1: //right
-                                player.setRotation( 270 );
-                                break;
-                            case 2: //left
-                                player.setRotation( 90 );
-                                break;
-                            case 3: //up
-                                player.setRotation( 0 );
-                                break;
-                        }
+
+        }else {
+            //rpg with anim
+            if (rpg) {
+                jumping=false;
+                if (player.anim.size()==4) {
+                    if (player.moving) {
+                        TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( playerTime, true );
                     } else {
-                        switch (player.dir) {
-                            case 0: //down
-                                break;
-                            case 1: //right
-                                player.setFlip( false, false );
-                                break;
-                            case 2: //left
-                                player.setFlip( true, false );
-                                break;
-                            case 3: //up
-                                break;
+                        TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( 0, true );
+                    }
+                }
+
+                //not rpg with anim
+            }else{
+                //moving
+                TextureRegion currentFramea=null;
+                if (player.moving && !jumping) {
+                    for (int k=player.anim.size()-1;k>=0;k--){
+                        if (player.animID.get( k ).equalsIgnoreCase( "equip" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( playerTime, true );
+                            break;
+                        }
+                        if (player.animID.get( k ).equalsIgnoreCase( "basic" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( playerTime, true );
+                            break;
                         }
                     }
                 }
 
-            }
-        }
-
-        //jumping
-        else if (jumping && !ladder && !floater && !sinker && !onplatformv) {
-            if (player.anim.size()>1) {
-
-                TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( 0.25f, true );
-                player.setRegion( currentFramea );
-
-            }
-            else if (player.anim.size()==1) {
-
-                TextureRegion currentFramea = player.anim.get(0).getKeyFrame( 0.25f, true );
-                player.setRegion( currentFramea );
-
-                if (!rpg){
-
-                    switch (player.dir) {
-                        case 0: //down
+                //jumping
+                else if (jumping) {
+                    for (int k=player.anim.size()-1;k>=0;k--){
+                        if (player.animID.get( k ).equalsIgnoreCase( "equip" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( 0.25f, true );
                             break;
-                        case 1: //right
-                            player.setFlip( false, false );
+                        }
+                        if (player.animID.get( k ).equalsIgnoreCase( "basic" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( 0.25f, true );
                             break;
-                        case 2: //left
-                            player.setFlip( true, false );
-                            break;
-                        case 3: //up
-                            break;
+                        }
                     }
                 }
 
-            }
-            if (rpg) jumping=false;
-
-        }
-        else if ((ladder || floater || sinker) && player.moving )
-        {
-            if (ladder && rpg) player.dir=3;
-
-            playerTime +=delta;
-            if (player.anim.size()>1) {
-
-                TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( playerTime, true );
-                player.setRegion( currentFramea );
-            }
-            else if (player.anim.size()==1) {
-
-                TextureRegion currentFramea = player.anim.get(0).getKeyFrame( playerTime, true );
-                player.setRegion( currentFramea );
-            }
-
-        }else
-        {
-            //idle animation if you will...
-
-            if (player.anim.size()>0) {
-                TextureRegion currentFramea;
-                if (player.anim.size()==1){
-                    currentFramea = player.anim.get( 0 ).getKeyFrame( 0, true );
-                    player.setRegion( currentFramea );
-
-                    switch (player.dir){
-                        case 0: case 3:
+                 else if (!player.moving) {
+                    //idle
+                    for (int k=player.anim.size()-1;k>=0;k--){
+                        if (player.animID.get( k ).equalsIgnoreCase( "equip" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( 0, true );
                             break;
-                        case 1:
-                            player.setFlip( false,false );
+                        }
+                        if (player.animID.get( k ).equalsIgnoreCase( "basic" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( 0, true );
                             break;
-                        case 2:
-                            player.setFlip( true,false );
-                            break;
+                        }
                     }
-                }else{
-                    currentFramea = player.anim.get( player.dir ).getKeyFrame( 0, true );
-                    player.setRegion( currentFramea );
-                }
-            }
-        }
 
-    }
+                }
+
+                if (jetpack) {
+                    for (int k=player.anim.size()-1;k>=0;k--){
+                        if (player.animID.get( k ).equalsIgnoreCase( "use" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( playerTime, true );
+                            break;
+                        }
+                        if (player.animID.get( k ).equalsIgnoreCase( "basic" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( playerTime, true );
+                            break;
+                        }
+                    }
+
+                }
+                player.setRegion( currentFramea );
+
+                //flip after setting region.
+                switch (player.dir) {
+                    case 0: //down
+                        break;
+                    case 1: //right
+                        player.setFlip( false, false );
+                        break;
+                    case 2: //left
+                        player.setFlip( true, false );
+                        break;
+                    case 3: //up
+                        break;
+                }
+
+            } //rpg or not
+        } //has anim or not
+    } //void
+
     public void playSfx(Sound s){
         if (s!=null) s.play(1.0f);
     }
@@ -1237,7 +1218,7 @@ public class game {
                 jumping = true;
                 onplatformv = false;
             }
-            if (ladder || floater || sinker) {
+            if (ladder && !jumping) {
 
                 player.body.setLinearVelocity( 0, player.speed );
                 return;
@@ -1261,7 +1242,7 @@ public class game {
                 //player.body.applyLinearImpulse( 0f, -stompForce, player.getX(), player.getY(), true );
                 stompinterval = 1;
             }
-            if (ladder || floater || sinker) {
+            if (ladder && !jumping) {
                 player.body.setLinearVelocity( 0, -player.speed );
                 return;
             }
@@ -1284,7 +1265,7 @@ public class game {
         player.moving=true;
         player.dir=2;
 
-        if (ladder || floater || sinker) {
+        if (ladder && !jumping) {
             player.body.setLinearVelocity(-player.speed,0);
             return;
         }
@@ -1302,7 +1283,7 @@ public class game {
     public void pressright(){
         player.moving=true;
         player.dir=1;
-        if (ladder || floater || sinker) {
+        if (ladder  && !jumping) {
             player.body.setLinearVelocity(player.speed,0);
             return;
         }
@@ -1356,8 +1337,9 @@ public class game {
     public boolean disableYaxis = false;
     boolean dashed = false;
     boolean jetpack = false;
-    float jetpackcooldown =0;
+    float jetpackcooldown =0f;
     float gravity;
+    public float varaccumulator;
     public void act(gameobject go){
 //        Gdx.app.log(go.pcooldown+"", go.cooldown+"");
         if (go==null) return;
@@ -1383,7 +1365,7 @@ public class game {
                 if (go.cooldown>0) return;
                 playSfx( go.sfx );
                 jetpack = true;
-                //    jetpackcooldown = 0.1f;
+                jetpackcooldown = 0.1f;
                 player.body.applyLinearImpulse( 0f, gravity*go.impulse, player.getX(), player.getY(), true );
                 jumping = true;
                 go.cooldown=go.pcooldown;
@@ -1464,8 +1446,26 @@ public class game {
         if (go.bindvar!=null){
             if (getVar( go.bindvar )<=0) {
                 go.action= gameobject.actions.NONE;
+                for (int i=player.anim.size()-1;i>=0;i--){
+                    if (player.animID.get( i ).equalsIgnoreCase( "use" )){
+                        player.animID.remove( i );
+                        player.anim.remove( i );
+                        continue;
+                    }
+                    if (player.animID.get( i ).equalsIgnoreCase( "equip" )){
+                        player.animID.remove( i );
+                        player.anim.remove( i );
+                        continue;
+                    }
+                }
             }else{
-                setOrAddVars( go.bindvar,1, VAROP.SUB );
+                varaccumulator += delta;
+                while (varaccumulator >= OBJ_STEP) {
+                    varaccumulator -= OBJ_STEP;
+                    setOrAddVars( go.bindvar,1, VAROP.SUB );
+                }
+
+
             }
 
         }
@@ -1587,6 +1587,7 @@ public class game {
             for (int i=0;i<animids.size();i++) {
                 if (animids.get( i ) == tlcece.getId()) {
                     newbrick.anim.add( anims.get( i )) ;
+                    newbrick.animID.add( "basic" );
                 }
             }
 
@@ -1617,6 +1618,8 @@ public class game {
         newbrick.rotating = o.containsKey( "rotating" );
         newbrick.destructible = o.containsKey( "destructible" );
         newbrick.light = (o.containsKey( "light" )) ? Float.parseFloat( o.get( "light" ).toString() ) : 0;
+
+
 
         if (o.containsKey( "lightcolor" )){
             String cs = o.get( "lightcolor" ).toString();
@@ -1790,6 +1793,7 @@ public class game {
                             }
                             Animation<TextureRegion> tempAnim = new Animation<>( 0.1f, walkFrames );
                             newbrick.anim.add( tempAnim );
+                            newbrick.animID.add( "rpg"+i );
                         }
                     }
 
@@ -2197,7 +2201,7 @@ public class game {
         Table action = new Table();
         control.padTop(1000);
         control.add( tpad );
-        control.add().pad(1000);
+        control.add().pad(1200);
         action.add();
         action.add( slot4 );
         action.add();
@@ -2294,7 +2298,10 @@ public class game {
                 if (Gdx.input.isTouched( i )) {
                     Vector3 touch2 = new Vector3();
                     gamecam.unproject( touch2.set( Gdx.input.getX( i ), Gdx.input.getY( i ), 0 ) );
-                    if (touchpoint != null) touchpoint.body.setTransform( touch2.x, touch2.y, 0 );
+                    if (touchpoint != null) {
+                        touchpoint.body.setTransform( touch2.x, touch2.y, 0 );
+                        touchpoint.body.setActive( true );
+                    }
                 }
             }
         }
