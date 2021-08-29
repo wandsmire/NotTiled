@@ -263,7 +263,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     SpriteBatch batch, ui;
     myShapeRenderer uis;
     ShapeRendererPlus sr;
-    OrthographicCamera cam, uicam, tilecam, minicam, gamecam;
+    OrthographicCamera cam, uicam, tilecam, minicam;
 
 
     GestureDetector gd;
@@ -1177,6 +1177,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void drawLoadingScreen() {
         //if(!task.isDone()) {
+
+
+
         Gdx.gl.glEnable( GL20.GL_BLEND );
         Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
 
@@ -1217,6 +1220,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     @Override
     public void render() {
+        if (kartu.equalsIgnoreCase( "game" )){
+            if (!mygame.render()) backToMap();
+            return;
+        }
 
         if (requestavailable) fullfilrequest();
 
@@ -1249,30 +1256,31 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     firstload = -1;
                 }
 
-                if (timeToPan >= 0) {
-                    timeToPan -= delta;
-                    float progress = timeToPan < 0 ? 1 : 1f - timeToPan / panDuration;
-                    OrthographicCamera cammy;
-                    switch (panType) {
-                        case 1:
-                            cammy = tilecam;
-                            break;
-                        case 2:
-                            cammy = uicam;
-                            break;
-                        case 3:
-                            cammy = gamecam;
-                            break;
-                        default:
-                            cammy = cam;
-                    }
-                    cammy.position.x = Interpolation.fade.apply( panOriginX, panTargetX, progress );
-                    cammy.position.y = Interpolation.fade.apply( panOriginY, panTargetY, progress );
-                    cammy.zoom = Interpolation.fade.apply( panOriginZoom, panTargetZoom, progress );
-                    //cammy.position.x = (float) Math.round(cammy.position.x * 100f) / 100f;
-                    //cammy.position.y = (float) Math.round(cammy.position.y * 100f) / 100f;
+                if (!kartu.equalsIgnoreCase( "game")) {
+                    if (timeToPan >= 0) {
+                        timeToPan -= delta;
+                        float progress = timeToPan < 0 ? 1 : 1f - timeToPan / panDuration;
+                        OrthographicCamera cammy;
+                        switch (panType) {
+                            case 1:
+                                cammy = tilecam;
+                                break;
+                            case 2:
+                                cammy = uicam;
+                                break;
+                            default:
+                                cammy = cam;
+                        }
 
-                    cammy.update();
+
+                        cammy.position.x = Interpolation.fade.apply( panOriginX, panTargetX, progress );
+                        cammy.position.y = Interpolation.fade.apply( panOriginY, panTargetY, progress );
+                        cammy.zoom = Interpolation.fade.apply( panOriginZoom, panTargetZoom, progress );
+                        //cammy.position.x = (float) Math.round(cammy.position.x * 100f) / 100f;
+                        //cammy.position.y = (float) Math.round(cammy.position.y * 100f) / 100f;
+
+                        cammy.update();
+                    }
                 }
 
 
@@ -1368,220 +1376,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 if (nofling > 0) nofling -= delta;
                 switch (kartu) {
-                    case "game":
-
-                        //crt.setEnabled(true);
-                        //vignette.setEnabled(true);
-                        //curvature.setEnabled(true);
-
-                        //bloom.setEnabled( true );
-                        //bloom.setBlurAmount( 2f );
-                        //bloom.setBloomIntesity( 1f );
-                        //bloom.setBaseIntesity( 1f );
-
-
-                        //postProcessor.capture();
-                        mygame.keyinput();
-                        Gdx.gl.glClearColor( mygame.bgcolor.r,mygame.bgcolor.g,mygame.bgcolor.b,mygame.bgcolor.a);
-                        Gdx.gl.glClear( GL20.GL_COLOR_BUFFER_BIT );
-                        batch.setProjectionMatrix( gamecam.combined );
-                        batch.begin();
-                        if (mygame.txBackground != null)
-                            batch.draw( mygame.txBackground, gamecam.position.x - 2f, gamecam.position.y - 2f, 4, 4 );
-                        batch.end();
-
-                        mygame.renderer.setView( gamecam );
-
-                            mygame.renderer.render();
-                            batch.setProjectionMatrix( gamecam.combined );
-                            batch.begin();
-
-                            ///
-
-                            if (!mygame.loadingmap) mygame.update( batch, delta, gamecam );
-
-                            if (mygame.debugmode)
-                                mygame.b2dr.render( mygame.world, gamecam.combined );
-
-                            batch.end();
-
-                        //postProcessor.render();
-                        if (mygame.night) {
-                            //mygame.rayHandler.setCombinedMatrix( gamecam);
-                            //mygame.rayHandler.updateAndRender();
-                        }
-
-
-                        Vector3 mouse = new Vector3( Gdx.input.getX(), Gdx.input.getY(), 0 );
-                        uicam.unproject( mouse ); // mousePos is now in world coordinates
-
-                        //background tombol
-                        Gdx.gl.glEnable( GL20.GL_BLEND );
-                        Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
-                        uis.setProjectionMatrix( uicam.combined );
-                        uis.begin( ShapeRenderer.ShapeType.Filled );
-                        uis.setColor( 0f, 0f, 0, 0.6f );
-                        if (Gdx.app.getType() != Application.ApplicationType.Desktop || mygame.uitest) {
-                            if (!mygame.starting && mygame.player.state != gameobject.states.DEAD && mygame.fade==0) {
-                                /*
-                                if (!mygame.disablecontrol) {
-
-                                    if (!mygame.disabledpad) {
-                                        if (!mygame.disableXaxis) {
-                                            uisrect( gui.left, mouse, null );
-                                            uisrect( gui.right, mouse, null );
-                                        }
-                                        if (!mygame.disableYaxis) {
-                                            uisrect( gui.up, mouse, null );
-                                            uisrect( gui.down, mouse, null );
-                                        }
-                                    }
-                                    if (mygame.action1 != null && mygame.action1.action!= gameobject.actions.NONE) uisrect( gui.action1, mouse, null );
-                                    if (mygame.action2 != null && mygame.action2.action!= gameobject.actions.NONE) uisrect( gui.action2, mouse, null );
-                                    if (mygame.action3 != null && mygame.action3.action!= gameobject.actions.NONE) uisrect( gui.action3, mouse, null );
-                                    if (mygame.action4 != null && mygame.action4.action!= gameobject.actions.NONE) uisrect( gui.action4, mouse, null );
-                                }
-
-                                 */
-                            }
-                        }
-                        //uisrect(gui.restart,mouse,null);
-                        if (mygame.player.state == gameobject.states.DEAD || (mygame.victory && mygame.nextlevel != null) || mygame.starting)
-                           // uisrect( gui.respawn, mouse, new Color( 0, 1f, 0, 1f ) );
-                        if (mygame.playtest  && mygame.fade==0) uisrect( gui.exit, mouse, null );
-                        if (mygame.victory || mygame.player.state == gameobject.states.DEAD || mygame.starting)
-                            uisrect( gui.gamestatus, mouse, null );
-                        uis.end();
-
-                        ui.setProjectionMatrix( uicam.combined );
-                        ui.begin();
-                        str1.getData().setScale( 0.8f );
-                        if (landscape) {
-                            mygame.drawHUD( ui, str1, ssx );
-                        } else {
-                            mygame.drawHUD( ui, str1, ssy );
-                        }
-                        str1.getData().setScale( 0.8f );
-                        if (mygame.message!=null){
-                            if (!landscape) {
-                                str1.draw( ui, mygame.message, 0, ssy-20, ssx, Align.center, true );
-                            }else{
-                                str1.draw( ui, mygame.message, 0, ssx-20, ssy, Align.center, true );
-                            }
-                        }
-
-                        if (mygame.orientation!=0){
-                            face.setOrientation( mygame.orientation );
-                            mygame.orientation=0;
-                        }
-
-                        if (mygame.victory) {
-                            String msg = mygame.debriefing;
-                            if (msg == null) msg = "You Win!";
-                            str1draw( ui, msg, gui.gamestatus );
-
-                        } else if (mygame.starting) {
-
-                            String msg = mygame.briefing[mygame.msgindex].replace( "\\n", "\n" );
-                            if (msg == null) msg = "Ready?";
-                            str1draw( ui, msg, gui.gamestatus );
-
-
-                        } else if (mygame.player.state == gameobject.states.DEAD) {
-                            String msg = mygame.died;
-                            if (msg == null) msg = "Oops... try again?";
-                            str1draw( ui, msg, gui.gamestatus );
-                        }
-
-
-
-
-                        //str1draw(ui,"Keys : "+mygame.key+" | Items Left : "+mygame.coin , gui.layer);
-                        if (Gdx.app.getType() != Application.ApplicationType.Desktop || mygame.uitest) {
-                            if (!mygame.starting && mygame.player.state != gameobject.states.DEAD  && mygame.fade==0) {
-                                /*
-                                if (!mygame.disablecontrol) {
-                                    if (!mygame.disabledpad) {
-
-                                        if (!mygame.disabledpad) {
-                                            if (!mygame.disableXaxis) {
-                                                uidrawbutton( txLeft, "Left", gui.left, 3 );
-                                                uidrawbutton( txRight, "Right", gui.right, 3 );
-                                            }
-                                            if (!mygame.disableYaxis) {
-                                                uidrawbutton( txUp, "Up", gui.up, 3 );
-                                                uidrawbutton( txDown, "Down", gui.down, 3 );
-                                            }
-                                        }
-
-                                    }
-                                    if (mygame.action1 != null && mygame.action1.action!= gameobject.actions.NONE)
-                                        uidrawbutton( txRight, mygame.action1.name, gui.action1, 3 );
-                                    if (mygame.action2 != null && mygame.action2.action!= gameobject.actions.NONE)
-                                        uidrawbutton( txDown, mygame.action2.name, gui.action2, 3 );
-                                    if (mygame.action3 != null && mygame.action3.action!= gameobject.actions.NONE)
-                                        uidrawbutton( txLeft, mygame.action3.name, gui.action3, 3 );
-                                    if (mygame.action4 != null && mygame.action4.action!= gameobject.actions.NONE)
-                                        uidrawbutton( txUp, mygame.action4.name, gui.action4, 3 );
-                                }
-
-                                 */
-                            }
-
-
-
-
-                        }
-                        //str1draw(ui,"Restart", gui.restart);
-                        //if (mygame.player.state == gameobject.states.DEAD)
-                           // str1draw( ui, "Respawn", gui.respawn );
-                        //if (mygame.victory && mygame.nextlevel != null)
-                            //str1draw( ui, "Next Level", gui.respawn );
-                        //if (mygame.starting) str1draw( ui, "OK", gui.respawn );
-                        if (mygame.playtest && mygame.fade==0) str1draw( ui, "X", gui.exit );
-                        // if (mygame.fade>0) str1draw( ui, "Loading...", gui.respawn );
-
-                        ui.end();
-
-                        if (!mygame.disablecontrol) {
-                            stage.act( delta );
-                            stage.draw();
-                        }
-
-                        if (mygame.loadingmap || mygame.transitioning) {
-                            uis.begin( ShapeRenderer.ShapeType.Filled );
-                            Gdx.gl.glEnable( GL20.GL_BLEND );
-                            Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
-
-                            uis.setColor( 0f, 0f, 0, 1f );
-                            if (landscape) uis.rect( 0, 0, ssy, ssx );
-                            if (!landscape) uis.rect( 0, 0, ssx, ssy );
-                            uis.end();
-                        }
-
-                        if (mygame.fadein>0) {
-                            uis.begin( ShapeRenderer.ShapeType.Filled );
-                            Gdx.gl.glEnable( GL20.GL_BLEND );
-                            Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
-
-                            uis.setColor( 0f, 0f, 0, mygame.fadein / mygame.fadeinmax );
-                            if (landscape) uis.rect( 0, 0, ssy, ssx );
-                            if (!landscape) uis.rect( 0, 0, ssx, ssy );
-                            uis.end();
-                        }
-
-                        if (mygame.fadeout>0) {
-                            uis.begin( ShapeRenderer.ShapeType.Filled );
-                            Gdx.gl.glEnable( GL20.GL_BLEND );
-                            Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
-
-                            uis.setColor( 0f, 0f, 0, 1-((mygame.fadeout-1) / mygame.fadeoutmax) );
-                            if (landscape) uis.rect( 0, 0, ssy, ssx );
-                            if (!landscape) uis.rect( 0, 0, ssx, ssy );
-                            uis.end();
-                        }
-
-                        break;
                     case "world":
                         bloom.setEnabled( false );
                         vignette.setEnabled( false );
@@ -1899,25 +1693,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
 
-    public void escapegame() {
-        face.setOrientation( 0 );
-        kartu = "world";
-        backToMap();
-        if (mygame.bgm==null) return;
-        if (mygame.bgm.isPlaying()) mygame.bgm.stop();
-    }
-
-    public void restartgame() {
-        if (mygame.bgm.isPlaying()) mygame.bgm.stop();
-        playgame( curdir, mygame.file );
-    }
-
-    public void nextlevel() {
-        prefs.putString( curfile, mygame.nextlevel ).flush();
-        if (mygame.bgm.isPlaying()) mygame.bgm.stop();
-        if (mygame.nextlevel != null) playgame( curdir, mygame.nextlevel );
-
-    }
 
     boolean touched, usetool;
     boolean touchable = true;
@@ -1965,139 +1740,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             cam.update();
-            // cam.translate( -x, y );
-
-            //if (p1>500) cam.position.x-=10;
-            //    if (cam.position.x > Tsw * Tw - onset) cam.position.x = Tsw * Tw - onset;
-            //   if (cam.position.y < -Tsh * Th) cam.position.y = -Tsh * Th;
-            //   if (cam.position.y > 0) cam.position.y = 0;
-
-
         }
-
-        if (kartu == "game") {
-
-            if (Gdx.input.isKeyJustPressed( Input.Keys.ESCAPE )) escapegame();
-            if (Gdx.input.isKeyJustPressed( Input.Keys.R )) restartgame();
-
-            if (Gdx.input.isKeyJustPressed( Input.Keys.SPACE )) {
-                if (mygame.victory) {
-                    nextlevel();
-                } else if (mygame.starting) {
-                    if (mygame.msgindex < mygame.briefing.length - 1) {
-                        mygame.msgindex += 1;
-                    } else {
-                        mygame.starting = false;
-                    }
-
-                } else if (mygame.player.state == gameobject.states.DEAD) {
-                    mygame.respawn();
-                }
-            }
-
-            if (touchable == false && !Gdx.input.isTouched()) {
-                touchable = true;
-            }
-            boolean pressed = false;
-            for (int i = 0; i < 5; i++) { // 20 is max number of touch points
-                if (Gdx.input.isTouched( i )) {
-                    Vector3 touch2 = new Vector3();
-                    uicam.unproject( touch2.set( Gdx.input.getX( i ), Gdx.input.getY( i ), 0 ) );
-
-                    //no limitation
-                    //if (tapped(touch2, gui.restart)) restartgame();
-                    if (tapped( touch2, gui.exit ) && mygame.playtest) escapegame();
-
-                    //no press when victory
-
-
-                    if (tapped( touch2, gui.gamestatus ) && touchable) {
-                        touchable = false;
-                        if (mygame.player.state == gameobject.states.DEAD) {
-                            mygame.respawn();
-                        }
-                        if (mygame.victory && mygame.nextlevel != null) {
-                            nextlevel();
-                        }
-                        if (mygame.starting) {
-                            if (mygame.msgindex < mygame.briefing.length - 1) {
-                                mygame.msgindex += 1;
-                            } else {
-                                mygame.starting = false;
-                            }
-
-                        }
-                    }
-
-                    if (mygame.victory || mygame.starting) return;
-                    //no press when dead, no press when desktop
-                    if (Gdx.app.getType() != Application.ApplicationType.Desktop || mygame.uitest) {
-                        if (mygame.player.state == com.mirwanda.nottiled.platformer.gameobject.states.DEAD)
-                            return;
-                        pressed = true;
-
-
-                        if (tslot1 && mygame.action1 != null && mygame.action1.action!= gameobject.actions.NONE) mygame.act( mygame.action1 );
-                        if (tslot2 && mygame.action2 != null && mygame.action2.action!= gameobject.actions.NONE) mygame.act( mygame.action2 );
-                        if (tslot3 && mygame.action3 != null && mygame.action3.action!= gameobject.actions.NONE) mygame.act( mygame.action3 );
-                        if (tslot4 && mygame.action4 != null && mygame.action4.action!= gameobject.actions.NONE) mygame.act( mygame.action4 );
-
-                        if (tanalog){
-                            float deltaX = tpad.getKnobPercentX();
-                            float deltaY = tpad.getKnobPercentY();
-                            if (deltaY>0.4f){
-                                mygame.pressup();
-                            }
-                            if (deltaY<-0.4f){
-                                mygame.pressdown();
-                            }
-
-                            if (deltaX>0.4f){
-                                mygame.pressright();
-                            }
-                            if (deltaX<-0.4f){
-                                mygame.pressleft();
-                            }
-
-                        }
-                        /*
-                        if (!mygame.disablecontrol) {
-
-                            if (!mygame.disabledpad) {
-                                if (!mygame.disableYaxis) {
-                                    if (tapped( touch2, gui.up )) mygame.pressup();
-                                    if (tapped( touch2, gui.down )) mygame.pressdown();
-                                }
-                                if (!mygame.disableXaxis) {
-                                    if (tapped( touch2, gui.left )) mygame.pressleft();
-                                    if (tapped( touch2, gui.right )) mygame.pressright();
-                                }
-                            }
-                            if (mygame.action1 != null && tapped( touch2, gui.action1 ))
-                                mygame.act( mygame.action1 );
-                            if (mygame.action2 != null && tapped( touch2, gui.action2 ))
-                                mygame.act( mygame.action2 );
-                            if (mygame.action3 != null && tapped( touch2, gui.action3 ))
-                                mygame.act( mygame.action3 );
-                            if (mygame.action4 != null && tapped( touch2, gui.action4 ))
-                                mygame.act( mygame.action4 );
-                        }
-
-                         */
-                    }
-
-                }
-
-            }
-            if (Gdx.app.getType() == Application.ApplicationType.Desktop && !mygame.uitest) return;
-
-            if (!pressed) {
-                mygame.stand();
-            }
-            return;
-
-        }
-
 
         if (Gdx.input.isKeyPressed( Input.Keys.CONTROL_LEFT ) && Gdx.input.isKeyJustPressed( Input.Keys.Z )) {
             if (mode == "tile") {
@@ -4393,10 +4036,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     @Override
     public void dispose() {
+        if (mygame!=null) mygame.dispose();
     }
 
     @Override
     public void resize(int width, int height) {
+        if (kartu == "game") {
+            mygame.resize( width, height );
+            return;
+        }
+
+
+
         //if (loadingfile) return;
         float tx, ty, tz;
         float tx1, ty1, tz1;
@@ -4423,7 +4074,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tilecam.setToOrtho( false, ssy, ssx );
             uicam.setToOrtho( false, ssy, ssx );
             minicam.setToOrtho( false, ssy, ssx );
-            gamecam.setToOrtho( false, 20, 11 );
             tx3 = Tsw * Tw * 10f;
             ty3 = 0;
             tz3 = 0;
@@ -4437,7 +4087,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tilecam.setToOrtho( false, ssx, ssy );
             uicam.setToOrtho( false, ssx, ssy );
             minicam.setToOrtho( false, ssx, ssy );
-            gamecam.setToOrtho( false, 11, 20 );
             tx3 = 0;
             ty3 = -0;
             tz3 = 0;
@@ -4454,15 +4103,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             //gotoStage(lastStage);
             //backToMap();
-        } else if (kartu == "game") {
         } else {
             if (dialog != null) {
                 dialog.hide();
 
             }
             if (startup != false) {
-                //setMenuMap();
-                //gotoStage(tMenu);
+
             }
             startup = true;
 
@@ -4473,21 +4120,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         cam.update();
         tilecam.position.set( tx1, ty1, tz1 );
         tilecam.update();
-        gamecam.update();
         recenterUI();
         resetMinimap();
         resetCaches();
-        //resetcam(false);
-        //minicam.position.set(tx3,ty3,tz3);
-        //minicam.update();
-        //uicam.position.set(tx2,ty2,tz2);
-        //uicam.update();
-        if (kartu == "game") {
-            this.stage.clear();
-            this.stage.addActor(this.control);
-            Gdx.input.setInputProcessor(this.stage);
 
-        }
     }
 
     @Override
@@ -5591,7 +5227,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tilecam = new OrthographicCamera( ssx, ssy );
             uicam = new OrthographicCamera( ssx, ssy );
             cam = new OrthographicCamera( ssx, ssy );
-            gamecam = new OrthographicCamera( ssx, ssy );
             minicam = new OrthographicCamera( 11, 20 );
         } else {
             hstage = new Stage( new StretchViewport( ssx * 1.5f, ssy * 1.5f ) );
@@ -5600,7 +5235,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tilecam = new OrthographicCamera( ssy, ssx );
             uicam = new OrthographicCamera( ssy, ssx );
             cam = new OrthographicCamera( ssy, ssx );
-            gamecam = new OrthographicCamera( ssy, ssx );
             minicam = new OrthographicCamera( 20, 11 );
 
         }
@@ -23027,20 +22661,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
     private void playgame(final String curdir, final String filex){
-
-            mygame = new com.mirwanda.nottiled.platformer.game();
-            if (mygame.initialise(curdir, filex,true)) {
-                kartu = "game";
-                Gdx.input.setInputProcessor( im );
-                gamecam.zoom = 0.2f;
-                gamecam.position.set( mygame.player.body.getPosition().x, mygame.player.body.getPosition().y, 0 );
-                gamecam.update();
-                stage.clear();
-                stage.addActor(control);
-                Gdx.input.setInputProcessor(stage);
-            }else{
-                msgbox("Cannot play.\nPlease make sure:\n1. There is a player tile.\n2. No image layer is used.");
-            }
+        kartu="game";
+        mygame = new com.mirwanda.nottiled.platformer.game();
+        mygame.create();
+        mygame.startgame( curdir,filex ,true);
 
     }
 

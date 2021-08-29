@@ -9,12 +9,15 @@ import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.MapObjects;
@@ -37,10 +40,23 @@ import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.Box2D;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
 import com.badlogic.gdx.physics.box2d.World;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Button;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.Touchpad;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.utils.viewport.StretchViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
+import com.mirwanda.nottiled.myShapeRenderer;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ALLSENSOR;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BLOCK;
@@ -49,16 +65,14 @@ import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ITEM;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ITEMSENSOR;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.LISTENER;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYERPROJECTILE;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.TOUCHSENSOR;
 import static com.mirwanda.nottiled.platformer.gameobject.states.DEAD;
-
-//import java.io.StringWriter;
-//import box2dLight.RayHandler;
 
 
 public class game {
     public boolean debugmode = false;
     public boolean playtest=true;
-    public boolean uitest=true;
+    public boolean uitest=false;
     public int orientation;
     public boolean night=false;
     public TiledMap map;
@@ -70,9 +84,28 @@ public class game {
     public boolean loadingmap;
     public boolean rpg=false;
     public Vector2 move;
+/////////////////////
+    float delta;
+    public Stage stage;
+
+    SpriteBatch batch, ui;
+    myShapeRenderer uis;
+    public Skin skin2;
+    BitmapFont str1;
+    int ssx = 480;
+    int ssy = 800;
+    int fontsize;
+
+    private Table control;
+    private Touchpad tpad;
+    private boolean tanalog;
+    private boolean tslot1,tslot2,tslot3,tslot4;
 
     public WorldContactListener mycontactlistener;
     public savegame save = new savegame();
+
+    OrthographicCamera uicam, gamecam;
+    Viewport uicamVP, gamecamVP;
 
     public Vector2 checkpoint = new Vector2();
     public gameobject player;
@@ -80,6 +113,7 @@ public class game {
     public gameobject action2;
     public gameobject action3;
     public gameobject action4;
+    public gameobject touchpoint;
 
     public List<gameobject> objects = new ArrayList<>();
     public List<particle> particles = new ArrayList<>();
@@ -95,9 +129,6 @@ public class game {
 
     //SOUND
     public Music bgm;
-
-    public int key;
-    public int coin;
     public int dead;
     public String nextlevel;
     public String[] briefing;
@@ -141,13 +172,80 @@ public class game {
     public static final short ENEMYPROJECTILE_BIT = 256;
     public static final short ITEMSENSOR_BIT = 512;
     public static final short ALLSENSOR_BIT = 1024;
+    public static final short TOUCHSENSOR_BIT = 2048;
     public int Tw;
     public int Th;
     public float Tsw;
     public float Tsh;
-    //public RayHandler rayHandler;
     public float scale=100f;
     public Color bgcolor=Color.LIGHT_GRAY;
+
+    public void create(){
+        batch = new SpriteBatch();
+        int assx = Gdx.graphics.getWidth();
+        int assy = Gdx.graphics.getHeight();
+        if (assx < assy) {
+            ssx = assx;
+            ssy = assy;
+        } else {
+            ssx = assy;
+            ssy = assx;
+        }
+        if (ssx < ssy) {
+
+            uicam = new OrthographicCamera();
+            gamecam = new OrthographicCamera();
+            uicamVP = new StretchViewport( 1920,1080 ,uicam);
+            gamecamVP = new StretchViewport( 20,11 ,gamecam);
+        } else {
+            uicam = new OrthographicCamera();
+            gamecam = new OrthographicCamera();
+            uicamVP = new StretchViewport( 1080,1920 ,uicam);
+            gamecamVP = new StretchViewport( 11, 20 ,gamecam);
+
+        }
+        uicamVP.apply(true);
+        gamecamVP.apply(true);
+        stage = new Stage( new StretchViewport( 3840 ,2160) );
+
+
+        fontsize = 48;
+
+        ui = new SpriteBatch();
+        uis = new myShapeRenderer();
+        skin2 = new Skin( Gdx.files.internal( "skins/skin/skin.json" ));
+
+
+        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        FileHandle fileHandl = Gdx.files.internal("languages/characters");
+        Map<String, String> vars = new HashMap<>();
+        String allstr = fileHandl.readString();
+        String[] cumi = allstr.split("\r\n");
+        for (String s : cumi) {
+            String[] cuma = s.split( ":" );
+            vars.put( cuma[0], cuma[1] );
+        }
+
+        String language = "English";
+        parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS + vars.get( language );
+        parameter.borderColor = new Color(.5f, .5f, .5f, .9f);
+        parameter.borderWidth = 0;
+        parameter.size = fontsize;
+
+
+        parameter.shadowColor = new Color(0f, 0f, 0f, .9f);
+        parameter.shadowOffsetY = 4;
+        FreeTypeFontGenerator generator;
+
+        String filenam = "retro.ttf";
+
+        generator = new FreeTypeFontGenerator(Gdx.files.internal(filenam));
+        FreeTypeFontGenerator.setMaxTextureSize( 99999 );
+        str1 = generator.generateFont(parameter);
+        generator.dispose();
+        loadTouchpad();
+
+    }
 
 
     public boolean initialise(String path, String filename, boolean playtest){
@@ -176,6 +274,9 @@ public class game {
             fade=5;
             victory = false;
             loadingmap = false;
+            ladder=false;
+            touchedladder=0;
+            player.body.setGravityScale(1);
             fadein = fadeinmax;
             log("initialisation finished!");
 
@@ -411,8 +512,6 @@ public class game {
                 this.Th = tlayer.getHeight();
                 this.Tsw = tlayer.getTileWidth();
                 this.Tsh = tlayer.getTileHeight();
-                int total = 0;
-                int objec = 0;
 
                 for (int yy = 0; yy < tlayer.getHeight(); yy++) {
                     for (int xx = 0; xx < tlayer.getWidth(); xx++) {
@@ -422,12 +521,10 @@ public class game {
                         {
                             continue;
                         }
-                        //objec++;
-                        //log("TOTAL: "+total+" | OBJECT: "+objec);
 
                         //NOTE: do not put exception in a tight loop.
-                        float ww = 0;
-                        float hh = 0;
+                        float ww;
+                        float hh;
                         ww = cece.getTile().getTextureRegion().getRegionWidth();
                         hh = cece.getTile().getTextureRegion().getRegionHeight();
                         setGameObject( false, cece, xx * Tsw, yy * Tsh, ww, hh, over, null, opacity );
@@ -597,25 +694,48 @@ public class game {
         }
     }
 
-    public void drawHUD(SpriteBatch b, BitmapFont str1, int ssy){
+    public void drawHUD(SpriteBatch b, BitmapFont str1){
         int index=0;
         for (KV vr: save.vars){
             if (vr.hud){
                 if (vr.hasicon) {
                     try {
-                        str1.draw( b, "  :  " + vr.value, 90, ssy - 20 - 60 * index );
-                        b.draw( icons[vr.icony][vr.iconx], 50, ssy - 65 - 60 * index, 48, 48 );
+                        str1.draw( b, "  :  " + vr.value, 90, 1080 - 35 - 60 * index );
+                        b.draw( icons[vr.icony][vr.iconx], 50, 1080 - 80 - 60 * index, 48, 48 );
                     }catch(Exception e){
                         e.printStackTrace();
                     }
-                   // str1.draw( b, vr.value, ssy-10-10*index)
                 }else{
-                    str1.draw( b, vr.key+" : " + vr.value, 50,ssy-20-60*index);
+                    str1.draw( b, vr.key+" : " + vr.value, 50,1080-35-60*index);
                 }
                 index++;
             }
         }
+
+        if (message!=null) str1.draw( ui, message, 0, 1080-35, 1920, Align.center, true );
+
+        float input=timer;
+        int MM;
+        int SS;
+        int MS;
+
+        MM = (int) input / 60;
+        SS = (int) (input % 60 ) % 60  ;
+        MS = ((int) (input*100))-(((int) input)*100);
+
+        String sMM = MM<10 ? "0"+MM : ""+MM;
+        String sSS = SS<10 ? "0"+SS : ""+SS;
+        String sMS = MS<10 ? "0"+MS : ""+MS;
+
+        String time = sMM+":"+sSS+"."+sMS;
+
+        str1.getData().setScale( 0.8f );
+
+        if (timer>0) str1.draw( ui, time, 1920 - 300, 1080 - 35, 200, Align.left, false );
+
     }
+
+
     public float getVar(String key){
         if (key==null) return 0;
         for (KV vr: save.vars){
@@ -644,18 +764,41 @@ public class game {
     public float zoom=0.2f;
     public List<gameobject> overs = new ArrayList<>();
     public List<gameobject> deads = new ArrayList<>();
-    public void update(SpriteBatch batch, float delta, OrthographicCamera gamecam) {
-        if(loadingmap) return; //agar tidak concurrent.
+    public float accumulator;
+    public float objaccumulator;
+    public float TIME_STEP=1/60f;
+    public float OBJ_STEP=1/60f;
+    public boolean updatephysics;
+    public boolean updategameobject;
 
-        gc = gamecam;
-        if (gc.zoom != zoom) gc.zoom = zoom;
-        if (!starting && player.state != DEAD) world.step( 1 / 60f, 6, 2 );
+    public void update(SpriteBatch batch, float delta) {
+        if (loadingmap) return;
+        updateFixedTimeStamp();
+        updatePlayerMovement();
+        checkGameCondition();
+        checkHUD();
+        updateFadeAndTransfer();
+        updatePlayerSprite(delta);
+        updateGameObjects();
+    }
 
-        if (player.HP <= 0) {
-            killPlayer();
+    private void updateFixedTimeStamp() {
+        accumulator += delta;
+        while (accumulator >= TIME_STEP) {
+            if (!starting && player.state != DEAD) world.step( TIME_STEP, 6, 2 );
+            accumulator -= TIME_STEP;
+            updatephysics=true;
         }
-        if (player.HP > player.maxHP) {
-            player.HP = player.maxHP;
+    }
+
+    private void checkGameCondition() {
+        if (timetrial) timer+=delta;
+        if (player.HP <= 0) killPlayer();
+        if (player.HP > player.maxHP) player.HP = player.maxHP;
+
+        if (autorespawn>0){
+            autorespawn-=delta;
+            if (autorespawn<=0) respawn();
         }
 
         if (requestkill!=null){
@@ -671,79 +814,82 @@ public class game {
                 requestkill = null;
             }
         }
-        if (recoil){
-            salto=360;
-            player.body.applyLinearImpulse( player.body.getLinearVelocity().x,3f,player.body.getPosition().x,player.body.getPosition().y,true );
-            recoil=false;
+    }
+
+    private void updateGameObjects() {
+        //update objects
+        overs.clear();deads.clear();
+        updategameobject=false;
+        objaccumulator += delta;
+        int times =0;
+        //timestamp 1/60f
+        while (objaccumulator >= OBJ_STEP) {
+            objaccumulator -= OBJ_STEP;
+            times+=1;
+            updategameobject=true;
         }
 
-        if (!rpg){
-            if (world.getGravity().y!=0) gravity = -world.getGravity().y/Math.abs( world.getGravity().y);
-            if (jetpack) {
-                if (Math.abs(player.body.getLinearVelocity().y)>player.speed){
-                    player.body.setLinearVelocity( player.body.getLinearVelocity().x,gravity*player.speed );
-                }
+        for (int i=0;i<objects.size();i++){
+            gameobject go = objects.get(i);
+            if(loadingmap) return;
+            if (updatephysics) go.updatePhysics( delta );
+            if (updategameobject) go.update( times ,delta);
+            if (go.state==DEAD) deads.add( go );
+        }
 
-                jetpackcooldown -= delta;
-                if (jetpackcooldown<=0) jetpack=false;
-            }
+        for (gameobject go:deads)
+        {
+            go.removeCollision();
+            objects.remove( go );
+        }
 
-            if (player.body.getLinearVelocity().x >player.speed && !jumping) {
-                player.body.setLinearVelocity( player.speed,player.body.getLinearVelocity().y );
+        for (int i = particles.size() - 1; i >= 0; i--){
+            particle pe = particles.get(i);
+            pe.update( Gdx.graphics.getDeltaTime() );
+            if (pe.isComplete()) particles.remove( pe );
+        }
+
+        if (updategameobject) {
+            if (action1 != null) action1.update(1, delta );
+            if (action2 != null) action2.update(1, delta );
+            if (action3 != null) action3.update(1, delta );
+            if (action4 != null) action4.update(1, delta );
+        }
+
+    }
+
+    private void drawObjectsAndParticles(){
+        if (loadingmap) return;
+        for (gameobject go: objects){
+            if (!go.over & go!=player) {
+                if (go.getTexture() != null) go.draw( batch );
             }
-            if (player.body.getLinearVelocity().x <-player.speed && !jumping) {
-                player.body.setLinearVelocity( -player.speed,player.body.getLinearVelocity().y );
+            if (go.HP > 0 && go.HP !=go.maxHP) {
+                batch.draw( hpbar[1][0], go.getX(), go.getY() + go.getHeight() + 0.01f, go.getWidth(), hpbar[1][0].getRegionHeight() / scale );
+                batch.draw( hpbar[0][0], go.getX(), go.getY() + go.getHeight() + 0.01f, go.HP / go.maxHP * go.getWidth(), hpbar[0][0].getRegionHeight() / scale );
             }
 
         }
 
-        checkHUD();
+        if (player.state!=DEAD) player.draw( batch );
+
+        for (gameobject sboxes:overs)
+        {
+            if (sboxes.getTexture()!=null ) sboxes.draw(batch);
+        }
+
+        for (particle pe : particles){
+            pe.draw( batch );
+        }
+
+    }
+    private void updateFadeAndTransfer() {
+        //fade and transfer
         if (transformrequest) fullfilltransformrequest();
 
-        if (!rpg) {
-            if (Math.abs( player.body.getLinearVelocity().y ) > 0f) {
-                jumping = true;
-                jumpinterval = 0;
-            } else {
-                jumpinterval += delta;
-            }
-
-            if (jumpinterval >= 0.02f) {
-                jumping = false; dashed=false;
-            }
-            stompinterval -= delta;
-            if (stompinterval < 0) stompinterval = 0;
-        }
-        if (player.body.getPosition().y<=-Tsh/scale && player.state != DEAD)
-        {
-            //playSfx(sfxplayer);
-            dead+=1;
-            player.state = DEAD;
-
-        }
-
-        if (salto>0) salto-=20;
-
-        if (salto>=0){
-            if (player.dir==1){
-                player.setRotation( salto );
-            }
-            else {
-                player.setRotation( 360-salto );
-            }
-        }
-
-
-
-        //gamecam.position.set(player.body.getPosition().x,player.body.getPosition().y,0);
-
-        //if (gamecam.position.x >)
         float posex = player.body.getPosition().x;
         float posey = player.body.getPosition().y;
 
-
-
-        //Menggelap hingga hitam, lalu pindah map.
         if (fadeout>0){
             fadeout--;
             if (fadeout == 0) {
@@ -751,7 +897,6 @@ public class game {
                 return;
             }
         }
-
 
         if (fade>0){
             fade--;
@@ -803,8 +948,6 @@ public class game {
             if (gj!=null){
                 posex = gj.body.getPosition().x;
                 posey = gj.body.getPosition().y;
-
-               // gamecam.position.set( gj.body.getPosition().x,gj.body.getPosition().y,0 );
             }
 
             if (peektimer<=0 && peektimer!=-1 && peektimer!=-2){
@@ -832,114 +975,14 @@ public class game {
                 }
             }
         }
-
-
-        stateTime += delta;
-
-        updatePlayerSprite(delta);
-        updatePlayerMovement();
-
-        /*
-        for (int i = objects.size() - 1; i >= 0; i--){
-            gameobject go = objects.get( i );
-            go.update(delta);
-            if (go.state==DEAD){
-                //go.myLight.remove( true );
-                if (world.getBodyCount()>0) world.destroyBody( go.body );
-                objects.remove( go );
-
-            }else{
-                if (go.over) continue;
-                if (go.getTexture()!=null ){
-                    go.draw(batch);
-
-                }
-            }
-
-        }
-
-         */
-        overs.clear();deads.clear();
-        for (int i=0;i<objects.size();i++){
-            gameobject go = objects.get(i);
-            if(loadingmap) return;
-
-            //failed attempt at frustum culling
-
-            //if (go.objtype!=null && go.objtype==BRICK) {
-            //}
-
-
-
-
-            go.update(delta);
-            if (go.state!=DEAD) {
-                if (!go.over) {
-
-                    /*
-                    if (gamecam.frustum.pointInFrustum( go.getX(),go.getY(),0 )){
-                        if (!go.body.isActive())  go.body.setActive( true );
-                    }else{
-                        if (go.body.isActive())  go.body.setActive( false );
-                    }
-
-                     */
-
-                    if (go.getTexture() != null) go.draw( batch );
-
-
-                //} else {s
-                  //  overs.add( go );
-                }
-                if (go.HP > 0 && go.HP !=go.maxHP) {
-                    batch.draw( hpbar[1][0], go.getX(), go.getY() + go.getHeight() + 0.01f, go.getWidth(), hpbar[1][0].getRegionHeight() / scale );
-                    batch.draw( hpbar[0][0], go.getX(), go.getY() + go.getHeight() + 0.01f, go.HP / go.maxHP * go.getWidth(), hpbar[0][0].getRegionHeight() / scale );
-                }
-            }else{
-                deads.add( go );
-            }
-        }
-
-        player.update(delta);
-        if (player.state != DEAD){
-            player.draw(batch);
-        }else
-        {
-            deads.add( player );
-        }
-
-        for (gameobject go:deads)
-        {
-            go.removeCollision();
-            objects.remove( go );
-        }
-
-        for (gameobject sboxes:overs)
-        {
-            if (sboxes.getTexture()!=null ) sboxes.draw(batch);
-        }
-
-
-
-        for (int i = particles.size() - 1; i >= 0; i--){
-            particle pe = particles.get(i);
-            pe.update( Gdx.graphics.getDeltaTime() );
-            pe.draw( batch );
-
-            if (pe.isComplete()) particles.remove( pe );
-        }
-
-
-
-        if (action1!=null) action1.update( delta );
-        if (action2!=null) action2.update( delta );
-        if (action3!=null) action3.update( delta );
-        if (action4!=null) action4.update( delta );
-
-        //if (night) rayHandler.updateAndRender();
+        // end of fade and trasnsfer
 
     }
 
+    //this happens after the keyinput, means it will override keyinput,
+    // which means it would be better to put it before the physics
+    //but it will correct the bug that make player speed faster
+    //so I don't care... heheh
     public void updatePlayerMovement(){
         ladder= touchedladder > 0;
         if (floater){
@@ -959,6 +1002,66 @@ public class game {
         //reduce
         if (player.body.getLinearVelocity().y<-player.speed*3) player.body.setLinearVelocity( player.body.getLinearVelocity().x,-player.speed*3 );
 
+        if (recoil){
+            salto=360;
+            player.body.applyLinearImpulse( player.body.getLinearVelocity().x,3f,player.body.getPosition().x,player.body.getPosition().y,true );
+            recoil=false;
+        }
+
+        if (!rpg){
+            if (world.getGravity().y!=0) gravity = -world.getGravity().y/Math.abs( world.getGravity().y);
+            if (jetpack) {
+                if (Math.abs(player.body.getLinearVelocity().y)>player.speed){
+                    player.body.setLinearVelocity( player.body.getLinearVelocity().x,gravity*player.speed );
+                }
+
+                jetpackcooldown -= delta;
+                if (jetpackcooldown<=0) jetpack=false;
+            }
+
+            if (player.body.getLinearVelocity().x >player.speed && !jumping) {
+                player.body.setLinearVelocity( player.speed,player.body.getLinearVelocity().y );
+            }
+            if (player.body.getLinearVelocity().x <-player.speed && !jumping) {
+                player.body.setLinearVelocity( -player.speed,player.body.getLinearVelocity().y );
+            }
+
+        }
+
+
+        if (!rpg) {
+            if (Math.abs( player.body.getLinearVelocity().y ) > 0f) {
+                jumping = true;
+                jumpinterval = 0;
+            } else {
+                jumpinterval += delta;
+            }
+
+            if (jumpinterval >= 0.02f) {
+                jumping = false; dashed=false;
+            }
+            stompinterval -= delta;
+            if (stompinterval < 0) stompinterval = 0;
+        }
+        if (player.body.getPosition().y<=-Tsh/scale && player.state != DEAD)
+        {
+            playSfx(player.sfxdead);
+            dead+=1;
+            player.state = DEAD;
+
+        }
+
+        if (salto>0) salto-=20;
+
+        if (salto>=0){
+            if (player.dir==1){
+                player.setRotation( salto );
+            }
+            else {
+                player.setRotation( 360-salto );
+            }
+        }
+
     }
     public void updatePlayerSprite(float delta){
         if (starting){
@@ -969,8 +1072,6 @@ public class game {
                 TextureRegion currentFramea = player.anim.get(0).getKeyFrame( 0, true );
                 player.setRegion( currentFramea );
             }
-
-
         }
 
         //moving
@@ -1077,7 +1178,7 @@ public class game {
         }
         else if ((ladder || floater || sinker) && player.moving )
         {
-            if (ladder) player.dir=3;
+            if (ladder && rpg) player.dir=3;
 
             playerTime +=delta;
             if (player.anim.size()>1) {
@@ -1244,90 +1345,12 @@ public class game {
 
     public void respawn(){
         load();
-
-    }
-
-    public void keyinput(){
-
-
-
-
-
-        if (Gdx.app.getType() == Application.ApplicationType.Desktop && !uitest ) {
-
-            if (victory||starting) return;
-
-
-            if (player.state == DEAD) return;
-
-
-
-
-            if (Gdx.input.isKeyPressed( Input.Keys.X )) {
-                act(action1);
-            }
-            if (Gdx.input.isKeyPressed( Input.Keys.C )) {
-                act(action2);
-            }
-            if (Gdx.input.isKeyPressed( Input.Keys.D )) {
-                act(action3);
-            }
-            if (Gdx.input.isKeyPressed( Input.Keys.S )) {
-                act(action4);
-            }
-
-
-            if (!rpg) {
-                if (Gdx.input.isKeyPressed( Input.Keys.RIGHT )) {
-                    pressright();
-                    player.moving = true;
-                } else if (Gdx.input.isKeyPressed( Input.Keys.LEFT )) {
-                    pressleft();
-
-                } else {
-                    stand();
-
-                }
-
-                if (ladder || floater || sinker) {
-                    if (Gdx.input.isKeyPressed( Input.Keys.UP )) pressup();
-                } else {
-                    if (Gdx.input.isKeyJustPressed( Input.Keys.UP )) pressup();
-                }
-
-                if (ladder || floater || sinker) {
-                    if (Gdx.input.isKeyPressed( Input.Keys.DOWN )) pressdown();
-                } else {
-                    if (Gdx.input.isKeyJustPressed( Input.Keys.DOWN )) pressdown();
-                }
-            }else{
-                if (Gdx.input.isKeyPressed( Input.Keys.RIGHT )) {
-                    pressright();
-                    player.moving = true;
-                } else if (Gdx.input.isKeyPressed( Input.Keys.LEFT )) {
-                    pressleft();
-                    player.moving = true;
-                } else if (Gdx.input.isKeyPressed( Input.Keys.UP )) {
-                    pressup();
-                    player.moving = true;
-                } else if (Gdx.input.isKeyPressed( Input.Keys.DOWN )) {
-                    pressdown();
-                    player.moving = true;
-
-                } else {
-                    stand();
-
-                }
-
-            }
-
-
-        }
-
-
     }
 
     public boolean disablecontrol = false;
+    public boolean enabletouch = false;
+    public boolean timetrial = false;
+    public float timer = 0f;
     public boolean disabledpad = false;
     public boolean disableXaxis = false;
     public boolean disableYaxis = false;
@@ -1494,6 +1517,8 @@ public class game {
 
     }
 
+    float autorespawn;
+
     public void killPlayer(){
         if (player.state!= DEAD && !victory && !starting)
         {
@@ -1501,6 +1526,7 @@ public class game {
             dead+=1;
             player.bumbum();
             player.state= DEAD;
+            autorespawn=1f;
             ///////////////////
 
 
@@ -1550,7 +1576,7 @@ public class game {
         gameobject newbrick = new gameobject();
         boolean flipX=false,flipY=false;
         float rota=0f;
-        TiledMapTileMapObject tmo = null;
+        TiledMapTileMapObject tmo;
         if (!object) { //tile
             tlcece = cece.getTile();
             o=tlcece.getProperties();
@@ -1821,6 +1847,12 @@ public class game {
                         newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.KinematicBody, ITEM, objx, t, over  ,opacity);
                     }
                     break;
+                case "touch":
+                    if (checkQual( o)) {
+                        newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.DynamicBody, TOUCHSENSOR, objx, t, over  ,opacity);
+                        touchpoint=newbrick;
+                    }
+                    break;
                 case "nuke":
                     if (checkQual( o)) {
                         newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.DynamicBody, ALLSENSOR, objx, t, over  ,opacity);
@@ -1900,7 +1932,7 @@ public class game {
                             newbrick.panim.add( tempAnim );
                         }
 
-                        int panimID = 0;
+                        int panimID;
                         if (o.containsKey( "panim" )){
                             String pnm=o.get( "panim" ).toString();
                             if (onlyDigits( pnm,pnm.length() )) {
@@ -1945,26 +1977,14 @@ public class game {
 
     }
 
-    public static boolean
-    onlyDigits(String str, int n)
+    public static boolean onlyDigits(String str, int n)
     {
-        // Traverse the string from
-        // start to end
-        for (int i = 0; i < n; i++) {
-
-            // Check if character is
-            // digit from 0-9
-            // then return true
-            // else false
-            if (str.charAt(i) >= '0'
-                    && str.charAt(i) <= '9') {
-                return true;
-            }
-            else {
+        for (int i = 0; i < n; i++)
+            if (!(str.charAt( i ) >= '0'
+                    && str.charAt( i ) <= '9')) {
                 return false;
             }
-        }
-        return false;
+        return true;
     }
 
     public Sound addSfx(String path){
@@ -1990,6 +2010,305 @@ public class game {
             }
             return null;
         }
+    }
+
+    public void resize(int width,int height){
+        uicamVP.update( width,height );
+        gamecamVP.update( width,height );
+        stage.getViewport().update( width,height );
+    }
+
+    public void startgame(String curdir,String filex, boolean playtest){
+        if (initialise(curdir, filex,playtest)) {
+            gamecam.zoom = 0.2f;
+            gamecam.position.set( player.body.getPosition().x, player.body.getPosition().y, 0 );
+            gamecam.update();
+            stage.clear();
+            stage.addActor(control);
+            Gdx.input.setInputProcessor(stage);
+        }
+
+    }
+
+    boolean shutdown = false;
+
+    public boolean render(){
+        if (shutdown) return false;
+        if (player==null) return false;
+
+        delta = Gdx.graphics.getDeltaTime();
+        stateTime += delta;
+        if (gamecam.zoom != zoom) gamecam.zoom = zoom;
+
+        //update keystroke and logic
+        keyinput();
+        update( batch, delta);
+
+        //draw bgcolor
+        Gdx.gl.glClearColor( bgcolor.r,bgcolor.g,bgcolor.b,bgcolor.a);
+        Gdx.gl.glClear( GL20.GL_COLOR_BUFFER_BIT );
+
+        //draw background
+        batch.setProjectionMatrix( gamecam.combined );
+        batch.begin();
+        if (txBackground != null) batch.draw( txBackground, gamecam.position.x - 2f, gamecam.position.y - 2f, 4, 4 );
+        batch.end();
+
+        //draw tilemaps
+        renderer.setView( gamecam );
+        renderer.render();
+
+        //draw game objects
+        batch.setProjectionMatrix( gamecam.combined );
+        batch.begin();
+        drawObjectsAndParticles();
+        batch.end();
+
+        //draw box2d debug if needed
+        if (debugmode) b2dr.render( world, gamecam.combined );
+
+        //draw HUD
+        ui.setProjectionMatrix( uicam.combined );
+        ui.begin();
+        drawHUD( ui, str1);
+        ui.end();
+
+        //draw virtual Controller
+        if (Gdx.app.getType() != Application.ApplicationType.Desktop || uitest) {
+            if (!starting && player.state != gameobject.states.DEAD  && fade==0) {
+                if (!disablecontrol) {
+                    stage.act( delta );
+                    stage.draw();
+                }
+            }
+        }
+
+        //draw fade effect
+        uis.setProjectionMatrix( uicam.combined );
+        uis.begin( ShapeRenderer.ShapeType.Filled );
+        Gdx.gl.glEnable( GL20.GL_BLEND );
+        Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
+        if (loadingmap || transitioning) {
+            uis.setColor( 0f, 0f, 0, 1f );
+            uis.rect( 0, 0, 1920, 1080 );
+        }
+        if (fadein>0) {
+            uis.setColor( 0f, 0f, 0, fadein / fadeinmax );
+            uis.rect( 0, 0, 1920, 1080 );
+        }
+        if (fadeout>0) {
+            uis.setColor( 0f, 0f, 0, 1-((fadeout-1) / fadeoutmax) );
+            uis.rect( 0, 0, 1920, 1080 );
+        }
+        uis.end();
+
+        //tell the boss that drawing is completed
+        return true;
+    }
+
+    private void loadTouchpad(){
+
+        Button slot1 = new Button( skin2 );
+        Button slot2 = new Button( skin2 );
+        Button slot3 = new Button( skin2 );
+        Button slot4 = new Button( skin2 );
+
+        slot1.addListener( new InputListener() {
+            @Override
+            public void touchUp(InputEvent event, float x, float y,
+                                int pointer, int button) {
+                tslot1 = false;
+            }
+
+            public boolean touchDown(InputEvent event, float x, float y,
+                                     int pointer, int button) {
+                tslot1 = true;
+                return true;
+            }
+
+        });
+
+        slot2.addListener( new InputListener() {
+            @Override
+            public void touchUp(InputEvent event, float x, float y,
+                                int pointer, int button) {
+                tslot2 = false;
+            }
+
+            public boolean touchDown(InputEvent event, float x, float y,
+                                     int pointer, int button) {
+                tslot2 = true;
+                return true;
+            }
+
+        });
+
+        slot3.addListener( new InputListener() {
+            @Override
+            public void touchUp(InputEvent event, float x, float y,
+                                int pointer, int button) {
+                tslot3 = false;
+            }
+
+            public boolean touchDown(InputEvent event, float x, float y,
+                                     int pointer, int button) {
+                tslot3 = true;
+                return true;
+            }
+
+        });
+
+        slot4.addListener( new InputListener() {
+            @Override
+            public void touchUp(InputEvent event, float x, float y,
+                                int pointer, int button) {
+                tslot4 = false;
+            }
+
+            public boolean touchDown(InputEvent event, float x, float y,
+                                     int pointer, int button) {
+                tslot4 = true;
+                return true;
+            }
+
+        });
+
+
+        tpad = new Touchpad(20, skin2);
+        tpad.setBounds(15, 15, 100, 100);
+
+        tpad.addListener( new InputListener() {
+            @Override
+            public void touchUp(InputEvent event, float x, float y,
+                                int pointer, int button) {
+                tanalog = false;
+            }
+
+            public boolean touchDown(InputEvent event, float x, float y,
+                                     int pointer, int button) {
+                tanalog = true;
+                return true;
+            }
+
+        });
+
+        control = new Table();
+        control.setFillParent( true );
+        Table action = new Table();
+        control.padTop(1000);
+        control.add( tpad );
+        control.add().pad(1000);
+        action.add();
+        action.add( slot4 );
+        action.add();
+        action.row();
+        action.add( slot3 );
+        action.add();
+        action.add( slot1 );
+        action.row();
+        action.add();
+        action.add( slot2 );
+        action.add();
+        control.add( action );
+    }
+
+    void keyinput() {
+
+        if (Gdx.input.isKeyJustPressed( Input.Keys.ESCAPE )) escapegame();
+        if (Gdx.input.isKeyJustPressed( Input.Keys.BACK )) escapegame();
+        if (player.state == gameobject.states.DEAD) return;
+        if (!disablecontrol) {
+            boolean pressed = false;
+
+            if (Gdx.app.getType() == Application.ApplicationType.Desktop) {
+                tslot1 = Gdx.input.isKeyPressed( Input.Keys.X );
+                tslot2 = Gdx.input.isKeyPressed( Input.Keys.C );
+                tslot3 = Gdx.input.isKeyPressed( Input.Keys.D );
+                tslot4 = Gdx.input.isKeyPressed( Input.Keys.S );
+            }
+
+            if (Gdx.input.isKeyPressed( Input.Keys.RIGHT )) {
+                pressright();
+                pressed = true;
+            }
+            if (Gdx.input.isKeyPressed( Input.Keys.LEFT )) {
+                pressleft();
+                pressed = true;
+            }
+            if (Gdx.input.isKeyPressed( Input.Keys.UP )) {
+                pressup();
+                pressed = true;
+            }
+            if (Gdx.input.isKeyPressed( Input.Keys.DOWN )) {
+                pressdown();
+                pressed = true;
+            }
+
+
+            if (tslot1 && action1 != null && action1.action != gameobject.actions.NONE) {
+                act( action1 );
+                pressed = true;
+            }
+            if (tslot2 && action2 != null && action2.action != gameobject.actions.NONE) {
+                act( action2 );
+                pressed = true;
+            }
+            if (tslot3 && action3 != null && action3.action != gameobject.actions.NONE) {
+                act( action3 );
+                pressed = true;
+            }
+            if (tslot4 && action4 != null && action4.action != gameobject.actions.NONE) {
+                act( action4 );
+                pressed = true;
+            }
+
+            if (tanalog) {
+                float deltaX = tpad.getKnobPercentX();
+                float deltaY = tpad.getKnobPercentY();
+                if (deltaY > 0.4f) {
+                    pressup();
+                    pressed = true;
+                }
+                if (deltaY < -0.4f) {
+                    pressdown();
+                    pressed = true;
+                }
+
+                if (deltaX > 0.4f) {
+                    pressright();
+                    pressed = true;
+                }
+                if (deltaX < -0.4f) {
+                    pressleft();
+                    pressed = true;
+                }
+
+            }
+            if (!pressed) stand();
+
+        }
+
+        if (enabletouch) {
+            //touchpoint for later purposes
+            for (int i = 0; i < 5; i++) { // 20 is max number of touch points
+                if (Gdx.input.isTouched( i )) {
+                    Vector3 touch2 = new Vector3();
+                    gamecam.unproject( touch2.set( Gdx.input.getX( i ), Gdx.input.getY( i ), 0 ) );
+                    if (touchpoint != null) touchpoint.body.setTransform( touch2.x, touch2.y, 0 );
+                }
+            }
+        }
+
+
+    }
+
+    public void dispose(){
+        batch.dispose();
+    }
+
+    public void escapegame(){
+        if (bgm!=null && bgm.isPlaying()) bgm.stop();
+        shutdown=true;
     }
 
 }

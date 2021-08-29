@@ -26,6 +26,7 @@ import static com.mirwanda.nottiled.platformer.gameobject.objecttype.LADDER;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.MONSTER;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYER;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYERPROJECTILE;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.TOUCHSENSOR;
 
 public class WorldContactListener implements ContactListener {
 
@@ -344,6 +345,13 @@ public class WorldContactListener implements ContactListener {
                 mygame.disabledpad = false;
             }
 
+            if (o.containsKey( "enabletouch" )){
+                mygame.enabletouch = true;
+            }
+            if (o.containsKey( "disabletouch" )){
+                mygame.enabletouch = false;
+            }
+
             if (o.containsKey( "disableXaxis" )){
                 mygame.disableXaxis = true;
             }
@@ -362,6 +370,18 @@ public class WorldContactListener implements ContactListener {
             }
             if (o.containsKey( "enablecontrol" )){
                 mygame.disablecontrol = false;
+            }
+
+            if (o.containsKey( "resettimer" )){
+                mygame.timer = 0f;
+            }
+
+            if (o.containsKey( "starttimer" )){
+                mygame.timetrial = true;
+            }
+
+            if (o.containsKey( "stoptimer" )){
+                mygame.timetrial = false;
             }
 
             if (o.containsKey( "zoom" )) {
@@ -638,6 +658,11 @@ public class WorldContactListener implements ContactListener {
         if (check(ALLSENSOR,MONSTER,o1,o2)){
             gameobject cp = select( MONSTER,o1,o2 );
             cp.state = gameobject.states.DEAD;
+        }
+
+        if (check(TOUCHSENSOR,ITEM,o1,o2)){
+            gameobject cp = select( ITEM,o1,o2 );
+            eventobject(cp);
         }
 
 

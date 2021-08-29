@@ -92,7 +92,7 @@ public class gameobject extends Sprite {
     public enum objecttype {
         PLAYER,
         WALLLEFT,WALLTOP,WALLBOTTOM,WALLRIGHT, WALLCENTER, LADDER, FLOATER, SINKER,
-        BRICK, HALFBRICK, BOX, CHECKPOINT,  BREAKABLE, SPRING,ACTION,
+        BRICK, HALFBRICK, BOX, CHECKPOINT,  BREAKABLE, SPRING,ACTION,TOUCHSENSOR,
         SWITCH, SWITCHON, SWITCHOFF, PLATFORMH, PLATFORMV, PLATFORMS, MONSTER, MISC, ITEMSENSOR, ALLSENSOR,
         LEFTSLOPE, RIGHTSLOPE, TRANSFER, BLOCK, ITEM, ENEMY, PLAYERPROJECTILE, ENEMYPROJECTILE, LISTENER
     }
@@ -248,6 +248,7 @@ public class gameobject extends Sprite {
                 break;
 
             case ITEMSENSOR:
+            case TOUCHSENSOR:
             case ALLSENSOR:
             case PLATFORMH:
             case PLATFORMV:
@@ -274,7 +275,7 @@ public class gameobject extends Sprite {
             case BRICK:
                 EdgeShape shaper = new EdgeShape();
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
-                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.PLAYERPROJECTILE_BIT | game.ENEMYPROJECTILE_BIT | game.ALLSENSOR_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.PLAYERPROJECTILE_BIT | game.ENEMYPROJECTILE_BIT | game.ALLSENSOR_BIT | game.TOUCHSENSOR_BIT;
                 float sz = Tswh/mygame.scale;
                 //top line
                 shaper.set(-sz,sz,sz, sz);
@@ -361,7 +362,7 @@ public class gameobject extends Sprite {
             case ITEM:
             case LISTENER:
                 fdef.filter.categoryBits = game.COIN_BIT;
-                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.ITEMSENSOR_BIT | game.ALLSENSOR_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.ITEMSENSOR_BIT | game.ALLSENSOR_BIT | game.TOUCHSENSOR_BIT;
                 shape.setAsBox(Tswh /mygame.scale, Tshh /mygame.scale);
                 fdef.shape = shape;
                 fdef.isSensor = true;
@@ -387,6 +388,18 @@ public class gameobject extends Sprite {
                 shape.setAsBox(Tswh /mygame.scale, Tshh /mygame.scale);
                 fdef.shape = shape;
                 fdef.isSensor = true;
+                fdef.friction=0;
+                fixture = body.createFixture(fdef);
+                //setCategoryFilter(fixture,game.DEFAULT_BIT);
+                fixture.setUserData(this);
+                break;
+
+            case TOUCHSENSOR:
+                fdef.filter.categoryBits = game.TOUCHSENSOR_BIT;
+                fdef.filter.maskBits = game.COIN_BIT | game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT;;
+                /////
+                shape.setAsBox(Tswh /mygame.scale, Tshh /mygame.scale);
+                fdef.shape = shape;
                 fdef.friction=0;
                 fixture = body.createFixture(fdef);
                 //setCategoryFilter(fixture,game.DEFAULT_BIT);
@@ -483,7 +496,7 @@ public class gameobject extends Sprite {
 
             case BLOCK:
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
-                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.PLAYERPROJECTILE_BIT | game.ENEMYPROJECTILE_BIT | game.ALLSENSOR_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.PLAYERPROJECTILE_BIT | game.ENEMYPROJECTILE_BIT | game.ALLSENSOR_BIT | game.TOUCHSENSOR_BIT;
                 shape.setAsBox(Tswh /mygame.scale, Tshh /mygame.scale);
                 fdef.shape = shape;
                 fixture = body.createFixture(fdef);
@@ -1043,8 +1056,12 @@ public class gameobject extends Sprite {
     public Vector2 lastPos;
     public boolean rotating;
     public float waitTime;
-    public void update(float dt){
 
+    public void updatePhysics(float dt){
+        if (body!=null) setPosition(body.getPosition().x-getWidth()/2f,body.getPosition().y-getHeight()/2f);
+    }
+    public void update(int times, float dt){
+        for (int t=0;t<times;t++){
         if (state== states.DEAD) return;
         //if (body==null) return;
 
@@ -1053,7 +1070,6 @@ public class gameobject extends Sprite {
             color=null;
         }
 
-       if (body!=null) setPosition(body.getPosition().x-getWidth()/2f,body.getPosition().y-getHeight()/2f);
         if (HP>maxHP) HP=maxHP;
         if (rotating) {
             setOriginCenter();
@@ -1111,41 +1127,44 @@ public class gameobject extends Sprite {
             case PLATFORMH:
 
             case PLATFORMV:
+
             case LISTENER:
                 mygame.mycontactlistener.eventobject( this );
                 break;
-
+            case PLAYER:
+                //for now, put it in the game.
+                break;
             case PLAYERPROJECTILE:
             case ENEMYPROJECTILE:
 
                 assert body != null;
-                switch(dir){
+                switch (dir) {
                     case 0://bawah
-                        body.setLinearVelocity(spread, -speed);
+                        body.setLinearVelocity( spread, -speed );
                         break;
                     case 1://kanan
-                        body.setLinearVelocity(speed, 0.01f+spread);
+                        body.setLinearVelocity( speed, 0.01f + spread );
                         break;
                     case 2://kiri
-                        body.setLinearVelocity(-speed, 0.01f+spread);
+                        body.setLinearVelocity( -speed, 0.01f + spread );
                         break;
                     case 3://atas
-                        body.setLinearVelocity(spread, speed);
+                        body.setLinearVelocity( spread, speed );
                         break;
                 }
-                distance+=speed;
-                if (distance>maxdistance){
-                    setCategoryFilter( game.DESTROYED_BIT);
-                    body.setLinearVelocity( 0,0 );
-                    state= states.DEAD;
+                distance += speed;
+                if (distance > maxdistance) {
+                    setCategoryFilter( game.DESTROYED_BIT );
+                    body.setLinearVelocity( 0, 0 );
+                    state = states.DEAD;
 
                 }
-                if (anim.size()>0) {
-                    if (anim.size()==1){
+                if (anim.size() > 0) {
+                    if (anim.size() == 1) {
                         TextureRegion currentFrame = anim.get( 0 ).getKeyFrame( mygame.stateTime, true );
                         setRegion( currentFrame );
 
-                    }else{
+                    } else {
                         TextureRegion currentFrame = anim.get( dir ).getKeyFrame( mygame.stateTime, true );
                         setRegion( currentFrame );
 
@@ -1153,24 +1172,24 @@ public class gameobject extends Sprite {
                 }
 
                 if (!rotating) {
-                        setOriginCenter();
-                        switch (dir) {
-                            case 0: //down
-                                setFlip( false, false );
-                                setRotation( -90 );
-                                break;
-                            case 1: //right
-                                setFlip( false, false );
-                                setRotation(0 );
-                                break;
-                            case 2: //left
-                                setFlip( true, false );
-                                setRotation(0 );
-                                break;
-                            case 3: //up
-                                setFlip( false, false );
-                                setRotation( 90 );
-                                break;
+                    setOriginCenter();
+                    switch (dir) {
+                        case 0: //down
+                            setFlip( false, false );
+                            setRotation( -90 );
+                            break;
+                        case 1: //right
+                            setFlip( false, false );
+                            setRotation( 0 );
+                            break;
+                        case 2: //left
+                            setFlip( true, false );
+                            setRotation( 0 );
+                            break;
+                        case 3: //up
+                            setFlip( false, false );
+                            setRotation( 90 );
+                            break;
                     }
                 }
 
@@ -1182,34 +1201,33 @@ public class gameobject extends Sprite {
 
             case MONSTER:
 
-                if (!tameif.equals( "" )){
-                    String[] ss= tameif.split( "," );
-                    int met=0;
+                if (!tameif.equals( "" )) {
+                    String[] ss = tameif.split( "," );
+                    int met = 0;
 
-                    for (String s: ss){
+                    for (String s : ss) {
                         String[] sv = s.split( "=" );
-                        if (mygame.getVar(sv[0])==Float.parseFloat( sv[1] )){
+                        if (mygame.getVar( sv[0] ) == Float.parseFloat( sv[1] )) {
                             met++;
                         }
                     }
-                    tame= met == ss.length;
+                    tame = met == ss.length;
                 }
                 boolean shooting = false;
                 assert body != null;
-                if (body.getPosition().dst( mygame.player.body.getPosition()) <chaseRadius/mygame.scale) {
-                   if (mygame.player.state!= states.DEAD && canshoot)
-                   {
-                       shooting=true;
-                       enemyshoot();
-                   }
+                if (body.getPosition().dst( mygame.player.body.getPosition() ) < chaseRadius / mygame.scale) {
+                    if (mygame.player.state != states.DEAD && canshoot) {
+                        shooting = true;
+                        enemyshoot();
+                    }
 
-               }
+                }
 
 
-                if (anim.size()>0) {
+                if (anim.size() > 0) {
                     float time;
-                    int fc=dir;
-                    if (anim.size()==1) fc=0;
+                    int fc = dir;
+                    if (anim.size() == 1) fc = 0;
                     if (moving || stepping) {
                         TextureRegion currentFrame = anim.get( fc ).getKeyFrame( mygame.stateTime, true );
                         setRegion( currentFrame );
@@ -1218,7 +1236,7 @@ public class gameobject extends Sprite {
                         setRegion( currentFrame );
 
                     }
-                }else{
+                } else {
                     if (!rotating) {
                         if (mygame.rpg) {
                             setOriginCenter();
@@ -1254,13 +1272,13 @@ public class gameobject extends Sprite {
 
                 }
 
-                if (path==null && !dirlocked) {
-                    if (body.getPosition().dst( mygame.player.body.getPosition() ) < chaseRadius /mygame.scale) {
-                        if (chase &&!tame && !shooting) moving = true;
+                if (path == null && !dirlocked) {
+                    if (body.getPosition().dst( mygame.player.body.getPosition() ) < chaseRadius / mygame.scale) {
+                        if (chase && !tame && !shooting) moving = true;
 
 
-                        if (!mygame.rpg){
-                            if (Math.abs( body.getPosition().x - mygame.player.body.getPosition().x ) >= speed * 10 /mygame.scale) {
+                        if (!mygame.rpg) {
+                            if (Math.abs( body.getPosition().x - mygame.player.body.getPosition().x ) >= speed * 10 / mygame.scale) {
 
                                 if (body.getPosition().x > mygame.player.body.getPosition().x) {
                                     dir = 2;
@@ -1268,7 +1286,7 @@ public class gameobject extends Sprite {
                                     dir = 1;
                                 }
                             } else {
-                                if (Math.abs( body.getPosition().y - mygame.player.body.getPosition().y ) >= speed * 10 /mygame.scale) {
+                                if (Math.abs( body.getPosition().y - mygame.player.body.getPosition().y ) >= speed * 10 / mygame.scale) {
                                     if (body.getPosition().y > mygame.player.body.getPosition().y) {
                                         dir = 0;
                                     } else {
@@ -1278,58 +1296,58 @@ public class gameobject extends Sprite {
                                     moving = false;
                                 }
                             }
-                        }else{
+                        } else {
                             float ppx = mygame.player.body.getPosition().x;
                             float ppy = mygame.player.body.getPosition().y;
                             float opx = body.getPosition().x;
                             float opy = body.getPosition().y;
-                            float gapx = Math.abs(ppx-opx);
-                            float gapy = Math.abs(ppy-opy);
+                            float gapx = Math.abs( ppx - opx );
+                            float gapy = Math.abs( ppy - opy );
 
                             //left down up right
                             // means mending ke atas/bawah dulu karena lebih dekat
-                            if (gapx > gapy){
-                                if (gapx < 16/mygame.scale){
-                                    if (opx > ppx){
+                            if (gapx > gapy) {
+                                if (gapx < 16 / mygame.scale) {
+                                    if (opx > ppx) {
                                         //lihat kiri
                                         dir = 0;
-                                    }else{
+                                    } else {
                                         //lihat kanan
-                                        dir=3;
+                                        dir = 3;
                                     }
                                     //menghadap ke player
 
-                                }else{
+                                } else {
                                     //reposisi
-                                    if (opy > ppy){
+                                    if (opy > ppy) {
                                         //liat bawah
                                         dir = 1;
-                                    }else{
+                                    } else {
                                         //liat atas
-                                        dir=2;
+                                        dir = 2;
                                     }
                                 }
 
                                 // means mending ke kiri/kanan dulu karena lebih dekat
-                            }else{
-                                if (gapy < 16/mygame.scale){
+                            } else {
+                                if (gapy < 16 / mygame.scale) {
                                     //menghadap ke player
-                                    if (opy > ppy){
+                                    if (opy > ppy) {
                                         //lihat atas
                                         dir = 2;
-                                    }else{
+                                    } else {
                                         //lihat bawah
-                                        dir=1;
+                                        dir = 1;
                                     }
 
-                                }else{
+                                } else {
                                     //reposisi
-                                    if (opx > ppx){
+                                    if (opx > ppx) {
                                         //lihat atas
                                         dir = 3;
-                                    }else{
+                                    } else {
                                         //lihat bawah
-                                        dir=0;
+                                        dir = 0;
                                     }
                                 }
                             }
@@ -1342,31 +1360,43 @@ public class gameobject extends Sprite {
                         //dir=0;
                         moving = false;
                     }
-                }
-
-
-                else if (path!=null){
-                    if (lastPos==null){
-                        currentPath=0;
+                } else if (path != null) {
+                    if (lastPos == null) {
+                        currentPath = 0;
                         dir = path[0];
-                        currentPath=0;
-                        lastPos=new Vector2(body.getPosition().x,body.getPosition().y);
-                        moving=true;
+                        currentPath = 0;
+                        lastPos = new Vector2( body.getPosition().x, body.getPosition().y );
+                        moving = true;
                     }
 
-                    if(lastPos.dst(body.getPosition().x,body.getPosition().y) >=mygame.Tsw/mygame.scale){
-                        currentPath+=1;
-                        if (currentPath>=path.length) currentPath=0;
+                    if (lastPos.dst( body.getPosition().x, body.getPosition().y ) >= mygame.Tsw / mygame.scale) {
+
+                        switch (dir){
+                            case 0: //down
+                                body.setTransform( lastPos.x,lastPos.y-mygame.Tsh / mygame.scale,0 );
+                                break;
+                            case 1: //left
+                                body.setTransform( lastPos.x+mygame.Tsw / mygame.scale,lastPos.y,0 );
+                                break;
+                            case 2: //right
+                                body.setTransform( lastPos.x-mygame.Tsw / mygame.scale,lastPos.y,0 );
+                                break;
+                            case 3: //up
+                                body.setTransform( lastPos.x,lastPos.y+mygame.Tsh / mygame.scale,0 );
+                                break;
+                        }
+                        currentPath += 1;
+                        if (currentPath >= path.length) currentPath = 0;
                         dir = path[currentPath];
-                        lastPos=new Vector2(body.getPosition().x,body.getPosition().y);
+                        lastPos = new Vector2( body.getPosition().x, body.getPosition().y );
                     }
                 }
 
 
-                if (mygame.player.state == states.DEAD) moving=false;
+                if (mygame.player.state == states.DEAD) moving = false;
 
                 if (moving) {
-                    if (mygame.rpg||heavy) {
+                    if (mygame.rpg || heavy) {
                         switch (dir) {
                             case 0://bawah
                                 body.setLinearVelocity( 0, -speed );
@@ -1381,7 +1411,7 @@ public class gameobject extends Sprite {
                                 body.setLinearVelocity( 0, speed );
                                 break;
                         }
-                    }else{
+                    } else {
                         switch (dir) {
 
                             case 1://kanan
@@ -1393,17 +1423,17 @@ public class gameobject extends Sprite {
                             default:
                                 body.setLinearVelocity( 0, 0 );
 
-                                moving=false;
+                                moving = false;
                         }
 
                     }
-                }else{
+                } else {
 
 
-                    if (anim.size()>0) {
+                    if (anim.size() > 0) {
                         if (mygame.rpg || stepping) body.setLinearVelocity( 0, 0 );
                         body.setLinearVelocity( body.getLinearVelocity().x, body.getLinearVelocity().y );
-                    }else{
+                    } else {
                         if (!rotating) {
                             if (mygame.rpg) {
                                 setOriginCenter();
@@ -1441,47 +1471,46 @@ public class gameobject extends Sprite {
                 }
 
 
-
                 break;
 
-                //make sure the object is kinematic and not static.
+            //make sure the object is kinematic and not static.
             case ITEM:
             case BLOCK:
             default:
 
-                if (objtype==PLAYER) return;
+                if (objtype == PLAYER) return;
                 ///
 
-                if (path!=null){
+                if (path != null) {
 
-                    if (lastPos==null){
-                        currentPath=0;
+                    if (lastPos == null) {
+                        currentPath = 0;
                         dir = path[0];
                         assert body != null;
-                        lastPos=new Vector2(body.getPosition().x,body.getPosition().y);
-                        moving=true;
+                        lastPos = new Vector2( body.getPosition().x, body.getPosition().y );
+                        moving = true;
                     }
 
-                    if (dir!=4){
+                    if (dir != 4) {
                         assert body != null;
-                        if(lastPos.dst(body.getPosition().x,body.getPosition().y) >=mygame.Tsw/mygame.scale){
-                        currentPath+=1;
-                        if (currentPath>=path.length) currentPath=0;
-                        dir = path[currentPath];
-                        lastPos=new Vector2(body.getPosition().x,body.getPosition().y);
-                        if (dir==4) waitTime=wait;
+                        if (lastPos.dst( body.getPosition().x, body.getPosition().y ) >= mygame.Tsw / mygame.scale) {
+                            currentPath += 1;
+                            if (currentPath >= path.length) currentPath = 0;
+                            dir = path[currentPath];
+                            lastPos = new Vector2( body.getPosition().x, body.getPosition().y );
+                            if (dir == 4) waitTime = wait;
 
-                    }
-                    }else{
-                        if(waitTime>0){
-                            waitTime-=dt;
-                            if (waitTime<=0) {
+                        }
+                    } else {
+                        if (waitTime > 0) {
+                            waitTime -= dt;
+                            if (waitTime <= 0) {
                                 currentPath += 1;
                                 if (currentPath >= path.length) currentPath = 0;
                                 dir = path[currentPath];
                                 assert body != null;
                                 lastPos = new Vector2( body.getPosition().x, body.getPosition().y );
-                                if (dir==4) waitTime=wait;
+                                if (dir == 4) waitTime = wait;
 
                             }
                         }
@@ -1490,13 +1519,11 @@ public class gameobject extends Sprite {
                 }
 
 
-
-
-                if (mygame.player.state == states.DEAD) moving=false;
+                if (mygame.player.state == states.DEAD) moving = false;
 
                 if (moving) {
                     assert body != null;
-                    if (mygame.rpg||heavy||objtype== objecttype.BLOCK||objtype== objecttype.ITEM) {
+                    if (mygame.rpg || heavy || objtype == objecttype.BLOCK || objtype == objecttype.ITEM) {
                         switch (dir) {
                             case 0://bawah
                                 body.setLinearVelocity( 0, -speed );
@@ -1515,7 +1542,7 @@ public class gameobject extends Sprite {
                                 break;
 
                         }
-                    }else{
+                    } else {
 
                         switch (dir) {
 
@@ -1528,28 +1555,28 @@ public class gameobject extends Sprite {
                             default:
                                 body.setLinearVelocity( 0, 0 );
 
-                                moving=false;
+                                moving = false;
                         }
 
                     }
                 }
 
-                if (anim.size()>0) {
+                if (anim.size() > 0) {
                     //mygame.log("HERE");
-                    assert body!=null;
+                    assert body != null;
                     if (mygame.rpg || stepping) body.setLinearVelocity( 0, 0 );
                     body.setLinearVelocity( body.getLinearVelocity().x, body.getLinearVelocity().y );
 
                     TextureRegion currentFrame;
-                    if (anim.size()==1) {
+                    if (anim.size() == 1) {
                         currentFrame = anim.get( 0 ).getKeyFrame( mygame.stateTime, true );
-                    }else{
+                    } else {
                         currentFrame = anim.get( dir ).getKeyFrame( mygame.stateTime, true );
 
                     }
                     setRegion( currentFrame );
                 }
-
+            }
                 ///
         }
 

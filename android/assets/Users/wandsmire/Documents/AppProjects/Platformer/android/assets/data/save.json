@@ -12,10 +12,11 @@ vars: [
 	}
 	{
 		key: level
-		value: 10
+		value: 1
 	}
 	{
 		key: score
+		value: 6500
 		hud: true
 		keephud: true
 	}
@@ -24,6 +25,6 @@ vars: [
 	}
 ]
 x: 0.4032258
-y: 1.8540053
+y: 31.370134
 mapname: index.tmx
 }
