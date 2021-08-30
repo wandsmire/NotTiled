@@ -7,6 +7,9 @@ import com.badlogic.gdx.assets.loaders.resolvers.AbsoluteFileHandleResolver;
 import com.badlogic.gdx.assets.loaders.resolvers.InternalFileHandleResolver;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.controllers.Controller;
+import com.badlogic.gdx.controllers.ControllerListener;
+import com.badlogic.gdx.controllers.Controllers;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -70,7 +73,7 @@ import static com.mirwanda.nottiled.platformer.gameobject.objecttype.TOUCHSENSOR
 import static com.mirwanda.nottiled.platformer.gameobject.states.DEAD;
 
 
-public class game {
+public class game implements ControllerListener {
     public boolean debugmode = false;
     public boolean playtest=true;
     public boolean uitest=false;
@@ -85,6 +88,9 @@ public class game {
     public boolean loadingmap;
     public boolean rpg=false;
     public Vector2 move;
+    public boolean camlockx;
+    public boolean camlocky;
+    //public RayHandler rayHandler;
 /////////////////////
     float delta;
     public Stage stage;
@@ -180,6 +186,7 @@ public class game {
     public float Tsh;
     public float scale=100f;
     public Color bgcolor=Color.LIGHT_GRAY;
+    public float shooting;
 
     public void create(){
         batch = new SpriteBatch();
@@ -245,6 +252,7 @@ public class game {
         str1 = generator.generateFont(parameter);
         generator.dispose();
         loadTouchpad();
+        Controllers.addListener(this);
 
     }
 
@@ -259,13 +267,15 @@ public class game {
             loadingmap = true;
             rpg = false;
 
-            Texture tmp = new Texture( Gdx.files.internal( "platformer/hpbar.png" ) );
-            hpbar = TextureRegion.split( tmp,
-                    tmp.getWidth(),
-                    tmp.getHeight() / 2 );
+
 
             initialiseSprites();
             initialiseBox2D();
+
+            night=true;
+            //rayHandler=new RayHandler( world);
+            //rayHandler.setAmbientLight(0.5f);
+
             if (!initialiseTMX()) return false;
             initialiseMapProperties();
             initialiseTilesets();
@@ -365,6 +375,22 @@ public class game {
                     txBackground = null;
                 }
             }
+
+            if (mpa.containsKey( "hpbar" )) {
+                String bgc = (String) mpa.get( "hpbar" );
+                if (getFile( path + "/" + bgc ).exists() && !bgc.equalsIgnoreCase( "" )) {
+                    tmp = new Texture( getFile( path + "/" + bgc )  );
+                } else {
+                    tmp = new Texture( Gdx.files.internal( "platformer/hpbar.png" ) );
+                }
+                hpbar = TextureRegion.split( tmp,
+                        tmp.getWidth(),
+                        tmp.getHeight() / 2 );
+            }
+
+
+
+
 
             if (mpa.containsKey( "orientation" )) {
                 String orien = (String) mpa.get( "orientation" );
@@ -647,6 +673,119 @@ public class game {
         return qual;
 
     }
+
+    public boolean checkvars(String sss){
+        boolean qual=true;
+
+            String[] ss = sss.split( "," );
+            qual=false;
+            int rq=0;
+            for (String s : ss) {
+                boolean repeat = true;
+                while (repeat) {
+                    repeat = false;
+                    boolean ada = false;
+                    String varname = "";
+                    if (s.contains( "=" )) {
+                        String[] sv = s.split( "=" );
+                        varname = sv[0];
+                        for (KV var : save.vars) {
+                            if (sv[0].equalsIgnoreCase( var.key )) {
+                                ada = true;
+                                if (Integer.parseInt( sv[1] ) == var.value) {
+                                    rq += 1;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (s.contains( "!" )) {
+                        String[] sv = s.split( "!" );
+                        varname = sv[0];
+
+                        String[] plus = sv[1].split( "_" );
+                        boolean qualify=true;
+                        for (String xxx : plus) {
+                            for (KV var : save.vars) {
+                                if (sv[0].equalsIgnoreCase( var.key )) {
+                                    ada = true;
+                                    if (Integer.parseInt(xxx) == var.value) {
+                                        qualify=false;
+                                    }
+                                }
+                            }
+                        }
+                        if (qualify) rq+=1;
+
+                    }
+                    if (s.contains( "&lt;" )) {
+                        String[] sv = s.split( "&lt;" );
+                        varname = sv[0];
+                        for (KV var : save.vars) {
+                            if (sv[0].equalsIgnoreCase( var.key )) {
+                                ada = true;
+                                if (var.value < Integer.parseInt( sv[1] )) {
+                                    rq += 1;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (s.contains( "&gt;" )) {
+                        String[] sv = s.split( "&gt;" );
+                        varname = sv[0];
+                        for (KV var : save.vars) {
+                            if (sv[0].equalsIgnoreCase( var.key )) {
+                                ada = true;
+                                if (var.value > Integer.parseInt( sv[1] )) {
+                                    rq += 1;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (!ada) {
+                        setOrAddVars( varname, 0, VAROP.SET );
+                        repeat = true;
+                    }
+                }
+
+            }
+            if (rq==ss.length) qual=true;
+
+        return qual;
+
+    }
+
+    @Override
+    public void connected(Controller controller) {
+        gamepad = controller;
+    }
+
+    @Override
+    public void disconnected(Controller controller) {
+        gamepad=null;
+    }
+
+    public Controller gamepad;
+    @Override
+    public boolean buttonDown(Controller controller, int buttonCode) {
+        gamepad = controller;
+        return false;
+    }
+
+    @Override
+    public boolean buttonUp(Controller controller, int buttonCode) {
+        gamepad = controller;
+        return false;
+    }
+
+    @Override
+    public boolean axisMoved(Controller controller, int axisCode, float value) {
+        gamepad = controller;
+        return false;
+    }
+
     public enum VAROP{SET,ADD, SUB}
 
     public void setOrAddVars(String key, int value, VAROP v){
@@ -799,6 +938,7 @@ public class game {
     private void checkGameCondition() {
         if (timetrial) timer+=delta;
         if (player.HP <= 0) killPlayer();
+        if (player.body.getPosition().y<-2f/scale) killPlayer();
         if (player.HP > player.maxHP) player.HP = player.maxHP;
 
         if (autorespawn>0){
@@ -811,8 +951,10 @@ public class game {
             if (killtimer<=0) {
                 for (gameobject go : requestkill){
                     go.setCategoryFilter( game.DESTROYED_BIT );
+                    if (go.myLight!=null) go.myLight.dispose();
                     go.state = gameobject.states.DEAD;
                     go.body.setLinearVelocity( 0, 0 );
+                    if (go.body!=null) world.destroyBody( go.body );
                     go.bumbum();
                     go.playSfx( go.sfxdead );
                 }
@@ -892,8 +1034,21 @@ public class game {
         //fade and transfer
         if (transformrequest) fullfilltransformrequest();
 
-        float posex = player.body.getPosition().x;
-        float posey = player.body.getPosition().y;
+        float posex;
+        float posey;
+
+        if (camlocky){
+            posey = gamecam.position.y;
+        }else{
+            posey = player.body.getPosition().y;
+        }
+        if (camlockx){
+            posex = gamecam.position.x;
+
+        }else{
+            posex = player.body.getPosition().x;
+
+        }
 
         if (fadeout>0){
             fadeout--;
@@ -913,8 +1068,9 @@ public class game {
                 }
 
 
-                posex = player.body.getPosition().x;
-                posey = player.body.getPosition().y;
+                 posex = player.body.getPosition().x;
+                 posey = player.body.getPosition().y;
+
 
                 Vector3 position = gamecam.position;
                 position.x = posex;
@@ -1128,7 +1284,15 @@ public class game {
                 TextureRegion currentFramea=null;
                 if (player.moving && !jumping) {
                     for (int k=player.anim.size()-1;k>=0;k--){
-                        if (player.animID.get( k ).equalsIgnoreCase( "equip" )){
+                        if (player.animID.get( k ).equalsIgnoreCase( "equipgun+jetpack" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( playerTime, true );
+                            break;
+                        }
+                        if (player.animID.get( k ).equalsIgnoreCase( "equipjetpack" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( playerTime, true );
+                            break;
+                        }
+                        if (player.animID.get( k ).equalsIgnoreCase( "equipgun" )){
                             currentFramea = player.anim.get( k ).getKeyFrame( playerTime, true );
                             break;
                         }
@@ -1142,7 +1306,15 @@ public class game {
                 //jumping
                 else if (jumping) {
                     for (int k=player.anim.size()-1;k>=0;k--){
-                        if (player.animID.get( k ).equalsIgnoreCase( "equip" )){
+                        if (player.animID.get( k ).equalsIgnoreCase( "equipgun+jetpack" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( 0.25f, true );
+                            break;
+                        }
+                        if (player.animID.get( k ).equalsIgnoreCase( "equipjetpack" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( 0.25f, true );
+                            break;
+                        }
+                        if (player.animID.get( k ).equalsIgnoreCase( "equipgun" )){
                             currentFramea = player.anim.get( k ).getKeyFrame( 0.25f, true );
                             break;
                         }
@@ -1150,13 +1322,22 @@ public class game {
                             currentFramea = player.anim.get( k ).getKeyFrame( 0.25f, true );
                             break;
                         }
+
                     }
                 }
 
                  else if (!player.moving) {
                     //idle
                     for (int k=player.anim.size()-1;k>=0;k--){
-                        if (player.animID.get( k ).equalsIgnoreCase( "equip" )){
+                        if (player.animID.get( k ).equalsIgnoreCase( "equipgun+jetpack" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( 0, true );
+                            break;
+                        }
+                        if (player.animID.get( k ).equalsIgnoreCase( "equipjetpack" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( 0, true );
+                            break;
+                        }
+                        if (player.animID.get( k ).equalsIgnoreCase( "equipgun" )){
                             currentFramea = player.anim.get( k ).getKeyFrame( 0, true );
                             break;
                         }
@@ -1166,11 +1347,30 @@ public class game {
                         }
                     }
 
+                }
+
+                if (ladder && !jumping) {
+                    float state = 0;
+                    if (player.moving) state = playerTime;
+                    for (int k=player.anim.size()-1;k>=0;k--){
+                        if (player.animID.get( k ).equalsIgnoreCase( "climb+jetpack" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( state, true );
+                            break;
+                        }
+                        if (player.animID.get( k ).equalsIgnoreCase( "climb" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( state, true );
+                            break;
+                        }
+                        if (player.animID.get( k ).equalsIgnoreCase( "basic" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( state, true );
+                            break;
+                        }
+                    }
                 }
 
                 if (jetpack) {
                     for (int k=player.anim.size()-1;k>=0;k--){
-                        if (player.animID.get( k ).equalsIgnoreCase( "use" )){
+                        if (player.animID.get( k ).equalsIgnoreCase( "usejetpack" )){
                             currentFramea = player.anim.get( k ).getKeyFrame( playerTime, true );
                             break;
                         }
@@ -1179,8 +1379,26 @@ public class game {
                             break;
                         }
                     }
-
                 }
+
+                if (shooting>0) {
+                    for (int k=player.anim.size()-1;k>=0;k--){
+                        if (player.animID.get( k ).equalsIgnoreCase( "usegun+jetpack" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( playerTime, true );
+                            break;
+                        }
+                        if (player.animID.get( k ).equalsIgnoreCase( "usegun" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( playerTime, true );
+                            break;
+                        }
+                        if (player.animID.get( k ).equalsIgnoreCase( "basic" )){
+                            currentFramea = player.anim.get( k ).getKeyFrame( playerTime, true );
+                            break;
+                        }
+                    }
+                    shooting -=delta;
+                }
+
                 player.setRegion( currentFramea );
 
                 //flip after setting region.
@@ -1406,7 +1624,7 @@ public class game {
             case SHOOT:
                 if (go.cooldown>0) return;
                 playSfx( go.sfx );
-
+                shooting = 0.2f;
                 gameobject newbrick = new gameobject();
                 newbrick.mygame = this;
                 newbrick.speed=go.pspeed;
@@ -1417,8 +1635,8 @@ public class game {
                 newbrick.anim=go.panim;
                 newbrick.deadtileID=go.pdeadanim;
                 newbrick.pimagesize=go.pimagesize;
-                float posx=player.body.getPosition().x;
-                float posy=player.body.getPosition().y;
+                float posx=player.body.getPosition().x+player.offsetx/scale;
+                float posy=player.body.getPosition().y+(player.offsety+3f)/scale;
                 switch (player.dir){
                     case 0:
                         posy-=player.getRegionHeight()/scale;
@@ -1437,6 +1655,10 @@ public class game {
                 }
                 newbrick.setupGameObject( world, null,posx, posy, newbrick.pimagesize.x/2f, newbrick.pimagesize.y/2f, BodyDef.BodyType.DynamicBody, PLAYERPROJECTILE, null ,null ,false,1);
                 this.objects.add( newbrick );
+                //newbrick.myLight = new PointLight( rayHandler, 100, newbrick.lightColor, 4/scale, 0, 0 );
+                //newbrick.myLight.setSoftnessLength( 0f );
+                //newbrick.myLight.attachToBody( newbrick.body );
+
                 go.cooldown=go.pcooldown;
                 break;
             default:
@@ -1447,12 +1669,27 @@ public class game {
             if (getVar( go.bindvar )<=0) {
                 go.action= gameobject.actions.NONE;
                 for (int i=player.anim.size()-1;i>=0;i--){
-                    if (player.animID.get( i ).equalsIgnoreCase( "use" )){
+                    if (player.animID.get( i ).equalsIgnoreCase( "usejetpack" )){
                         player.animID.remove( i );
                         player.anim.remove( i );
                         continue;
                     }
-                    if (player.animID.get( i ).equalsIgnoreCase( "equip" )){
+                    if (player.animID.get( i ).equalsIgnoreCase( "equipjetpack" )){
+                        player.animID.remove( i );
+                        player.anim.remove( i );
+                        continue;
+                    }
+                    if (player.animID.get( i ).equalsIgnoreCase( "climb+jetpack" )){
+                        player.animID.remove( i );
+                        player.anim.remove( i );
+                        continue;
+                    }
+                    if (player.animID.get( i ).equalsIgnoreCase( "equipgun+jetpack" )){
+                        player.animID.remove( i );
+                        player.anim.remove( i );
+                        continue;
+                    }
+                    if (player.animID.get( i ).equalsIgnoreCase( "usegun+jetpack" )){
                         player.animID.remove( i );
                         player.anim.remove( i );
                         continue;
@@ -1617,7 +1854,7 @@ public class game {
         newbrick.damage = (o.containsKey( "damage" )) ? Float.parseFloat( o.get( "damage" ).toString() ) : 0f;
         newbrick.rotating = o.containsKey( "rotating" );
         newbrick.destructible = o.containsKey( "destructible" );
-        newbrick.light = (o.containsKey( "light" )) ? Float.parseFloat( o.get( "light" ).toString() ) : 0;
+        //newbrick.light = (o.containsKey( "light" )) ? Float.parseFloat( o.get( "light" ).toString() ) : 0;
 
 
 
@@ -1719,13 +1956,6 @@ public class game {
 
         }
 
-        if (o.containsKey( "night" )) {
-            night=true;
-            //rayHandler=new RayHandler( world);
-            //rayHandler.setAmbientLight( 1,1,1,0.3f);
-
-        }
-
         if (o.containsKey( "zoom" )) {
             zoom = Float.parseFloat( o.get( "zoom" ).toString() );
         }
@@ -1761,7 +1991,7 @@ public class game {
         newbrick.wait = (o.containsKey( "wait" )) ? Float.parseFloat( o.get( "wait" ).toString() ) : 1f;
         newbrick.speed = (o.containsKey( "speed" )) ? Float.parseFloat( o.get( "speed" ).toString() ) : 1f;
         newbrick.chase = o.containsKey( "chase" );
-        newbrick.chaseRadius = (o.containsKey( "chaseRadius" )) ? Float.parseFloat( o.get( "chaseRadius" ).toString() ) : 100f;
+        newbrick.chaseRadius = (o.containsKey( "chaseradius" )) ? Float.parseFloat( o.get( "chaseradius" ).toString() ) : 100f;
         newbrick.deadtileID = (o.containsKey( "deadanim" )) ? Integer.parseInt( o.get( "deadanim" ).toString() ) : 0;
         newbrick.pdeadanim = (o.containsKey( "pdeadanim" )) ? Integer.parseInt( o.get( "pdeadanim" ).toString() ) : 0;
         newbrick.stepping = o.containsKey( "stepping" );
@@ -1772,6 +2002,8 @@ public class game {
         newbrick.pspeed = (o.containsKey( "pspeed" )) ? Float.parseFloat( o.get( "pspeed" ).toString() ) : 4;
         newbrick.pmaxdistance = (o.containsKey( "pmaxdistance" )) ? Integer.parseInt( o.get( "pmaxdistance" ).toString() ) : 300;
         newbrick.pdamage = (o.containsKey( "pdamage" )) ? Integer.parseInt( o.get( "pdamage" ).toString() ) : 1;
+        newbrick.offsetx = (o.containsKey( "offsetx" )) ? Integer.parseInt( o.get( "offsetx" ).toString() ) : 0;
+        newbrick.offsety = (o.containsKey( "offsety" )) ? Integer.parseInt( o.get( "offsety" ).toString() ) : 0;
 
 
         if (o.containsKey( "object" )) {
@@ -2053,9 +2285,9 @@ public class game {
         Gdx.gl.glClear( GL20.GL_COLOR_BUFFER_BIT );
 
         //draw background
-        batch.setProjectionMatrix( gamecam.combined );
+        batch.setProjectionMatrix( uicam.combined );
         batch.begin();
-        if (txBackground != null) batch.draw( txBackground, gamecam.position.x - 2f, gamecam.position.y - 2f, 4, 4 );
+        if (txBackground != null) batch.draw( txBackground, 0, 0, 1920, 1080 );
         batch.end();
 
         //draw tilemaps
@@ -2067,6 +2299,15 @@ public class game {
         batch.begin();
         drawObjectsAndParticles();
         batch.end();
+
+        //light
+        /*
+        if(rayHandler != null){
+            rayHandler.setCombinedMatrix(gamecam);
+            rayHandler.updateAndRender();
+        }
+
+         */
 
         //draw box2d debug if needed
         if (debugmode) b2dr.render( world, gamecam.combined );
@@ -2080,7 +2321,7 @@ public class game {
         //draw virtual Controller
         if (Gdx.app.getType() != Application.ApplicationType.Desktop || uitest) {
             if (!starting && player.state != gameobject.states.DEAD  && fade==0) {
-                if (!disablecontrol) {
+                if (!disablecontrol && gamepad==null) {
                     stage.act( delta );
                     stage.draw();
                 }
@@ -2215,6 +2456,7 @@ public class game {
         action.add();
         control.add( action );
     }
+    boolean pressed = false;
 
     void keyinput() {
 
@@ -2222,9 +2464,35 @@ public class game {
         if (Gdx.input.isKeyJustPressed( Input.Keys.BACK )) escapegame();
         if (player.state == gameobject.states.DEAD) return;
         if (!disablecontrol) {
-            boolean pressed = false;
+            pressed=false;
+            //GAMEPAD
+            if (gamepad!=null){
+                tslot1 = gamepad.getButton(gamepad.getMapping().buttonB);
+                tslot2 = gamepad.getButton(gamepad.getMapping().buttonA);
+                tslot3 = gamepad.getButton(gamepad.getMapping().buttonX);
+                tslot4 = gamepad.getButton(gamepad.getMapping().buttonY);
+                if (gamepad.getButton(gamepad.getMapping().buttonDpadLeft)){
+                    pressleft();
+                    pressed = true;
+                }
+                if (gamepad.getButton(gamepad.getMapping().buttonDpadRight)){
+                    pressright();
+                    pressed = true;
+                }
+                if (gamepad.getButton(gamepad.getMapping().buttonDpadUp)){
+                    pressup();
+                    pressed = true;
+                }
+                if (gamepad.getButton(gamepad.getMapping().buttonDpadDown)){
+                    pressdown();
+                    pressed = true;
+                }
 
-            if (Gdx.app.getType() == Application.ApplicationType.Desktop) {
+            }
+
+
+            //DESKTOP
+            if (Gdx.app.getType() == Application.ApplicationType.Desktop && gamepad==null) {
                 tslot1 = Gdx.input.isKeyPressed( Input.Keys.X );
                 tslot2 = Gdx.input.isKeyPressed( Input.Keys.C );
                 tslot3 = Gdx.input.isKeyPressed( Input.Keys.D );
@@ -2266,9 +2534,17 @@ public class game {
                 pressed = true;
             }
 
-            if (tanalog) {
-                float deltaX = tpad.getKnobPercentX();
-                float deltaY = tpad.getKnobPercentY();
+            if (tanalog || gamepad!=null) {
+                float deltaX=0f;
+                float deltaY=0f;
+                if (gamepad==null) {
+                    deltaX = tpad.getKnobPercentX();
+                    deltaY = tpad.getKnobPercentY();
+                }else{
+                    deltaX = gamepad.getAxis(gamepad.getMapping().axisLeftX);
+                    deltaY = gamepad.getAxis(gamepad.getMapping().axisLeftY);
+                    log(deltaX+"---"+deltaY);
+                }
                 if (deltaY > 0.4f) {
                     pressup();
                     pressed = true;

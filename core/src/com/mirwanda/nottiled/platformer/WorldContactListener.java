@@ -148,6 +148,66 @@ public class WorldContactListener implements ContactListener {
                 mygame.save();
             }
 
+            if (o.containsKey( "stopbgm" )) {
+                if (mygame.bgm != null && mygame.bgm.isPlaying()) {
+                    mygame.bgm.stop();
+                }
+            }
+
+            if (o.containsKey( "playbgm" )) {
+                if (mygame.bgm != null && !mygame.bgm.isPlaying()) {
+                    mygame.bgm.play();
+                }
+            }
+
+            if (o.containsKey( "changebgm" )) {
+                if (mygame.bgm != null && mygame.bgm.isPlaying()) {
+                    mygame.bgm.stop();
+                }
+
+                String bgms = (String) o.get( "changebgm" );
+                if (mygame.getFile( mygame.path + "/" + bgms ).exists() && !bgms.equalsIgnoreCase( "" )) {
+                    if (mygame.bgm == null) {
+                        mygame.bgm = Gdx.audio.newMusic( mygame.getFile( mygame.path + "/" + bgms ) );
+                        mygame.bgm.setLooping( true );
+                    } else {
+                        if (!mygame.bgm.isPlaying()) {
+                            mygame.bgm = Gdx.audio.newMusic( mygame.getFile( mygame.path + "/" + bgms ) );
+                            mygame.bgm.setLooping( true );
+                        }
+                    }
+                }
+            }
+
+            if (o.containsKey( "setbgm" )) {
+                String bgms = (String) o.get( "setbgm" );
+                if (mygame.getFile( mygame.path + "/" + bgms ).exists() && !bgms.equalsIgnoreCase( "" )) {
+                    if (mygame.bgm == null) {
+                        mygame.bgm = Gdx.audio.newMusic( mygame.getFile( mygame.path + "/" + bgms ) );
+                        mygame.bgm.setLooping( true );
+                    } else {
+                        if (!mygame.bgm.isPlaying()) {
+                            mygame.bgm = Gdx.audio.newMusic( mygame.getFile( mygame.path + "/" + bgms ) );
+                            mygame.bgm.setLooping( true );
+                        }
+                    }
+                }
+            }
+
+            if (o.containsKey( "changebackground" )) {
+                String bgc = (String) o.get( "changebackground" );
+                if (mygame.getFile( mygame.path + "/" + bgc ).exists() && !bgc.equalsIgnoreCase( "" )) {
+                    mygame.txBackground = new Texture( mygame.getFile( mygame.path + "/" + bgc ) );
+                } else {
+                    mygame.txBackground = null;
+                }
+            }
+
+            if (o.containsKey( "removebackground" )) {
+                mygame.txBackground = null;
+            }
+
+
             if (o.get( "notice" ) != null) {
                 mygame.message = o.get( "notice" ).toString();
             }
@@ -373,6 +433,23 @@ public class WorldContactListener implements ContactListener {
                 mygame.disablecontrol = false;
             }
 
+
+            if (o.containsKey( "camlockx" )){
+                mygame.camlockx = true;
+            }
+
+            if (o.containsKey( "camlocky" )){
+                mygame.camlocky = true;
+            }
+
+            if (o.containsKey( "camreleasex" )){
+                mygame.camlockx = false;
+            }
+
+            if (o.containsKey( "camreleasey" )){
+                mygame.camlocky = false;
+            }
+
             if (o.containsKey( "resettimer" )){
                 mygame.timer = 0f;
             }
@@ -414,6 +491,135 @@ public class WorldContactListener implements ContactListener {
                 if (act==null){
                     act = o.get( "setaction" ).toString();
                 }
+
+                if (o.containsKey( "equipjetpack" )){
+                    String pnm=o.get( "equipjetpack" ).toString();
+                    if (onlyDigits( pnm,pnm.length() )) {
+                        int animID = Integer.parseInt( o.get( "equipjetpack" ).toString() );
+                        if (mygame.animids.size() > 0) {
+                            for (int i = 0; i < mygame.animids.size(); i++) {
+                                if (mygame.animids.get( i ) == animID) {
+                                    mygame.player.anim.add( mygame.anims.get( i ) );
+                                    mygame.player.animID.add( "equipjetpack" );
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (o.containsKey( "usejetpack" )){
+                    String pnm=o.get( "usejetpack" ).toString();
+                    if (onlyDigits( pnm,pnm.length() )) {
+                        int animID = Integer.parseInt( o.get( "usejetpack" ).toString() );
+                        if (mygame.animids.size() > 0) {
+                            for (int i = 0; i < mygame.animids.size(); i++) {
+                                if (mygame.animids.get( i ) == animID) {
+                                    mygame.player.anim.add( mygame.anims.get( i ) );
+                                    mygame.player.animID.add( "usejetpack" );
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (o.containsKey( "equipgun" )){
+                    String pnm=o.get( "equipgun" ).toString();
+                    if (onlyDigits( pnm,pnm.length() )) {
+                        int animID = Integer.parseInt( o.get( "equipgun" ).toString() );
+                        if (mygame.animids.size() > 0) {
+                            for (int i = 0; i < mygame.animids.size(); i++) {
+                                if (mygame.animids.get( i ) == animID) {
+                                    mygame.player.anim.add( mygame.anims.get( i ) );
+                                    mygame.player.animID.add( "equipgun" );
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (o.containsKey( "usegun" )){
+                    String pnm=o.get( "usegun" ).toString();
+                    if (onlyDigits( pnm,pnm.length() )) {
+                        int animID = Integer.parseInt( o.get( "usegun" ).toString() );
+                        if (mygame.animids.size() > 0) {
+                            for (int i = 0; i < mygame.animids.size(); i++) {
+                                if (mygame.animids.get( i ) == animID) {
+                                    mygame.player.anim.add( mygame.anims.get( i ) );
+                                    mygame.player.animID.add( "usegun" );
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (o.containsKey( "equipgun+jetpack" ) && mygame.checkvars( "gun&gt;0,jetpack&gt;0" )){
+                    String pnm=o.get( "equipgun+jetpack" ).toString();
+                    if (onlyDigits( pnm,pnm.length() )) {
+                        int animID = Integer.parseInt( o.get( "equipgun+jetpack" ).toString() );
+                        if (mygame.animids.size() > 0) {
+                            for (int i = 0; i < mygame.animids.size(); i++) {
+                                if (mygame.animids.get( i ) == animID) {
+                                    mygame.player.anim.add( mygame.anims.get( i ) );
+                                    mygame.player.animID.add( "equipgun+jetpack" );
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (o.containsKey( "usegun+jetpack" ) && mygame.checkvars( "gun&gt;0,jetpack&gt;0" )){
+                    String pnm=o.get( "usegun+jetpack" ).toString();
+                    if (onlyDigits( pnm,pnm.length() )) {
+                        int animID = Integer.parseInt( o.get( "usegun+jetpack" ).toString() );
+                        if (mygame.animids.size() > 0) {
+                            for (int i = 0; i < mygame.animids.size(); i++) {
+                                if (mygame.animids.get( i ) == animID) {
+                                    mygame.player.anim.add( mygame.anims.get( i ) );
+                                    mygame.player.animID.add( "usegun+jetpack" );
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (o.containsKey( "climb" )){
+                    String pnm=o.get( "climb" ).toString();
+                    if (onlyDigits( pnm,pnm.length() )) {
+                        int animID = Integer.parseInt( o.get( "climb" ).toString() );
+                        if (mygame.animids.size() > 0) {
+                            for (int i = 0; i < mygame.animids.size(); i++) {
+                                if (mygame.animids.get( i ) == animID) {
+                                    mygame.player.anim.add( mygame.anims.get( i ) );
+                                    mygame.player.animID.add( "climb" );
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (o.containsKey( "climb+jetpack" )){
+                    String pnm=o.get( "climb+jetpack" ).toString();
+                    if (onlyDigits( pnm,pnm.length() )) {
+                        int animID = Integer.parseInt( o.get( "climb+jetpack" ).toString() );
+                        if (mygame.animids.size() > 0) {
+                            for (int i = 0; i < mygame.animids.size(); i++) {
+                                if (mygame.animids.get( i ) == animID) {
+                                    mygame.player.anim.add( mygame.anims.get( i ) );
+                                    mygame.player.animID.add( "climb+jetpack" );
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
                 switch (act){
                     case "jump":
                         newbrick.action = gameobject.actions.JUMP;
@@ -425,41 +631,7 @@ public class WorldContactListener implements ContactListener {
                         newbrick.action = gameobject.actions.JETPACK;
                         newbrick.impulse = (o.containsKey( "impulse" )) ? Float.parseFloat( o.get( "impulse" ).toString() ) : 3f;
                         newbrick.pcooldown = (o.containsKey( "cooldown" )) ? Float.parseFloat( o.get( "cooldown" ).toString() ) : 0.8f;
-
-                        if (o.containsKey( "equip" )){
-                            String pnm=o.get( "equip" ).toString();
-                            if (onlyDigits( pnm,pnm.length() )) {
-                                int animID = Integer.parseInt( o.get( "equip" ).toString() );
-                                if (mygame.animids.size() > 0) {
-                                    for (int i = 0; i < mygame.animids.size(); i++) {
-                                        if (mygame.animids.get( i ) == animID) {
-                                            mygame.player.anim.add( mygame.anims.get( i ) );
-                                            mygame.player.animID.add( "equip" );
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        if (o.containsKey( "use" )){
-                            String pnm=o.get( "use" ).toString();
-                            if (onlyDigits( pnm,pnm.length() )) {
-                                int animID = Integer.parseInt( o.get( "use" ).toString() );
-                                if (mygame.animids.size() > 0) {
-                                    for (int i = 0; i < mygame.animids.size(); i++) {
-                                        if (mygame.animids.get( i ) == animID) {
-                                            mygame.player.anim.add( mygame.anims.get( i ) );
-                                            mygame.player.animID.add( "use" );
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
                         break;
-
                     case "dash":
                         newbrick.action = gameobject.actions.DASH;
                         newbrick.impulse = (o.containsKey( "impulse" )) ? Float.parseFloat( o.get( "impulse" ).toString() ) : 1;
@@ -538,8 +710,9 @@ public class WorldContactListener implements ContactListener {
 
             if (o.containsKey( "once" )) {
                 myobject.bumbum();
-                myobject.setCategoryFilter( game.DESTROYED_BIT );
-                mygame.objects.remove( myobject );
+                myobject.state = gameobject.states.DEAD;
+                //myobject.setCategoryFilter( game.DESTROYED_BIT );
+                //mygame.objects.remove( myobject );
             }
 
             if (o.get( "bgcolor" ) != null) {

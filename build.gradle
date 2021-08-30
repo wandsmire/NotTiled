@@ -25,6 +25,8 @@ allprojects {
         box2DLightsVersion = '1.5'
         ashleyVersion = '1.7.0'
         aiVersion = '1.8.2'
+        gdxControllersVersion = '2.2.1' // see badges above for latest versions
+
     }
 
     repositories {
@@ -59,6 +61,8 @@ project(":desktop") {
         }
         implementation group: 'com.esotericsoftware', name: 'kryo', version: '4.0.1'
         implementation group: 'jfugue', name: 'jfugue', version: '5.0.9'
+        implementation "com.badlogicgames.gdx-controllers:gdx-controllers-desktop:$gdxControllersVersion"
+
 
 
     }
@@ -97,6 +101,8 @@ project(":android") {
         }
         implementation group: 'com.esotericsoftware', name: 'kryo', version: '4.0.1'
         implementation group: 'jfugue', name: 'jfugue', version: '5.0.9'
+        implementation "com.badlogicgames.gdx-controllers:gdx-controllers-desktop:$gdxControllersVersion"
+
 
     }
 }
@@ -120,6 +126,8 @@ project(":ios") {
         }
         implementation group: 'com.esotericsoftware', name: 'kryo', version: '4.0.1'
         implementation group: 'jfugue', name: 'jfugue', version: '5.0.9'
+        implementation "com.badlogicgames.gdx-controllers:gdx-controllers-desktop:$gdxControllersVersion"
+
 
     }
 }
@@ -141,6 +149,8 @@ project(":core") {
         implementation group: 'com.esotericsoftware', name: 'kryo', version: '4.0.1'
         implementation group: 'jfugue', name: 'jfugue', version: '5.0.9'
         implementation "com.badlogicgames.box2dlights:box2dlights:1.4"
+        implementation "com.badlogicgames.gdx-controllers:gdx-controllers-desktop:$gdxControllersVersion"
+
     }
 }
 

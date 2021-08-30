@@ -21,14 +21,19 @@ import com.badlogic.gdx.physics.box2d.World;
 
 import java.util.ArrayList;
 
+import box2dLight.PointLight;
+
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ENEMYPROJECTILE;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.MONSTER;
+import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PARTICLE;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYER;
 
 public class gameobject extends Sprite {
     public String id="";
     public String name="";
     public game mygame;
+    public int offsetx;
+    public int offsety;
 
     public gameobject(){}
     public objecttype objtype;
@@ -59,7 +64,7 @@ public class gameobject extends Sprite {
     java.util.List<String> animID = new ArrayList<>();
     public Vector2 pimagesize;
     //public ParticleEffect meledak;
-    //public PointLight myLight;
+    public PointLight myLight;
     public float light;
     public Color bgcolor;
     public Color lightColor = Color.WHITE;
@@ -95,7 +100,7 @@ public class gameobject extends Sprite {
         WALLLEFT,WALLTOP,WALLBOTTOM,WALLRIGHT, WALLCENTER, LADDER, FLOATER, SINKER,
         BRICK, HALFBRICK, BOX, CHECKPOINT,  BREAKABLE, SPRING,ACTION,TOUCHSENSOR,
         SWITCH, SWITCHON, SWITCHOFF, PLATFORMH, PLATFORMV, PLATFORMS, MONSTER, MISC, ITEMSENSOR, ALLSENSOR,
-        LEFTSLOPE, RIGHTSLOPE, TRANSFER, BLOCK, ITEM, ENEMY, PLAYERPROJECTILE, ENEMYPROJECTILE, LISTENER
+        LEFTSLOPE, RIGHTSLOPE, TRANSFER, BLOCK, ITEM, ENEMY, PLAYERPROJECTILE, ENEMYPROJECTILE, PARTICLE, LISTENER
     }
 
     float Tswh;
@@ -165,7 +170,7 @@ public class gameobject extends Sprite {
 
         switch(objtype){
             //object position
-            case PLAYERPROJECTILE: case ENEMYPROJECTILE:
+            case PLAYERPROJECTILE: case ENEMYPROJECTILE: case PARTICLE:
                 setPosition( 9999f,9999f );
                 break;
             case ENEMY:
@@ -189,14 +194,17 @@ public class gameobject extends Sprite {
         //setSize( width/mygame.scale, height /mygame.scale );
         //setOrigin( width /mygame.scale, height /mygame.scale );
 
+
         /*
         if (light>0 && mygame.night) {
-            myLight = new PointLight( mygame.rayHandler, 500, lightColor, light, 0, 0 );
-            myLight.setSoftnessLength( 0.3f );
+            myLight = new PointLight( mygame.rayHandler, 500, lightColor, 100/mygame.scale, 0, 0 );
+            myLight.setSoftnessLength(0f );
             myLight.attachToBody( body );
         }
 
          */
+
+
 
 
 
@@ -261,6 +269,7 @@ public class gameobject extends Sprite {
 
             case PLAYERPROJECTILE:
             case ENEMYPROJECTILE:
+            case PARTICLE:
                 bdef.type = collisiontype;
                 bdef.position.set(xx, yy);
                 body = world.createBody(bdef);
@@ -450,6 +459,14 @@ public class gameobject extends Sprite {
                 fixture = body.createFixture(fdef);
                 fixture.setUserData(this);
 
+            case PARTICLE:
+                fdef.filter.categoryBits = game.COIN_BIT;
+                fdef.filter.maskBits = game.DEFAULT_BIT;
+                shape.setAsBox(width / 200f, height / 200f);
+                fdef.shape = shape;
+                fdef.isSensor = true;
+                fixture = body.createFixture(fdef);
+                fixture.setUserData(this);
                 //setCategoryFilter(game.COIN_BIT);
 
 
@@ -1059,7 +1076,7 @@ public class gameobject extends Sprite {
     public float waitTime;
 
     public void updatePhysics(float dt){
-        if (body!=null) setPosition(body.getPosition().x-getWidth()/2f,body.getPosition().y-getHeight()/2f);
+        if (body!=null) setPosition(body.getPosition().x-getWidth()/2f+offsetx/mygame.scale,body.getPosition().y-getHeight()/2f+offsety/mygame.scale);
     }
     public void update(int times, float dt){
         for (int t=0;t<times;t++){
@@ -1133,10 +1150,10 @@ public class gameobject extends Sprite {
                 mygame.mycontactlistener.eventobject( this );
                 break;
             case PLAYER:
-                //for now, put it in the game.
                 break;
             case PLAYERPROJECTILE:
             case ENEMYPROJECTILE:
+            case PARTICLE:
 
                 assert body != null;
                 switch (dir) {
@@ -1219,6 +1236,12 @@ public class gameobject extends Sprite {
                 if (body.getPosition().dst( mygame.player.body.getPosition() ) < chaseRadius / mygame.scale) {
                     if (mygame.player.state != states.DEAD && canshoot) {
                         shooting = true;
+                        if (!mygame.rpg) {
+                            //player ada di kanan
+                            if (mygame.player.body.getPosition().x > body.getPosition().x) face = 1;
+                            //player ada di kanan
+                            if (mygame.player.body.getPosition().x < body.getPosition().x) face = 2;
+                        }
                         enemyshoot();
                     }
 
@@ -1620,6 +1643,7 @@ public class gameobject extends Sprite {
         newbrick.damage=pdamage;
         newbrick.anim=panim;
         newbrick.dir=face;
+
         float posx=body.getPosition().x;
         float posy=body.getPosition().y;
         switch (dir){
@@ -1643,8 +1667,19 @@ public class gameobject extends Sprite {
 
                 break;
         }
-        newbrick.setupGameObject( mygame.world,null,posx, posy, pimagesize.x, pimagesize.y, BodyDef.BodyType.DynamicBody, ENEMYPROJECTILE, null ,null ,false,1);
+
+        if (newbrick.damage>0) {
+            newbrick.setupGameObject( mygame.world, null, posx, posy, pimagesize.x, pimagesize.y, BodyDef.BodyType.DynamicBody, ENEMYPROJECTILE, null, null, false, 1 );
+        }else{
+            newbrick.setupGameObject( mygame.world, null, posx, posy, pimagesize.x, pimagesize.y, BodyDef.BodyType.DynamicBody, PARTICLE, null, null, false, 1 );
+        }
         mygame.objects.add( newbrick );
+
+        //myLight = new PointLight( mygame.rayHandler, 500, lightColor, 30/mygame.scale, 0, 0 );
+        //myLight.setSoftnessLength( 0f );
+        //myLight.setSoftnessLength( 0f );
+        //myLight.attachToBody( newbrick.body );
+
         cooldown= pcooldown;
 
     }

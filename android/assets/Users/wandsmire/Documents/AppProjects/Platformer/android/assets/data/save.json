@@ -1,43 +1,5 @@
 {
-vars: [
-	{
-		key: menu
-		value: 2
-	}
-	{
-		key: tunnel
-	}
-	{
-		key: warp
-	}
-	{
-		key: level
-		value: 3
-	}
-	{
-		key: score
-		value: 7450
-		hud: true
-		keephud: true
-	}
-	{
-		key: trophy
-		iconx: 3
-		hasicon: true
-	}
-	{
-		key: gun
-		iconx: 6
-		hasicon: true
-		icony: 2
-	}
-	{
-		key: jetpack
-		iconx: 6
-		hasicon: true
-	}
-]
-x: 0.4032258
-y: 24.918522
-mapname: index.tmx
+x: 1.15
+y: 0.6849999
+mapname: Map01.tmx
 }
