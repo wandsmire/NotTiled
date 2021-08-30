@@ -47,6 +47,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Button;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.Touchpad;
@@ -76,7 +77,7 @@ import static com.mirwanda.nottiled.platformer.gameobject.states.DEAD;
 public class game implements ControllerListener {
     public boolean debugmode = false;
     public boolean playtest=true;
-    public boolean uitest=false;
+    public boolean uitest=true;
     public int orientation;
     public boolean night=false;
     public TiledMap map;
@@ -1668,6 +1669,12 @@ public class game implements ControllerListener {
         if (go.bindvar!=null){
             if (getVar( go.bindvar )<=0) {
                 go.action= gameobject.actions.NONE;
+                switch (go.slot){
+                    case 1: slot1.removeActor( islot1  );break;
+                    case 2: slot2.removeActor( islot2  );break;
+                    case 3: slot3.removeActor( islot3  );break;
+                    case 4: slot4.removeActor( islot4  );break;
+                }
                 for (int i=player.anim.size()-1;i>=0;i--){
                     if (player.animID.get( i ).equalsIgnoreCase( "usejetpack" )){
                         player.animID.remove( i );
@@ -2259,8 +2266,6 @@ public class game implements ControllerListener {
             gamecam.zoom = 0.2f;
             gamecam.position.set( player.body.getPosition().x, player.body.getPosition().y, 0 );
             gamecam.update();
-            stage.clear();
-            stage.addActor(control);
             Gdx.input.setInputProcessor(stage);
         }
 
@@ -2351,12 +2356,14 @@ public class game implements ControllerListener {
         return true;
     }
 
-    private void loadTouchpad(){
+    Button slot1,slot2,slot3,slot4;
+    Image islot1,islot2,islot3,islot4;
+    public void loadTouchpad(){
 
-        Button slot1 = new Button( skin2 );
-        Button slot2 = new Button( skin2 );
-        Button slot3 = new Button( skin2 );
-        Button slot4 = new Button( skin2 );
+         slot1 = new Button( skin2 );
+         slot2 = new Button( skin2 );
+         slot3 = new Button( skin2 );
+         slot4 = new Button( skin2 );
 
         slot1.addListener( new InputListener() {
             @Override
@@ -2455,6 +2462,8 @@ public class game implements ControllerListener {
         action.add( slot2 );
         action.add();
         control.add( action );
+        stage.clear();
+        stage.addActor( control );
     }
     boolean pressed = false;
 

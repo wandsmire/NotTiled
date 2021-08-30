@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
+import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.math.Vector2;
@@ -11,6 +12,9 @@ import com.badlogic.gdx.physics.box2d.Contact;
 import com.badlogic.gdx.physics.box2d.ContactImpulse;
 import com.badlogic.gdx.physics.box2d.ContactListener;
 import com.badlogic.gdx.physics.box2d.Manifold;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.scenes.scene2d.utils.SpriteDrawable;
 
 import java.util.ArrayList;
 
@@ -62,6 +66,7 @@ public class WorldContactListener implements ContactListener {
             int rq=0;
             for (String s : ss) {
 
+
                 if (s.contains( "=" )) {
                     String[] sv = s.split( "=" );
                     for (KV var : mygame.save.vars) {
@@ -111,7 +116,6 @@ public class WorldContactListener implements ContactListener {
             if (rq==ss.length) qual=true;
         }
         if (qual) {
-
             if (o.get( "setvar" ) != null) {
                 String[] ss = o.get( "setvar" ).toString().split( "," );
                 for (String s : ss) {
@@ -625,6 +629,7 @@ public class WorldContactListener implements ContactListener {
                         newbrick.action = gameobject.actions.JUMP;
                         newbrick.impulse = (o.containsKey( "impulse" )) ? Float.parseFloat( o.get( "impulse" ).toString() ) : 3f;
                         newbrick.pcooldown = (o.containsKey( "cooldown" )) ? Float.parseFloat( o.get( "cooldown" ).toString() ) : 0.8f;
+                        Actor a = new Actor();
 
                         break;
                     case "jetpack":
@@ -691,20 +696,76 @@ public class WorldContactListener implements ContactListener {
 
                             break;
                 }
-                switch (o.get( "slot" ).toString()){
-                    case "1":
-                        mygame.action1=newbrick;
-                        break;
-                    case "2":
-                        mygame.action2=newbrick;
-                        break;
-                    case "3":
-                        mygame.action3=newbrick;
-                        break;
-                    case "4":
-                        mygame.action4=newbrick;
-                        break;
+
+                int iconx=-1;
+                int icony=-1;
+
+                if (o.get( "icon" ) !=null) {
+                    String[] ss = o.get( "icon" ).toString().split( "," );
+                    iconx=Integer.parseInt( ss[1]);
+                    icony=Integer.parseInt( ss[0]);
                 }
+
+
+                if (o.containsKey( "slot" )){
+                    String slots = o.get( "slot" ).toString();
+                    String[] sso = slots.split( "" );
+                    for (String sr: sso){
+                        switch (sr){
+                            case "1":
+                                newbrick.slot=1;
+                                mygame.action1=newbrick;
+                                mygame.slot1.removeActor( mygame.islot1  );
+                                if (act.equalsIgnoreCase( "none" )) break;
+                                if (iconx ==-1 && icony ==-1) break;
+                                mygame.islot1 = new Image();
+                                mygame.islot1 .setDrawable(new SpriteDrawable(new Sprite(mygame.icons[iconx][icony])));
+                                mygame.islot1 .setScale( 10f );
+                                mygame.slot1.add(mygame.islot1 ).padTop( 190f ).padLeft( -175f );
+                                break;
+                            case "2":
+                                newbrick.slot=2;
+                                mygame.action2=newbrick;
+                                mygame.slot2.removeActor( mygame.islot2  );
+                                if (act.equalsIgnoreCase( "none" )) break;
+
+                                mygame.islot2 = new Image();
+                                mygame.islot2 .setDrawable(new SpriteDrawable(new Sprite(mygame.icons[iconx][icony])));
+                                mygame.islot2 .setScale( 10f );
+                                mygame.slot2.add(mygame.islot2 ).padTop( 190f ).padLeft( -175f );
+                                break;
+
+                            case "3":
+                                newbrick.slot=3;
+                                mygame.action3=newbrick;
+                                mygame.slot3.removeActor( mygame.islot3  );
+                                if (act.equalsIgnoreCase( "none" )) break;
+
+                                mygame.islot3 = new Image();
+                                mygame.islot3 .setDrawable(new SpriteDrawable(new Sprite(mygame.icons[iconx][icony])));
+                                mygame.islot3 .setScale( 10f );
+                                mygame.slot3.add(mygame.islot3 ).padTop( 190f ).padLeft( -175f );
+
+                                break;
+                            case "4":
+                                newbrick.slot=4;
+                                mygame.action4=newbrick;
+                                mygame.slot4.removeActor( mygame.islot4  );
+                                if (act.equalsIgnoreCase( "none" )) break;
+
+                                mygame.islot4 = new Image();
+                                mygame.islot4 .setDrawable(new SpriteDrawable(new Sprite(mygame.icons[iconx][icony])));
+                                mygame.islot4 .setScale( 10f );
+                                mygame.slot4.add(mygame.islot4 ).padTop( 190f ).padLeft( -175f );
+
+                                break;
+                        }
+
+                    }
+
+                }
+
+               // mygame.loadTouchpad();
 
             }
 

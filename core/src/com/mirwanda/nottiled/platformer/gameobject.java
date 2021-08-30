@@ -34,6 +34,7 @@ public class gameobject extends Sprite {
     public game mygame;
     public int offsetx;
     public int offsety;
+    public int slot;
 
     public gameobject(){}
     public objecttype objtype;
