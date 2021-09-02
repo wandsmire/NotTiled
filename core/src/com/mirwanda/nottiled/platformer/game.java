@@ -77,7 +77,7 @@ import static com.mirwanda.nottiled.platformer.gameobject.states.DEAD;
 public class game implements ControllerListener {
     public boolean debugmode = false;
     public boolean playtest=true;
-    public boolean uitest=true;
+    public boolean uitest=false;
     public int orientation;
     public boolean night=false;
     public TiledMap map;
@@ -2585,7 +2585,7 @@ public class game implements ControllerListener {
                     gamecam.unproject( touch2.set( Gdx.input.getX( i ), Gdx.input.getY( i ), 0 ) );
                     if (touchpoint != null) {
                         touchpoint.body.setTransform( touch2.x, touch2.y, 0 );
-                        touchpoint.body.setActive( true );
+                        touchpoint.body.setAwake( true );
                     }
                 }
             }

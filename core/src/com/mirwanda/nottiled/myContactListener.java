@@ -6,6 +6,7 @@ import com.badlogic.gdx.physics.box2d.ContactListener;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.Manifold;
 
+import static com.mirwanda.nottiled.obj.objecttype.MARKER;
 import static com.mirwanda.nottiled.obj.objecttype.POINTER;
 
 public class myContactListener implements ContactListener {
@@ -19,15 +20,44 @@ public class myContactListener implements ContactListener {
             Fixture fixA = contact.getFixtureA();
             Fixture fixB = contact.getFixtureB();
             if (fixA.getUserData() == POINTER){
-                game.checkBox2D((obj) fixB.getUserData());
-
+                if (fixB.getUserData() instanceof obj){
+                    game.checkBox2D((obj) fixB.getUserData());
+                } else{
+                    if (game.markermode) return;
+                    game.markerstring=(String) fixB.getUserData();
+                    if (game.markerstring.equalsIgnoreCase( "P" ))
+                    {
+                        game.requestoldfunction=true;
+                        return;
+                    }
+                    game.markermode=true;
+                }
+                game.hidebody=true;
+                game.bodyc=0.2f;
             }
+
             if (fixB.getUserData() == POINTER){
-                game.checkBox2D((obj) fixA.getUserData());
+                if (fixA.getUserData() instanceof obj){
+                    game.checkBox2D((obj) fixA.getUserData());
+                } else{
+                   if (game.markermode) return;
+                    game.markerstring=(String) fixA.getUserData();
+                    if (game.markerstring.equalsIgnoreCase( "P" ))
+                    {
+                        game.requestoldfunction=true;
+                        return;
+                    }
+                    game.markermode=true;
+
+                }
+                game.hidebody=true;
+                game.bodyc=0.2f;
+
+
 
             }
 
-              //  Gdx.app.log("TEST","COLLIDED");
+            //  Gdx.app.log("TEST","COLLIDED");
 
 
         }

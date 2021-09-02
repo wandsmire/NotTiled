@@ -1,6 +1,5 @@
 package com.mirwanda.nottiled;
 
-import com.badlogic.gdx.Application;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -66,7 +65,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.TextField;
 import com.badlogic.gdx.scenes.scene2d.ui.Touchpad;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.SpriteDrawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
@@ -95,7 +93,6 @@ import com.esotericsoftware.kryonet.Server;
 import com.mirwanda.nottiled.ai.ATGraph;
 import com.mirwanda.nottiled.ai.AutoTile;
 import com.mirwanda.nottiled.platformer.game;
-import com.mirwanda.nottiled.platformer.gameobject;
 
 import org.jfugue.midi.MidiFileManager;
 import org.jfugue.pattern.Pattern;
@@ -286,6 +283,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     java.util.List<Label> tla = new ArrayList<Label>();
     java.util.List<layerhistory> undolayer = new ArrayList<layerhistory>();
     java.util.List<layerhistory> redolayer = new ArrayList<layerhistory>();
+
+    java.util.List<layerobjecthistory> undolayerobject = new ArrayList<>();
+    java.util.List<layerobjecthistory> redolayerobject = new ArrayList<>();
+
     java.util.List<TileCache> tcaches = new ArrayList<TileCache>();
 
     layer tempLayer;
@@ -664,16 +665,92 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+
+                if (layers.size()>0 && layers.get(selLayer).getType()== layer.Type.OBJECT){
+                    Vector3 touch = new Vector3();
+                    cam.unproject( touch.set( new Vector3(screenX,screenY,0) ) );
+                    float ae = touch.x;
+                    float ab = touch.y;
+                    updatePointer(ae,-ab);
+                }
+
                 return false;
             }
 
             @Override
             public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+                if (markermode)
+                {
+                    markermode=false;
+                    oldae=-1;
+                    oldab=-1;
+
+                    for (obj o: selobjs){
+
+                        if (magnet==1){
+                            float newW = ((int)o.getW()/(int) (Tsw*0.5f))*Tsw*0.5f;
+                            float newH = ((int)o.getH()/(int) (Tsh*0.5f))*Tsh*0.5f;
+                            float newX = ((int)o.getX()/(int) (Tsw*0.5f))*Tsw*0.5f;
+                            float newY = ((int)o.getY()/(int) (Tsh*0.5f))*Tsh*0.5f;
+                            float newRot = ((int)o.getRotation()/(int) 5)*5;
+                            o.setW( newW );
+                            o.setH( newH );
+                            o.setX( newX );
+                            o.setY( newY );
+                            o.setRotation( newRot );
+                        }
+                        if (o.getH()<5) o.setH(5);
+                        if (o.getW()<5) o.setW(5);
+
+                        o.updateVerticesActive( world,Tsh );
+
+                        layerobjecthistory loh = new layerobjecthistory();
+                        loh.setRelatedobj( o );
+                        loh.setLayer( selLayer );
+
+                        obj oc = new obj();
+                        oc.setGid( o.getGid() );
+                        oc.setProperties( o.getProperties() );
+                        oc.setPoints( o.getPoints() );
+                        oc.setW( o.getW() );
+                        oc.setH( o.getH() );
+                        oc.setX( o.getX() );
+                        oc.setY(o.getY());
+                        oc.setId( o.getId() );
+                        oc.setName( o.getName() );
+                        oc.setRotation( o.getRotation() );
+                        oc.setShape( o.getShape() );
+                        oc.setType( o.getType() );
+                        oc.setText( o.getText() );
+
+
+                        Json json = new Json();
+                        loh.setData(olddata);
+                        undolayerobject.add( loh );
+                        olddata=json.toJson(oc);
+                    }
+
+                }
                 return false;
             }
 
             @Override
             public boolean touchDragged(int screenX, int screenY, int pointer) {
+
+                if (layers.size()>0 && layers.get(selLayer).getType()== layer.Type.OBJECT){
+                    Vector3 touch = new Vector3();
+                    cam.unproject( touch.set( new Vector3(screenX,screenY,0) ) );
+                    float ae = touch.x;
+                    float ab = touch.y;
+                    //body.setTransform( 9999, 9999,0 );
+                    //body.setAwake( false );
+                   // body.setAwake( false );
+
+
+
+                }
+
+
                 return false;
             }
 
@@ -1224,8 +1301,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (!mygame.render()) backToMap();
             return;
         }
+        delta = Gdx.graphics.getDeltaTime();
 
         if (requestavailable) fullfilrequest();
+        pointerremoval(delta);
+        fulfilloldfunction();
 
         FPSCount +=1;
         if (FPSCount ==60) FPSCount=0;
@@ -1256,7 +1336,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     firstload = -1;
                 }
 
-                if (!kartu.equalsIgnoreCase( "game")) {
+
                     if (timeToPan >= 0) {
                         timeToPan -= delta;
                         float progress = timeToPan < 0 ? 1 : 1f - timeToPan / panDuration;
@@ -1281,7 +1361,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         cammy.update();
                     }
-                }
+
 
 
 
@@ -1417,7 +1497,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         postProcessor.render();
                         drawWorldUI();
                         //draw debug for collision detection
-                        //b2dr.render(world,cam.combined);
+                        b2dr.render(world,cam.combined);
 
                         drawstage( delta );
 
@@ -1643,7 +1723,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void clsEnter() {
-        delta = Gdx.graphics.getDeltaTime();
         fps = Integer.toString( Gdx.graphics.getFramesPerSecond() );
 
     }
@@ -1781,6 +1860,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (kartu != "stage") {
             if (Gdx.input.isKeyJustPressed( Input.Keys.E )) {
                 eraser = !eraser;
+            }
+            if (Gdx.input.isKeyJustPressed( Input.Keys.Q )) {
+                markermode=false;
             }
             if (Gdx.input.isKeyPressed( Input.Keys.W ) || Gdx.input.isKeyPressed( Input.Keys.UP )) {
                 cam.position.add( 0, 40f, 0 );
@@ -3686,9 +3768,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 if (layers.get( i ).getType() == layer.Type.OBJECT && isShown && layers.get( i ).getObjects().size() > 0) {
 
+                    updateMarkers();
                     for (int j = 0; j < layers.get( i ).getObjects().size(); j++) {
 
                         obj ox = layers.get( i ).getObjects().get( j );
+                        if (selobjs.contains( ox )){
+                            sr.setColor( 0.9f, 0.5f, 0.9f, 0.5f ); //not green
+                        }else{
+                            sr.setColor( 0.5f, 0.7f, 0.5f, 0.5f ); //green
+                        }
+
 
                         if (ox.getShape() != null) {
                             switch (ox.getShape()) {
@@ -3791,7 +3880,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         sr.end();
 
         //part 2 of 2, outline.
-        sr.begin( ShapeRenderer.ShapeType.Line ); //Edit it with filled to make it looks gorgeous.
+        sr.begin( ShapeRenderer.ShapeType.Line ); //
         Gdx.gl.glEnable( GL20.GL_BLEND );
 
         Gdx.gl20.glLineWidth( 5 );//average
@@ -4524,6 +4613,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 uisrect( gui.map, mouse, vis( "map" ) );//map props. button
                 uisrect( gui.save, mouse, vis( "quicksave" ) );//main menu button
                 uisrect( gui.layerpick, mouse, vis( "layerpick" ) );//layerpicker
+
                 /* draw filled rectangle for the whole minimap.
                 if (sMinimap){
                 if (!landscape) {
@@ -4555,12 +4645,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
             if (mode == "tile") {
+                uisrect( gui.undo, mouse, vis( "undo" ) );//undo
+                uisrect( gui.redo, mouse, vis( "redo" ) );//redo
 
                 if (sShowFPS) uisrect( gui.fps, mouse, vis( "FPS" ) );//tile/obj switch
 
                 uisrect( gui.rotation, mouse, vis( "rotation" ) );//rotation switch
-                uisrect( gui.undo, mouse, vis( "undo" ) );//undo
-                uisrect( gui.redo, mouse, vis( "redo" ) );//redo
                 if (swatches) {
                     //uisrect( gui.swatches, mouse, vis( "swatches" ) );//swatches
                     uisrect( gui.sw1, mouse, vis( "swatches1" ) );//swatches
@@ -4626,6 +4716,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 uisrect( gui.objectpickerleft, mouse, null );//objtools switch
                 uisrect( gui.objectpickerright, mouse, null );//objtools switch
                 uisrect( gui.lock, mouse, null );//tool switch
+                uisrect( gui.undo, mouse, vis( "undo" ) );//undo
+                uisrect( gui.redo, mouse, vis( "redo" ) );//redo
+
 
             }
             if (mode == "image") {
@@ -5028,6 +5121,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     uidrawbutton( txundo, z.undo, gui.undo, 3.1f );
                     uidrawbutton( txredo, z.redo, gui.redo, 3.1f );
                 } else if (mode == "object") {
+                    uidrawbutton( txundo, z.undo, gui.undo, 3.1f );
+                    uidrawbutton( txredo, z.redo, gui.redo, 3.1f );
 
 
                     str1draw( ui, shapeName, gui.objectpickermid );
@@ -8990,7 +9085,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bApply.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                obj oj=selobj;
+                obj oj=selobjs.get(0);
                 try {
                     oj.setX( Float.parseFloat( tf.get( 1 ).getText() ) );
                     oj.setY( Float.parseFloat( tf.get( 2 ).getText() ) );
@@ -9019,8 +9114,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bRemove.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                selobj.destroyBody( world );
-                layers.get(selLayer).getObjects().remove( selobj);
+                selobjs.get(0).destroyBody( world );
+                layers.get(selLayer).getObjects().remove( selobjs.get(0));
 
                 backToMap();
             }
@@ -9051,7 +9146,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     }
 
-    obj selobj;
+    java.util.List<obj> selobjs = new ArrayList<>();
     public void loadPropEditor() {
 		/*
 		 Table tPropEditor;
@@ -9172,7 +9267,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 switch (sender) {
                     case "object":
-                        pp = selobj.getProperties();
+                        pp = selobjs.get(0).getProperties();
                         break;
                     case "tile":
                         pp = tilesets.get(selTsetID).getTiles().get(selTileID).getProperties();
@@ -10486,7 +10581,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 java.util.List<property> pp = new ArrayList<property>();
                 switch (sender) {
                     case "object":
-                        pp = selobj.getProperties();
+                        pp = selobjs.get(0).getProperties();
                         break;
                     case "tile":
                         pp = tilesets.get(selTsetID).getTiles().get(selTileID).getProperties();
@@ -10525,7 +10620,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 java.util.List<property> pp = new ArrayList<property>();
                 switch (sender) {
                     case "object":
-                        pp = selobj.getProperties();
+                        pp = selobjs.get(0).getProperties();
                         break;
                     case "tile":
                         pp = tilesets.get(selTsetID).getTiles().get(selTileID).getProperties();
@@ -10567,7 +10662,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                     switch (sender) {
                         case "object":
-                            selobj.setProperties(at.getProperties());
+                            selobjs.get(0).setProperties(at.getProperties());
                             break;
                         case "tile":
                             tilesets.get(selTsetID).getTiles().get(selTileID).setProperties(at.getProperties());
@@ -10680,9 +10775,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bProps.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                refreshProperties(selobj.getProperties());
+                refreshProperties(selobjs.get(0).getProperties());
 
-                lPropID.setText(z.object + " " + z.properties + ": " + selobj.getId());
+                lPropID.setText(z.object + " " + z.properties + ": " + selobjs.get(0).getId());
                 sender = "object";
                 gotoStage(tPropsMgmt);
             }
@@ -10773,7 +10868,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 java.util.List<property> pp = new ArrayList<property>();
                 switch (sender) {
                     case "object":
-                        pp = selobj.getProperties();
+                        pp = selobjs.get(0).getProperties();
                         break;
                     case "tset":
                         pp = tilesets.get(selTsetID).getProperties();
@@ -10850,7 +10945,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 java.util.List<property> pp = new ArrayList<property>();
                 switch (sender) {
                     case "object":
-                        pp = selobj.getProperties();
+                        pp = selobjs.get(0).getProperties();
                         break;
                     case "tile":
                         pp = tilesets.get(selTsetID).getTiles().get(selTileID).getProperties();
@@ -10888,7 +10983,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 java.util.List<property> pp = new ArrayList<property>();
                 switch (sender) {
                     case "object":
-                        pp = selobj.getProperties();
+                        pp = selobjs.get(0).getProperties();
                         break;
                     case "tile":
                         pp = tilesets.get(selTsetID).getTiles().get(selTileID).getProperties();
@@ -11689,7 +11784,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 switch (sender) {
                     case "object":
-                        selobj.setProperties(at.getProperties());
+                        selobjs.get(0).setProperties(at.getProperties());
 
                         break;
                     case "tile":
@@ -16047,6 +16142,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return false;
     }
 
+    public boolean requestoldfunction;
+
+    public void fulfilloldfunction(){
+        if (requestoldfunction) {
+            showPropBox2D( selobjs.get( 0 ) );
+            requestoldfunction = false;
+        }
+    }
+
     @Override
     public boolean tap(float p1, float p2, int p3, int p4) {
         //Vector3 ve,vo;
@@ -17102,30 +17206,103 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
-    public void updatePointer(float x, float y){
-        bdef.type = BodyDef.BodyType.DynamicBody;
-        bdef.position.set(x,-y);
-        body = world.createBody(bdef);
-        fdef.filter.categoryBits = game.PLAYER_BIT;
-        fdef.filter.maskBits = game.DEFAULT_BIT;
-        fdef.isSensor = true;
+    boolean hidebody =false;
+    float bodyc=0;
+    public void pointerremoval(float delta){
+        if (hidebody){
+            bodyc-=delta;
+            if (bodyc<=0){
+                body.setAwake( false );
+                hidebody=false;
 
-        pshape = new PolygonShape();
-        pshape.setAsBox( 3,3 );
-        fdef.shape = pshape;
-        fixture = body.createFixture(fdef);
-        objType = obj.objecttype.POINTER;
-        fixture.setUserData(objType);
+            }
+        }
+    }
+    public void updatePointer(float x, float y){
+
+        if (body == null) {
+
+            bdef.type = BodyDef.BodyType.DynamicBody;
+
+            bdef.position.set( x, -y );
+            body = world.createBody( bdef );
+            fdef.filter.categoryBits = game.PLAYER_BIT;
+            fdef.filter.maskBits = game.DEFAULT_BIT | game.MARKER_BIT;
+            fdef.isSensor = true;
+
+            pshape = new PolygonShape();
+            pshape.setAsBox( 3, 3 );
+            fdef.shape = pshape;
+            fixture = body.createFixture( fdef );
+            objType = obj.objecttype.POINTER;
+            fixture.setUserData( objType );
+        }else{
+            body.setTransform( x,-y,0 );
+            body.setAwake( true );
+        }
+
     }
 
-    public void checkBox2D(obj ox){
-        tempObjx.add( ox );
-        loadList( "object" );
-       // status( tempObjx.size()+"",1 );
+    boolean requestupdatemarker=false;
+    public boolean markermode = false;
+    public String markerstring;
+
+
+    public void updateMarkers(){
+        if (selobjs.size()==0) return;
+        if (requestupdatemarker){
+            requestupdatemarker=false;
+
+            updateObjectCollision();
+
+            if (layers.get(selLayer).getType()!= layer.Type.OBJECT) return;
+            for (obj o : layers.get(selLayer).getObjects()){
+                if (selobjs.contains( o )) {
+                    o.updateVerticesActive( world, Tsh );
+                }
+            }
+        }
+
+
+
+    }
+
+    public String olddata;
+    public void checkBox2D(obj o){
+        selobjs.clear();
+        if (!selobjs.contains( o )){
+            selobjs.add(o);
+
+            obj oc = new obj();
+            oc.setGid( o.getGid() );
+            oc.setProperties( o.getProperties() );
+            oc.setPoints( o.getPoints() );
+            oc.setW( o.getW() );
+            oc.setH( o.getH() );
+            oc.setX( o.getX() );
+            oc.setY(o.getY());
+            oc.setId( o.getId() );
+            oc.setName( o.getName() );
+            oc.setRotation( o.getRotation() );
+            oc.setShape( o.getShape() );
+            oc.setType( o.getType() );
+            oc.setText( o.getText() );
+            Json json = new Json();
+            olddata=json.toJson(oc);
+
+
+        }
+        requestupdatemarker=true;
+
+
+
+        //tempObjx.add( ox );
+        //loadList( "object" );
     }
 
     public void showPropBox2D(obj ox){
-        selobj=ox;
+        markermode=false;
+        //selobjs.set( 0,ox);
            // Gdx.app.log( "PP",activeobjtool+"");
         //cumi
         if (activeobjtool == 7) {
@@ -17196,13 +17373,179 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         float newae = (ab * Tsh / 2) - (ae * Tsh / 2);
         */
         tempObjx.clear();
-        updatePointer(ae,-ab);
+        //updatePointer(ae,-ab);
         return true;
 
         //return false;
     }
 
+    float oldae=0;
+    float oldab=0;
+    private void resizeobject(float ae, float ab){
+        float angle2;
+        double posx2;
+        double posy2;
+        double n2;
+        float angle;
+        double posx;
+        double posy;
+        double n1;
+
+        if (markermode){
+            for (obj o : selobjs){
+                float rotation = o.getRotation();
+                //if (o.getType().equalsIgnoreCase( "image" )) ab=-ab;
+
+                switch (markerstring){
+                    case "R": // OK
+                        if (oldab==-1) continue;
+                        if (oldae>ae){
+                            float delta = Math.abs(oldae-ae);
+                            o.setRotation( o.getRotation()-delta*5 );
+                        }else{
+                            float delta = Math.abs(oldae-ae);
+                            o.setRotation( o.getRotation()+delta*5 );
+                        }
+                        break;
+
+                    case "SE": //OK
+                        angle2 = (float) ((rotation)*DEGREES_TO_RADIANS);
+                        posx2 = o.getX()+ Math.cos(angle2)*o.getW();
+                        posy2 = o.getY()+ Math.sin(angle2)*o.getW();
+                        n2 = Math.sqrt(Math.pow(ae-posx2,2)+Math.pow(-ab+Tsh-posy2,2 ));
+                        o.setH( (float) n2);
+
+                        angle = (float) ((90+rotation)*DEGREES_TO_RADIANS);
+                        posx = o.getX()+ Math.cos(angle)*o.getH();
+                        posy = o.getY()+ Math.sin(angle)*o.getH();
+                        n1 = Math.sqrt(Math.pow(ae-posx,2)+Math.pow(-ab+Tsh-posy,2 ));
+                        o.setW( (float) n1 );
+                        break;
+
+                    case "SEI": //OK
+                        angle2 = (float) ((rotation)*DEGREES_TO_RADIANS);
+                        posx2 = o.getX()+ Math.cos(angle2)*o.getW();
+                        posy2 = o.getY()+ Math.sin(angle2)*o.getW();
+                        n2 = Math.sqrt(Math.pow(ae-posx2,2)+Math.pow(-ab+Tsh-posy2,2 ));
+                        o.setH( (float) n2);
+
+                        angle = (float) ((90+rotation)*DEGREES_TO_RADIANS);
+                        posx = o.getX()+ Math.cos(angle)*-o.getH();
+                        posy = o.getY()+ Math.sin(angle)*-o.getH();
+                        n1 = Math.sqrt(Math.pow(ae-posx,2)+Math.pow(-ab+Tsh-posy,2 ));
+                        o.setW( (float) n1 );
+                        break;
+
+                    case "E": //OK
+                        angle = (float) ((90+rotation)*DEGREES_TO_RADIANS);
+                        posx = o.getX()+ Math.cos(angle)*(o.getH()/2f);
+                        posy = o.getY()+ Math.sin(angle)*(o.getH()/2f);
+                        n1 = Math.sqrt(Math.pow(ae-posx,2)+Math.pow(-ab+Tsh-posy,2 ));
+                        o.setW( (float) n1 );
+                        break;
+
+                    case "P": //OK
+                        showPropBox2D( selobjs.get(0));
+                        break;
+
+
+                    case "S": //OK
+                        angle2 = (float) ((rotation)*DEGREES_TO_RADIANS);
+                        posx2 = o.getX()+ Math.cos(angle2)*(o.getW()/2f);
+                        posy2 = o.getY()+ Math.sin(angle2)*(o.getW()/2f);
+                        n2 = Math.sqrt(Math.pow(ae-posx2,2)+Math.pow(-ab+Tsh-posy2,2 ));
+                        o.setH( (float) n2);
+                        break;
+
+                    case "NW":
+                        o.setX( ae);
+                        o.setY( -ab+Tsh );
+
+                        /*
+                        angle2 = (float) ((rotation)*DEGREES_TO_RADIANS);
+                        posx2 = o.getX()+ Math.cos(angle2)*o.getW();
+                        posy2 = o.getY()+ Math.sin(angle2)*o.getW();
+                        n2 = Math.sqrt(Math.pow(ae-posx2,2)+Math.pow(-ab+Tsh-posy2,2 ));
+                        o.setH( (float) n2);
+
+                        angle = (float) ((90+rotation)*DEGREES_TO_RADIANS);
+                        posx = o.getX()+ Math.cos(angle)*o.getH();
+                        posy = o.getY()+ Math.sin(angle)*o.getH();
+                        n1 = Math.sqrt(Math.pow(ae-posx,2)+Math.pow(-ab+Tsh-posy,2 ));
+                        o.setW( (float) n1 );
+                        break;
+
+                         */
+
+                    //find the anchor first, then use the anchor as the basis of the calculation
+
+
+                    case "C":
+                        o.setX( ae);
+                        o.setY( -ab+Tsh );
+                        break;
+
+
+
+                    case "SW":
+
+                        if (o.getRotation()==0) {
+                            o.setH( ae - o.getY() );
+                        }else{
+                            n1 = Math.sqrt(Math.pow(ae-o.getX(),2)+Math.pow(-ab+Tsh-o.getY(),2 ));
+                            o.setH( (float) n1 );
+                        }
+                        break;
+                    case "NE":
+                        if (o.getRotation()==0) {
+                            o.setW( ae - o.getX() );
+                        }else{
+                             n1 = Math.sqrt(Math.pow(ae-o.getX(),2)+Math.pow(-ab+Tsh-o.getY(),2 ));
+                            o.setW( (float) n1 );
+                        }
+                        break;
+                    case "W":
+                        break;
+
+
+                }
+
+                if (magnet==1){
+                    float newW = ((int)o.getW()/(int) (Tsw*0.5f))*Tsw*0.5f;
+                    float newH = ((int)o.getH()/(int) (Tsh*0.5f))*Tsh*0.5f;
+                    float newX = ((int)o.getX()/(int) (Tsw*0.5f))*Tsw*0.5f;
+                    float newY = ((int)o.getY()/(int) (Tsh*0.5f))*Tsh*0.5f;
+                    o.setW( newW );
+                    o.setH( newH );
+                    o.setX( newX );
+                    o.setY( newY );
+                }
+                if (o.getH()<5) o.setH(5);
+                if (o.getW()<5) o.setW(5);
+
+
+               // o.updateVerticesActive( world,Tsh );
+
+            }
+
+
+        }
+        oldae=ae;
+        oldab=ab;
+    }
+
+
     private void longpressObject(float p1, float p2){
+        if (layers.size()>0 && layers.get(selLayer).getType()== layer.Type.OBJECT){
+            Vector3 touch = new Vector3();
+            cam.unproject( touch.set( new Vector3(p1,p2,0) ) );
+            float ae = touch.x;
+            float ab = touch.y;
+            updatePointer(ae,-ab);
+        }
+        if (markermode) return;
+
+
         obj nyok = new obj();
 
         String shapeNameX = "";
@@ -19438,6 +19781,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 com.badlogic.gdx.utils.Array<Body> bds = new com.badlogic.gdx.utils.Array<Body>();
                 world.getBodies( bds );
                 for ( Body bd : bds){
+                    if (bd==body) continue;
                     if (world.getBodyCount()==0) break;
                     world.destroyBody( bd );
                 }
@@ -19497,8 +19841,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 case STACK: case SINGLE:
                     resetCaches(); break;
             }
-
+            selobjs.clear();
             updateObjectCollision();
+
             adjustTileset();
 
             return true;
@@ -19813,7 +20158,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (tapped(touch2, gui.undo)) {
 
 
-            if (mode == "tile") {
+            if (mode.equalsIgnoreCase("tile")) {
                 try {
                     if (!cue("undo") && lockUI) return true;
                     if (undolayer.size() > 0) {
@@ -19848,7 +20193,28 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 //updateMinimap();
                 //if (sMinimap) cacheTiles();
                 return true;
+            }else if (mode.equalsIgnoreCase( "object" )){
+                if (undolayerobject.size()>0){
+                    layerobjecthistory loh = undolayerobject.get( undolayerobject.size()-1 );
+                    Json json = new Json();
+                    //log(loh.getData());
+                    obj newo = json.fromJson(obj.class, loh.getData());
+
+
+
+                        for (int i=0;i<layers.get(loh.getLayer()).getObjects().size()-1;i++){
+                            obj o = layers.get(loh.getLayer()).getObjects().get(i);
+                              if (o.getId()==newo.getId()){
+                                  layers.get(loh.getLayer()).getObjects().set(i,newo);
+                                  break;
+                              }
+                        }
+                    redolayerobject.add( loh );
+                        undolayerobject.remove( loh );
+                     updateObjectCollision();
+                }
             }
+
             if (mode == "newpoly") {
 
                 newobject.undoPoint();
@@ -22750,7 +23116,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     @Override
     public boolean pan(float p1, float p2, float p3, float p4) {
         if (loadingfile) return true;
+
+        if(markermode){
+            Vector3 touch2 = new Vector3();
+            cam.unproject(touch2.set(p1, p2, 0));
+            resizeobject( touch2.x,touch2.y );
+            return true;
+        }
         if (kartu.equalsIgnoreCase("game")){return true;}
+
         if (kartu.equalsIgnoreCase( "editor" ) && iseditGUI){
 
 

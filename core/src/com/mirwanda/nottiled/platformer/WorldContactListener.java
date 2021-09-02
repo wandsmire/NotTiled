@@ -718,6 +718,7 @@ public class WorldContactListener implements ContactListener {
                                 mygame.slot1.removeActor( mygame.islot1  );
                                 if (act.equalsIgnoreCase( "none" )) break;
                                 if (iconx ==-1 && icony ==-1) break;
+                                if (mygame.icons==null) break;
                                 mygame.islot1 = new Image();
                                 mygame.islot1 .setDrawable(new SpriteDrawable(new Sprite(mygame.icons[iconx][icony])));
                                 mygame.islot1 .setScale( 10f );
@@ -728,6 +729,8 @@ public class WorldContactListener implements ContactListener {
                                 mygame.action2=newbrick;
                                 mygame.slot2.removeActor( mygame.islot2  );
                                 if (act.equalsIgnoreCase( "none" )) break;
+                                if (iconx ==-1 && icony ==-1) break;
+                                if (mygame.icons==null) break;
 
                                 mygame.islot2 = new Image();
                                 mygame.islot2 .setDrawable(new SpriteDrawable(new Sprite(mygame.icons[iconx][icony])));
@@ -740,6 +743,8 @@ public class WorldContactListener implements ContactListener {
                                 mygame.action3=newbrick;
                                 mygame.slot3.removeActor( mygame.islot3  );
                                 if (act.equalsIgnoreCase( "none" )) break;
+                                if (iconx ==-1 && icony ==-1) break;
+                                if (mygame.icons==null) break;
 
                                 mygame.islot3 = new Image();
                                 mygame.islot3 .setDrawable(new SpriteDrawable(new Sprite(mygame.icons[iconx][icony])));
@@ -752,6 +757,8 @@ public class WorldContactListener implements ContactListener {
                                 mygame.action4=newbrick;
                                 mygame.slot4.removeActor( mygame.islot4  );
                                 if (act.equalsIgnoreCase( "none" )) break;
+                                if (iconx ==-1 && icony ==-1) break;
+                                if (mygame.icons==null) break;
 
                                 mygame.islot4 = new Image();
                                 mygame.islot4 .setDrawable(new SpriteDrawable(new Sprite(mygame.icons[iconx][icony])));

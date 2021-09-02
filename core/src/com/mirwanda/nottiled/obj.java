@@ -26,20 +26,87 @@ public class obj implements Cloneable
 	private boolean wrap=false;
 	private String text="";
 	private float rotation=0f;
+	private boolean active=false;
 
-	public Body body;
-	BodyDef bdef = new BodyDef();
-	PolygonShape pshape;
-	EdgeShape eshape;
-	FixtureDef fdef = new FixtureDef();
-	public Fixture fixture;
+	private Body body;
+	private BodyDef bdef = new BodyDef();
+	private PolygonShape pshape;
+	private EdgeShape eshape;
+	private FixtureDef fdef = new FixtureDef();
+	private Fixture fixture;
+
+	public boolean isActive() {
+		return active;
+	}
+
+	public void setActive(boolean active) {
+		this.active = active;
+	}
+
+
+	public void setBody(Body body) {
+		this.body = body;
+	}
+
+
+	public void setBdef(BodyDef bdef) {
+		this.bdef = bdef;
+	}
+
+
+	public void setPshape(PolygonShape pshape) {
+		this.pshape = pshape;
+	}
+
+	public EdgeShape getEshape() {
+		return eshape;
+	}
+
+	public void setEshape(EdgeShape eshape) {
+		this.eshape = eshape;
+	}
+
+
+	public void setFdef(FixtureDef fdef) {
+		this.fdef = fdef;
+	}
+
+
+	public void setFixture(Fixture fixture) {
+		this.fixture = fixture;
+	}
+
+	public objecttype getObjType() {
+		return objType;
+	}
+
+	public void setObjType(objecttype objType) {
+		this.objType = objType;
+	}
+
+	public static short getDefaultBit() {
+		return DEFAULT_BIT;
+	}
+
+	public static short getPlayerBit() {
+		return PLAYER_BIT;
+	}
+
+	public static short getMarkerBit() {
+		return MARKER_BIT;
+	}
+
+	public static double getDegreesToRadians() {
+		return DEGREES_TO_RADIANS;
+	}
 
 	public enum objecttype {
-		OBJECT, POINTER
+		OBJECT, POINTER, MARKER
 	}
 	public objecttype objType = objecttype.OBJECT;
 	public static final short DEFAULT_BIT = 1;
 	public static final short PLAYER_BIT = 2;
+	public static final short MARKER_BIT = 4;
 
 
 	private java.util.List<property> properties = new ArrayList<property>();
@@ -178,6 +245,326 @@ public class obj implements Cloneable
 		float angle = (float) ((360-rotation)*DEGREES_TO_RADIANS);
 		body.setTransform( body.getPosition(),angle);
 	}
+
+	public void updateVerticesActive(World world, int Tsh){
+		if (body!=null) world.destroyBody( body );
+		bdef.type = BodyDef.BodyType.StaticBody;
+		fdef.filter.categoryBits = DEFAULT_BIT;
+		fdef.filter.maskBits = PLAYER_BIT;
+
+		objType = objecttype.OBJECT;
+
+		Vector2[] vertices = new Vector2[4];
+		if (shape=="image") {
+			bdef.position.set(x,-y+Tsh);
+			body = world.createBody(bdef);
+
+			vertices[0] = new Vector2( 0f, 0f );
+			vertices[1] = new Vector2( 0, h );
+			vertices[2] = new Vector2( w, h );
+			vertices[3] = new Vector2( w, 0 );
+			pshape = new PolygonShape();
+			pshape.set(vertices);
+			fdef.shape = pshape;
+			fixture = body.createFixture(fdef);
+			fixture.setUserData(this);
+			addMarker( "SEI" );
+			addMarker( "R" );
+
+		}else if (shape=="polygon"){
+			bdef.position.set(x,-y+Tsh);
+			body = world.createBody(bdef);
+
+			if (points.size()>2 & points.size()<9) {
+				vertices = new Vector2[points.size()];
+				for(int i=0;i<points.size();i++){
+					vertices[i]=new Vector2(points.get(i).x,-points.get(i).y);
+				}
+			}else
+			{
+				vertices[0] = new Vector2( 0f, 0f );
+				vertices[1] = new Vector2( 0, -10 );
+				vertices[2] = new Vector2( 10, -10 );
+				vertices[3] = new Vector2( 10, 0 );
+			}
+			pshape = new PolygonShape();
+			pshape.set(vertices);
+			fdef.shape = pshape;
+			fixture = body.createFixture(fdef);
+			fixture.setUserData(this);
+			addMarker( "R" );
+
+
+		}else if (shape=="polyline"){
+			bdef.position.set(x,-y+Tsh);
+			body = world.createBody(bdef);
+
+			for(int i=0;i<points.size()-1;i++){
+				eshape = new EdgeShape();
+				eshape.set(points.get( i ).x,-points.get( i ).y,points.get( i+1 ).x,-points.get( i+1 ).y);
+				fdef.shape = eshape;
+				fixture = body.createFixture(fdef);
+				fixture.setUserData(this);
+
+			}
+			addMarker( "R" );
+
+		}else if (shape=="point"){
+			bdef.position.set(x,-y+Tsh);
+			body = world.createBody(bdef);
+
+			vertices[0] = new Vector2( -Tsh/4f, -Tsh/4f );
+			vertices[1] = new Vector2( Tsh/4, -Tsh/4 );
+			vertices[2] = new Vector2( -Tsh/4, Tsh/4 );
+			vertices[3] = new Vector2( Tsh/4, Tsh/4 );
+			pshape = new PolygonShape();
+			pshape.set(vertices);
+			fdef.shape = pshape;
+			fixture = body.createFixture(fdef);
+			fixture.setUserData(this);
+		}else if (shape=="text"){
+			bdef.position.set(x,-y+Tsh);
+			body = world.createBody(bdef);
+
+			vertices[0] = new Vector2( -Tsh/4f, -Tsh/4f );
+			vertices[1] = new Vector2( Tsh/4, -Tsh/4 );
+			vertices[2] = new Vector2( -Tsh/4, Tsh/4 );
+			vertices[3] = new Vector2( Tsh/4, Tsh/4 );
+			pshape = new PolygonShape();
+			pshape.set(vertices);
+			fdef.shape = pshape;
+			fixture = body.createFixture(fdef);
+			fixture.setUserData(this);
+			addMarker( "SE" );
+
+		}else if (shape=="ellipse"){
+			bdef.position.set(x,-y+Tsh);
+			body = world.createBody(bdef);
+
+			vertices[0] = new Vector2( 0f, 0f );
+			vertices[1] = new Vector2( 0, -h );
+			vertices[2] = new Vector2( w, -h );
+			vertices[3] = new Vector2( w, 0 );
+			pshape = new PolygonShape();
+			pshape.set(vertices);
+			fdef.shape = pshape;
+			fixture = body.createFixture(fdef);
+			fixture.setUserData(this);
+
+			addMarker( "SE" );
+			///
+
+		}else{
+			bdef.position.set(x,-y+Tsh);
+			body = world.createBody(bdef);
+
+			vertices[0] = new Vector2( 0f, 0f );
+			vertices[1] = new Vector2( 0, -h );
+			vertices[2] = new Vector2( w, -h );
+			vertices[3] = new Vector2( w, 0 );
+			pshape = new PolygonShape();
+			pshape.set(vertices);
+			fdef.shape = pshape;
+			fixture = body.createFixture(fdef);
+			fixture.setUserData(this);
+
+			addMarker( "SE" );
+			addMarker( "R" );
+			///
+			///
+		}
+
+		addMarker( "NW" );
+		addMarker( "P" );
+
+
+
+
+
+		float angle = (float) ((360-rotation)*DEGREES_TO_RADIANS);
+		body.setTransform( body.getPosition(),angle);
+	}
+
+	private void addMarker(String markerstring){
+		Vector2[] vertices = new Vector2[4];
+		float ow=Math.min(w,h)/8f;
+
+		switch (markerstring){
+			case "NW":
+				//NORTH WEST
+				vertices[0] = new Vector2( -ow, -ow );
+				vertices[1] = new Vector2( -ow, ow );
+				vertices[2] = new Vector2( ow, -ow );
+				vertices[3] = new Vector2( ow, ow );
+				pshape = new PolygonShape();
+				pshape.set(vertices);
+				fdef.shape = pshape;
+				fixture = body.createFixture(fdef);
+				fixture.setUserData("NW");
+
+				break;
+
+			case "SE":
+				//SOUTH EAST
+				vertices[0] = new Vector2( -ow+w, -ow-h );
+				vertices[1] = new Vector2( -ow+w, ow-h );
+				vertices[2] = new Vector2( ow+w, -ow-h );
+				vertices[3] = new Vector2( ow+w, ow-h );
+				pshape = new PolygonShape();
+				pshape.set(vertices);
+				fdef.shape = pshape;
+				fixture = body.createFixture(fdef);
+				fixture.setUserData("SE");
+				//
+				break;
+
+			case "SEI":
+				//SOUTH EAST
+				vertices[0] = new Vector2( -ow+w, -ow+h );
+				vertices[1] = new Vector2( -ow+w, ow+h );
+				vertices[2] = new Vector2( ow+w, -ow+h );
+				vertices[3] = new Vector2( ow+w, ow+h );
+				pshape = new PolygonShape();
+				pshape.set(vertices);
+				fdef.shape = pshape;
+				fixture = body.createFixture(fdef);
+				fixture.setUserData("SEI");
+				//
+				break;
+
+			case "R":
+				//ROTATE
+				vertices[0] = new Vector2( -ow+w/2f, -ow+2*ow );
+				vertices[1] = new Vector2( -ow+w/2f, ow+2*ow );
+				vertices[2] = new Vector2( ow+w/2f, -ow+2*ow );
+				vertices[3] = new Vector2( ow+w/2f, ow+2*ow );
+				pshape = new PolygonShape();
+				pshape.set(vertices);
+				fdef.shape = pshape;
+				fixture = body.createFixture(fdef);
+				fixture.setUserData("R");
+				//
+				break;
+
+			case "P":
+				//PROPERTIES
+				vertices[0] = new Vector2( -ow-2*ow, -ow-h/2f );
+				vertices[1] = new Vector2( -ow-2*ow, ow-h/2f );
+				vertices[2] = new Vector2( ow-2*ow, -ow-h/2f );
+				vertices[3] = new Vector2( ow-2*ow, ow-h/2f );
+				pshape = new PolygonShape();
+				pshape.set(vertices);
+				fdef.shape = pshape;
+				fixture = body.createFixture(fdef);
+				fixture.setUserData("P");
+				//
+				break;
+
+		/*
+		//SOUTH WEST
+		vertices[0] = new Vector2( -ow, -ow-h );
+		vertices[1] = new Vector2( -ow, ow-h );
+		vertices[2] = new Vector2( ow, -ow-h );
+		vertices[3] = new Vector2( ow, ow-h );
+		pshape = new PolygonShape();
+		pshape.set(vertices);
+		fdef.shape = pshape;
+		fixture = body.createFixture(fdef);
+		fixture.setUserData("SW");
+		//
+
+		 */
+
+
+
+
+
+		/*
+		//NORTH EAST
+		vertices[0] = new Vector2( -ow+w, -ow );
+		vertices[1] = new Vector2( -ow+w, ow );
+		vertices[2] = new Vector2( ow+w, -ow );
+		vertices[3] = new Vector2( ow+w, ow );
+		pshape = new PolygonShape();
+		pshape.set(vertices);
+		fdef.shape = pshape;
+		fixture = body.createFixture(fdef);
+		fixture.setUserData("NE");
+		//
+
+		 */
+
+		/*
+		//NORTH
+		vertices[0] = new Vector2( -ow+w/2f, -ow );
+		vertices[1] = new Vector2( -ow+w/2f, ow );
+		vertices[2] = new Vector2( ow+w/2f, -ow );
+		vertices[3] = new Vector2( ow+w/2f, ow );
+		pshape = new PolygonShape();
+		pshape.set(vertices);
+		fdef.shape = pshape;
+		fixture = body.createFixture(fdef);
+		fixture.setUserData("N");
+		//
+
+		//SOUTH
+		vertices[0] = new Vector2( -ow+w/2f, -ow-h );
+		vertices[1] = new Vector2( -ow+w/2f, ow-h );
+		vertices[2] = new Vector2( ow+w/2f, -ow-h );
+		vertices[3] = new Vector2( ow+w/2f, ow-h );
+		pshape = new PolygonShape();
+		pshape.set(vertices);
+		fdef.shape = pshape;
+		fixture = body.createFixture(fdef);
+		fixture.setUserData("S");
+		//
+
+		//WEST
+		vertices[0] = new Vector2( -ow, -ow-h/2f );
+		vertices[1] = new Vector2( -ow, ow-h/2f );
+		vertices[2] = new Vector2( ow, -ow-h/2f );
+		vertices[3] = new Vector2( ow, ow-h/2f );
+		pshape = new PolygonShape();
+		pshape.set(vertices);
+		fdef.shape = pshape;
+		fixture = body.createFixture(fdef);
+		fixture.setUserData("W");
+		//
+
+		//EAST
+		vertices[0] = new Vector2( -ow+w, -ow-h/2f );
+		vertices[1] = new Vector2( -ow+w, ow-h/2f );
+		vertices[2] = new Vector2( ow+w, -ow-h/2f );
+		vertices[3] = new Vector2( ow+w, ow-h/2f );
+		pshape = new PolygonShape();
+		pshape.set(vertices);
+		fdef.shape = pshape;
+		fixture = body.createFixture(fdef);
+		fixture.setUserData("E");
+		//
+
+		 */
+
+
+		/*
+		//CENTER
+		vertices[0] = new Vector2( -ow+w/2f, -ow-h/2f );
+		vertices[1] = new Vector2( -ow+w/2f, ow-h/2f );
+		vertices[2] = new Vector2( ow+w/2f, -ow-h/2f );
+		vertices[3] = new Vector2( ow+w/2f, ow-h/2f );
+		pshape = new PolygonShape();
+		pshape.set(vertices);
+		fdef.shape = pshape;
+		fixture = body.createFixture(fdef);
+		fixture.setUserData("C");
+		//
+
+		 */
+
+		}
+
+	}
+
 	private static final double DEGREES_TO_RADIANS = (double)(Math.PI/180);
 
 	public void setRotation(float rotation)
