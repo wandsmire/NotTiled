@@ -1,4 +1,12 @@
 android {
+    signingConfigs {
+        debug {
+            storeFile file('C:\\debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
     buildToolsVersion "30.0.3"
     compileSdkVersion 30
     sourceSets {
@@ -20,8 +28,8 @@ android {
         applicationId "com.mirwanda.nottiled"
         minSdkVersion 19
         targetSdkVersion 30
-        versionCode 73
-        versionName "1.7.0 aplha 25/08/21"
+        versionCode 76
+        versionName "1.7.1"
     }
     buildTypes {
         release {

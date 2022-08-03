@@ -1,0 +1,14 @@
+{
+vars: [
+	{
+		key: cave
+	}
+	{
+		key: energy
+		value: 100
+	}
+]
+x: 0.88
+y: 6.926667
+mapname: cave1.tmx
+}

@@ -624,6 +624,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     @Override
     public void create() {
         log( "Gdx create started!" );
+        //Gdx basepath now refere to Android/data/com.mirwanda.nottiled/files/
         basepath = Gdx.files.getExternalStoragePath();
 
         log("basepath = "+basepath);
@@ -9619,14 +9620,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void loadPreferences() {
         swatches = prefs.getBoolean("swatches", true);
-
-        switch(Gdx.app.getType()) {
-            case Android:
-                nativefilechooser = true;//prefs.getBoolean( "nativefc", true );
-                break;
-            case Desktop:
-                nativefilechooser = false;//prefs.getBoolean( "nativefc", true );
-        }
+        nativefilechooser = prefs.getBoolean( "nativefc", false );
         rwpath = prefs.getString("rwpath", basepath+"RustedWarfare");
         if (rwpath.equalsIgnoreCase( "/RustedWarfare" )) rwpath = basepath+"RustedWarfare";
         autosaveInterval = prefs.getInteger("interval", 1);

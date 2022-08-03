@@ -1,6 +1,7 @@
 package com.mirwanda.nottiled;
 
 import android.*;
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.*;
 import android.content.pm.*;
@@ -9,6 +10,7 @@ import android.net.Uri;
 import android.os.*;
 import android.provider.DocumentsContract;
 import android.provider.OpenableColumns;
+import android.provider.Settings;
 import android.speech.tts.*;
 
 import com.badlogic.gdx.backends.android.*;
@@ -232,9 +234,15 @@ public class MainActivity extends AndroidApplication implements Interface
 
  */
 
-
+	final static int APP_STORAGE_ACCESS_REQUEST_CODE = 501; // Any value
 	public void requestAccess(){
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+			if(!Environment.isExternalStorageManager()){
+				Intent intent;
+				intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:" + BuildConfig.APPLICATION_ID));
+				startActivityForResult(intent, APP_STORAGE_ACCESS_REQUEST_CODE);
+			}
+
 		}else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Build.VERSION.SDK_INT < Build.VERSION_CODES.R ) {
 			if (this.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
 				this.requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1024);
@@ -520,6 +528,7 @@ public class MainActivity extends AndroidApplication implements Interface
 	String SAFuri="";
 	String SAFstatus="";
 
+	@SuppressLint("WrongConstant")
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent resultData) {
 		//mCheckout.onActivityResult(requestCode, resultCode, data);

@@ -1,0 +1,683 @@
+{
+T: [
+	{
+		name: 01 Read first please!!
+		steps: [
+			{
+				text: These tutorials are intended for new NotTiled users.
+				trigger: start
+			}
+			{
+				text: "If you are an existing user, you will need to [Reload samples] first, otherwise these tutorial might not work as intended and cause you unnecessary confusion."
+				trigger: next
+			}
+			{
+				text: "To reload samples, goto Menu > Links > Reload Samples."
+				trigger: next
+			}
+			{
+				text: Thank you.
+				trigger: next
+			}
+			{
+				text: ""
+				trigger: end
+			}
+		]
+	}
+	{
+		name: 02 Creating empty files & adding tilesets
+		steps: [
+			{
+				text: "Welcome to NotTiled, I will be your guide. Now, open the menu at the bottom left corner."
+				trigger: start
+			}
+			{
+				text: ""
+				trigger: lockUI
+			}
+			{
+				text: Click on New File
+				trigger: menu
+			}
+			{
+				text: "As you can see, you can set quite a lot of things here."
+				trigger: new
+			}
+			{
+				text: "The top one is the filename, make sure to end your file with .tmx"
+				trigger: next
+			}
+			{
+				text: "Then, you can select the folder where you want to save the file"
+				trigger: next
+			}
+			{
+				text: "After that, tile width and height. They are the dimension of your tile in the map. Let's use 16x16."
+				trigger: next
+			}
+			{
+				text: 16
+				trigger: settilesize
+			}
+			{
+				text: Map width and height are the total number of tile on each axis. We will use 30x30.
+				trigger: next
+			}
+			{
+				text: 30
+				trigger: setmapsize
+			}
+			{
+				text: "The rest are for advanced users, just ignore it for now."
+				trigger: next
+			}
+			{
+				text: "Okay, click on [OK]"
+				trigger: next
+			}
+			{
+				text: "To create an empty file, click [Create empty file]"
+				trigger: usetemplate
+			}
+			{
+				text: "Great! now you can see an empty map. Let's put a tileset. "
+				trigger: newmap
+			}
+			{
+				text: A tileset is just a fancy word for collection of images in one file.
+				trigger: next
+			}
+			{
+				text: Click the tile picker in the bottom center.
+				trigger: next
+			}
+			{
+				text: "Click [add new tileset]"
+				trigger: tilepick
+			}
+			{
+				text: "Let's use the four-season-tileset.png. If you cannot find it, it should be in /NotTiled/Sample/ folder."
+				trigger: addtileset
+			}
+			{
+				text: Just click ok...
+				trigger: import
+			}
+			{
+				text: "Great, now click on any tile you want to use."
+				trigger: tilesetadded
+			}
+			{
+				text: Click on the map.
+				trigger: tilepickclick
+			}
+			{
+				text: Fantastic! let's try another one!
+				trigger: tileclick
+			}
+			{
+				text: Pick whichever you like.
+				trigger: tilepick
+			}
+			{
+				text: Put it on the map...
+				trigger: tilepickclick
+			}
+			{
+				text: "Very easy right? NotTiled have an autosave feature, but you can also save manually. Click on the quick save button."
+				trigger: tileclick
+			}
+			{
+				text: "Well done, you got the basic. See you on another tutorial."
+				trigger: quicksave
+			}
+			{
+				text: ""
+				trigger: end
+			}
+		]
+	}
+	{
+		name: 03 Basic Rusted Warfare mapping
+		steps: [
+			{
+				text: "Welcome to basic RW mapping tutorial. Let's go straight into action, shall we? open the menu."
+				trigger: start
+			}
+			{
+				text: ""
+				trigger: lockUI
+			}
+			{
+				text: click on the new file
+				trigger: menu
+			}
+			{
+				text: "Rusted Warfare uses 20x20 tile. So, make sure the tile width and tile height are both 20. We will set map width and map height to 50 and 50. When you are done, click [OK] button"
+				trigger: new
+			}
+			{
+				text: 20
+				trigger: settilesize
+			}
+			{
+				text: 50
+				trigger: setmapsize
+			}
+			{
+				text: "Choose [Rusted Warfare Tutorial] and press OK."
+				trigger: usetemplate
+			}
+			{
+				text: Well done! just click Apply.
+				trigger: usetemplateok
+			}
+			{
+				text: Okay!! good job so far!
+				trigger: applytemplate
+			}
+			{
+				text: "Rusted Warfare map is very simple. It consists of 3 layers. Ground, Items, and Units."
+				trigger: next
+			}
+			{
+				text: "Ground is where you put the landscape, the battle field, or whatever you call it."
+				trigger: next
+			}
+			{
+				text: "Items layer is where you put resource pools among other things. "
+				trigger: next
+			}
+			{
+				text: "Units layer is for units (duh), put Command center or any units here."
+				trigger: next
+			}
+			{
+				text: "Putting wrong things on the wrong place will make your map unplayable, remember that."
+				trigger: next
+			}
+			{
+				text: "Now, click on the layer selection button on the bottom right corner."
+				trigger: next
+			}
+			{
+				text: "See the eye icons? for now, let's hide eveything except the ground layer. When you are done, click on the ground layer."
+				trigger: layerpick
+			}
+			{
+				text: "Okay, I will give you a guidance. follow the drawings."
+				trigger: layerselected
+			}
+			{
+				text: NotTiled/sample/template/Rusted Warfare Tutorial/export1.png
+				trigger: changebg
+			}
+			{
+				text: "To do so, you will need to pick a tile. Click on the tile selection button in the bottom center."
+				trigger: next
+			}
+			{
+				text: "now, switch to the [Stone Lava - Ridge] Tileset by pressing the >> icon twice. After that, click on the rock tile (bottom left one)"
+				trigger: tilepick
+			}
+			{
+				text: "now just follow the guide, please draw as identical as possible."
+				trigger: tilepickclick
+			}
+			{
+				text: "To make things easier, tap and hold to create a rectangle. When you are finished, click on the redo button. "
+				trigger: next
+			}
+			{
+				text: ""
+				trigger: unlockUI
+			}
+			{
+				text: "Okay, our map looks ugly, right? It's okay. We will fix it. I'll extend the guide. Just follow it. Press redo again when you are done."
+				trigger: redo
+			}
+			{
+				text: NotTiled/sample/template/Rusted Warfare Tutorial/export2.png
+				trigger: changebg
+			}
+			{
+				text: "Well done, now let's connect them all. Follow the new guide. Press redo again when you are done."
+				trigger: redo
+			}
+			{
+				text: NotTiled/sample/template/Rusted Warfare Tutorial/export3.png
+				trigger: changebg
+			}
+			{
+				text: "Well done, now fill the rest with lava. Select your lava first."
+				trigger: redo
+			}
+			{
+				text: It is the one in the middle.
+				trigger: tilepick
+			}
+			{
+				text: Now click on the fill tool.
+				trigger: tilepickclick
+			}
+			{
+				text: "Well done, fill it on the map. Click redo when finished."
+				trigger: tool3
+			}
+			{
+				text: "Fantastic! we are finished with the Ground layer, now let's go back to layer selection (bottom right)."
+				trigger: redo
+			}
+			{
+				text: "Please hide the ground layer, and show Items layer (so you could see new guidance). When you are done, click the Items layer."
+				trigger: layerpick
+			}
+			{
+				text: Okay follow the new guide.
+				trigger: layerselected
+			}
+			{
+				text: NotTiled/sample/template/Rusted Warfare Tutorial/export5.png
+				trigger: changebg
+			}
+			{
+				text: "Switch to the [misc] tileset, and tap and hold the top left part of the resource pool to enable the stamp mode, and then drag it to make a 3x3 selection"
+				trigger: tilepick
+			}
+			{
+				text: "Nicely done. follow the drawings, and hit redo button to continue."
+				trigger: stamp
+			}
+			{
+				text: "Well done, now lets continue with the final layer. The Units layer. let's go back to layer selection"
+				trigger: redo
+			}
+			{
+				text: "Please hide the items layer, and show Units layer (for the guidance). When you are done, click the Units layer."
+				trigger: layerpick
+			}
+			{
+				text: "Okay, you know what to do. Follow the guide."
+				trigger: layerselected
+			}
+			{
+				text: NotTiled/sample/template/Rusted Warfare Tutorial/export6.png
+				trigger: changebg
+			}
+			{
+				text: "Switch to the [units] tileset, and find the correct units."
+				trigger: tilepick
+			}
+			{
+				text: "That's it. follow the drawings, and as usual, hit redo button to continue."
+				trigger: tileclick
+			}
+			{
+				text: Super! now you can go back to the layer selection and show all of the layers to see your masterpiece. Click redo when you are done.
+				trigger: redo
+			}
+			{
+				text: "Okay, let's take a screenshot so that you map will have a thumbnail on Rusted Warfare. Just zoom out until you see the button."
+				trigger: redo
+			}
+			{
+				text: "Nice! Just one more step! Copy the file to the Rusted Warfare folder. You can do it manually, but it is easier just to send it from NotTiled. Zoom back in to show the controls and Click the menu."
+				trigger: screenshot
+			}
+			{
+				text: click on Links
+				trigger: menu
+			}
+			{
+				text: click Copy to Rusted Warfare
+				trigger: links
+			}
+			{
+				text: Nicely done! now go to Rusted Warfare and enjoy your new map! I hope this tutorial helps you to understand the basic of RW mappping. Thank you and see you on another tutorial.
+				trigger: copytorw
+			}
+			{
+				text: ""
+				trigger: end
+			}
+		]
+	}
+	{
+		name: 04 RW Mapping using Macro
+		steps: [
+			{
+				text: "Welcome back! Make sure you have taken the basic RW mapping tutorial first, otherwise just cancel this tutorial. Okay, now, open the menu."
+				trigger: start
+			}
+			{
+				text: ""
+				trigger: lockUI
+			}
+			{
+				text: click on the new file
+				trigger: menu
+			}
+			{
+				text: "Let's use the same tile size (20x20) and map size from before (50x50). When you are done, click [OK] button"
+				trigger: new
+			}
+			{
+				text: "Now choose [Rusted Warfare] and press OK."
+				trigger: usetemplate
+			}
+			{
+				text: "Well done, you can see that there are quite a lot of tilesets. Let it stays that way, scroll to the bottom and click Apply."
+				trigger: usetemplateok
+			}
+			{
+				text: Okay!! another empty map :)
+				trigger: applytemplate
+			}
+			{
+				text: ""
+				trigger: unlockUI
+			}
+			{
+				text: You may notice that there are 2 additional button at the bottom
+				trigger: next
+			}
+			{
+				text: "The right one is the [Macro Tile] selection button, it is just like the tile selection, but for [Macro tiles]."
+				trigger: next
+			}
+			{
+				text: "The left one is the [Run Macro] button, to apply macro to the map."
+				trigger: next
+			}
+			{
+				text: Enough theories! let's start by clicking at our layer selection button (bottom right corner).
+				trigger: next
+			}
+			{
+				text: "There are more layers right? The Set layer is where we put our macro, while the trigger layer... just ignore it for now :)"
+				trigger: layerpick
+			}
+			{
+				text: "As usual, I'd like you to hide all layers (for guidance), except the [Set] layer. We are going to use that. When you are done, select the Set layer."
+				trigger: next
+			}
+			{
+				text: "Okay, here comes the guidance. Please follow it. Make sure you are on the [Set] layer."
+				trigger: layerselected
+			}
+			{
+				text: NotTiled/sample/template/Rusted Warfare/export1a.png
+				trigger: changebg
+			}
+			{
+				text: "But first, you will need to pick a macro tile. Click on the [Macro Tile] selection button at the bottom."
+				trigger: next
+			}
+			{
+				text: "Let's use the [Grass] autotile. Click on it, and follow the guide. Press redo when you are done."
+				trigger: autopick
+			}
+			{
+				text: "Okay, now fill the rest with [Shallow water]. Make sure to use [Shallow Water], not [water] (they do not mix)."
+				trigger: redo
+			}
+			{
+				text: "Now, longpress (press and hold) the [Run Macro] button."
+				trigger: redo
+			}
+			{
+				text: "Nothing happened? nope. Show your ground layer (and hide the Set layer, duh) and you will see the result."
+				trigger: refresh
+			}
+			{
+				text: Cool isn't it? Much easier than before! The power of Macros! :P
+				trigger: redo
+			}
+			{
+				text: "The next steps are the same (Items layer & Units), so I would not repeat it again."
+				trigger: next
+			}
+			{
+				text: Take note that Macro are not perfect. It cannot do anything about tiles that have no adjacent tiles.
+				trigger: next
+			}
+			{
+				text: "and not every macro tile can mix with other macro tiles. For example, Water can only mix with Shallow Water and Deep Water."
+				trigger: next
+			}
+			{
+				text: "That's it, you can finish the map if you want :) See you on the next tutorial!"
+				trigger: next
+			}
+			{
+				text: ""
+				trigger: end
+			}
+		]
+	}
+	{
+		name: 05 Using NotTiled as a Pixel Editor
+		steps: [
+			{
+				text: "Welcome back! This tutorial is a bit different, we will use NotTiled as a Pixel Editor."
+				trigger: start
+			}
+			{
+				text: ""
+				trigger: lockUI
+			}
+			{
+				text: Click on the new file
+				trigger: menu
+			}
+			{
+				text: "Pixel editors use 1x1 tile, I'll set it for you. I recommend map size of 16x16 for this tutorial. When you are done, click [OK] button"
+				trigger: new
+			}
+			{
+				text: 1
+				trigger: settilesize
+			}
+			{
+				text: "Now choose [Pixel Editor] and press OK."
+				trigger: usetemplate
+			}
+			{
+				text: Click Apply.
+				trigger: usetemplateok
+			}
+			{
+				text: Okay!! very easy.
+				trigger: applytemplate
+			}
+			{
+				text: ""
+				trigger: unlockUI
+			}
+			{
+				text: "To draw something, pick a color from the picker (bottom center)."
+				trigger: next
+			}
+			{
+				text: Pick any color you like.
+				trigger: tilepick
+			}
+			{
+				text: Put it on the map.
+				trigger: tilepickclick
+			}
+			{
+				text: "Fantastic! to create your PNG, goto menu."
+				trigger: tileclick
+			}
+			{
+				text: Click Export
+				trigger: menu
+			}
+			{
+				text: "Put the filename (without extension), and click on Export to PNG"
+				trigger: export
+			}
+			{
+				text: Well done.
+				trigger: exporttopng
+			}
+			{
+				text: "You can also create an animation sheet by drawing on multiple Layers, and Export it as a Tileset."
+				trigger: next
+			}
+			{
+				text: You can make the layers animate by longpressing the Redo button
+				trigger: next
+			}
+			{
+				text: "Oh, and to edit existing PNG, just import it as a tileset, and then stamp it on your layer."
+				trigger: next
+			}
+			{
+				text: "Thank you, see you on another tutorial."
+				trigger: next
+			}
+			{
+				text: ""
+				trigger: end
+			}
+		]
+	}
+	{
+		name: 06 Using NotTiled as a Game Editor
+		steps: [
+			{
+				text: "Welcome back! I made this NotTiled platformer so that we could make a game in NotTiled. This is still new, so it is not that good... Nevertheless, just give it a try. Open the menu"
+				trigger: start
+			}
+			{
+				text: ""
+				trigger: lockUI
+			}
+			{
+				text: Click on the new file
+				trigger: menu
+			}
+			{
+				text: You can put it in any folder you want.
+				trigger: new
+			}
+			{
+				text: 16
+				trigger: settilesize
+			}
+			{
+				text: "Now choose [NotTiled platformer] and press OK."
+				trigger: usetemplate
+			}
+			{
+				text: Click Apply.
+				trigger: usetemplateok
+			}
+			{
+				text: Okay!! very easy.
+				trigger: applytemplate
+			}
+			{
+				text: ""
+				trigger: unlockUI
+			}
+			{
+				text: "To draw something, pick an item from the picker (bottom center)."
+				trigger: next
+			}
+			{
+				text: Pick any item you like.
+				trigger: tilepick
+			}
+			{
+				text: "At the minimum, you will need the man with the white shirt as the player and some places for him to stand."
+				trigger: next
+			}
+			{
+				text: "For other things, just try it yourself, okay? :)"
+				trigger: next
+			}
+			{
+				text: Put it on the map.
+				trigger: tilepickclick
+			}
+			{
+				text: "Fantastico! to play the game, click the Play button on the left."
+				trigger: tileclick
+			}
+			{
+				text: ""
+				trigger: end
+			}
+		]
+	}
+	{
+		name: 07 RW Mapping using Terrain Autotile
+		steps: [
+			{
+				text: "Welcome back! Terrain autotile is a new feature that could help making maps easier. Now, open the menu."
+				trigger: start
+			}
+			{
+				text: ""
+				trigger: lockUI
+			}
+			{
+				text: Click on the new file
+				trigger: menu
+			}
+			{
+				text: "I'll set tile and map size. Just click [OK] button"
+				trigger: new
+			}
+			{
+				text: 20
+				trigger: settilesize
+			}
+			{
+				text: 50
+				trigger: setmapsize
+			}
+			{
+				text: "Now choose [Rusted Warfare V2] (or V3 if you are.... patient) and press OK."
+				trigger: usetemplate
+			}
+			{
+				text: Click Apply.
+				trigger: usetemplateok
+			}
+			{
+				text: Okay!! good.
+				trigger: applytemplate
+			}
+			{
+				text: ""
+				trigger: unlockUI
+			}
+			{
+				text: "To draw something, pick an item from the picker (bottom center)."
+				trigger: next
+			}
+			{
+				text: "This time, transition tiles will be done automatically, so just pick any tile in the first tileset."
+				trigger: tilepick
+			}
+			{
+				text: Use brush and see the magic
+				trigger: tilepickclick
+			}
+			{
+				text: Fantastico! Remember that terrain autotiles does not work with fill tool. See you later.
+				trigger: tileclick
+			}
+			{
+				text: ""
+				trigger: end
+			}
+		]
+	}
+]
+}

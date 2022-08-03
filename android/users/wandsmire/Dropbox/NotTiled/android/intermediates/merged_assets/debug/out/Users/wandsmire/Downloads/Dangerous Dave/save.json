@@ -1,0 +1,31 @@
+{
+vars: [
+	{
+		key: menu
+		value: 2
+	}
+	{
+		key: tunnel
+	}
+	{
+		key: warp
+	}
+	{
+		key: score
+		value: 4200
+		hud: true
+		keephud: true
+	}
+	{
+		key: jetpack
+	}
+	{
+		key: trophy
+		iconx: 3
+		hasicon: true
+	}
+]
+x: 0.24
+y: 27.439167
+mapname: index.tmx
+}
