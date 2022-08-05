@@ -1,13 +1,13 @@
 com/mirwanda/nottiled/IActivityRequestHandler.java
  com.mirwanda.nottiled.IActivityRequestHandler
-com/mirwanda/nottiled/Aplikasi.java
- com.mirwanda.nottiled.Aplikasi
-com/mirwanda/nottiled/AndroidLauncher.java
- com.mirwanda.nottiled.AndroidLauncher
-com/mirwanda/nottiled/BuildConfig.java
- com.mirwanda.nottiled.BuildConfig
 com/mirwanda/nottiled/MainActivity.java
  com.mirwanda.nottiled.MainActivity
  com.mirwanda.nottiled.MainActivity$1
  com.mirwanda.nottiled.MainActivity$2
  com.mirwanda.nottiled.MainActivity$3
+com/mirwanda/nottiled/AndroidLauncher.java
+ com.mirwanda.nottiled.AndroidLauncher
+com/mirwanda/nottiled/BuildConfig.java
+ com.mirwanda.nottiled.BuildConfig
+com/mirwanda/nottiled/Aplikasi.java
+ com.mirwanda.nottiled.Aplikasi

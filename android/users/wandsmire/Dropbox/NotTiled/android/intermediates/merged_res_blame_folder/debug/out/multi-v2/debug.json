@@ -1,27 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "C:\\Users\\reza.mirwanda\\Documents\\GitHub\\NotTiled\\android\\users\\wandsmire\\Dropbox\\NotTiled\\android\\intermediates\\res\\merged\\debug\\values_values.arsc.flat",
+            "outputFile": "C:\\Users\\reza\\OneDrive\\Dokumen\\GitHub\\NotTiled\\android\\users\\wandsmire\\Dropbox\\NotTiled\\android\\intermediates\\res\\merged\\debug\\values_values.arsc.flat",
             "map": [
                 {
-                    "source": "C:\\Users\\reza.mirwanda\\Documents\\GitHub\\NotTiled\\android\\res\\values\\ic_launcher_background.xml",
-                    "from": {
-                        "startLines": "2",
-                        "startColumns": "4",
-                        "startOffsets": "57",
-                        "endColumns": "56",
-                        "endOffsets": "109"
-                    },
-                    "to": {
-                        "startLines": "3",
-                        "startColumns": "4",
-                        "startOffsets": "111",
-                        "endColumns": "56",
-                        "endOffsets": "163"
-                    }
-                },
-                {
-                    "source": "C:\\Users\\reza.mirwanda\\Documents\\GitHub\\NotTiled\\android\\res\\values\\strings.xml",
+                    "source": "C:\\Users\\reza\\OneDrive\\Dokumen\\GitHub\\NotTiled\\android\\res\\values\\strings.xml",
                     "from": {
                         "startLines": "3",
                         "startColumns": "4",
@@ -38,7 +21,26 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\reza.mirwanda\\Documents\\GitHub\\NotTiled\\android\\res\\values\\color.xml",
+                    "source": "C:\\Users\\reza\\OneDrive\\Dokumen\\GitHub\\NotTiled\\android\\res\\values\\styles.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "19",
+                        "endLines": "9",
+                        "endColumns": "12",
+                        "endOffsets": "484"
+                    },
+                    "to": {
+                        "startLines": "5",
+                        "startColumns": "4",
+                        "startOffsets": "214",
+                        "endLines": "12",
+                        "endColumns": "12",
+                        "endOffsets": "672"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\reza\\OneDrive\\Dokumen\\GitHub\\NotTiled\\android\\res\\values\\color.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",
@@ -55,22 +57,20 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\reza.mirwanda\\Documents\\GitHub\\NotTiled\\android\\res\\values\\styles.xml",
+                    "source": "C:\\Users\\reza\\OneDrive\\Dokumen\\GitHub\\NotTiled\\android\\res\\values\\ic_launcher_background.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",
-                        "startOffsets": "19",
-                        "endLines": "9",
-                        "endColumns": "12",
-                        "endOffsets": "484"
+                        "startOffsets": "57",
+                        "endColumns": "56",
+                        "endOffsets": "109"
                     },
                     "to": {
-                        "startLines": "5",
+                        "startLines": "3",
                         "startColumns": "4",
-                        "startOffsets": "214",
-                        "endLines": "12",
-                        "endColumns": "12",
-                        "endOffsets": "672"
+                        "startOffsets": "111",
+                        "endColumns": "56",
+                        "endOffsets": "163"
                     }
                 }
             ]

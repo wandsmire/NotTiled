@@ -23,52 +23,50 @@ INJECTED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidMani
 		INJECTED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml
 	xmlns:android
 		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:2:11-69
-uses-permission#android.permission.MANAGE_EXTERNAL_STORAGE
-ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:5:5-82
-	android:name
-		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:5:22-79
 uses-permission#android.permission.WRITE_EXTERNAL_STORAGE
-ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:6:5-81
+ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:5:5-81
 	android:name
-		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:6:22-78
+		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:5:22-78
 uses-permission#android.permission.VIBRATE
-ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:7:5-66
+ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:6:5-66
 	android:name
-		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:7:22-63
+		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:6:22-63
 uses-permission#android.permission.INTERNET
-ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:8:5-67
+ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:7:5-67
 	android:name
-		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:8:22-64
+		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:7:22-64
 uses-permission#android.permission.ACCESS_NETWORK_STATE
-ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:9:5-79
+ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:8:5-79
 	android:name
-		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:9:22-76
+		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:8:22-76
 uses-permission#android.permission.RECORD_AUDIO
-ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:11:5-71
+ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:10:5-71
 	android:name
-		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:11:22-68
+		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:10:22-68
 application
-ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:12:5-58:24
+ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:11:5-58:24
 	android:requestLegacyExternalStorage
 		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:22:9-52
 	android:label
-		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:19:9-41
+		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:18:9-41
 	android:appCategory
-		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:17:9-35
+		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:16:9-35
 	android:resizeableActivity
-		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:21:9-44
+		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:20:9-44
 	android:largeHeap
-		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:18:9-33
+		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:17:9-33
 	android:icon
-		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:15:9-43
+		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:14:9-43
 	android:allowBackup
-		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:14:9-35
+		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:13:9-35
 	android:theme
-		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:20:9-40
+		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:19:9-40
 	android:isGame
-		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:16:9-30
+		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:15:9-30
 	android:name
-		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:13:9-54
+		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:12:9-54
+	android:hasFragileUserData
+		ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:21:9-42
 activity#com.mirwanda.nottiled.MainActivity
 ADDED from C:\Users\reza\OneDrive\Dokumen\GitHub\NotTiled\android\AndroidManifest.xml:31:5-57:25
 	android:label
