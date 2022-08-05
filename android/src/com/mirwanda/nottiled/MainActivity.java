@@ -237,11 +237,6 @@ public class MainActivity extends AndroidApplication implements Interface
 	final static int APP_STORAGE_ACCESS_REQUEST_CODE = 501; // Any value
 	public void requestAccess(){
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-			if(!Environment.isExternalStorageManager()){
-				Intent intent;
-				intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:" + BuildConfig.APPLICATION_ID));
-				startActivityForResult(intent, APP_STORAGE_ACCESS_REQUEST_CODE);
-			}
 
 		}else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Build.VERSION.SDK_INT < Build.VERSION_CODES.R ) {
 			if (this.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {

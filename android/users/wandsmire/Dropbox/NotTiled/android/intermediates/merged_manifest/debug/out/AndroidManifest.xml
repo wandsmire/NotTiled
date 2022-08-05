@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.mirwanda.nottiled"
-    android:versionCode="74"
-    android:versionName="1.7.0" >
+    android:versionCode="76"
+    android:versionName="1.7.1" >
 
     <uses-sdk
         android:minSdkVersion="19"
         android:targetSdkVersion="30" />
 
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -21,6 +20,7 @@
         android:allowBackup="true"
         android:appCategory="game"
         android:debuggable="true"
+        android:hasFragileUserData="true"
         android:icon="@mipmap/ic_launcher"
         android:isGame="true"
         android:label="@string/app_name"
