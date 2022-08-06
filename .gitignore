@@ -26,6 +26,7 @@ www-test/
 /android/gen/
 /android/generated/
 /android/intermediaries/
+/android/users/
 .idea/
 *.ipr
 *.iws
