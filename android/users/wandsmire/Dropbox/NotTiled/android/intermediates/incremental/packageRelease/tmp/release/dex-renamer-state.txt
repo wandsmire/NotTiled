@@ -1,4 +1,0 @@
-#Sat Aug 06 01:41:20 JST 2022
-base.0=C\:\\Users\\reza\\OneDrive\\Dokumen\\GitHub\\NotTiled\\android\\users\\wandsmire\\Dropbox\\NotTiled\\android\\intermediates\\dex\\release\\mergeDexRelease\\classes.dex
-renamed.0=classes.dex
-path.0=classes.dex
