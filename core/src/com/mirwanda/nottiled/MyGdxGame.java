@@ -9799,6 +9799,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (sGridY == 0) sGridY = 10;
                 prefs.putInteger("gridy", sGridY).flush();
                 backToMap();
+                resetCaches();
                 if (!language.equalsIgnoreCase(oldlang) || fontsize != oldfontsize  || sCustomFont != oldcustomfont) {
                     msgbox(z.restart);
                 }
@@ -16512,6 +16513,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             seltset = 0;
                         }
                         curspr = tilesets.get(seltset).getFirstgid();
+
                         adjustPickAuto();
                         recenterpick();
                         resetMassprops();
@@ -16524,6 +16526,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             seltset = tilesets.size() - 1;
                         }
                         curspr = tilesets.get(seltset).getFirstgid();
+
+
                         adjustPickAuto();
                         recenterpick();
                         resetMassprops();
@@ -20864,6 +20868,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void adjustPickAuto(){
         if (tilesets.size()>0){
+            if (issettingtile)
+            {
+                pickAuto=false;
+                recenterpick();
+                return;
+            }
+
+
             if (tilesets.get(seltset).getTerrains().size() >0) {
                 for (property p : tilesets.get( seltset ).getProperties()) {
                     if (p.getName().equalsIgnoreCase( "forced_autotile" )) {
