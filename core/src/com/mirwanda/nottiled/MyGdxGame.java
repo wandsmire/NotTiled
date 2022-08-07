@@ -1,5 +1,7 @@
 package com.mirwanda.nottiled;
 
+import static com.badlogic.gdx.Application.ApplicationType.Android;
+
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -205,7 +207,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     int magnet = 1;
     boolean eraser = false;
     String magnetName = "lock";
-    int activetool = 0, activeobjtool = 0;
+    int activetool = 0, activeobjtool = 0, activeobjtoolmode = 0;
     float blink = 0;
     boolean turun = false;
     String info;
@@ -620,6 +622,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 //            APP CYCLE
 //////////////////////////////////////////////////////
     String basepath;
+    float waittoloadlist=-1;
 
     @Override
     public void create() {
@@ -680,6 +683,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             @Override
             public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+                waittoloadlist=0.25f;
+
                 if (markermode)
                 {
                     markermode=false;
@@ -1304,6 +1309,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
         delta = Gdx.graphics.getDeltaTime();
 
+        if (waittoloadlist>0) waittoloadlist-=delta;
+        if (waittoloadlist<=0 && waittoloadlist!=-1) {
+            if (selobjs.size()>1) loadList("object");
+            waittoloadlist=-1;
+        }
+
         if (requestavailable) fullfilrequest();
         pointerremoval(delta);
         fulfilloldfunction();
@@ -1455,6 +1466,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 checkConnectionStatus();
 
+
                 if (nofling > 0) nofling -= delta;
                 switch (kartu) {
                     case "world":
@@ -1498,7 +1510,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         postProcessor.render();
                         drawWorldUI();
                         //draw debug for collision detection
-                        b2dr.render(world,cam.combined);
+                        //b2dr.render(world,cam.combined);
 
                         drawstage( delta );
 
@@ -4719,6 +4731,26 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 uisrect( gui.lock, mouse, null );//tool switch
                 uisrect( gui.undo, mouse, vis( "undo" ) );//undo
                 uisrect( gui.redo, mouse, vis( "redo" ) );//redo
+                Color c1 = null, c2 = null, c3 = null;
+
+                switch (activeobjtoolmode) {
+                    case 0:
+                        c1 = new Color( 1f, 1f, 0f, .4f );
+                        break;
+                    case 1:
+                        c2 = new Color( 1f, 1f, 0f, .4f );
+                        break;
+                    case 2:
+                        c3 = new Color( 1f, 1f, 0f, .4f );
+                        break;
+                }
+
+
+
+                uisrect( gui.tool2, mouse, vis( "tool2" ) );
+                uisrect( gui.tool3, mouse, c3);
+                uisrect( gui.tool4, mouse, c2);
+                uisrect( gui.tool5, mouse, c1);
 
 
             }
@@ -5124,7 +5156,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 } else if (mode == "object") {
                     uidrawbutton( txundo, z.undo, gui.undo, 3.1f );
                     uidrawbutton( txredo, z.redo, gui.redo, 3.1f );
-
+                    uidrawbutton( txinfo, "Info", gui.tool2, 3 );
+                    uidrawbutton( txmove, "Edit", gui.tool3, 3 );
+                    uidrawbutton( txrectangle, "Select", gui.tool4, 3 );
+                    uidrawbutton( txpencil, "Create", gui.tool5, 4 );
 
                     str1draw( ui, shapeName, gui.objectpickermid );
                     uidrawbutton( txLeft, "", gui.objectpickerleft, 3 );
@@ -6959,7 +6994,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tMenu1.add( bSave ).row();
             tMenu1.add( bSaveAs ).row();
             tMenu1.add( bExporter ).row();
-            tMenu2.add( bImporter).row();
+            if (Gdx.app.getType()==Android) tMenu2.add( bImporter).row();
             tMenu2.add( bTutorial ).row();
             tMenu2.add( bPreference ).row();
             tMenu2.add( bLinks ).row();
@@ -6981,7 +7016,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tMenu.add( bSave ).row();
             tMenu.add( bSaveAs ).row();
             tMenu.add( bExporter ).row();
-            tMenu.add( bImporter).row();
+            if (Gdx.app.getType()==Android)  tMenu.add( bImporter).row();
             tMenu.add( bTutorial ).row();
             tMenu.add( bPreference ).row();
             tMenu.add( bLinks ).row();
@@ -9056,6 +9091,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 oj.setType(tf.get(6).getText());
                 oj.destroyBody( world );
                 oj.updateVertices(world, Tsh);
+                updateMarkers();
                 backToMap();
             }
         });
@@ -11480,8 +11516,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 tbl.add(new Label(z.object, skin)).row();
 
                 int objectsize=0;
-                for (int i = 0; i < tempObjx.size(); i++) {
-                    obj oo = tempObjx.get( i );
+                for (int i = 0; i < selobjs.size(); i++) {
+                    obj oo = selobjs.get( i );
                     Button tat = new Button(skin);
                     tat.defaults().left();
                     Image img = null;
@@ -11503,8 +11539,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         tat.addListener(new ChangeListener() {
                             @Override
                             public void changed(ChangeEvent event, Actor actor) {
-                                showPropBox2D( (obj) actor.getUserObject() );
-                                //backToMap();
+                                selobjs.clear();
+                                selobjs.add((obj) actor.getUserObject() );
+                                backToMap();
 
                             }
                         });
@@ -16017,6 +16054,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (tapEditorMenu(touch2)) return true;
         }
 
+
         velx = 0;
         vely = 0;
         if (kartu == "world") {
@@ -16129,7 +16167,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         tapTile(num, false, true,false,curspr);
                     } else if (mode == "object") {
-                        tapObject(num, ae, ab);
+                        //tapObject(num, ae, ab);
+                        if (activeobjtoolmode==1) selobjs.clear();
 
                     } else if (mode == "newpoly") {
                         tapNewPoly(num, ae, ab);
@@ -17078,7 +17117,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return false;
     }
 
-    public Body body;
+    public Body body; //pointer body
     BodyDef bdef = new BodyDef();
     PolygonShape pshape;
     FixtureDef fdef = new FixtureDef();
@@ -17108,8 +17147,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
     public void updatePointer(float x, float y){
 
-        if (body == null) {
-
+        if (body !=null){
+            body.setTransform( x,-y,0 );
+            body.setAwake( true );
+        }else{
             bdef.type = BodyDef.BodyType.DynamicBody;
 
             bdef.position.set( x, -y );
@@ -17124,9 +17165,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             fixture = body.createFixture( fdef );
             objType = obj.objecttype.POINTER;
             fixture.setUserData( objType );
-        }else{
-            body.setTransform( x,-y,0 );
-            body.setAwake( true );
         }
 
     }
@@ -17157,7 +17195,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public String olddata;
     public void checkBox2D(obj o){
-        selobjs.clear();
+        if (activeobjtoolmode!=1) return;
+
+
         if (!selobjs.contains( o )){
             selobjs.add(o);
 
@@ -17177,19 +17217,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             oc.setText( o.getText() );
             Json json = new Json();
             olddata=json.toJson(oc);
-
-
         }
         requestupdatemarker=true;
 
 
 
+
         //tempObjx.add( ox );
-        //loadList( "object" );
+
     }
 
     public void showPropBox2D(obj ox){
-        markermode=false;
+        //markermode=false;
         //selobjs.set( 0,ox);
            // Gdx.app.log( "PP",activeobjtool+"");
         //cumi
@@ -17260,7 +17299,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         float newab = (ab * Tsw / 2) + (ae * Tsw / 2);
         float newae = (ab * Tsh / 2) - (ae * Tsh / 2);
         */
-        tempObjx.clear();
         //updatePointer(ae,-ab);
         return true;
 
@@ -17333,7 +17371,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         break;
 
                     case "P": //OK
-                        showPropBox2D( selobjs.get(0));
+                        //showPropBox2D( selobjs.get(0));
                         break;
 
 
@@ -17424,6 +17462,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
     private void longpressObject(float p1, float p2){
+        if (activeobjtoolmode!=0) return;
         if (layers.size()>0 && layers.get(selLayer).getType()== layer.Type.OBJECT){
             Vector3 touch = new Vector3();
             cam.unproject( touch.set( new Vector3(p1,p2,0) ) );
@@ -17603,18 +17642,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             nyok.setY((int) (numa / Tw)*Tsh);
 
                             //create new obj.
-                            nyok = new obj(curid, (int) (numa % Tw)*Tsh , (int) (numa / Tw)*Tsh, Tsh, Tsh, "", "",world);
-                            nyok.setShape(shapeNameX);
-                            nyok.updateVertices( world , Tsh);
+                            if (activeobjtoolmode==0) {
+                                nyok = new obj(curid, (int) (numa % Tw) * Tsh, (int) (numa / Tw) * Tsh, Tsh, Tsh, "", "", world);
+                                nyok.setShape(shapeNameX);
+                                nyok.updateVertices(world, Tsh);
+                            }
                         }
 
                     }else {
                         int dd=0;
                         if (activeobjtool==6) dd=Tsh;
 
-                        nyok = new obj(curid, (int) (ae / Tsw) * Tsw, (int) ((-ab + Tsh) / Tsh) * Tsh+dd, Tsw, Tsh, "", "",world);
-                        nyok.setShape(shapeNameX);
-                        nyok.updateVertices( world, Tsh );
+                        if (activeobjtoolmode==0) {
+                            nyok = new obj(curid, (int) (ae / Tsw) * Tsw, (int) ((-ab + Tsh) / Tsh) * Tsh + dd, Tsw, Tsh, "", "", world);
+                            nyok.setShape(shapeNameX);
+                            nyok.updateVertices(world, Tsh);
+                        }
                     }
 
                     break;
@@ -20003,6 +20046,29 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 assemblymode=false;
                 return true;
             }
+        }else if (mode=="object"){
+            if (tapped(touch2, gui.tool2)) {
+                if (!cue("tool2") && lockUI) return true;
+                if (selobjs.size()>0) showPropBox2D( selobjs.get(0));
+                return true;
+            }
+            if (tapped(touch2, gui.tool3)) {
+                if (!cue("tool3") && lockUI) return true;
+                activeobjtoolmode = 2; //edit
+                return true;
+            }
+            if (tapped(touch2, gui.tool4)) {
+                if (!cue("tool4") && lockUI) return true;
+                activeobjtoolmode = 1; //select
+                return true;
+            }
+            if (tapped(touch2, gui.tool5)) {
+                if (!cue("tool5") && lockUI) return true;
+                activeobjtoolmode = 0; //create
+                selobjs.clear();
+                return true;
+            }
+
         }
 
         //tool selector (btm right)
@@ -23011,7 +23077,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public boolean pan(float p1, float p2, float p3, float p4) {
         if (loadingfile) return true;
 
-        if(markermode){
+        if(markermode && activeobjtoolmode==2){
             Vector3 touch2 = new Vector3();
             cam.unproject(touch2.set(p1, p2, 0));
             resizeobject( touch2.x,touch2.y );
