@@ -269,7 +269,7 @@ public class obj implements Cloneable
 			fixture = body.createFixture(fdef);
 			fixture.setUserData(this);
 			addMarker( "SEI" );
-			addMarker( "R" );
+			//addMarker( "R" );
 
 		}else if (shape=="polygon"){
 			bdef.position.set(x,-y+Tsh);
@@ -292,7 +292,7 @@ public class obj implements Cloneable
 			fdef.shape = pshape;
 			fixture = body.createFixture(fdef);
 			fixture.setUserData(this);
-			addMarker( "R" );
+			//addMarker( "R" );
 
 
 		}else if (shape=="polyline"){
@@ -307,7 +307,7 @@ public class obj implements Cloneable
 				fixture.setUserData(this);
 
 			}
-			addMarker( "R" );
+			//addMarker( "R" );
 
 		}else if (shape=="point"){
 			bdef.position.set(x,-y+Tsh);
@@ -369,13 +369,13 @@ public class obj implements Cloneable
 			fixture.setUserData(this);
 
 			addMarker( "SE" );
-			addMarker( "R" );
+			//addMarker( "R" );
 			///
 			///
 		}
 
 		addMarker( "NW" );
-		addMarker( "P" );
+		//addMarker( "P" );
 
 
 

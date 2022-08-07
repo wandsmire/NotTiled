@@ -25,11 +25,6 @@ public class myContactListener implements ContactListener {
                 } else{
                     if (game.markermode) return;
                     game.markerstring=(String) fixB.getUserData();
-                    if (game.markerstring.equalsIgnoreCase( "P" ))
-                    {
-                        game.requestoldfunction=true;
-                        return;
-                    }
                     game.markermode=true;
                 }
                 game.hidebody=true;
@@ -42,11 +37,6 @@ public class myContactListener implements ContactListener {
                 } else{
                    if (game.markermode) return;
                     game.markerstring=(String) fixA.getUserData();
-                    if (game.markerstring.equalsIgnoreCase( "P" ))
-                    {
-                        game.requestoldfunction=true;
-                        return;
-                    }
                     game.markermode=true;
 
                 }

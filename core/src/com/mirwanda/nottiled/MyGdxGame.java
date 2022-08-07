@@ -1311,7 +1311,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         if (waittoloadlist>0) waittoloadlist-=delta;
         if (waittoloadlist<=0 && waittoloadlist!=-1) {
-            if (selobjs.size()>1) loadList("object");
+            if (selobjs.size()>1 && activeobjtoolmode==1) loadList("object");
             waittoloadlist=-1;
         }
 
@@ -11541,6 +11541,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             public void changed(ChangeEvent event, Actor actor) {
                                 selobjs.clear();
                                 selobjs.add((obj) actor.getUserObject() );
+                                requestupdatemarker=true;
                                 backToMap();
 
                             }
@@ -17324,6 +17325,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 switch (markerstring){
                     case "R": // OK
+                        /* disabled because its annoying
                         if (oldab==-1) continue;
                         if (oldae>ae){
                             float delta = Math.abs(oldae-ae);
@@ -17332,6 +17334,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             float delta = Math.abs(oldae-ae);
                             o.setRotation( o.getRotation()+delta*5 );
                         }
+
+                         */
                         break;
 
                     case "SE": //OK
@@ -19775,7 +19779,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             selobjs.clear();
             updateObjectCollision();
 
-            adjustTileset();
+            //adjustTileset();
 
             return true;
         }
