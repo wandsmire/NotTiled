@@ -11333,7 +11333,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         public void changed(ChangeEvent event, Actor actor) {
                             selLayer = Integer.parseInt(actor.getName());
                             updateObjectCollision();
-                            adjustTileset();
+                            //adjustTileset();
                             backToMap();
                             cue("layerselected");
                         }
@@ -11553,6 +11553,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 tut.addListener(new ChangeListener() {
                     @Override
                     public void changed(ChangeEvent event, Actor actor) {
+                        selobjs.clear();
+                        requestupdatemarker=true;
                         backToMap();
                     }
                 });
@@ -21900,7 +21902,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                     updateObjectCollision();
                     resetCaches();
-                    adjustTileset();
+                    //adjustTileset();
                     return true;
                     //'812398BB9
                 }
