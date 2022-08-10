@@ -11,7 +11,7 @@ public class layer
 	private List<Integer> tset = new ArrayList<Integer>();
 	private List<Color> color = new ArrayList<Color>();
 	private List<property> properties = new ArrayList<property>();
-	private String name;
+	private String name="";
 	private boolean visible;
 	private float opacity;
 	private boolean locked = false;

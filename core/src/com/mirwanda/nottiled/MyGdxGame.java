@@ -4986,7 +4986,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
                     if (layers.size() > 0)
-                        str1draw( ui, layers.get( selLayer ).getName(), gui.layer );
+
+                    if (layers.get( selLayer ).getName()!=null) str1draw( ui, layers.get( selLayer ).getName(), gui.layer );
                     uidrawbutton( txlayer, z.layer, gui.layerpick, 1 );
                     uidrawbutton( txmenu, z.menu, gui.menu, 2 );
                     uidrawbutton( txmap, z.map, gui.map, 2 );
@@ -5257,7 +5258,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         System.out.println( exceptionAsString );
         file.writeString( "\n\n" + exceptionAsString, true );
 
-        saveMap( curdir + "/" + curfile );
+        //do not save the map if error occurs!
+        //saveMap( curdir + "/" + curfile );
+
         //refs.putString( "lof", basepath+"NotTiled/" + "sample/island.tmx" );
         //prefs.putString( "lastpath", basepath+"NotTiled/" );
         prefs.flush();
@@ -13756,17 +13759,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         //Saving the file to the temp folder first
         String tempPath = basepath+"NotTiled/Temp/" + Integer.toString((int) (Math.random()*100000)) +".tmx";
-        buildTMX(tempPath);
-        FileHandle tempFile = Gdx.files.absolute(tempPath);
+        if (buildTMX(tempPath)) {
+            FileHandle tempFile = Gdx.files.absolute(tempPath);
 
-        //copy the temp file to the actual file
-        tempFile.copyTo(actualFile);
+            //copy the temp file to the actual file
+            tempFile.copyTo(actualFile);
 
-        //delete the temp file.
-        tempFile.delete();
+            //delete the temp file.
+            tempFile.delete();
+        }
     }
 
-    public void buildTMX(String tempPath) {
+    public boolean buildTMX(String tempPath) {
         //we are saving to tmp file first.
         FileHandle tempfile = Gdx.files.absolute(tempPath);
         if (tempfile.exists()) tempfile.delete();
@@ -14189,7 +14193,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             srz.endDocument();
             srz.flush();
             fos.close();
-
+            return true;
 
         } catch (Exception e) {
             FileHandle fil = Gdx.files.absolute(basepath+"errorlog.txt");
@@ -14198,6 +14202,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             String exceptionAsString = sw.toString();
             System.out.println(exceptionAsString);
             fil.writeString(exceptionAsString, false);
+            return false;
 
 
         }
@@ -14676,8 +14681,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                         filehand = Gdx.files.absolute(foredirext + "/" + tempdiro);
                                         if (!filehand.exists()) {
                                             filehand = Gdx.files.absolute(tempdiro);
+                                            log (foredirext + "/" + tempdiro);
                                             if (!filehand.exists()) {
                                                 filehand = Gdx.files.internal("empty.jpeg");
+                                                log("Not found");
                                             }
                                         }
                                     }
@@ -14811,7 +14818,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         }
 
-                        if (name.equals("objectgroup")) {
+                        if (name.equals("objectgroup") && owner!="tile") {
 
                             owner = "objectgroup";
                             tempLayer = new layer();
@@ -14872,7 +14879,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             isi = "";
 
                         }
-                        if (name.equals("object")) {
+                        if (name.equals("object") && owner!="tile") {
                             tempobj = new obj();
                             if (myParser.getAttributeValue(null, "id") != null) {
                                 int pID = Integer.parseInt(myParser.getAttributeValue(null, "id"));
@@ -14923,26 +14930,26 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             owner = "object";
 
                         }
-                        if (name.equals("polyline")) {
+                        if (name.equals("polyline") && owner!="tile") {
                             tempobj.setShape("polyline");
                             tempobj.setPointsFromString(myParser.getAttributeValue(null, "points"));
 
                         }
-                        if (name.equals("polygon")) {
+                        if (name.equals("polygon") && owner!="tile") {
                             tempobj.setShape("polygon");
                             tempobj.setPointsFromString(myParser.getAttributeValue(null, "points"));
 
                         }
 
-                        if (name.equals("ellipse")) {
+                        if (name.equals("ellipse") && owner!="tile") {
                             tempobj.setShape("ellipse");
 
                         }
-                        if (name.equals("point")) {
+                        if (name.equals("point") && owner!="tile") {
                             tempobj.setShape("point");
 
                         }
-                        if (name.equals("text")) {
+                        if (name.equals("text") && owner!="tile") {
                             tempobj.setShape("text");
                             tempobj.setWrap(Boolean.parseBoolean(myParser.getAttributeValue(null, "wrap")));
                             isi = "";
@@ -14954,7 +14961,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         break;
                     case XmlPullParser.END_TAG:
-                        if (name.equals("object")) {
+                        if (name.equals("object") && owner!="tile") {
 
                             layers.get(layers.size() - 1).getObjects().add(tempobj);
                             curid=lastPid+1;
