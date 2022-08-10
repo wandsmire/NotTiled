@@ -13747,7 +13747,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         prefs.putString("lof", actualFile.path());
         prefs.flush();
 
-        //Check and create the temp folder
+        //Check and create the temp folder, basepath include traling backspace fyi.
         FileHandle fh2 = Gdx.files.absolute(basepath+"NotTiled/");
         if (!fh2.exists()) fh2.mkdirs();
         FileHandle fh3 = Gdx.files.absolute(basepath+"NotTiled/Temp");
@@ -13767,16 +13767,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     public void buildTMX(String tempPath) {
+        //we are saving to tmp file first.
         FileHandle tempfile = Gdx.files.absolute(tempPath);
+        if (tempfile.exists()) tempfile.delete();
+
+        //save macro (which is wrongly named as autotiles).
         if (autotiles.size()>0) {
             autotiles at = new autotiles( autotiles );
             Json json = new Json();
             writeThisAbs( curdir + "/auto.json", json.prettyPrint( at ) );
         }
-        ////
 
         try {
-            if (tempfile.exists()) tempfile.delete();
+
             FileOutputStream fos = new FileOutputStream(tempfile.file());
 
             XmlPullParserFactory factory = XmlPullParserFactory.newInstance(
@@ -14143,14 +14146,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                         srz.endTag(null, "text");
                                         break;
                                     case "image":
-                                       // float newyy = Float.parseFloat(yy);
-                                        //newyy += Tsh;
-                                        //srz.attribute("", "y", Float.toString(newyy));
-                                        srz.attribute("", "y", yy);
-                                        srz.attribute("", "width", ww);
-                                        srz.attribute("", "height", hh);
-
-                                        break;
                                     default:
                                         srz.attribute("", "y", yy);
                                         srz.attribute("", "width", ww);
@@ -14194,8 +14189,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             srz.endDocument();
             srz.flush();
             fos.close();
-
-                //     log(all);
 
 
         } catch (Exception e) {
