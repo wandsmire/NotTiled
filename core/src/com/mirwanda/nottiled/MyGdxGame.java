@@ -3475,13 +3475,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         //This thing is slow.
         try {
             //jangan dihapus, karena valuenya bakal di set lagi di bawah.
-            widd=50;
-            heii=50;
-            buffersz=8191; //2500 per layer, 3 full layer kebangetan.
+            widd=20;
+            heii=20;
+            buffersz=8191; //8000/40=20 full layer kebangetan.
             if (widd > Tw) widd = Tw; //kode asu
             if (heii > Th) heii = Th; //temennya
 
             log( "resetting cache...");
+            for (TileCache cace : tcaches){
+                cace.getCache().dispose();
+            }
                 tcaches.clear();
             int maxx = Tw / widd;
             if (Tw % widd != 0) maxx++;
@@ -4792,7 +4795,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (isupdatingcache & FPSCount==1) {
                         isupdatingcache=false;
 
-
+                        /*
                         if (landscape) {
                             fboo = new FrameBuffer( Pixmap.Format.RGBA8888, ssy, ssx, false );
                         }else{
@@ -4803,11 +4806,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         log ("Cache size: "+tcaches.size());
                         log("caching...");
 
+
                         fboo.begin();
                         Gdx.gl.glEnable( GL20.GL_BLEND );
                         Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
-
-//                        Gdx.gl.glBlendFunc( GL20.GL_ONE_MINUS_DST_ALPHA, GL20.GL_SRC_ALPHA );
                         SpriteCache cache;
 
                         for (int i = 0; i < tcaches.size(); i++) {
@@ -4824,26 +4826,59 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
 
 
-                        Gdx.gl.glEnable( GL20.GL_BLEND );
-                        Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
+                        //Gdx.gl.glDisable( GL20.GL_BLEND );
+                        //Gdx.gl.glBlendFunc( GL20.GL_ONE_MINUS_DST_ALPHA, GL20.GL_SRC_ALPHA );
                         fboo.end();
                         txxx=fboo.getColorBufferTexture();
+
                         log("caching finished");
 
-
-
-
+                         */
 
                     }
+
+                    //////////////////////
+                    batch.begin();
+                    Gdx.gl.glEnable( GL20.GL_BLEND );
+                    Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
+                    SpriteCache cache;
+
+                    for (int i = 0; i < tcaches.size(); i++) {
+
+                        cache = tcaches.get( i ).getCache();
+
+                        int myid = tcaches.get( i ).getCacheID();
+                        cache.setProjectionMatrix( minicam.combined );
+
+                        cache.begin();
+                        cache.draw( myid ); //call our cache with cache ID and draw it
+                        cache.end();
+
+                    }
+
+
+                    //Gdx.gl.glDisable( GL20.GL_BLEND );
+                    //Gdx.gl.glBlendFunc( GL20.GL_ONE_MINUS_DST_ALPHA, GL20.GL_SRC_ALPHA );
+                    batch.end();
+
+                    //////////////////////
+                    /*
                     // draw the texture, even on the 1st fps
                     ui.begin();
-
+                    Gdx.gl.glEnable( GL20.GL_BLEND );
+                    Gdx.gl.glBlendFunc( GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA );
                     if (landscape) {
+                        //if (txxx!=null) ui.draw(txxx,0,0,ssy,ssx,0,0,ssy,ssx,false,true);
                         if (txxx!=null) ui.draw(txxx,0,0,ssy,ssx,0,0,ssy,ssx,false,true);
                     }else{
+                        //if (txxx!=null) ui.draw(txxx,0,0,50,50,0,0,50,50,false,true);
                         if (txxx!=null) ui.draw(txxx,0,0,ssx,ssy,0,0,ssx,ssy,false,true);
                     }
                     ui.end();
+
+                     */
+
+
 
                 }
 
@@ -11156,12 +11191,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                         layers.get(3).setVisible( true );
                                     }
                                 }
-                                for (int i = 0; i < tilesets.size(); i++) {
-                                    if (curspr >= tilesets.get(i).getFirstgid() && curspr < tilesets.get(i).getFirstgid() + tilesets.get(i).getTilecount()) {
-                                        seltset = i;
-                                        break;
-                                    }
-                                }
+                                setTsetFromCurspr();
+
                             }
                             backToMap();
                         }
@@ -11224,7 +11255,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         this.wl = wla;
         Table tblmain = new Table();
         Table tbl = new Table();
-        ScrollPane sp = new ScrollPane(tbl);
+        ScrollPane sp = new ScrollPane(tbl,skin);
+
         tblmain.add(sp);
         tblmain.setFillParent(true);
         tbl.defaults().width(btnx).height(btny*1.5f).padBottom(2);
@@ -11419,7 +11451,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         @Override
                         public void changed(ChangeEvent event, Actor actor) {
 
-                            seltset = Integer.parseInt(actor.getName());
+                            curtset = Integer.parseInt(actor.getName());
                             adjustPickAuto();
                             recenterpick();
                             resetMassprops();
@@ -18150,6 +18182,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         this.curspr=layers.get(selLayer).getStr().get(num).intValue();
                         addRecentTile( this.curspr );
                         setTsetFromCurspr();
+                        seltset=curtset;
                         break;
                     }
 
@@ -21673,7 +21706,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             int tzet = layers.get(selLayer).getTset().get(num);
 
-            layerhistory lh2 = new layerhistory(true, fromnew, oi, num, selLayer, tzet, seltset);
+            layerhistory lh2 = new layerhistory(true, fromnew, oi, num, selLayer, tzet, curtset);
 
             if (fromnew != oi) {
                 undolayer.add(lh2);
@@ -21682,7 +21715,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             layers.get(selLayer).getStr().set(num, oi);
-            layers.get(selLayer).getTset().set(num, seltset);
+            layers.get(selLayer).getTset().set(num, curtset);
             updateCache(num);
 
             q.add(new floodfill(num - Tw, oi, from, 1));

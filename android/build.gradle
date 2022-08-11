@@ -28,8 +28,8 @@ android {
         applicationId "com.mirwanda.nottiled"
         minSdkVersion 19
         targetSdkVersion 30
-        versionCode 78
-        versionName "1.7.3"
+        versionCode 79
+        versionName "1.7.4 A1"
     }
     buildTypes {
         release {
