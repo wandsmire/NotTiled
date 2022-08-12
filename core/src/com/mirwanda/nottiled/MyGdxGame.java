@@ -671,6 +671,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 
+/*
                 if (layers.size()>0 && layers.get(selLayer).getType()== layer.Type.OBJECT){
                     Vector3 touch = new Vector3();
                     cam.unproject( touch.set( new Vector3(screenX,screenY,0) ) );
@@ -678,7 +679,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     float ab = touch.y;
                     updatePointer(ae,-ab);
                 }
-
+*/
                 return false;
             }
 
@@ -1315,6 +1316,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (waittoloadlist<=0 && waittoloadlist!=-1) {
             if (selobjs.size()>1 && activeobjtoolmode==1) loadList("object");
             waittoloadlist=-1;
+        }
+
+        if (movepointer>0) movepointer-=delta;
+        if (movepointer<=0 && movepointer!=-1){
+            if (body !=null){
+                body.setTransform( -99,99,0 );
+                body.setAwake( true );
+            }
+            movepointer=-1;
         }
 
         if (requestavailable) fullfilrequest();
@@ -11451,7 +11461,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         @Override
                         public void changed(ChangeEvent event, Actor actor) {
 
-                            curtset = Integer.parseInt(actor.getName());
+                            seltset = Integer.parseInt(actor.getName());
                             adjustPickAuto();
                             recenterpick();
                             resetMassprops();
@@ -16131,6 +16141,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 case "world":
 
                     if (!roll) if (tapWorldMenu(touch2)) return true;
+
+                    if (layers.size()>0 && layers.get(selLayer).getType()== layer.Type.OBJECT){
+                        Vector3 touch = new Vector3();
+                        cam.unproject( touch.set( new Vector3(p1,p2,0) ) );
+                        float ae = touch.x;
+                        float ab = touch.y;
+                        updatePointer(ae,-ab);
+                    }
+
+
+
                     if (tilesets.size() == 0) {
                         kartu = "tile";
                         return true;
@@ -17192,11 +17213,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         }
     }
+    float movepointer=-1;
     public void updatePointer(float x, float y){
 
         if (body !=null){
             body.setTransform( x,-y,0 );
             body.setAwake( true );
+            movepointer=0.25f;
         }else{
             bdef.type = BodyDef.BodyType.DynamicBody;
 
@@ -22229,6 +22252,27 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     //status("Object picker",1);
                     return true;
                 }
+                if (tapped(touch2, gui.tool5)) { //actually add new layer...
+                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    //do nothing, just to prevent longpressing.
+                    return true;
+                }
+                if (tapped(touch2, gui.tool4)) { //actually add new layer...
+                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    //do nothing, just to prevent longpressing.
+                    return true;
+                }
+                if (tapped(touch2, gui.tool3)) { //actually add new layer...
+                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    //do nothing, just to prevent longpressing.
+                    return true;
+                }
+                if (tapped(touch2, gui.tool2)) { //actually add new layer...
+                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    //do nothing, just to prevent longpressing.
+                    return true;
+                }
+
                 longpressobj(p1, p2);
                 return true;
             }
