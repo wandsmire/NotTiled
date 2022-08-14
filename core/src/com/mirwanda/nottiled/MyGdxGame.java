@@ -1320,7 +1320,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         if (movepointer>0) movepointer-=delta;
         if (movepointer<=0 && movepointer!=-1){
-            if (body !=null){
+            if (body !=null && activeobjtoolmode!=2){
                 body.setTransform( -99,99,0 );
                 body.setAwake( true );
             }
@@ -1522,7 +1522,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         postProcessor.render();
                         drawWorldUI();
                         //draw debug for collision detection
-                        //b2dr.render(world,cam.combined);
+                        b2dr.render(world,cam.combined);
 
                         drawstage( delta );
 
@@ -12528,6 +12528,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                     Tsh = newTsh;
                     Tsw = newTsw;
+
+                    if (fFilename.getText()!="") curfile=fFilename.getText();
                     mapFormat = sbMapFormat.getSelected().toString();
                     renderorder = sbMapRenderOrder.getSelected().toString();
                     orientation = sbMapOrientation.getSelected().toString();
@@ -12566,7 +12568,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         });
 
         fFilename = new TextField("", skin);
-        fFilename.setDisabled(true);
+        //fFilename.setDisabled(true);
         fCurdir = new TextField("", skin);
         fCurdir.setDisabled(true);
         fTsw = new TextField("", skin);
