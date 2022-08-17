@@ -2,6 +2,8 @@ package com.mirwanda.nottiled;
 
 import com.badlogic.gdx.Gdx;
 
+import java.util.List;
+
 public class tile
 {
 	private int tileID;
@@ -11,19 +13,20 @@ public class tile
 	private float timer;
 	private java.util.List<frame> animation = new java.util.ArrayList<frame>();
 	private java.util.List<property> properties = new java.util.ArrayList<property>();
-	private java.util.List<obj> collisions = new java.util.ArrayList<obj>();
+
+	public List<obj> getObjects() {
+		return objects;
+	}
+
+	public void setObjects(List<obj> objects) {
+		this.objects = objects;
+	}
+
+	private java.util.List<obj> objects = new java.util.ArrayList<obj>();
 	
 	private int[] terrain = new int[]{-1,-1,-1,-1};
 
-	public void setCollisions(java.util.List<obj> collisions)
-	{
-		this.collisions = collisions;
-	}
 
-	public java.util.List<obj> getCollisions()
-	{
-		return collisions;
-	}
 
 	public void setTerrain(int[] terrain)
 	{

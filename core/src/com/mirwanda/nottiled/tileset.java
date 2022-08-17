@@ -8,7 +8,17 @@ public class tileset
 	private java.util.List<terrain> terrains = new ArrayList<terrain>();
 	private java.util.List<property> properties = new java.util.ArrayList<property>();
 	private java.util.List<Color> colors = new java.util.ArrayList<Color>();
-	
+
+	public List<obj> getCollision() {
+		return collision;
+	}
+
+	public void setCollision(List<obj> collision) {
+		this.collision = collision;
+	}
+
+	private java.util.List<obj> collision = new ArrayList<obj>();
+
 	private String name;
 	private String source;
 	private String trans;

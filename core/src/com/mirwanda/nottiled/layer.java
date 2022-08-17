@@ -9,6 +9,16 @@ public class layer
 {
 	private List<Long> gid = new ArrayList<Long>();
 	private List<Integer> tset = new ArrayList<Integer>();
+
+	public List<Integer> getTile() {
+		return tile;
+	}
+
+	public void setTile(List<Integer> tile) {
+		this.tile = tile;
+	}
+
+	private List<Integer> tile = new ArrayList<Integer>();
 	private List<Color> color = new ArrayList<Color>();
 	private List<property> properties = new ArrayList<property>();
 	private String name="";
