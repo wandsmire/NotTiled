@@ -9,18 +9,55 @@ public class layerhistory extends packet
 	public int layer;
 	public int oldtset;
 	public int newtset;
+
+	public int getOldtset() {
+		return oldtset;
+	}
+
+	public void setOldtset(int oldtset) {
+		this.oldtset = oldtset;
+	}
+
+	public int getOldtile() {
+		return oldtile;
+	}
+
+	public void setOldtile(int oldtile) {
+		this.oldtile = oldtile;
+	}
+
+	public int getNewtile() {
+		return newtile;
+	}
+
+	public void setNewtile(int newtile) {
+		this.newtile = newtile;
+	}
+
+	public boolean isUndo() {
+		return undo;
+	}
+
+	public void setUndo(boolean undo) {
+		this.undo = undo;
+	}
+
+	public int oldtile;
+	public int newtile;
 	public boolean undo;
 
 	public layerhistory(){
 	}
-	public layerhistory(boolean follower, long from, long to, int location, int layer, int oldtset,int newtset){
+	public layerhistory(boolean follower, int layer, int num, long from, long to, int oldtset,int newtset, int oldtile, int newtile){
 		this.follower=follower;
-		this.to=to;
-		this.from=from; 
-		this.location=location;
 		this.layer=layer;
+		this.location=num;
+		this.from=from;
+		this.to=to;
 		this.oldtset=oldtset;
 		this.newtset=newtset;
+		this.oldtile=oldtile;
+		this.newtile=newtile;
 	}
 
 	public void setNewtset(int newtset)

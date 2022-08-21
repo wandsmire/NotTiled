@@ -166,19 +166,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public Vignette vignette;
     public boolean frompick;
     private layer.Type newLayerType;
-    Boolean pv;
     String oldlang;
     Integer oldfontsize;
     String oldcustomfont;
     PostProcessor postProcessor;
     Slider slfirstgen;
     //Animation<TextureRegion> animation;
-    float elapsed;
     String temproname = "";
     String temprotype = "";
     String temprovalue = "";
     private java.util.List<Integer> swatchValue = new ArrayList<Integer>();
-    Pixmap pmMinimap;
+
     Texture txMinimap;
 
     //////////////////////////////////////////////////////
@@ -194,7 +192,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public enum selectTool {PICKER, COPY, MOVE, FLIP, CLONE}
 
     selectTool movetool = selectTool.PICKER;
-    String debugMe = " ", debugYou = " ";
+    String debugMe = " ";
     Table lastStage;
     String sender;
     boolean swatches = false;
@@ -202,7 +200,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     int selTsetID; //tiles
     String fps = "";
 
-    float keydown = 0f;
+
     boolean backing;
     String shapeName = "rectangle", rotationName = "0", toolName = "Tile", viewModeName = "Stack", objViewModeName = "All";
     int magnet = 1;
@@ -211,8 +209,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     int activetool = 0, activeobjtool = 0, activeobjtoolmode = 0;
     float blink = 0;
     boolean turun = false;
-    String info;
-    obj copyobj = null;
+
     boolean sShowGrid = true, sShowFPS, sAutoSave, sSaveTsx = false, sShowGID = false, sMinimap;
     boolean sShowCoords;
     String sCustomFont = "";
@@ -230,7 +227,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     ViewMode viewMode = ViewMode.CUSTOM;
     boolean issettingtile = false;
-    int objviewMode;
+
     int selTileID = -1;
     int tempframeid;
     int templastID;
@@ -242,20 +239,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     int nssy = 800;
 
     int btnx = 440, btny = 50;
-    int jon, joni;
     int selat;
     int startSelect, endSelect, initialSelect;
     boolean rising = false;
     boolean tutoring = false;
     int activetutor = 0;
-    String mapFormat = "csv", tsxFile = "", activeFilename;
+    String mapFormat = "csv", tsxFile = "";
     String kartu = "", mode, lastpath, openedfile, tilePicker = "", saveasdir, rwpath;
     int autosaveInterval = 1;
     int gridOpacity = 5;
     boolean isSampleReloaded;
     int curspr, curid;
-    obj curobj;
-    String curgroup = "default";
+
     int selgroup = 0, selLayer = 0, oedit = 0, ogroup = 0, seltset = 0;
     int curtset=0;
     String encoding = "";
@@ -1428,8 +1423,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (undohistory > 5f) {
                     undohistory = 0;
                     //  Gdx.app.log("Cache","Clearing...");
-                    if (undolayer.size() > Tw * Th * 2) {
-                        undolayer.subList( 0, undolayer.size() - (Tw * Th * 2) ).clear();
+                    if (undolayer.size() > 100000) {
+                        undolayer.subList( 0, undolayer.size() - 100000 ).clear();
                     }
                     // Gdx.app.log("Cache","Cleared");
                 }
@@ -1520,7 +1515,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         drawGrid();
                         drawObjects();
                         drawObjectsInfo();
-                        //drawCollisions();
+                        drawCollisions();
                         postProcessor.render();
                         drawWorldUI();
                         //draw debug for collision detection
@@ -3665,20 +3660,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         tiles = tilesets.get( initset ).getTiles();
                         tilesize = tiles.size();
 
-                        //this code is kinda useless, as the animation won't work on cache.
-                        /*
-                        if (tilesize > 0) {
-                            for (int n = 0; n < tilesize; n++) {
-                                if (tiles.get( n ).getAnimation().size() > 0) {
-                                    if (mm == tiles.get( n ).getTileID() + tilesets.get( initset ).getFirstgid()) {
-                                        mm = (long) tiles.get( n ).getActiveFrameID() + tilesets.get( initset ).getFirstgid();
-                                    }
-                                }
-                            }
-                        }
-
-                         */
-
                         sprX = (int) (mm - tilesets.get( initset ).getFirstgid()) % (tilesets.get( initset ).getWidth());
                         sprY = (int) (mm - tilesets.get( initset ).getFirstgid()) / (tilesets.get( initset ).getWidth());
                         margin = tilesets.get( initset ).getMargin();
@@ -3736,18 +3717,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     counting += 1;
                     drawer.add( cache, tilesets );
 
-                        /* cache should be prevented to reach 8000.
-                        if (counting == 8000) {
-                            int id = cache.endCache();
-                            cacheIDs.add(id);
-                            caches.add(cache);
-
-                            cache = new SpriteCache(8000, true);
-
-                            cache.beginCache();
-                            counting = 0;
-                        }
-                         */
                 }
 
 
@@ -3762,6 +3731,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void drawCollisions() {
+        if (tilesets.size()==0) return;
         sr.setProjectionMatrix( cam.combined );
 
         //Part one of 2, filled.
@@ -3803,6 +3773,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
                     for (int j = 0; j < Tw*Th; j++) {
+                        int cth = j / Tw;
+                        int ctw = j % Tw;
+                        int addx = ctw*Tsw;
+                        int addy = -cth*Tsh;
+                        //log(addy+"");
 
                         // normal or empty tile should be skipped
                         if (lay.getTile().get(j)==-1) continue;
@@ -3810,13 +3785,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         int ctst = lay.getTset().get(j);
                         int ctle = lay.getTile().get(j);
 
-                        for (obj ox: tilesets.get(ctst).getTiles().get(ctle).getObjects()) {
+                        if (tilesets.get(ctst).getTiles().get(ctle).getObjects().size()==0) continue;
 
+                        for (int ko = 0; ko<tilesets.get(ctst).getTiles().get(ctle).getObjects().size();ko++) {
+                            obj ox = tilesets.get(ctst).getTiles().get(ctle).getObjects().get(ko);
+                            //log(addy+"----"+ox.getY()+"-------"+(ox.getShape()==null)+"---"+ko);
 
                             if (ox.getShape() != null) {
                                 switch (ox.getShape()) {
                                     case "ellipse":
-                                        sr.ellipse(ox.getX(), -ox.getY() + Tsh - ox.getH(), ox.getW(), ox.getH());
+                                        sr.ellipse(ox.getX()+addx, -ox.getY() + Tsh - ox.getH()+addy, ox.getW(), ox.getH());
 
                                         break;
                                     case "point":
@@ -3830,7 +3808,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                         //sr.ellipse(ox.getXa() + Tsh * 3 / 8, -ox.getYa() + Tsh - Tsh * 5 / 8, Tsw / 4, Tsh / 4);
 
 
-                                        float[] f = ox.getVertices(Tsh);
+                                        float[] f = ox.getVertices(Tsh,addx,addy);
                                         if (ox.getPointsSize() >= 3) {
                                             Polygon polygon = new Polygon();
                                             polygon.setVertices(f);
@@ -3841,31 +3819,24 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                                         break;
                                     case "polyline":
-                                        //sr.ellipse(ox.getXa() + Tsh / 4f, -ox.getYa() + Tsh - Tsh * 3f / 4f, Tsw / 2f, Tsh / 2f);
-                                        //sr.ellipse(ox.getXa() + Tsh * 3f / 8f, -ox.getYa() + Tsh - Tsh * 5f / 8f, Tsw / 4f, Tsh / 4f);
-
-                                    /*
-                                    if (ox.getPointsSize() >= 2) {
-                                        f = ox.getVertices(Tsh);
-                                        Polyline polyline = new Polyline(f);
-                                        polyline.setOrigin(ox.getX(), -ox.getY() + Tsh);
-                                        polyline.rotate(360 - ox.getRotation());
-                                        sr.polyline(polyline.getTransformedVertices());
-                                    }
-                                    */
+                                        //only in line, not here
 
                                         break;
                                     case "text":
-                                        sr.rect(ox.getX(), ox.getYantingelag(Tsh) - ox.getH(), 0, 0, ox.getW(), ox.getH(), 1, 1, ox.getRotation());
+                                        sr.rect(ox.getX()+addx, ox.getYantingelag(Tsh) - ox.getH()+addy, 0, 0, ox.getW(), ox.getH(), 1, 1, ox.getRotation());
                                         //str1.draw(batch, ox.getText(), ox.getX(), -ox.getYantingelag(Tsh));
 
                                         break;
                                     case "image":
-                                        sr.rect(ox.getX(), ox.getYantingelag(Tsh), 0, 0, ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation());
+                                        sr.rect(ox.getX()+addx, ox.getYantingelag(Tsh)+addy, 0, 0, ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation());
                                         break;
                                     default:
+                                        //ox.getYantingelag(Tsh) - ox.getH()+
                                         if (orientation.equalsIgnoreCase("orthogonal")) {
-                                            sr.rect(ox.getX(), ox.getYantingelag(Tsh) - ox.getH(), 0, ox.getH(), ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation());
+                                            //sr.rect(ox.getX()+addx, ox.getY()+addy, ox.getW(), ox.getH());
+
+
+                                            sr.rect(ox.getX()+addx, ox.getYantingelag(Tsh) - ox.getH()+addy , 0, ox.getH(), ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation());
                                         } else if (orientation.equalsIgnoreCase("isometric")) {
                                             //anchor
                                             float offx = (ox.getX() / Tsh * Tsw / 2) - (ox.getY() / Tsh * Tsw / 2);//-ox.getY();
@@ -3889,7 +3860,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                             float p7 = offx + op1 + op7;
                                             float p8 = offy + op2 + op8;
 
-                                            sr.polygon(new float[]{p1, p2, p3, p4, p5, p6, p7, p8});
+                                        //    sr.polygon(new float[]{p1, p2, p3, p4, p5, p6, p7, p8});
 
 
                                         }
@@ -3901,7 +3872,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
                             } else {
-                                sr.rect(ox.getX(), ox.getYantingelag(Tsh) - ox.getH(), ox.getW(), ox.getH());
+
+                               sr.rect(ox.getX()+addx, ox.getYantingelag(Tsh) - ox.getH() + addy, ox.getW(), ox.getH());
 
                             }
                         }
@@ -3913,6 +3885,168 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         sr.end();
 
+
+        sr.begin( ShapeRenderer.ShapeType.Line ); //
+        Gdx.gl.glEnable( GL20.GL_BLEND );
+
+        Gdx.gl20.glLineWidth( 3 );//average
+        sr.setColor( 0.5f, 0.5f, 0.5f, 0.5f ); //blink
+
+        if (layers.size() > 0) {
+            for (int i = 0; i < layers.size(); i++) {
+                layer lay = layers.get( i );
+
+                if (i == selLayer) {
+                    sr.setColor( 0.5f, 0.5f, 0.8f, 0.8f ); //blink
+
+                } else {
+                    sr.setColor( 0.8f, 0.8f, 0.8f, 0.5f ); //blink
+
+                }
+
+                boolean isShown = false;
+                switch (viewMode) {
+                    case ALL:
+                        isShown = true;
+                        break;
+                    case STACK:
+                        if (i <= selLayer) isShown = true;
+                        break;
+                    case SINGLE:
+                        if (i == selLayer) isShown = true;
+                        break;
+                    case CUSTOM:
+                        if (lay.isVisible()) isShown = true;
+                        break;
+                }
+
+                if (lay.getType() == layer.Type.TILE && isShown) {
+
+
+                    for (int j = 0; j < Tw*Th; j++) {
+                        int cth = j / Tw;
+                        int ctw = j % Tw;
+                        int addx = ctw*Tsw;
+                        int addy = -cth*Tsh;
+                        //log(addy+"");
+
+                        // normal or empty tile should be skipped
+                        if (lay.getTile().get(j)==-1) continue;
+
+                        int ctst = lay.getTset().get(j);
+                        int ctle = lay.getTile().get(j);
+
+                        if (tilesets.get(ctst).getTiles().get(ctle).getObjects().size()==0) continue;
+
+                        for (int ko = 0; ko<tilesets.get(ctst).getTiles().get(ctle).getObjects().size();ko++) {
+                            obj ox = tilesets.get(ctst).getTiles().get(ctle).getObjects().get(ko);
+                            //log(addy+"----"+ox.getY()+"-------"+(ox.getShape()==null)+"---"+ko);
+
+                            if (ox.getShape() != null) {
+                                switch (ox.getShape()) {
+                                    case "ellipse":
+                                        sr.ellipse(ox.getX()+addx, -ox.getY() + Tsh - ox.getH()+addy, ox.getW(), ox.getH());
+
+                                        break;
+                                    case "point":
+                                        sr.ellipse(ox.getXa() + Tsh / 4, -ox.getYa() + Tsh - Tsh * 3 / 4, Tsw / 2, Tsh / 2);
+
+                                        sr.rect(ox.getXa() + Tsh / 4, -ox.getYa() + Tsh - Tsh * 3 / 4, Tsw / 2, Tsh / 2);
+
+                                        break;
+                                    case "polygon":
+                                        //sr.ellipse(ox.getXa() + Tsh / 4, -ox.getYa() + Tsh - Tsh * 3 / 4, Tsw / 2, Tsh / 2);
+                                        //sr.ellipse(ox.getXa() + Tsh * 3 / 8, -ox.getYa() + Tsh - Tsh * 5 / 8, Tsw / 4, Tsh / 4);
+
+
+                                        float[] f = ox.getVertices(Tsh,addx,addy);
+                                        if (ox.getPointsSize() >= 3) {
+                                            Polygon polygon = new Polygon();
+                                            polygon.setVertices(f);
+                                            polygon.setOrigin(ox.getX(), -ox.getY() + Tsh);
+                                            polygon.rotate(360 - ox.getRotation());
+                                            sr.polygon(polygon.getTransformedVertices());
+                                        }
+
+                                        break;
+                                    case "polyline":
+                                        //sr.ellipse(ox.getXa() + Tsh / 4f, -ox.getYa() + Tsh - Tsh * 3f / 4f, Tsw / 2f, Tsh / 2f);
+                                        //sr.ellipse(ox.getXa() + Tsh * 3f / 8f, -ox.getYa() + Tsh - Tsh * 5f / 8f, Tsw / 4f, Tsh / 4f);
+
+
+                                        if (ox.getPointsSize() >= 2) {
+                                            f = ox.getVertices(Tsh,addx,addy);
+                                            Polyline polyline = new Polyline(f);
+                                            polyline.setOrigin(ox.getX(), -ox.getY() + Tsh);
+                                            polyline.rotate(360 - ox.getRotation());
+                                            sr.polyline(polyline.getTransformedVertices());
+                                        }
+
+
+                                        break;
+                                    case "text":
+                                        sr.rect(ox.getX()+addx, ox.getYantingelag(Tsh) - ox.getH()+addy, 0, 0, ox.getW(), ox.getH(), 1, 1, ox.getRotation());
+                                        //str1.draw(batch, ox.getText(), ox.getX(), -ox.getYantingelag(Tsh));
+
+                                        break;
+                                    case "image":
+                                        sr.rect(ox.getX()+addx, ox.getYantingelag(Tsh)+addy, 0, 0, ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation());
+                                        break;
+                                    default:
+                                        //ox.getYantingelag(Tsh) - ox.getH()+
+                                        if (orientation.equalsIgnoreCase("orthogonal")) {
+                                            //sr.rect(ox.getX()+addx, ox.getY()+addy, ox.getW(), ox.getH());
+
+
+                                            sr.rect(ox.getX()+addx, ox.getYantingelag(Tsh) - ox.getH()+addy , 0, ox.getH(), ox.getW(), ox.getH(), 1, 1, 360 - ox.getRotation());
+                                        } else if (orientation.equalsIgnoreCase("isometric")) {
+                                            //anchor
+                                            float offx = (ox.getX() / Tsh * Tsw / 2) - (ox.getY() / Tsh * Tsw / 2);//-ox.getY();
+                                            float offy = (-ox.getX() / Tsh * Tsh / 2) - (ox.getY() / Tsh * Tsh / 2); //-ox.getY()*Tsh/2;
+
+                                            float op1 = Tsw / 2; //'0'
+                                            float op2 = Tsh; //0
+                                            float op3 = ox.getW() / Tsh * Tsw / 2;
+                                            float op4 = ox.getW() / Tsh * Tsh / 2;
+                                            float op5 = (ox.getW() / Tsh * Tsw / 2) - (ox.getH() / Tsh * Tsw / 2);
+                                            float op6 = (-ox.getH() / Tsh * Tsh / 2) - (ox.getW() / Tsh * Tsh / 2);
+                                            float op7 = -ox.getH() / Tsh * Tsw / 2;
+                                            float op8 = -ox.getH() / Tsh * Tsh / 2;
+
+                                            float p1 = offx + op1;
+                                            float p2 = offy + op2;
+                                            float p3 = offx + op1 + op3;
+                                            float p4 = offy + op2 - op4;
+                                            float p5 = offx + op1 + op5;
+                                            float p6 = offy + op2 + op6;
+                                            float p7 = offx + op1 + op7;
+                                            float p8 = offy + op2 + op8;
+
+                                            //    sr.polygon(new float[]{p1, p2, p3, p4, p5, p6, p7, p8});
+
+
+                                        }
+                                        //str1.draw(batch, j+"", 0, -j);
+
+
+                                        break;
+                                }
+
+
+                            } else {
+
+                                sr.rect(ox.getX()+addx, ox.getYantingelag(Tsh) - ox.getH() + addy, ox.getW(), ox.getH());
+
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
+
+        sr.end();
+        /*
         //part 2 of 2, outline.
         sr.begin( ShapeRenderer.ShapeType.Line ); //
         Gdx.gl.glEnable( GL20.GL_BLEND );
@@ -4058,6 +4192,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         sr.end();
+
+         */
 
     }
 
@@ -9146,9 +9282,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             if (x < Tw / 2 && x != Tw / 2) {
                 int location = i + (Tw / 2 - x) * 2 - 1;
-                long from = layers.get(selLayer).getStr().get(location);
                 long to = layers.get(selLayer).getStr().get(i);
-                int oldtset = layers.get(selLayer).getTset().get(location);
                 int newtset = layers.get(selLayer).getTset().get(i);
                 int layer = selLayer;
 
@@ -9177,12 +9311,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                 }
 
-                layerhistory lh = new layerhistory(follower, from, to, location, layer, oldtset, newtset);
-                undolayer.add(lh);
-
-                layers.get(selLayer).getStr().set(location, to);
-                layers.get(selLayer).getTset().set(location, newtset);
-                updateCache( location );
+                updateTileData(layer,location,to,newtset);
 
             }
         }
@@ -9237,12 +9366,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                 }
 
-                layerhistory lh = new layerhistory(follower, from, to, location, layer, oldtset, newtset);
-                undolayer.add(lh);
-
-                layers.get(selLayer).getStr().set(location, to);
-                layers.get(selLayer).getTset().set(location, newtset);
-                updateCache( location );
+                updateTileData(layer,location,to,newtset);
             }
         }
         backToMap();
@@ -9306,12 +9430,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                 }
 
+                updateTileData(layer,location,to,newtset);
 
-                layerhistory lh = new layerhistory(follower, from, to, location, layer, oldtset, newtset);
-                undolayer.add(lh);
-
-                layers.get(selLayer).getStr().set(location, to);
-                layers.get(selLayer).getTset().set(location, newtset);
             }
         }
 
@@ -10486,7 +10606,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         elha.clear();
         boolean follower = false;
         for (int i=0;i<Tw*Th;i++){
-            layerhistory lh = new layerhistory(follower,layers.get(zeLayer).getStr().get(i),0,i,zeLayer,layers.get(zeLayer).getTset().get(i),0);
+            layerhistory lh = new layerhistory(follower,zeLayer,i,0,layers.get(zeLayer).getStr().get(i),-1,layers.get(zeLayer).getTset().get(i),-1,layers.get(zeLayer).getTile().get(i));
             elha.add(lh);
             follower=true;
         }
@@ -15045,6 +15165,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             isi = "";
                             switch (xtree.get(xtree.size()-1)) {
                                 case "layer":
+
                                     encoding = myParser.getAttributeValue(null, "encoding");
                                     if (encoding == null) {
                                         encoding = "xml";
@@ -15462,9 +15583,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             }
                         }
                         if (name.equals("tile")) {
-                            log("WEI"+xtree.toString());
                             if (xtree.get(xtree.size()-2).equalsIgnoreCase("tileset")) {
                                 tempTset.getTiles().add(tempTile);
+                                xtree.remove(xtree.size()-1);
+                            }else{
                                 xtree.remove(xtree.size()-1);
                             }
 
@@ -15623,7 +15745,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             ErrorBung(e, "/maknyus.txt");
         }
         CacheAllTset();
-        CacheAllTile();
         resetSwatches();
         updateObjectCollision();
         resetCaches();
@@ -16151,31 +16272,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public java.util.List<Integer> cacheTset(java.util.List<Long> spr) {
         tilesetsize = tilesets.size();
-        java.util.List<Integer> nyot = new ArrayList<Integer>();
+        java.util.List<Integer> nyot = new ArrayList<>();
         for (int s = 0; s < spr.size(); s++) {
             hex = Long.toHexString(spr.get(s));
             trailer = "00000000" + hex;
             hex = trailer.substring(trailer.length() - 8);
-            String flag = hex.substring(0, 2);
             Long mm = Long.decode("#00" + hex.substring(2, 8));
-            boolean isi = false;
+            nyot.add(-1);
+
             for (int g = tilesetsize - 1; g >= 0; g--) {
-                if (mm == 0) {
-                    nyot.add(-1);
-                    break;
-                }
                 if (mm >= tilesets.get(g).getFirstgid() && mm < tilesets.get(g).getFirstgid() + tilesets.get(g).getTilecount()) {
-                    nyot.add(g);
-                    isi = true;
-                    break;
-                }
-                if (g == 0 && !isi) {
-                    nyot.add(-1);
+                    nyot.set(s,g);
                     break;
                 }
             }
         }
-
         return nyot;
     }
 
@@ -16184,21 +16295,28 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         log("prepare caching tset...");
         //hog
-        java.util.List<Integer> copy = new ArrayList<Integer>();
+        java.util.List<Integer> copy = new ArrayList<>();
         for (int k = 0; k<Tw*Th;k++){
             copy.add(Integer.valueOf( -1 ));
         }
         log("caching tset...");
         for (int lay = 0; lay < layers.size(); lay++) {
+
             if (tilesets.size() >0) {
                 log("layer");
                 layers.get( lay ).setTset( cacheTset( layers.get( lay ).getStr() ) );
             }else{
+
                 log("empty layer");
                 layers.get( lay ).setTset(copy);
+
             }
+
         }
+        int a = layers.get(0).getTset().size();
+        log(a+"");
         log("caching tset ok");
+        CacheAllTile();
 
     }
 
@@ -16206,13 +16324,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         log("caching tiles started....");
         for (int lay = 0; lay < layers.size(); lay++) {
             layer l = layers.get(lay);
+            if (l.getType()!= layer.Type.TILE) continue;
             l.getTile().clear();
             for (int k = 0; k<Tw*Th;k++){
                 l.getTile().add(-1);
+                if (l.getTset().get(k)==-1) continue;
                 if (tilesets.get(l.getTset().get(k)).getTiles().size()>0){
                     for (int j=0; j<tilesets.get(l.getTset().get(k)).getTiles().size();j++){
                         tile tt = tilesets.get(l.getTset().get(k)).getTiles().get(j);
-                        if (tt.getTileID()==l.getStr().get(k)){
+                        if (tt.getTileID()+tilesets.get(l.getTset().get(k)).getFirstgid()==l.getStr().get(k)){
                             l.getTile().set(k,j);
                             break;
                         }
@@ -18284,9 +18404,63 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     }
 
+    public void updateTileData(int lay, int num, long str, int tsetID){
+        //retrieve layer for cleaner code.
+        layer l = layers.get(lay);
 
+        ////////////////RECORD HISTORY FOR UNDO REDO//////////////
+        //get current info
+        Long oldStr = l.getStr().get( num );
+        int oldTset = l.getTset().get( num );
+        int oldTile = l.getTile().get( num );
+
+        ////////////////update cached tile data//////////////////
+        if (str==0) tsetID=-1;
+        int newtile=-1;
+
+        l.getStr().set( num, str );
+        l.getTset().set( num, tsetID );
+
+        if (l.getTset().get(num)!=-1) {
+            tileset ts = tilesets.get(l.getTset().get(tsetID));
+            if (ts.getTiles().size()>0){
+                for (int j=0; j<ts.getTiles().size();j++){
+                    tile tt = ts.getTiles().get(j);
+                    if (tt.getTileID()+ts.getFirstgid()==l.getStr().get(num)){
+                        l.getTile().set(num,j);
+                        newtile = j;
+                        break;
+                    }
+                }
+            }
+
+        }else{
+            l.getTile().set(num,-1);
+        }
+
+        ////////////////////RECORD HISTORY//////////////////////////
+        layerhistory lh2 = new layerhistory( follower, lay, num, oldStr, str, oldTset, tsetID, oldTile, newtile );
+
+        if (oldStr != str) {
+            undolayer.add( lh2 );
+            uploaddata( lh2 );
+            redolayer.clear();
+            follower = true;
+        }
+
+        /////////////////////update graphic cache///////////////////
+        updateCache( num );
+
+    }
+
+    boolean follower = false;
 
     public void tapTile(int num, boolean follower, boolean terra, boolean smartStamp, int curspr) {
+        this.follower = follower;
+        tapTile( num,  terra,  smartStamp,  curspr);
+    }
+
+    public void tapTile(int num, boolean terra, boolean smartStamp, int curspr) {
         if (cammode == "View only") return;
         if (layers.size()==0) return;
         //the actual stamping process.
@@ -18323,22 +18497,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 int tzet = layers.get( selLayer ).getTset().get( nyum );
                                 int tzeto = seltset;
 
-                                layerhistory lh2 = new layerhistory( follower, from, oi, nyum, selLayer, tzet, tzeto );
+                                updateTileData(selLayer,nyum,oi,curtset);
 
 
-                                if (from != oi) {
-                                    undolayer.add( lh2 );
-                                    uploaddata( lh2 );
-                                    redolayer.clear();
-
-                                    layers.get( selLayer ).getStr().set( nyum, oi );
-                                    layers.get( selLayer ).getTset().set( nyum, curtset );
-                                    updateCache( nyum );
-                                    follower = true;
-                                }
                             }
                         }
-
                     }
                 }
 
@@ -18396,19 +18559,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 case 4:
                     cue("tileclick");
                     long noi = Long.decode("#" + 00 + hex.substring(2)) - tilesets.get(curtset).getFirstgid();
-                    Long from = layers.get(selLayer).getStr().get(num);
-                    int tzet = layers.get(selLayer).getTset().get(num);
-
-                    layerhistory lh2 = new layerhistory(follower, from, oi, num, selLayer, tzet, curtset);
-                    updateCache(num);
-
-                    if (from != oi) {
-                        undolayer.add(lh2);
-                        uploaddata(lh2);
-                        redolayer.clear();
-                    }
-                    layers.get(selLayer).getStr().set(num, oi);
-                    layers.get(selLayer).getTset().set(num, curtset);
+                    updateTileData(selLayer,num,oi,curtset);
                     tile t = null;
 
                     for (int k = 0; k < tilesets.get(curtset).getTiles().size(); k++) {
@@ -18417,141 +18568,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
                     }
 
-                    //OLD code for terrain
-                    /*
-                    if (t == null) return;
-                    int[] aa = null;
-                    if (t.isTerrain()) aa = t.getTerrain();
 
-                    if (t.isTerrain() && t.isCenter()) {
-
-                        //this loop detect the surrounding of a tile
-                        for (int i = 0; i < 9; i++) {
-
-                            //gogo is for detecting index of surrounding tile
-                            int gogo = num;
-                            switch (i) {
-                                case 0:
-                                    if (num <= Tw || num % Tw == 0) continue;
-                                    gogo = num - Tw - 1;
-                                    break;
-                                case 1:
-                                    if (num <= Tw) continue;
-                                    gogo = num - Tw;
-                                    break;
-                                case 2:
-                                    if (num <= Tw || num % Tw == Tw - 1) continue;
-                                    gogo = num - Tw + 1;
-                                    break;
-                                case 3:
-                                    if (num <= 1 || num % Tw == 0) continue;
-                                    gogo = num - 1;
-                                    break;
-                                case 4:
-                                    if (num >= Tw * Th || num % Tw == Tw - 1) continue;
-                                    gogo = num + 1;
-                                    break;
-                                case 5:
-                                    if (num >= Tw * Th - Tw || num % Tw == 0) continue;
-                                    gogo = num + Tw - 1;
-                                    break;
-                                case 6:
-                                    if (num >= Tw * Th - Tw) continue;
-                                    gogo = num + Tw;
-                                    break;
-                                case 7:
-                                    if (num >= Tw * Th - Tw || num % Tw == Tw - 1) continue;
-                                    gogo = num + Tw + 1;
-                                    break;
-                                case 8:
-                                    gogo = num;
-                                    break;
-                            }
-
-                            //nyum is to find the str of gogo location
-                            long nyum = layers.get(selLayer).getStr().get(gogo);
-                            hex = Long.toHexString(nyum);
-                            trailer = "00000000" + hex;
-                            hex = trailer.substring(trailer.length() - 8);
-                            noi = Long.decode("#" + 00 + hex.substring(2)) - tilesets.get(seltset).getFirstgid();
-
-                            t = null;
-
-                            for (int k = 0; k < tilesets.get(seltset).getTiles().size(); k++) {
-                                if (tilesets.get(seltset).getTiles().get(k).getTileID() == noi) {
-                                    t = tilesets.get(seltset).getTiles().get(k);
-                                }
-                            }
-                            if (t == null) continue;
-                            //so basically aa is for the mid, bb is for surrouding
-                            int[] bb = t.getTerrain();
-                            int[] cc = null;
-                            if (bb != null) {
-                                switch (i) {
-                                    case 0:
-                                        cc = new int[]{bb[0], bb[1], bb[2], aa[3]};
-                                        break;
-                                    case 1:
-                                        cc = new int[]{bb[0], bb[1], aa[2], aa[3]};
-                                        break;
-                                    case 2:
-                                        cc = new int[]{bb[0], bb[1], aa[2], bb[3]};
-                                        break;
-                                    case 3:
-                                        cc = new int[]{bb[0], aa[1], bb[2], aa[3]};
-                                        break;
-                                    case 4:
-                                        cc = new int[]{aa[0], bb[1], aa[2], bb[3]};
-                                        break;
-                                    case 5:
-                                        cc = new int[]{bb[0], aa[1], bb[2], bb[3]};
-                                        break;
-                                    case 6:
-                                        cc = new int[]{aa[0], aa[1], bb[2], bb[3]};
-                                        break;
-                                    case 7:
-                                        cc = new int[]{aa[0], bb[1], bb[2], bb[3]};
-                                        break;
-                                    case 8:
-                                        cc = new int[]{aa[0], aa[1], aa[2], aa[3]};
-                                        break;
-                                }
-                                java.util.List<Integer> lint = new ArrayList<Integer>();
-
-                                for (int u = 0; u < tilesets.get(seltset).getTiles().size(); u++) {
-                                    tile x = tilesets.get(seltset).getTiles().get(u);
-                                    if (x.getTerrainString().equalsIgnoreCase(cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3])) {
-                                        lint.add(u);
-                                    }
-                                }
-                                if (lint.size() > 0) {
-                                    tile y = tilesets.get(seltset).getTiles().get(lint.get((int) (Math.random() * lint.size())));
-
-
-                                    from = layers.get(selLayer).getStr().get(gogo);
-                                    tzet = layers.get(selLayer).getTset().get(gogo);
-                                    lh2 = new layerhistory(true, from, (long) y.getTileID() + tilesets.get(seltset).getFirstgid(), gogo, selLayer, tzet, seltset);
-
-
-                                    if (from != (long) y.getTileID() + tilesets.get(seltset).getFirstgid()) {
-                                        undolayer.add(lh2);
-                                        uploaddata(lh2);
-                                        redolayer.clear();
-                                    }
-
-                                    layers.get(selLayer).getStr().set(gogo, (long) y.getTileID() + tilesets.get(seltset).getFirstgid());
-
-                                }
-
-
-                            }
-                        }
-
-
-                    }
-
-
-                     */
                     //// CODE FOR TERRAINS!!! (14 JUNE)
 
                     if (oi==0) return;
@@ -18566,11 +18583,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         //means aa will alwyas be the center
                         //this loop detect the surrounding of a tile
                         final int numa = num;
-                        /*
-                        Thread thread = new Thread(){
-                            public void run(){
 
-                         */
                                 Terrainify(numa, t, new int[]{0,1,2,3,4,5,6,7,8},false);
                                 //log(numanuma.size()+"");
 
@@ -18613,61 +18626,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     }catch (Exception e){}
 
                                 }
-                                /*
-                                }
-                        };
-
-                        thread.start();
-
-                                 */
-
-                        /*
-                        Terrainify(num, t, new int[]{0,1,2,3,4,5,6,7,8},false);
-                        //log(numanuma.size()+"");
-
-                        while(!numanuma.isEmpty()){
-                            int gogo=0;
-                            int[] dir = new int[]{};
-                            switch ((int) numanuma.get(0).dir) {
-                                case 0:
-                                    dir = new int[]{0,1,3};
-                                    break;
-                                case 1:
-                                    dir = new int[]{1};
-                                    break;
-                                case 2:
-                                    dir = new int[]{2,1,4};
-                                    break;
-                                case 3:
-                                    dir = new int[]{3};
-                                    break;
-                                case 4:
-                                    dir = new int[]{4};
-                                    break;
-                                case 5:
-                                    dir = new int[]{5,3,6};
-                                    break;
-                                case 6:
-                                    dir = new int[]{6};
-                                    break;
-                                case 7:
-                                    dir = new int[]{7,6,4};
-                                    break;
-                                case 8:
-                                    dir = new int[]{8};
-                                    break;
-                            }
 
 
-                            Terrainify((int) numanuma.get(0).num, numanuma.get(0).t, dir,false);
-                            numanuma.remove(0);
-                        }
-                         */
-
-
-
-
-                    }
+                     }
 
                     //// END OF NEW TERRAIN CODE
 
@@ -18676,17 +18637,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 case 2: //fill
                     if (roll) activetool = 0;
-                    //oi = Long.decode("#" + spc + hex.substring(2));
-                    from = layers.get(selLayer).getStr().get(num);
-                    tzet = layers.get(selLayer).getTset().get(num);
-
-                    lh2 = new layerhistory(false, from, oi, num, selLayer, tzet, curtset);
-                    uploaddata(lh2);
-                    undolayer.add(lh2);
-                    redolayer.clear();
-
-                    //layers.get(selLayer).getStr().set(num, oi);
-
+                    Long from = layers.get(selLayer).getStr().get(num);
+                    //updateTileData(selLayer,num,oi,curtset);
                     fillthis(num, oi, from, 0);
                     break;
                 case 3: //paste, at last.
@@ -18724,23 +18676,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                                     //the previous data for undo
                                     from = layers.get(clipsource).getStr().get(orinyum);
-                                    tzet = layers.get(clipsource).getTset().get(orinyum);
+                                    int tzet = layers.get(clipsource).getTset().get(orinyum);
 
                                     if (movetool==selectTool.MOVE) {
                                         //if using move tool, then clear the data
 
-                                        //clearing should be before.. so new loop?
-                                        layers.get(clipsource).getStr().set(orinyum,(long) 0);
-                                        layers.get(clipsource).getTset().set(orinyum,-1);
+                                        //clearing should be before.. so new loop
+                                        updateTileData(clipsource,orinyum,0,-1);
+
                                         if (newmapstartselect==-1) newmapstartselect=nyum;
                                         newmapendselect=nyum;
-                                        lh2 = new layerhistory(followe, from, 0, orinyum, clipsource, tzet, -1);
-                                        undolayer.add(lh2);
-                                        updateCache( nyum );
-                                        updateCache( orinyum );
-                                        uploaddata(lh2);
-                                        redolayer.clear();
+
+                                        updateTileData(clipsource,nyum,from ,tzet);
                                         followe = true;
+
                                     }
 
 
@@ -18772,25 +18721,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                         if (oi==0) continue;
                                         int oritzet = cliplayer.getTset().get(orinyum);
 
-                                        //the previous data for undo
-                                        from = layers.get(selLayer).getStr().get(nyum);
-                                        tzet = layers.get(selLayer).getTset().get(nyum);
-
-
-                                        lh2 = new layerhistory(followe, from, oi, nyum, selLayer, tzet, oritzet);
-
-                                        //if (from != oi) {
-                                            undolayer.add(lh2);
-                                            uploaddata(lh2);
-                                            redolayer.clear();
-                                            layers.get(selLayer).getStr().set(nyum, oi);
-                                            layers.get(selLayer).getTset().set(nyum, oritzet);
-                                            followe = true;
-                                        updateCache( nyum );
-                                        updateCache( orinyum );
-
-                                        //}
-
+                                        updateTileData(selLayer,nyum,oi,oritzet);
+                                        followe = true;
 
                                     }
                                 }
@@ -18820,22 +18752,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                                 oi = l.getStr().get( orinyum );
                                                 int oritzet = l.getTset().get( orinyum );
 
-                                                //the previous data for undo
-                                                from = l.getStr().get( nyum );
-                                                tzet = l.getTset().get( nyum );
-
-
-                                                lh2 = new layerhistory( followe, from, oi, nyum, i, tzet, oritzet );
-
-                                                //if (from != oi) {
-                                                undolayer.add( lh2 );
-                                                uploaddata( lh2 );
-                                                redolayer.clear();
-                                                layers.get( i ).getStr().set( nyum, oi );
-                                                layers.get( i ).getTset().set( nyum, oritzet );
+                                                updateTileData(i,nyum,oi,oritzet);
                                                 followe = true;
-                                                updateCache( nyum );
-                                                updateCache( orinyum );
+
 
                                             }
                                         }
@@ -19051,25 +18970,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (lint.size() > 0) {
                         tile y = tilesets.get( curtset ).getTiles().get( lint.get( (int) (Math.random() * lint.size()) ) );
 
-
-                        from = layers.get( selLayer ).getStr().get( gogo );
-                        tzet = layers.get( selLayer ).getTset().get( gogo );
-                        lh2 = new layerhistory( true, from, (long) y.getTileID() + tilesets.get( curtset ).getFirstgid(), gogo, selLayer, tzet, curtset );
-
-                        if (from != (long) y.getTileID() + tilesets.get( curtset ).getFirstgid()) {
-                            undolayer.add( lh2 );
-                            uploaddata( lh2 );
-                            redolayer.clear();
-                        }
-
-                        layers.get( selLayer ).getStr().set( gogo, (long) y.getTileID() + tilesets.get( curtset ).getFirstgid() );
-                        updateCache( gogo );
-                        layers.get( selLayer ).getTset().set( gogo, curtset );
+                        updateTileData(selLayer,gogo,(long) y.getTileID() + tilesets.get( curtset ).getFirstgid(),curtset);
 
                         if ((cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3]).equalsIgnoreCase( "-1,-1,-1,-1" )) {
-                            layers.get( selLayer ).getStr().set( gogo, (long) 0 );
-                            layers.get( selLayer ).getTset().set( gogo, -1 );
 
+                            updateTileData(selLayer,gogo,0,-1);
                         }
 
                     } else {
@@ -19100,27 +19005,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         if (lint.size() > 0) {
                             tile y = tilesets.get( curtset ).getTiles().get( lint.get( (int) (Math.random() * lint.size()) ) );
+                           updateTileData(selLayer,gogo,(long) y.getTileID() + tilesets.get( curtset ).getFirstgid(),curtset);
 
-                            from = layers.get( selLayer ).getStr().get( gogo );
-                            tzet = layers.get( selLayer ).getTset().get( gogo );
-                            lh2 = new layerhistory( true, from, (long) y.getTileID() + tilesets.get( curtset ).getFirstgid(), gogo, selLayer, tzet, curtset );
-
-                            if (from != (long) y.getTileID() + tilesets.get( curtset ).getFirstgid()) {
-                                undolayer.add( lh2 );
-                                uploaddata( lh2 );
-                                redolayer.clear();
-                            }
-
-                            layers.get( selLayer ).getStr().set( gogo, (long) y.getTileID() + tilesets.get( curtset ).getFirstgid() );
-                            updateCache( gogo );
-
-                            layers.get( selLayer ).getTset().set( gogo, curtset );
                             if (!fill) requestReterrain = true;
 
                             if (y.getTerrainString().equalsIgnoreCase( "-1.-1.-1.-1" )) {
-                                layers.get( selLayer ).getStr().set( gogo, (long) 0 );
-                                layers.get( selLayer ).getTset().set( gogo, -1 );
-                                updateCache( gogo );
+
+                                updateTileData(selLayer,gogo,0,-1);
 
                                 //requestReterrain=false;
                             }
@@ -19723,7 +19614,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 undolayer.add(h);
                                 redolayer.clear();
                                 layers.get(h.getLayer()).getStr().set(h.getLocation(), h.getTo());
-                                layers.get(h.getLayer()).getTset().set(h.getLocation(), h.getNewtset());;
+                                layers.get(h.getLayer()).getTset().set(h.getLocation(), h.getNewtset());
                             }
                             break;
                     }
@@ -20698,6 +20589,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             lh = undolayer.get(n);
                             layers.get(lh.getLayer()).getStr().set(lh.getLocation(), lh.getFrom());
                             layers.get(lh.getLayer()).getTset().set(lh.getLocation(), lh.getoldTset());
+                            layers.get(lh.getLayer()).getTile().set(lh.getLocation(), lh.getOldtile());
                             updateCache(lh.getLocation());
                             redolayer.add(lh);
                             lh.undo=true;
@@ -20782,6 +20674,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         pertamax = false;
                         layers.get(lh.getLayer()).getStr().set(lh.getLocation(), lh.getTo());
                         layers.get(lh.getLayer()).getTset().set(lh.getLocation(), lh.getNewtset());
+                        layers.get(lh.getLayer()).getTile().set(lh.getLocation(), lh.getNewtile());
                         updateCache(lh.getLocation());
 
                         //status(lh.getTset()+"",5);
@@ -22159,47 +22052,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         snapWholeMapPhase2(0);
     }
 
-    public void fillthisold(int num, long oi, long from, int direction) {
 
-        if (num < 0) return;
-        if (num >= Tw * Th) return;
-        switch (direction) {
-            case 1://up
-                break;
-            case 2://down
-                break;
-            case 3://left
-                if (num % Tw == 0) return;
-                break;
-            case 4://rigjt
-                if (num % Tw == 1) return;
-                break;
-        }
-
-
-        long fromnew = layers.get(selLayer).getStr().get(num);
-        if (from != fromnew) return;
-        if (oi == from) return;
-
-        int tzet = layers.get(selLayer).getTset().get(num);
-
-        layerhistory lh2 = new layerhistory(true, fromnew, oi, num, selLayer, tzet, seltset);
-        if (fromnew != oi) {
-            undolayer.add(lh2);
-            redolayer.clear();
-        }
-
-        layers.get(selLayer).getStr().set(num, oi);
-
-        fillthis(num - Tw, oi, from, 1);
-        fillthis(num + Tw, oi, from, 2);
-        fillthis(num - 1, oi, from, 3);
-        fillthis(num + 1, oi, from, 4);
-
-    }
 
     public void fillthis(int numa, long oia, long froma, int directiona) {
-        java.util.Queue<floodfill> q = new LinkedList<floodfill>();
+        java.util.Queue<floodfill> q = new LinkedList<>();
         q.add(new floodfill(numa, oia, froma, directiona));
         while (!q.isEmpty()) {
             floodfill n = q.remove();
@@ -22228,19 +22084,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (from != fromnew) continue;
             if (oi == from) continue;
 
-            int tzet = layers.get(selLayer).getTset().get(num);
+            updateTileData(selLayer,num,oi,curtset);
 
-            layerhistory lh2 = new layerhistory(true, fromnew, oi, num, selLayer, tzet, curtset);
-
-            if (fromnew != oi) {
-                undolayer.add(lh2);
-                uploaddata(lh2);
-                redolayer.clear();
-            }
-
-            layers.get(selLayer).getStr().set(num, oi);
-            layers.get(selLayer).getTset().set(num, curtset);
-            updateCache(num);
 
             q.add(new floodfill(num - Tw, oi, from, 1));
             q.add(new floodfill(num + Tw, oi, from, 2));
@@ -22401,22 +22246,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             int num = newnum;
                                 if (num <0) continue;
                                 if (num >= Tw*Th) continue;
-                                Long from = layers.get( selLayer ).getStr().get( num );
-                                int tzet = layers.get( selLayer ).getTset().get( num );
 
-                                layerhistory lh2 = new layerhistory( follower, from, oi, num, selLayer, tzet, seltset );
-                                follower=true;
-                                updateCache( num );
+                                updateTileData(selLayer,num,oi,curtset);
 
-                                if (from != oi) {
-                                    undolayer.add( lh2 );
-                                    uploaddata( lh2 );
-                                    redolayer.clear();
-                                }
-                                layers.get( selLayer ).getStr().set( num, oi );
-                                layers.get( selLayer ).getTset().set( num, atst );
-
-                            ////////////
 
                         } //comma
                     } // properties
@@ -24205,21 +24037,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                                         }
 
-                                        /*
-                                        try {
-                                                autotilePool.execute( new Runnable() {
-                                                    @Override
-                                                    public void run() {
-                                                    }
-                                                } );
-                                            } catch (Exception e) {
-                                                e.printStackTrace();
-                                            }
-
-                                         */
-
-                                        //threadPool.waitUntilAllTasksFinished();
-
                                         if (firstone) firstone = false;
                                         break;
                                     case CIRCLE:
@@ -24239,25 +24056,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 }
 
                                 curspr = oldcurspr;
-							/*
-							int nyum=mapstartSelect + xx + (yy * Tw);
-							if (activetool==0) long oi = curspr;
-							if (activetool==1) long oi = 0;
-							Long from = layers.get(selLayer).getStr().get(nyum);
-							int tzet = layers.get(selLayer).getTset().get(nyum);
 
-							layerhistory lh2=new layerhistory(follower,from,oi,nyum,selLayer,tzet);
-
-							if(from!=oi){
-								undolayer.add(lh2);
-								redolayer.clear();
-							}
-
-
-							layers.get(selLayer).getStr().set(nyum, oi);
-							layers.get(selLayer).getTset().set(nyum, seltset);
-							follower=true;
-							*/
                             }
                         }
                     }

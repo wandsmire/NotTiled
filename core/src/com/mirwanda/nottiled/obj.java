@@ -631,7 +631,17 @@ public class obj implements Cloneable
 		}
 		return g;
 	}
-	
+
+	public float[] getVertices(float tsh, int addx, int addy)
+	{
+		float[] g=new float[points.size()*2];
+		for (int a=0;a<points.size();a++){
+			g[a*2]=points.get(a).x+getX()+addx;
+			g[a*2+1]=-points.get(a).y-getY()+tsh+addy;
+		}
+		return g;
+	}
+
 	public int getPointsSize(){
 		return points.size();
 	}
