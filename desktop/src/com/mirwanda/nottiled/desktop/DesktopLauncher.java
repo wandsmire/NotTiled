@@ -17,7 +17,7 @@ public class DesktopLauncher {
 		cfg.width = LwjglApplicationConfiguration.getDesktopDisplayMode().width;
 		cfg.height = LwjglApplicationConfiguration.getDesktopDisplayMode().height;
 		cfg.fullscreen = false;
-		cfg.x=-1;cfg.y=-1;
+		//cfg.x=-1;cfg.y=-1;
 		com.mirwanda.nottiled.nullInterface ni= new com.mirwanda.nottiled.nullInterface();
 		new LwjglApplication(new MyGdxGame("",ni), cfg);
 

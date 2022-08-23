@@ -1,2 +1,0 @@
-com/mirwanda/nottiled/IOSLauncher.java
- com.mirwanda.nottiled.IOSLauncher

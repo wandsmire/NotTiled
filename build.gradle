@@ -6,17 +6,16 @@ buildscript {
         mavenCentral()
         maven { url "https://plugins.gradle.org/m2/" }
         maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
-        jcenter()
         google()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.1.2'
-        classpath 'com.mobidevelop.robovm:robovm-gradle-plugin:2.3.8'
+        classpath 'com.android.tools.build:gradle:7.2.2'
+        classpath 'com.mobidevelop.robovm:robovm-gradle-plugin:2.3.10'
     }
 }
 
 allprojects {
-    buildDir = "/users/wandsmire/Dropbox/${rootProject.name}/${project.name}"
+    buildDir = "D:/${rootProject.name}/${project.name}"
     version = '1.0'
     ext {
         appName = "NotTiled"
@@ -32,11 +31,10 @@ allprojects {
     repositories {
         mavenLocal()
         mavenCentral()
-        jcenter()
         google()
         maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
         maven { url "https://oss.sonatype.org/content/repositories/releases/" }
-        maven { url "http://repo.clojars.org/" }
+        maven { url "https://repo.clojars.org/" }
         maven { url "https://maven.sing-group.org/repository/maven/" }
     }
 
@@ -148,21 +146,10 @@ project(":core") {
         }
         implementation group: 'com.esotericsoftware', name: 'kryo', version: '4.0.1'
         implementation group: 'jfugue', name: 'jfugue', version: '5.0.9'
-        implementation "com.badlogicgames.box2dlights:box2dlights:1.4"
+        implementation "com.badlogicgames.box2dlights:box2dlights:1.5"
         implementation "com.badlogicgames.gdx-controllers:gdx-controllers-core:$gdxControllersVersion"
 
     }
 }
 
-task fixIML {
-    def imlFile = file('NotTiled.iml')
-    if (imlFile.exists()) {
-        def iml = new XmlParser().parse(imlFile)
-        iml.component.facet.each { facet ->
-            def type = facet.@type
-            if (type == 'android-gradle' || type == 'java-gradle')
-                facet.parent().remove(facet)
-        }
-        new XmlNodePrinter(new PrintWriter(new FileWriter(imlFile))).print(iml)
-    }
-}
+
