@@ -7393,9 +7393,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tLinks1.add( bManual ).row();
             tLinks1.add( bVideos ).row();
             tLinks1.add( bDiscord ).row();
-            tLinks1.add( bWhatsapp ).row();
+            //tLinks1.add( bWhatsapp ).row();
             tLinks1.add( bReload ).row();
-            tLinks2.add( bCopyto ).row();
+            tLinks1.add( bCopyto ).row();
 
             tLinks2.add( new Label( z.thirdpartyapps, skin ) ).padTop( 10 ).row();
             tLinks2.add( bRusted ).row();
@@ -7412,7 +7412,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tLinks.add( bManual ).row();
             tLinks.add( bVideos ).row();
             tLinks.add( bDiscord ).row();
-            tLinks.add( bWhatsapp ).row();
+            //tLinks.add( bWhatsapp ).row();
             tLinks.add( bReload ).row();
             tLinks.add( bCopyto ).row();
             tLinks.add( bBack3 ).row();
