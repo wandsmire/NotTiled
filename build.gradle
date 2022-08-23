@@ -15,6 +15,7 @@ buildscript {
 }
 
 allprojects {
+
     buildDir = "D:/${rootProject.name}/${project.name}"
     version = '1.0'
     ext {
@@ -43,7 +44,6 @@ allprojects {
 
 project(":desktop") {
     apply plugin: "java-library"
-
 
     dependencies {
         implementation project(":core")
