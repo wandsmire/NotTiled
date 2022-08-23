@@ -18421,22 +18421,23 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         l.getStr().set( num, str );
         l.getTset().set( num, tsetID );
 
-        if (l.getTset().get(num)!=-1) {
-            tileset ts = tilesets.get(l.getTset().get(tsetID));
-            if (ts.getTiles().size()>0){
-                for (int j=0; j<ts.getTiles().size();j++){
-                    tile tt = ts.getTiles().get(j);
-                    if (tt.getTileID()+ts.getFirstgid()==l.getStr().get(num)){
-                        l.getTile().set(num,j);
-                        newtile = j;
-                        break;
+            if (l.getTset().get(num)!=-1) {
+                tileset ts = tilesets.get(tsetID);
+                if (ts.getTiles().size() > 0) {
+                    for (int j = 0; j < ts.getTiles().size(); j++) {
+                        tile tt = ts.getTiles().get(j);
+                        if (tt.getTileID() + ts.getFirstgid() == l.getStr().get(num)) {
+                            l.getTile().set(num, j);
+                            newtile = j;
+                            break;
+                        }
                     }
                 }
+
+            } else {
+                l.getTile().set(num, -1);
             }
 
-        }else{
-            l.getTile().set(num,-1);
-        }
 
         ////////////////////RECORD HISTORY//////////////////////////
         layerhistory lh2 = new layerhistory( follower, lay, num, oldStr, str, oldTset, tsetID, oldTile, newtile );
