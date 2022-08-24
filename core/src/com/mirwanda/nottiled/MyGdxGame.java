@@ -136,6 +136,11 @@ import java.util.zip.ZipOutputStream;
 
 import static java.lang.Thread.sleep;
 
+import de.tomgrill.gdxdialogs.core.GDXDialogs;
+import de.tomgrill.gdxdialogs.core.GDXDialogsSystem;
+import de.tomgrill.gdxdialogs.core.dialogs.GDXTextPrompt;
+import de.tomgrill.gdxdialogs.core.listener.TextPromptListener;
+
 
 public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private static final boolean isDesktop = false;//(Gdx.app.getType() == Application.ApplicationType.Desktop);
@@ -166,6 +171,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public Vignette vignette;
     public boolean frompick;
     private layer.Type newLayerType;
+    GDXDialogs dialogs;
     String oldlang;
     Integer oldfontsize;
     String oldcustomfont;
@@ -300,7 +306,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     Table tObjProp;
     TextButton bApply, bCancel, bRemove, bProps;
     Table tNF, tMP;
-    com.badlogic.gdx.Input.TextInputListener pSaveAs;
+    TextPromptListener pSaveAs;
     //nf
     TextField fNFilename, fNCurdir, fNTsw, fNTsh, fNTw, fNTh;
     SelectBox sbNMapFormat;
@@ -345,8 +351,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     TextButton bRusted, bWardate, bManual;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> lautolist;
     TextButton bAutoadd, bAutoprops, bAutoload, bAutosave, bAutorename, bAutoremove, bAutomoveup, bAutoback;
-    com.badlogic.gdx.Input.TextInputListener pAutoadd;
-    com.badlogic.gdx.Input.TextInputListener pAutorename;
+    TextPromptListener pAutoadd;
+    TextPromptListener pAutorename;
     Table tLayerNew;
     TextButton bLayerGroup, blayerBack;
     Table tPropEditor;
@@ -358,37 +364,37 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     TextButton bPropValfile, bPropApply, bPropCancel, bPropCopy, bPropPaste, bPropGid, bProppng, bPropCp;
     String clipProp = "", clipobjcpy = "";
     com.badlogic.gdx.scenes.scene2d.ui.List<String> llayerlist;
-    com.badlogic.gdx.Input.TextInputListener pNewLayer;
-    com.badlogic.gdx.Input.TextInputListener pNewLayerSC;
-    com.badlogic.gdx.Input.TextInputListener pAddMacro;
-    com.badlogic.gdx.Input.TextInputListener pBrushSize;
+    TextPromptListener pNewLayer;
+    TextPromptListener pNewLayerSC;
+    TextPromptListener pAddMacro;
+    TextPromptListener pBrushSize;
 
-    com.badlogic.gdx.Input.TextInputListener pEditLayer;
-    com.badlogic.gdx.Input.TextInputListener pSetOpacity;
+    TextPromptListener pEditLayer;
+    TextPromptListener pSetOpacity;
     TextButton bAddLayer, bRemoveLayer, bMoveLayer, bEditLayer, bBackLayer, bSetOpacity;
     TextButton bLayerDuplicate, bLayerProperties;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> lproplist;
-    com.badlogic.gdx.Input.TextInputListener pNewProp;
+    TextPromptListener pNewProp;
     String tempNameNew;
-    com.badlogic.gdx.Input.TextInputListener pEditProp;
+    TextPromptListener pEditProp;
     String tempNameEdit;
-    com.badlogic.gdx.Input.TextInputListener pNewProp2;
+    TextPromptListener pNewProp2;
     Label lPropID;
-    com.badlogic.gdx.Input.TextInputListener pEditProp2;
+    TextPromptListener pEditProp2;
     TextButton bAddProp, bRemoveProp, bMoveProp, bEditProp, bBackProp;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> ltsetlist;
     TextButton bAddTset, bRemoveTset, bMoveTset, bBackTset, bPropTset, bImportFolder;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> lobjlist;
-    com.badlogic.gdx.Input.TextInputListener pNewObjLayer;
-    com.badlogic.gdx.Input.TextInputListener pNewObjLayerSC;
-    com.badlogic.gdx.Input.TextInputListener pEditObjLayer;
+    TextPromptListener pNewObjLayer;
+    TextPromptListener pNewObjLayerSC;
+    TextPromptListener pEditObjLayer;
     TextButton bAddObjLayer, bRemoveObjLayer, bMoveObjLayer, bEditObjLayer, bBackObjLayer;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> ltilelist;
     TextButton bAddTileLayer, bTileAnimations, bReplaceTileLayer, bRemoveTileLayer, bMoveTileLayer, bBackTileLayer, bPropsTileLayer, bTerrainEditor;
-    com.badlogic.gdx.Input.TextInputListener pNewTerrain;
+    TextPromptListener pNewTerrain;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> lframelist;
-    com.badlogic.gdx.Input.TextInputListener pNewFrame;
-    com.badlogic.gdx.Input.TextInputListener pEditFrame;
+    TextPromptListener pNewFrame;
+    TextPromptListener pEditFrame;
     TextField fDurationframe;
     TextButton bAddFrameLayer, bEditFrameLayer, bReplaceFrameLayer, bRemoveFrameLayer, bMoveFrameLayer, bBackFrameLayer, bDuration;
     Image iFrameView;
@@ -412,10 +418,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     AsyncExecutor asyncExecutor = new AsyncExecutor( 10 );
     AsyncResult<Void> task;
     obj newobject = new obj();
-    com.badlogic.gdx.Input.TextInputListener psaveproptemplate = new com.badlogic.gdx.Input.TextInputListener() {
+    TextPromptListener psaveproptemplate = new TextPromptListener() {
 
         @Override
-        public void input(String input) {
+        public void confirm(String input) {
             if (input == "") {
                 return;
             }
@@ -424,15 +430,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         @Override
-        public void canceled() {
+        public void cancel() {
         }
 
     };
 
-    com.badlogic.gdx.Input.TextInputListener pnewtextobject = new com.badlogic.gdx.Input.TextInputListener() {
+    TextPromptListener pnewtextobject = new TextPromptListener() {
 
         @Override
-        public void input(String input) {
+        public void confirm(String input) {
             if (input == "") {
                 return;
             }
@@ -441,7 +447,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         @Override
-        public void canceled() {
+        public void cancel() {
         }
 
     };
@@ -626,7 +632,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         log( "Gdx create started!" );
         //Gdx basepath now refere to Android/data/com.mirwanda.nottiled/files/
         basepath = Gdx.files.getExternalStoragePath();
-
+         dialogs = GDXDialogsSystem.install();
         log("basepath = "+basepath);
         nullTable = new Table();
         vers = face.getVersione();
@@ -1519,7 +1525,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         postProcessor.render();
                         drawWorldUI();
                         //draw debug for collision detection
-                        b2dr.render(world,cam.combined);
+                        //b2dr.render(world,cam.combined);
 
                         drawstage( delta );
 
@@ -7303,22 +7309,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         } );
 
-        pSaveAs = new com.badlogic.gdx.Input.TextInputListener() {
+        pSaveAs = new TextPromptListener() {
+            @Override
+            public void cancel() {
+
+            }
 
             @Override
-            public void input(String input) {
-                if (input == "") {
+            public void confirm(String text) {
+                if (text == "") {
                     return;
                 }
                 curdir = saveasdir;
-                curfile = input;
-                saveMap( saveasdir + "/" + input );
+                curfile = text;
+                saveMap( saveasdir + "/" + text );
             }
-
-            @Override
-            public void canceled() {
-            }
-
         };
 
 
@@ -10679,10 +10684,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         });
 
 
-        pNewLayer = new com.badlogic.gdx.Input.TextInputListener() {
+        pNewLayer = new TextPromptListener() {
 
             @Override
-            public void input(String input) {
+            public void confirm(String input) {
                 if (input == "") {
                     return;
                 }
@@ -10709,15 +10714,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             @Override
-            public void canceled() {
+            public void cancel() {
             }
 
         };
 
-        pBrushSize = new com.badlogic.gdx.Input.TextInputListener() {
+        pBrushSize = new TextPromptListener() {
 
             @Override
-            public void input(String input) {
+            public void confirm(String input) {
                 if (input == "") return;
                 try{
                     int s = Integer.parseInt(input);
@@ -10732,17 +10737,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             @Override
-            public void canceled() {
+            public void cancel() {
             }
 
         };
 
 
 
-        pNewLayerSC = new com.badlogic.gdx.Input.TextInputListener() {
+        pNewLayerSC = new TextPromptListener() {
 
             @Override
-            public void input(String input) {
+            public void confirm(String input) {
                 if (input == "") {
                     return;
                 }
@@ -10752,13 +10757,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (newLayerType==layer.Type.TILE) {
                     java.util.List<Long> newstr = new ArrayList<Long>();
                     java.util.List<Integer> newtset = new ArrayList<Integer>();
+                    java.util.List<Integer> newtile = new ArrayList<Integer>();
 
                     for (int i = 0; i < Tw * Th; i++) {
                         newstr.add((long) 0);
                         newtset.add(-1);
+                        newtile.add(-1);
                     }
                     newlayer.setStr(newstr);
                     newlayer.setTset(newtset);
+                    newlayer.setTile(newtile);
                     newlayer.setName(input);
                     newlayer.setType(layer.Type.TILE);
 
@@ -10775,15 +10783,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             @Override
-            public void canceled() {
+            public void cancel() {
             }
 
         };
 
-        pAddMacro = new com.badlogic.gdx.Input.TextInputListener() {
+        pAddMacro = new TextPromptListener() {
 
             @Override
-            public void input(String input) {
+            public void confirm(String input) {
                 if (input == "") {
                     return;
                 }
@@ -10823,15 +10831,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             @Override
-            public void canceled() {
+            public void cancel() {
             }
 
         };
 
-        pEditLayer = new com.badlogic.gdx.Input.TextInputListener() {
+        pEditLayer = new TextPromptListener() {
 
             @Override
-            public void input(String input) {
+            public void confirm(String input) {
                 if (input == "") {
                     return;
                 }
@@ -10847,15 +10855,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             @Override
-            public void canceled() {
+            public void cancel() {
             }
 
         };
 
-        pSetOpacity = new com.badlogic.gdx.Input.TextInputListener() {
+        pSetOpacity = new TextPromptListener() {
 
             @Override
-            public void input(String input) {
+            public void confirm(String input) {
                 if (input == "") {
                     input = "1";
                 }
@@ -10869,7 +10877,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             @Override
-            public void canceled() {
+            public void cancel() {
             }
 
         };
@@ -10885,7 +10893,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bEditLayer.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                Gdx.input.getTextInput(pEditLayer, z.edit + ", " + z.layer + " " + z.name, llayerlist.getSelected(), "");
+                getNewTextInput(pEditLayer, z.edit + ", " + z.layer + " " + z.name, llayerlist.getSelected(), "");
 
             }
         });
@@ -10895,7 +10903,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
 
                 if (layers.size() > 0) {
-                    Gdx.input.getTextInput(pSetOpacity, z.setopacity, Float.toString(layers.get(llayerlist.getSelectedIndex()).getOpacity()), "");
+                    getNewTextInput(pSetOpacity, z.setopacity, Float.toString(layers.get(llayerlist.getSelectedIndex()).getOpacity()), "");
                 }
             }
         });
@@ -11059,7 +11067,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 at.setProperties(pp);
                 Json json = new Json();
                 clipProp = json.toJson(at);
-                Gdx.input.getTextInput(psaveproptemplate, z.exportastemplate, "", "");
+                getNewTextInput(psaveproptemplate, z.exportastemplate, "", "");
 
                 //get the name.
 
@@ -12343,10 +12351,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tAutoMgmt.add(bAutoload).row();
         tAutoMgmt.add(bAutoback).row();
 
-        pAutoadd = new com.badlogic.gdx.Input.TextInputListener() {
+        pAutoadd = new TextPromptListener() {
 
             @Override
-            public void input(String input) {
+            public void confirm(String input) {
                 if (input != "") {
                     autotiles.add(new autotile(input));
                     refreshAutoMgmt();
@@ -12354,15 +12362,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             @Override
-            public void canceled() {
+            public void cancel() {
             }
 
         };
 
-        pAutorename = new com.badlogic.gdx.Input.TextInputListener() {
+        pAutorename = new TextPromptListener() {
 
             @Override
-            public void input(String input) {
+            public void confirm(String input) {
                 if (input != "") {
                     autotiles.get(lautolist.getSelectedIndex()).setName(input);
                     refreshAutoMgmt();
@@ -12370,7 +12378,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             @Override
-            public void canceled() {
+            public void cancel() {
             }
 
         };
@@ -12387,7 +12395,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bAutoadd.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                Gdx.input.getTextInput(pAutoadd, z.name, "", "");
+                getNewTextInput(pAutoadd, z.name, "", "");
             }
         });
 
@@ -12396,7 +12404,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 int dex = lautolist.getSelectedIndex();
                 if (dex >= 0) {
-                    Gdx.input.getTextInput(pAutorename, z.rename, autotiles.get(dex).getName(), "");
+                    getNewTextInput(pAutorename, z.rename, autotiles.get(dex).getName(), "");
                 }
             }
         });
@@ -13065,10 +13073,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         });
 
-        pNewTerrain = new com.badlogic.gdx.Input.TextInputListener() {
+        pNewTerrain = new TextPromptListener() {
 
             @Override
-            public void input(String input) {
+            public void confirm(String input) {
                 if (input == "") {
                     return;
                 }
@@ -13085,7 +13093,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             @Override
-            public void canceled() {
+            public void cancel() {
             }
 
         };
@@ -13518,7 +13526,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 newLayerType = layer.Type.TILE;
-                Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                 backToMap();
             }
         });
@@ -13527,7 +13535,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 newLayerType = layer.Type.OBJECT;
-                Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                 backToMap();
             }
         });
@@ -13537,7 +13545,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 newLayerType = layer.Type.IMAGE;
-                Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                 backToMap();
             }
         });
@@ -13547,7 +13555,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void loadFrameManagement() {
 		/*
 		 com.badlogic.gdx.scenes.scene2d.ui.List<String> lanimlist;
-		 com.badlogic.gdx.Input.TextInputListener pNewAnim;
+		 TextPromptListener pNewAnim;
 		 TextButton bAddAnimLayer, bEditAnimLayer, bRemoveAnimLayer;
 
 		 */
@@ -13559,10 +13567,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         });
 
-        pEditFrame = new com.badlogic.gdx.Input.TextInputListener() {
+        pEditFrame = new TextPromptListener() {
 
             @Override
-            public void input(String input) {
+            public void confirm(String input) {
                 if (input == "") {
                     return;
                 }
@@ -13584,7 +13592,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             @Override
-            public void canceled() {
+            public void cancel() {
             }
 
         };
@@ -13655,7 +13663,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 java.util.List<tile> tiles = tilesets.get(selTsetID).getTiles();
 
                 if (tiles.get(selTileID).getAnimation().size() > 0) {
-                    Gdx.input.getTextInput(pEditFrame, "Edit Duration", Integer.toString(tiles.get(selTileID).getAnimation().get(lframelist.getSelectedIndex()).getDuration()), "");
+                    getNewTextInput(pEditFrame, "Edit Duration", Integer.toString(tiles.get(selTileID).getAnimation().get(lframelist.getSelectedIndex()).getDuration()), "");
                 }
 
             }
@@ -13871,6 +13879,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         saveRecents();
 
     }
+
+    public void getNewTextInput(TextPromptListener tpl, String title, String value, String hint){
+        GDXTextPrompt textPrompt = dialogs.newDialog(GDXTextPrompt.class);
+        textPrompt.setTitle(title);
+        textPrompt.setMessage(hint);
+        textPrompt.setValue(value);
+        textPrompt.setCancelButtonLabel(z.cancel);
+        textPrompt.setConfirmButtonLabel(z.ok);
+        textPrompt.setTextPromptListener(tpl);
+        textPrompt.build().show();
+    }
+
     public void tujuanDialog(String dialog, FileHandle file) {
         openedfile = file.path();
         switch (dialog) {
@@ -13968,7 +13988,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 break;
             case "saveas":
                 saveasdir = file.path();
-                Gdx.input.getTextInput(pSaveAs, z.saveas, "new.tmx", "");
+
+
+                getNewTextInput(pSaveAs, z.saveas, "new.tmx", "");
 
                 break;
 
@@ -17595,7 +17617,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "newterrain":
                         newTerrainID = num - ts.getFirstgid();
                         tilePicker = "terraineditor";
-                        Gdx.input.getTextInput(pNewTerrain, "New Terrain Name", "", "");
+                        getNewTextInput(pNewTerrain, "New Terrain Name", "", "");
                         kartu = "pickanim";
                         Gdx.input.setInputProcessor(im);
                         return true;
@@ -18387,7 +18409,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             case 5:
                 newobject = nyok;
-                Gdx.input.getTextInput(pnewtextobject, "Set Text", "", "");
+                getNewTextInput(pnewtextobject, "Set Text", "", "");
 
 
                 break;
@@ -19211,7 +19233,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     String myID="";
     public java.util.List<actvClients> activeClients = new ArrayList<actvClients>();
 
-    com.badlogic.gdx.Input.TextInputListener til;
+    TextPromptListener til;
 
 
     public void pushUpdate(){
@@ -19684,10 +19706,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         });
 
-        til = new com.badlogic.gdx.Input.TextInputListener() {
+        til = new TextPromptListener() {
 
             @Override
-            public void input(String input) {
+            public void confirm(String input) {
                 if (input == "") {
                     return;
                 }
@@ -19696,7 +19718,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             @Override
-            public void canceled() {
+            public void cancel() {
             }
 
         };
@@ -20375,7 +20397,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (activetool==3 && !stamp && !assemblymode) {
                 if (tapped( touch2, gui.addmacro )) {
                    if (mapstartSelect==mapendSelect) return true;
-                    Gdx.input.getTextInput(pAddMacro, z.addnew+" :"+z.macro, "", "");
+                    getNewTextInput(pAddMacro, z.addnew+" :"+z.macro, "", "");
                    return true;
                 }
             }
@@ -22315,22 +22337,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     return true;
                 }
                 if (tapped(touch2, gui.tool2) || tapped(touch2, gui.tool3)) {
-                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    //getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                     //do nothing, just to prevent longpressing.
                     return true;
                 }
                 if (tapped(touch2, gui.mode)) { //actually add new layer...
-                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    //getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                     //do nothing, just to prevent longpressing.
                     return true;
                 }
                 if (tapped(touch2, gui.play)) { //actually add new layer...
-                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    //getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                     //do nothing, just to prevent longpressing.
                     return true;
                 }
                 if (tapped(touch2, gui.redo)) {
-                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    //getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                     //rotating = !rotating;
                     return true;
                 }
@@ -22338,7 +22360,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     return true;
                 }
                 if (tapped(touch2, gui.undo)) {
-                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    //getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                     //loadInterface("custom1.json");
                         /*
                         Json json = new Json();
@@ -22363,7 +22385,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (touch.y > 0) ab = 1;
                 if (tapped(touch2, gui.tool5)) {
                     //kucrut
-                    Gdx.input.getTextInput(pBrushSize, z.tilesize + " ["+brushsize+"]", "", "1-10");
+                    getNewTextInput(pBrushSize, z.tilesize + " ["+brushsize+"]", "", "1-10");
 
                     activetool=4;
                     return true;
@@ -22579,7 +22601,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     return true;
                 }
                 if (tapped(touch2, gui.mode)) {
-                   // Gdx.input.getTextInput(pNewObjLayerSC, z.addnew, z.object + " " + (layers.size() + 1), "");
+                   // getNewTextInput(pNewObjLayerSC, z.addnew, z.object + " " + (layers.size() + 1), "");
                     return true;
                 }
                 if (tapped(touch2, gui.objectpickermid)) {
@@ -22587,22 +22609,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     return true;
                 }
                 if (tapped(touch2, gui.tool5)) { //actually add new layer...
-                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    //getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                     //do nothing, just to prevent longpressing.
                     return true;
                 }
                 if (tapped(touch2, gui.tool4)) { //actually add new layer...
-                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    //getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                     //do nothing, just to prevent longpressing.
                     return true;
                 }
                 if (tapped(touch2, gui.tool3)) { //actually add new layer...
-                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    //getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                     //do nothing, just to prevent longpressing.
                     return true;
                 }
                 if (tapped(touch2, gui.tool2)) { //actually add new layer...
-                    //Gdx.input.getTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                    //getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                     //do nothing, just to prevent longpressing.
                     return true;
                 }
@@ -23464,7 +23486,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             }
                             if (ox.getShape() == "text") {
                                 newobject = ox;
-                                Gdx.input.getTextInput(pnewtextobject, z.addnew, ox.getText(), "");
+                                getNewTextInput(pnewtextobject, z.addnew, ox.getText(), "");
                                 return true;
                             }
                             if (ox.getShape() == "polygon" || ox.getShape() == "polyline") {

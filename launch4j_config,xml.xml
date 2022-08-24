@@ -2,7 +2,7 @@
 <launch4jConfig>
   <dontWrapJar>false</dontWrapJar>
   <headerType>gui</headerType>
-  <jar>D:\NotTiled\desktop\libs\desktop-1.0.jar</jar>
+  <jar>D:\NotTiled\desktop\libs\desktop-1.7.4.jar</jar>
   <outfile>C:\Users\reza\Dropbox\NotTiled-Download\NotTiled Desktop.exe</outfile>
   <errTitle></errTitle>
   <cmdLine></cmdLine>
@@ -18,8 +18,8 @@
     <path></path>
     <bundledJre64Bit>false</bundledJre64Bit>
     <bundledJreAsFallback>false</bundledJreAsFallback>
-    <minVersion>1.7.0</minVersion>
-    <maxVersion>1.9.0</maxVersion>
+    <minVersion>1.8</minVersion>
+    <maxVersion></maxVersion>
     <jdkPreference>preferJre</jdkPreference>
     <runtimeBits>64/32</runtimeBits>
   </jre>
