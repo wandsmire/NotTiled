@@ -2,8 +2,8 @@
 <launch4jConfig>
   <dontWrapJar>false</dontWrapJar>
   <headerType>gui</headerType>
-  <jar>D:\NotTiled\desktop\libs\desktop-1.7.4.jar</jar>
-  <outfile>C:\Users\reza\Dropbox\NotTiled-Download\NotTiled Desktop.exe</outfile>
+  <jar>D:\NotTiled\desktop\libs\desktop-1.7.4b.jar</jar>
+  <outfile>C:\Users\reza\Dropbox\NotTiled-Download\NotTiled Desktop 1.7.4b.exe</outfile>
   <errTitle></errTitle>
   <cmdLine></cmdLine>
   <chdir>.</chdir>

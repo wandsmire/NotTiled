@@ -29,7 +29,7 @@ android {
         minSdkVersion 19
         targetSdkVersion 30
         versionCode 80
-        versionName "1.7.5 alpha 1"
+        versionName "1.7.4b"
     }
     buildTypes {
         release {

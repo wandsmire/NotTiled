@@ -1,5 +1,5 @@
 <h1>NotTiled </h1>
-Latest version: 1.6.0
+Latest version: 1.7.4b
 
 NotTiled is a simple tiled map editor (tmx editor) for gamers and game developers. It is based on Tiled Map Editor (https://www.mapeditor.org/) by Thorbjørn Lindeijer.
 
@@ -7,7 +7,7 @@ Sample maps & tilesets included (credit to their own respective creators).
 
 Features:
 - Orientation: Orthogonal, Isometric
-- Map size tested up to 500x500 tiles
+- Map size tested up to 1000x1000 tiles
 - Map format: xml, csv, base 64, base 64 zlib compressed, base 64 gzip compressed
 - Render order: right-down, left-down, right-up, left-up
 - Multiple tileset (also supports .tsx file)
@@ -18,17 +18,15 @@ Features:
 - Custom properties for map, tiles, and objects
 - Editing tools: Pencil tool, Stamp, Flood fill, Brush, Rectangle, Copy Paste, and Terrain tool
 - Tile rotation and flip
-- Undo and redo (at present only for tile mapping)
+- Undo and redo 
 - Objects supported: Rectangle, ellipse, point, polygon, polyline, text (partially), and image
 - Copy paste objects
 - Export to PNG, Lua & Json
 
 Still not implemented yet:
 - Staggerred and Hex map
-- Collision Editor
 - Wangset
 - Template
-- Object on isometric map
 
 This app is far from perfect and is under active development. Updates will be delivered each week. My goal is to make NotTiled a free, robust, and bug free tiled map editor for everyone.
 

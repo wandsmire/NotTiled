@@ -1521,7 +1521,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         drawGrid();
                         drawObjects();
                         drawObjectsInfo();
-                        drawCollisions();
+                        //drawCollisions();
                         postProcessor.render();
                         drawWorldUI();
                         //draw debug for collision detection
@@ -3488,8 +3488,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         //This thing is slow.
         try {
             //jangan dihapus, karena valuenya bakal di set lagi di bawah.
-            widd=20;
-            heii=20;
+            widd=50;
+            heii=50;
             buffersz=8191; //8000/40=20 full layer kebangetan.
             if (widd > Tw) widd = Tw; //kode asu
             if (heii > Th) heii = Th; //temennya
@@ -3737,6 +3737,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void drawCollisions() {
+
         if (tilesets.size()==0) return;
         sr.setProjectionMatrix( cam.combined );
 
@@ -17361,6 +17362,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     Integer num = ts.getFirstgid()+aaaa;
                     curspr = num;
                     curtset=seltset;
+                    updateAT();
                     curpickAuto=pickAuto;
                     adjustLayer( ts );
                     addRecentTile( curspr );
@@ -18582,7 +18584,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 case 4:
                     cue("tileclick");
                     long noi = Long.decode("#" + 00 + hex.substring(2)) - tilesets.get(curtset).getFirstgid();
-                    updateTileData(selLayer,num,oi,curtset);
+
+                    //not using terrain mode
+                    if (!curpickAuto){
+                        updateTileData(selLayer,num,oi,curtset);
+                        return;
+                    }
                     tile t = null;
 
                     for (int k = 0; k < tilesets.get(curtset).getTiles().size(); k++) {
@@ -18591,17 +18598,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
                     }
 
+                    updateTileData(selLayer,num,oi,curtset);
 
                     //// CODE FOR TERRAINS!!! (14 JUNE)
 
                     if (oi==0) return;
+                    if (t==null) return;
                     //updateAT();
-                    //NEW code for terrain
-                    if (t == null) return;
-                    if (!terra) return;
+                    //NEW code for terra
                     if (smartStamp) return;
-                    if (!curpickAuto) return;
+                    if (!terra) return;
 
+                    // so that we can use icon tile
+                    //if (t.isTerrainForEditor()) {
                     if (t.isTerrainForEditor() && t.isCenter()) {
                         //means aa will alwyas be the center
                         //this loop detect the surrounding of a tile
@@ -18837,7 +18846,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         historyA.add(-1);
         ATGraph.addAT(myAT);
 
-        for (tile t: tilesets.get( seltset ).getTiles())
+        for (tile t: tilesets.get( curtset ).getTiles())
         {
             int cond=t.getTerrain()[0];
             if (t.isTerrainForEditor() && t.isCenter() && !historyA.contains(cond)){
@@ -18848,7 +18857,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         }
 
-        for (tile t: tilesets.get( seltset ).getTiles())
+        for (tile t: tilesets.get( curtset ).getTiles())
         {
             if (t.isTerrainForEditor() && t.isTransition()){
                 Vector2 newHist = new Vector2(t.getTransA(), t.getTransB());
@@ -18860,6 +18869,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                 }
                 if (!sdh){
+                    //no connection for empty tiles.
+                    if (newHist.x==-1) continue;
+                    if (newHist.y==-1) continue;
+
                     AutoTile AT1= ATGraph.getAT( (int) newHist.x );
                     AutoTile AT2= ATGraph.getAT( (int) newHist.y );
                     //log(newHist.x+"-----"+newHist.y); //cool comment
@@ -19001,6 +19014,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
 
                     } else {
+                        //if (1==1) return true;
+                       // return true;
+
                         //no AI for bad terrain...
                         // if (aa[0]==-1 && aa[1] ==-1 && aa[2]==-1 && aa[3]==-1) return true;
                         if (bb[0] == -1 && bb[1] == -1 && bb[2] == -1 && bb[3] == -1) return true;
@@ -19014,15 +19030,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (ATPath==null) continue;
                         if (ATPath.getCount() <= 1) continue;
                         int ATid = ATPath.get( 1 ).name;
-                        //log("Result="+ATid+"");
-
 
                         for (int u = 0; u < tilesets.get( curtset ).getTiles().size(); u++) {
 
                             tile x = tilesets.get( curtset ).getTiles().get( u );
                             if (x.getTerrainString().equalsIgnoreCase( ATid + "," + ATid + "," + ATid + "," + ATid )) {
                                 lint.add( u );
-                                //log(u+"}"+ATid);
                             }
                         }
 
@@ -19033,10 +19046,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             if (!fill) requestReterrain = true;
 
                             if (y.getTerrainString().equalsIgnoreCase( "-1.-1.-1.-1" )) {
-
                                 updateTileData(selLayer,gogo,0,-1);
-
-                                //requestReterrain=false;
                             }
 
                             switch (i) {
@@ -19075,8 +19085,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             }
                             if (!fill) numanuma.add( new tung( gogo, y, i ) );
 
-
                         }
+
+
                     }
 
 
