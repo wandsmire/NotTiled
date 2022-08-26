@@ -42,6 +42,7 @@ public class DesktopLauncher {
 
 		Lwjgl3ApplicationConfiguration cfg3 = new Lwjgl3ApplicationConfiguration();
 		cfg3.setTitle( "NotTiled" );
+		cfg3.setOpenGLEmulation(Lwjgl3ApplicationConfiguration.GLEmulation.ANGLE_GLES20, 0, 0);
 		//cfg3.useOpenGL3( false,1,1 );
 		cfg3.setMaximized( true );
 		com.mirwanda.nottiled.nullInterface ni3= new com.mirwanda.nottiled.nullInterface();

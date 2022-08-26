@@ -49,6 +49,7 @@ project(":desktop") {
         implementation project(":core")
         api "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
         api "com.badlogicgames.gdx:gdx-lwjgl3-glfw-awt-macos:$gdxVersion"
+        api "com.badlogicgames.gdx:gdx-lwjgl3-angle:$gdxVersion"
         implementation 'org.bouncycastle:bcpkix-jdk15on:1.56'
         //api "com.badlogicgames.gdx:gdx-backend-lwjgl:$gdxVersion"
         api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
@@ -63,6 +64,7 @@ project(":desktop") {
         implementation "com.badlogicgames.gdx-controllers:gdx-controllers-desktop:$gdxControllersVersion"
         implementation fileTree(dir:"../src", include: "*.class")
         implementation "de.tomgrill.gdxdialogs:gdx-dialogs-desktop:1.3.0"
+
 
     }
 }
