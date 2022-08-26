@@ -1394,7 +1394,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 autosave += delta;
 
                 if (autosave > 60f * autosaveInterval) {
-                    log(autosaveInterval+"");
+                    //log(autosaveInterval+"");
                     autosave = 0;
                     if (sAutoSave) {
                         status( z.autosaving, 1 );
@@ -15514,7 +15514,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             log("BOS:"+xtree.get(xtree.size()-2));
                             switch (xtree.get(xtree.size()-2)) {
                                 case "tile":
-                                case "layer":
+                                case "map":
                                 tempobj = new obj();
                                 if (myParser.getAttributeValue(null, "id") != null) {
                                     int pID = Integer.parseInt(myParser.getAttributeValue(null, "id"));
@@ -15600,7 +15600,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     tempTile.getObjects().add(tempobj);
                                     log("OBJECT ADDED ON TILE!");
                                 break;
-                                case "layer":
+                                case "map":
                                     layers.get(layers.size() - 1).getObjects().add(tempobj);
                                     curid=lastPid+1;
                             }
@@ -16337,7 +16337,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         }
         int a = layers.get(0).getTset().size();
-        log(a+"");
+        //log(a+"");
         log("caching tset ok");
         CacheAllTile();
 
@@ -24035,7 +24035,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     if (xx > 0 && xx < widih && yy == heih) curspr = pon[7];
                                     if (xx == widih && yy == heih) curspr = pon[8];
                                 }
-                                    log(curspr+"");
+                                    //log(curspr+"");
 
                                 switch (currentShape)
                                 {
