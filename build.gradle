@@ -16,7 +16,7 @@ buildscript {
 
 allprojects {
 
-    buildDir = "D:/${rootProject.name}/${project.name}"
+    buildDir = "../../${rootProject.name}_build/${project.name}"
     version = '1.7.5'
     ext {
         appName = "NotTiled"
