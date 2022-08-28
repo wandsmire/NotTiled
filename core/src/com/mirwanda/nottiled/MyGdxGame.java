@@ -95,6 +95,8 @@ import com.esotericsoftware.kryonet.Server;
 import com.mirwanda.nottiled.ai.ATGraph;
 import com.mirwanda.nottiled.ai.AutoTile;
 import com.mirwanda.nottiled.platformer.game;
+import com.poisson.DiskGenerator;
+import com.poisson.Point;
 
 import org.jfugue.midi.MidiFileManager;
 import org.jfugue.pattern.Pattern;
@@ -1679,7 +1681,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         if (layers.size()>0) {
             for (int l=0;l<layers.size();l++) {
-                if (layers.get( l).getType()== layer.Type.TILE) {
+                if (layers.get( l).getType()== layer.Type.TILE && l==selLayer) {
                     if (sShowGIDmap) {
                         str1.getData().setScale( 0.01f + Tsw / 160f );
                         for (int yy = 0; yy < Th; yy++) {
@@ -7734,8 +7736,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         trandomgen.setFillParent( true );
         trandomgen.defaults().width( btnx / 2 ).padBottom( 2 ).height( btny );
         ffirstgen = new TextField( "0.5", skin );
-        slfirstgen = new Slider( .4f, .6f, .01f, false, skin );
-        slfirstgen.setValue( .5f );
+        slfirstgen = new Slider( 0, 10, 1, false, skin );
+        slfirstgen.setValue( 5 );
         fgencount = new TextField( "5", skin );
         fbirthlim = new TextField( "5", skin );
         fdeathlim = new TextField( "3", skin );
@@ -7786,7 +7788,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         runrandomize.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                float p1 = slfirstgen.getValue();// Float.parseFloat(ffirstgen.getText());
+                int p1 = (int) slfirstgen.getValue();// Float.parseFloat(ffirstgen.getText());
                 int p2 = 5;//Integer.parseInt(fgencount.getText());
                 int p3 = 5;//Integer.parseInt(fbirthlim.getText());
                 int p4 = 3;//Integer.parseInt(fdeathlim.getText());
@@ -7804,7 +7806,74 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                 }
 
-                rundomize( p1, p2, p3, p4, p5, p6, p7, p8 );
+//                rundomize( p1, p2, p3, p4, p5, p6, p7, p8 )
+
+                for (int cl = 0;cl<Tw*Th;cl++){
+                    tapTile(cl,true,false,false,(int) p5);
+                }
+
+                PerlinNoiseGenerator pn = new PerlinNoiseGenerator();
+                float[][] pgn = pn.generatePerlinNoise(Tw,Th,p1);
+                int dex=0;
+                for (float[] eachRow : pgn) {
+                    for (float j : eachRow) {
+                        if (j>0.5f){
+                            curpickAuto=true;
+                            tapTile(dex,true,true,false,(int) p7);
+                        }
+                        dex+=1;
+                    }
+                }
+
+                curtset=1;
+                selLayer=1;
+                for (int cl = 0;cl<Tw*Th;cl++){
+                    tapTile(cl,true,false,false,(int) 0);
+                }
+                DiskGenerator dg = new DiskGenerator(Tw,Th,20,8);
+
+//                DiskGenerator dg = new DiskGenerator(Tw,Th,20,8);
+                List<Point> lp = dg.generate();
+                List<Point> ln = new ArrayList<>();
+                for (Point p : lp){
+                    if (p.getX()<=1)continue;
+                    if (p.getY()<=1)continue;
+                    if (p.getX()>=Tw-2)continue;
+                    if (p.getY()>=Th-2)continue;
+                    List<Integer> nums = new ArrayList<>();
+                    int num = p.getX()+p.getY()*Tw;
+                    nums.add(num);
+                    nums.add(num+1);
+                    nums.add(num-1);
+                    nums.add(num+Tw);
+                    nums.add(num-Tw);
+                    nums.add(num+Tw-1);
+                    nums.add(num-Tw-1);
+                    nums.add(num+Tw+1);
+                    nums.add(num-Tw+1);
+
+                    boolean cont=true;
+                    for (int numa: nums) {
+                        if (layers.get(0).getTile().get(numa) != -1) {
+                            layer l = layers.get(0);
+                            if (tilesets.get(l.getTset().get(numa)).getTiles().get(l.getTile().get(numa)).getProperties().size() > 0)
+                            {
+                                cont=false;
+                                break;
+                            }
+                        }
+                    }
+                    if (cont) ln.add(p);
+                }
+
+                for (Point p : ln){
+                    int num = p.getX()+p.getY()*Tw;
+                    tapTile(num,false,true,false,372);
+                }
+
+                curtset=0;
+                selLayer=0;
+
             }
         } );
 
