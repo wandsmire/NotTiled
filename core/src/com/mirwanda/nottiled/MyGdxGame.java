@@ -7444,8 +7444,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tMap.defaults().width( btnx ).height( btny + 3 ).padBottom( 2 );
             //if (!face.ispro())
             tMap1.add( bPatreon2 ).row();
-            tMap1.add( bFeedback ).row();
-            tMap1.add( bUIEditor ).row();
+            //tMap1.add( bFeedback ).row();
+            //tMap1.add( bUIEditor ).row();
             //tMap1.add( bCollaboration ).row();
             tMap1.add( bProperties ).row();
             tMap1.add( bBackground ).row();
@@ -7461,9 +7461,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tMap = new Table();
             tMap.setFillParent( true );
             tMap.defaults().width( btnx ).height( btny + 3 ).padBottom( 2 );
-            if (!face.ispro()) tMap.add( bPatreon2 ).row();
-            tMap.add( bFeedback ).row();
-            tMap.add( bUIEditor ).row();
+            tMap.add( bPatreon2 ).row();
+            //tMap.add( bFeedback ).row();
+            //tMap.add( bUIEditor ).row();
             //tMap.add( bCollaboration ).row();
             tMap.add( bProperties ).row();
             tMap.add( bBackground ).row();
