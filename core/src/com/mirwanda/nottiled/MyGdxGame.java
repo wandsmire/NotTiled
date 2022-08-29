@@ -7399,7 +7399,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             Table tLinks1 = new Table();
             tLinks1.defaults().width( btnx ).height( btny * 2 ).padBottom( 2 );
             tLinks1.add( bLicense ).row();
-            tLinks1.add( bManual ).row();
+            //Links1.add( bManual ).row();
             tLinks1.add( bVideos ).row();
             tLinks1.add( bDiscord ).row();
             //tLinks1.add( bWhatsapp ).row();
