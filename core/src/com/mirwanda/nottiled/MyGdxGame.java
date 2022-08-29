@@ -7418,7 +7418,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tLinks.setFillParent( true );
             tLinks.defaults().width( btnx ).height( btny + 2 ).padBottom( 2 );
             tLinks.add( bLicense ).row();
-            tLinks.add( bManual ).row();
+            //tLinks.add( bManual ).row();
             tLinks.add( bVideos ).row();
             tLinks.add( bDiscord ).row();
             //tLinks.add( bWhatsapp ).row();
