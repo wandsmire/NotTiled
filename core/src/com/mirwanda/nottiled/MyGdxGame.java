@@ -126,6 +126,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -7806,8 +7807,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                 }
 
-//                rundomize( p1, p2, p3, p4, p5, p6, p7, p8 )
-
                 for (int cl = 0;cl<Tw*Th;cl++){
                     tapTile(cl,true,false,false,(int) p5);
                 }
@@ -7827,12 +7826,31 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 curtset=1;
                 selLayer=1;
+
+
+                //get the data for pool
+                int poolspr=0;
+                mainloop:
+                for (tileset t : tilesets){
+                    for (tile tt : t.getTiles()){
+                        boolean isabase=false,isplayer=false;
+                        for (property p : tt.getProperties()){
+                            if (p.getName().equalsIgnoreCase("res_pool")){
+                                poolspr=tt.getTileID()+t.getFirstgid();
+                                break mainloop;
+                            }
+                        }
+                    }
+                }
+
+                //clear the data
                 for (int cl = 0;cl<Tw*Th;cl++){
                     tapTile(cl,true,false,false,(int) 0);
                 }
-                DiskGenerator dg = new DiskGenerator(Tw,Th,20,8);
 
-//                DiskGenerator dg = new DiskGenerator(Tw,Th,20,8);
+
+                //generate res pool
+                DiskGenerator dg = new DiskGenerator(Tw,Th,20,8);
                 List<Point> lp = dg.generate();
                 List<Point> ln = new ArrayList<>();
                 for (Point p : lp){
@@ -7868,8 +7886,84 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 for (Point p : ln){
                     int num = p.getX()+p.getY()*Tw;
-                    tapTile(num,false,true,false,372);
+                    tapTile(num,false,true,false,poolspr);
                 }
+
+                //get bases data
+                List<Integer> bases = new ArrayList<>();
+                for (tileset t : tilesets){
+                    for (tile tt : t.getTiles()){
+                        boolean isabase=false,isplayer=false;
+                        for (property p : tt.getProperties()){
+                            if (p.getName().equalsIgnoreCase("unit") && p.getValue().equalsIgnoreCase("commandCenter")){
+                                isabase=true;
+                            }
+                            if (p.getName().equalsIgnoreCase("team") && !p.getValue().equalsIgnoreCase("-1")){
+                                isplayer=true;
+                            }
+                        }
+                        if (isabase && isplayer) bases.add(tt.getTileID()+t.getFirstgid());
+                    }
+                }
+
+                curtset=2;
+                selLayer=2;
+                //clear the data
+                for (int cl = 0;cl<Tw*Th;cl++){
+                    tapTile(cl,true,false,false,(int) 0);
+                }
+
+
+                //generate bases
+                dg = new DiskGenerator(Tw,Th,30,8);
+                lp = dg.generate();
+                ln = new ArrayList<>();
+                for (Point p : lp){
+                    if (p.getX()<=1)continue;
+                    if (p.getY()<=1)continue;
+                    if (p.getX()>=Tw-2)continue;
+                    if (p.getY()>=Th-2)continue;
+                    List<Integer> nums = new ArrayList<>();
+                    int num = p.getX()+p.getY()*Tw;
+                    nums.add(num);
+                    nums.add(num+1);
+                    nums.add(num-1);
+                    nums.add(num+Tw);
+                    nums.add(num-Tw);
+                    nums.add(num+Tw-1);
+                    nums.add(num-Tw-1);
+                    nums.add(num+Tw+1);
+                    nums.add(num-Tw+1);
+                    nums.add(num+Tw+Tw);
+
+                    boolean cont=true;
+                    for (int numa: nums) {
+                        if (layers.get(0).getTile().get(numa) != -1) {
+                            layer l = layers.get(0);
+                            if (tilesets.get(l.getTset().get(numa)).getTiles().get(l.getTile().get(numa)).getProperties().size() > 0)
+                            {
+                                cont=false;
+                                break;
+                            }
+                        }
+                        if (layers.get(1).getStr().get(numa) != 0) {
+                                cont=false;
+                                break;
+                        }
+                    }
+                    if (cont) ln.add(p);
+                }
+
+                Collections.shuffle(ln);
+                int count=0;
+                for (Point p : ln){
+                    if (count>9) break;
+                    int num = p.getX()+p.getY()*Tw;
+                    tapTile(num,false,true,false,bases.get(count));
+                    count++;
+                }
+
+
 
                 curtset=0;
                 selLayer=0;
