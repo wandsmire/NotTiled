@@ -7807,15 +7807,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                 }
 
+                //for (layer l : layers){
+                  //  l.clearLayer();
+                //}
                 for (int cl = 0;cl<Tw*Th;cl++){
                     tapTile(cl,true,false,false,(int) p5);
                 }
 
                 PerlinNoiseGenerator pn = new PerlinNoiseGenerator();
                 float[][] pgn = pn.generatePerlinNoise(Tw,Th,p1);
+                List<Float> fn = new ArrayList<>();
                 int dex=0;
                 for (float[] eachRow : pgn) {
                     for (float j : eachRow) {
+                        fn.add(j);
                         if (j>0.5f){
                             curpickAuto=true;
                             tapTile(dex,true,true,false,(int) p7);
@@ -7891,18 +7896,23 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 //get bases data
                 List<Integer> bases = new ArrayList<>();
+                List<Integer> builders = new ArrayList<>();
                 for (tileset t : tilesets){
                     for (tile tt : t.getTiles()){
-                        boolean isabase=false,isplayer=false;
+                        boolean isabase=false,isplayer=false,isabuilder=false;
                         for (property p : tt.getProperties()){
                             if (p.getName().equalsIgnoreCase("unit") && p.getValue().equalsIgnoreCase("commandCenter")){
                                 isabase=true;
+                            }
+                            if (p.getName().equalsIgnoreCase("unit") && p.getValue().equalsIgnoreCase("builder")){
+                                isabuilder=true;
                             }
                             if (p.getName().equalsIgnoreCase("team") && !p.getValue().equalsIgnoreCase("-1")){
                                 isplayer=true;
                             }
                         }
                         if (isabase && isplayer) bases.add(tt.getTileID()+t.getFirstgid());
+                        if (isabuilder && isplayer) builders.add(tt.getTileID()+t.getFirstgid());
                     }
                 }
 
@@ -7915,7 +7925,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
                 //generate bases
-                dg = new DiskGenerator(Tw,Th,30,8);
+                dg = new DiskGenerator(Tw,Th,5,4);
                 lp = dg.generate();
                 ln = new ArrayList<>();
                 for (Point p : lp){
@@ -7956,10 +7966,31 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 Collections.shuffle(ln);
                 int count=0;
+                int space = 50;
                 for (Point p : ln){
                     if (count>9) break;
                     int num = p.getX()+p.getY()*Tw;
+                    //to prevent base on the small places
+                    if (fn.get(num)<0.70f) continue;
+                    boolean tooclose = false;
+                    //check if there is another base nearby
+                    int cleft = p.getX()-space;
+                    if (cleft<0) cleft=0;
+                    int cright = p.getX()+space;
+                    if (cright>Tw-1) cright=Tw-1;
+                    int ctop = p.getY()-space;
+                    if (ctop<0) ctop=0;
+                    int cbottom = p.getY()+space;
+                    if (cbottom>Th-1) cbottom=Th-1;
+                    for (int px = cleft; px<=cright;px++){
+                        for (int py = ctop; py<=cbottom;py++){
+                            if (layers.get(selLayer).getStr().get(py*Tw+px)!=0) tooclose=true;
+                        }
+                    }
+
+                    if (tooclose) continue;
                     tapTile(num,false,true,false,bases.get(count));
+                    tapTile(num+Tw*2,false,true,false,builders.get(count));
                     count++;
                 }
 

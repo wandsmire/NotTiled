@@ -31,6 +31,16 @@ public class layer
 	private int imagewidth;
 	private int imageheight;
 
+	public void clearLayer(){
+		for (int i=0;i<gid.size();i++){
+			if (gid.get(i)!=0){
+				gid.set(i,(long) 0);
+				tset.set(i,-1);
+				tile.set(i,-1);
+			}
+		}
+	}
+
 	public Texture getTexture() {
 		return texture;
 	}
