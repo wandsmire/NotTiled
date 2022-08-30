@@ -7754,8 +7754,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         fbirthlim = new TextField( "5", skin );
         fdeathlim = new TextField( "3", skin );
         flivestr = new TextField( "0", skin );
+        flivestr.setTextFieldFilter(tffint);
         flivetset = new TextField( "0", skin );
         fdeadstr = new TextField( "0", skin );
+        fdeadstr.setTextFieldFilter(tffint);
         fdeadtset = new TextField( "0", skin );
         TextButton runrandomize = new TextButton( z.randomize, skin );
         TextButton pickrnda = new TextButton( z.picktile1, skin );
@@ -7804,8 +7806,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 int p2 = 5;//Integer.parseInt(fgencount.getText());
                 int p3 = 5;//Integer.parseInt(fbirthlim.getText());
                 int p4 = 3;//Integer.parseInt(fdeathlim.getText());
+                if (flivestr.getText().equalsIgnoreCase("")) flivestr.setText("0");
+                if (fdeadstr.getText().equalsIgnoreCase("")) fdeadstr.setText("0");
                 long p5 = Long.parseLong( flivestr.getText() );
                 long p7 = Long.parseLong( fdeadstr.getText() );
+                if (getTsetFromSpr((int) p5) ==-1) p5=0;
+                if (getTsetFromSpr((int) p7) ==-1) p7=0;
                 int groundlayer=-1,itemslayer=-1,unitslayer=-1;
                 int poolspr=-1;
 
@@ -7821,13 +7827,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (groundlayer!=-1) selLayer=groundlayer;
 
                 //this is the basis of random map, does not matter RW or not.
-                curtset = getTsetFromSpr((int) p5);
+                if (p5!=0) curtset = getTsetFromSpr((int) p5);
                 for (int cl = 0;cl<Tw*Th;cl++){
                     tapTile(cl,true,false,false,(int) p5);
                 }
 
                 //use perlin noise to draw cool map
-                curtset = getTsetFromSpr((int) p7);
+                if (p7!=0) curtset = getTsetFromSpr((int) p7);
                 PerlinNoiseGenerator pn = new PerlinNoiseGenerator();
                 float[][] pgn = pn.generatePerlinNoise(Tw,Th,p1);
                 int fx = 0, fy =0;
