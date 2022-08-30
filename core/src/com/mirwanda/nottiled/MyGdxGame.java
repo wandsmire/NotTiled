@@ -7648,6 +7648,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     }
 
+    private int findLayer(String name){
+        if (layers.size()==0) return -1;
+        for (int i=0; i<layers.size();i++){
+            layer l = layers.get(i);
+            if (l.getName().equalsIgnoreCase(name)){
+                return i;
+            }
+        }
+        return -1;
+    }
+
     private void loadTools() {
         ttools = new Table();
         ttools.setFillParent( true );
@@ -7794,210 +7805,279 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 int p3 = 5;//Integer.parseInt(fbirthlim.getText());
                 int p4 = 3;//Integer.parseInt(fdeathlim.getText());
                 long p5 = Long.parseLong( flivestr.getText() );
-                int p6 = 0;
                 long p7 = Long.parseLong( fdeadstr.getText() );
-                int p8 = 0;
+                int groundlayer=-1,itemslayer=-1,unitslayer=-1;
+                int poolspr=-1;
 
-                for (int i = 0; i < tilesets.size(); i++) {
-                    if (p5 >= tilesets.get( i ).getFirstgid() && p5 < tilesets.get( i ).getFirstgid() + tilesets.get( i ).getTilecount()) {
-                        p6 = i;
-                    }
-                    if (p7 >= tilesets.get( i ).getFirstgid() && p7 < tilesets.get( i ).getFirstgid() + tilesets.get( i ).getTilecount()) {
-                        p8 = i;
-                    }
-                }
+                groundlayer = findLayer("ground");
+                itemslayer = findLayer("items");
+                unitslayer = findLayer("units");
 
-                //for (layer l : layers){
-                  //  l.clearLayer();
-                //}
+                //cache the curtset & sellayer
+                int mytset = curtset;
+                int mylayer = selLayer;
+
+                //if no ground layer, the random map will be drawn on the current layer
+                if (groundlayer!=-1) selLayer=groundlayer;
+
+                //this is the basis of random map, does not matter RW or not.
+                curtset = getTsetFromSpr((int) p5);
                 for (int cl = 0;cl<Tw*Th;cl++){
                     tapTile(cl,true,false,false,(int) p5);
                 }
 
+                //use perlin noise to draw cool map
+                curtset = getTsetFromSpr((int) p7);
                 PerlinNoiseGenerator pn = new PerlinNoiseGenerator();
                 float[][] pgn = pn.generatePerlinNoise(Tw,Th,p1);
-                List<Float> fn = new ArrayList<>();
-                int dex=0;
+                int fx = 0, fy =0;
                 for (float[] eachRow : pgn) {
+                    fy=0;
                     for (float j : eachRow) {
-                        fn.add(j);
                         if (j>0.5f){
                             curpickAuto=true;
-                            tapTile(dex,true,true,false,(int) p7);
+                            tapTile(fy*Tw+fx,true,true,false,(int) p7);
                         }
-                        dex+=1;
+                        fy++;
                     }
+                    fx++;
                 }
 
-                curtset=1;
-                selLayer=1;
+                //RESOURCE POOLS
+                if (groundlayer!=-1 && itemslayer!=-1){
+                    selLayer=itemslayer;
 
+                    //clear the data
+                    for (int cl = 0;cl<Tw*Th;cl++){
+                        tapTile(cl,true,false,false,(int) 0);
+                    }
 
-                //get the data for pool
-                int poolspr=0;
-                mainloop:
-                for (tileset t : tilesets){
-                    for (tile tt : t.getTiles()){
-                        boolean isabase=false,isplayer=false;
-                        for (property p : tt.getProperties()){
-                            if (p.getName().equalsIgnoreCase("res_pool")){
-                                poolspr=tt.getTileID()+t.getFirstgid();
-                                break mainloop;
+                    //get the data for pool
+                    mainloop:
+                    for (tileset t : tilesets){
+                        for (tile tt : t.getTiles()){
+                            for (property p : tt.getProperties()){
+                                if (p.getName().equalsIgnoreCase("res_pool")){
+                                    poolspr=tt.getTileID()+t.getFirstgid();
+                                    curtset = getTsetFromSpr(poolspr);
+                                    break mainloop;
+                                }
                             }
                         }
                     }
+
+                    if (poolspr!=-1){
+                        //generate res pool
+                        DiskGenerator dg = new DiskGenerator(Tw,Th,20,8);
+                        List<Point> lp = dg.generate();
+                        List<Point> ln = new ArrayList<>();
+                        for (Point p : lp){
+                            if (p.getX()<=1)continue;
+                            if (p.getY()<=1)continue;
+                            if (p.getX()>=Tw-2)continue;
+                            if (p.getY()>=Th-2)continue;
+                            List<Integer> nums = new ArrayList<>();
+                            int num = p.getX()+p.getY()*Tw;
+                            nums.add(num);
+                            nums.add(num+1);
+                            nums.add(num-1);
+                            nums.add(num+Tw);
+                            nums.add(num-Tw);
+                            nums.add(num+Tw-1);
+                            nums.add(num-Tw-1);
+                            nums.add(num+Tw+1);
+                            nums.add(num-Tw+1);
+
+                            boolean cont=true;
+                            for (int numa: nums) {
+                                if (layers.get(groundlayer).getTile().get(numa) != -1) {
+                                    layer l = layers.get(groundlayer);
+                                    if (tilesets.get(l.getTset().get(numa)).getTiles().get(l.getTile().get(numa)).getProperties().size() > 0)
+                                    {
+                                        cont=false;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (cont) ln.add(p);
+                        }
+
+                        for (Point p : ln){
+                            int num = p.getX()+p.getY()*Tw;
+                            tapTile(num,false,true,false,poolspr);
+                        }
+
+                    }
+
                 }
 
-                //clear the data
-                for (int cl = 0;cl<Tw*Th;cl++){
-                    tapTile(cl,true,false,false,(int) 0);
-                }
 
+                if (groundlayer!=-1 && itemslayer!=-1 && unitslayer !=-1) {
+                    selLayer=unitslayer;
 
-                //generate res pool
-                DiskGenerator dg = new DiskGenerator(Tw,Th,20,8);
-                List<Point> lp = dg.generate();
-                List<Point> ln = new ArrayList<>();
-                for (Point p : lp){
-                    if (p.getX()<=1)continue;
-                    if (p.getY()<=1)continue;
-                    if (p.getX()>=Tw-2)continue;
-                    if (p.getY()>=Th-2)continue;
-                    List<Integer> nums = new ArrayList<>();
-                    int num = p.getX()+p.getY()*Tw;
-                    nums.add(num);
-                    nums.add(num+1);
-                    nums.add(num-1);
-                    nums.add(num+Tw);
-                    nums.add(num-Tw);
-                    nums.add(num+Tw-1);
-                    nums.add(num-Tw-1);
-                    nums.add(num+Tw+1);
-                    nums.add(num-Tw+1);
+                    //clear the data
+                    for (int cl = 0;cl<Tw*Th;cl++){
+                        tapTile(cl,true,false,false,(int) 0);
+                    }
 
-                    boolean cont=true;
-                    for (int numa: nums) {
-                        if (layers.get(0).getTile().get(numa) != -1) {
-                            layer l = layers.get(0);
-                            if (tilesets.get(l.getTset().get(numa)).getTiles().get(l.getTile().get(numa)).getProperties().size() > 0)
-                            {
+                    //get bases data
+                    List<Integer> bases = new ArrayList<>();
+                    List<Integer> builders = new ArrayList<>();
+
+                    for (tileset t : tilesets){
+                        for (tile tt : t.getTiles()){
+                            boolean isabase=false,isplayer=false,isabuilder=false;
+                            for (property p : tt.getProperties()){
+                                if (p.getName().equalsIgnoreCase("unit") && p.getValue().equalsIgnoreCase("commandCenter")){
+                                    isabase=true;
+                                }
+                                if (p.getName().equalsIgnoreCase("unit") && p.getValue().equalsIgnoreCase("builder")){
+                                    isabuilder=true;
+                                }
+                                if (p.getName().equalsIgnoreCase("team") && !p.getValue().equalsIgnoreCase("-1")){
+                                    isplayer=true;
+                                }
+                            }
+                            if (isabase && isplayer) bases.add(tt.getTileID()+t.getFirstgid());
+                            if (isabuilder && isplayer) builders.add(tt.getTileID()+t.getFirstgid());
+                        }
+                    }
+
+                    //generate bases
+                    //create all possible location
+                    DiskGenerator dg = new DiskGenerator(Tw,Th,5,4);
+                    List<Point> lp = dg.generate();
+                    List<Point> ln = new ArrayList<>();
+
+                    //remove unwanted location
+                    for (Point p : lp){
+                        if (p.getX()<=5)continue;
+                        if (p.getY()<=5)continue;
+                        if (p.getX()>=Tw-5)continue;
+                        if (p.getY()>=Th-5)continue;
+                        List<Integer> nums = new ArrayList<>();
+                        int num = p.getX()+p.getY()*Tw;
+                        nums.add(num);
+                        nums.add(num+1);
+                        nums.add(num-1);
+                        nums.add(num+Tw);
+                        nums.add(num-Tw);
+                        nums.add(num+Tw-1);
+                        nums.add(num-Tw-1);
+                        nums.add(num+Tw+1);
+                        nums.add(num-Tw+1);
+                        nums.add(num+Tw+Tw);
+
+                        boolean cont=true;
+                        for (int numa: nums) {
+                            //if there is a property in the ground layer, it means that it is not placable by buildings.
+                            if (layers.get(groundlayer).getTile().get(numa) != -1) {
+                                layer l = layers.get(groundlayer);
+                                if (tilesets.get(l.getTset().get(numa)).getTiles().get(l.getTile().get(numa)).getProperties().size() > 0)
+                                {
+                                    cont=false;
+                                    break;
+                                }
+                            }
+                            //if there is anything in the items layer, it should not be stacked.
+                            if (layers.get(itemslayer).getStr().get(numa) != 0) {
                                 cont=false;
                                 break;
                             }
                         }
-                    }
-                    if (cont) ln.add(p);
-                }
-
-                for (Point p : ln){
-                    int num = p.getX()+p.getY()*Tw;
-                    tapTile(num,false,true,false,poolspr);
-                }
-
-                //get bases data
-                List<Integer> bases = new ArrayList<>();
-                List<Integer> builders = new ArrayList<>();
-                for (tileset t : tilesets){
-                    for (tile tt : t.getTiles()){
-                        boolean isabase=false,isplayer=false,isabuilder=false;
-                        for (property p : tt.getProperties()){
-                            if (p.getName().equalsIgnoreCase("unit") && p.getValue().equalsIgnoreCase("commandCenter")){
-                                isabase=true;
-                            }
-                            if (p.getName().equalsIgnoreCase("unit") && p.getValue().equalsIgnoreCase("builder")){
-                                isabuilder=true;
-                            }
-                            if (p.getName().equalsIgnoreCase("team") && !p.getValue().equalsIgnoreCase("-1")){
-                                isplayer=true;
-                            }
-                        }
-                        if (isabase && isplayer) bases.add(tt.getTileID()+t.getFirstgid());
-                        if (isabuilder && isplayer) builders.add(tt.getTileID()+t.getFirstgid());
-                    }
-                }
-
-                curtset=2;
-                selLayer=2;
-                //clear the data
-                for (int cl = 0;cl<Tw*Th;cl++){
-                    tapTile(cl,true,false,false,(int) 0);
-                }
-
-
-                //generate bases
-                dg = new DiskGenerator(Tw,Th,5,4);
-                lp = dg.generate();
-                ln = new ArrayList<>();
-                for (Point p : lp){
-                    if (p.getX()<=1)continue;
-                    if (p.getY()<=1)continue;
-                    if (p.getX()>=Tw-2)continue;
-                    if (p.getY()>=Th-2)continue;
-                    List<Integer> nums = new ArrayList<>();
-                    int num = p.getX()+p.getY()*Tw;
-                    nums.add(num);
-                    nums.add(num+1);
-                    nums.add(num-1);
-                    nums.add(num+Tw);
-                    nums.add(num-Tw);
-                    nums.add(num+Tw-1);
-                    nums.add(num-Tw-1);
-                    nums.add(num+Tw+1);
-                    nums.add(num-Tw+1);
-                    nums.add(num+Tw+Tw);
-
-                    boolean cont=true;
-                    for (int numa: nums) {
-                        if (layers.get(0).getTile().get(numa) != -1) {
-                            layer l = layers.get(0);
-                            if (tilesets.get(l.getTset().get(numa)).getTiles().get(l.getTile().get(numa)).getProperties().size() > 0)
-                            {
-                                cont=false;
-                                break;
-                            }
-                        }
-                        if (layers.get(1).getStr().get(numa) != 0) {
-                                cont=false;
-                                break;
-                        }
-                    }
-                    if (cont) ln.add(p);
-                }
-
-                Collections.shuffle(ln);
-                int count=0;
-                int space = 50;
-                for (Point p : ln){
-                    if (count>9) break;
-                    int num = p.getX()+p.getY()*Tw;
-                    //to prevent base on the small places
-                    if (fn.get(num)<0.70f) continue;
-                    boolean tooclose = false;
-                    //check if there is another base nearby
-                    int cleft = p.getX()-space;
-                    if (cleft<0) cleft=0;
-                    int cright = p.getX()+space;
-                    if (cright>Tw-1) cright=Tw-1;
-                    int ctop = p.getY()-space;
-                    if (ctop<0) ctop=0;
-                    int cbottom = p.getY()+space;
-                    if (cbottom>Th-1) cbottom=Th-1;
-                    for (int px = cleft; px<=cright;px++){
-                        for (int py = ctop; py<=cbottom;py++){
-                            if (layers.get(selLayer).getStr().get(py*Tw+px)!=0) tooclose=true;
-                        }
+                        if (cont) ln.add(p);
                     }
 
-                    if (tooclose) continue;
-                    tapTile(num,false,true,false,bases.get(count));
-                    tapTile(num+Tw*2,false,true,false,builders.get(count));
-                    count++;
+                    //randomise
+                    Collections.shuffle(ln);
+                    int count=0;
+                    int space = 50;
+                    int wide = 6;
+                    int pool = 10;
+                    for (Point p : ln){
+                        if (count>9) break;
+                        int num = p.getX()+p.getY()*Tw;
+
+                        //check if there is another base nearby
+                        boolean tooclose = false;
+                        int cleft = p.getX()-space;
+                        if (cleft<0) cleft=0;
+                        int cright = p.getX()+space;
+                        if (cright>Tw-1) cright=Tw-1;
+                        int ctop = p.getY()-space;
+                        if (ctop<0) ctop=0;
+                        int cbottom = p.getY()+space;
+                        if (cbottom>Th-1) cbottom=Th-1;
+                        for (int px = cleft; px<=cright;px++){
+                            for (int py = ctop; py<=cbottom;py++){
+                                if (layers.get(unitslayer).getStr().get(py*Tw+px)!=0)
+                                {
+                                    tooclose=true;
+                                    break;
+                                }
+                            }
+                            if (tooclose) break;
+                        }
+                        if (tooclose) continue;
+
+                        //check if the base area is big enough
+                        boolean toosmall = false;
+                        cleft = p.getX()-wide;
+                        if (cleft<0) cleft=0;
+                        cright = p.getX()+wide;
+                        if (cright>Tw-1) cright=Tw-1;
+                        ctop = p.getY()-wide;
+                        if (ctop<0) ctop=0;
+                        cbottom = p.getY()+wide;
+                        if (cbottom>Th-1) cbottom=Th-1;
+                        for (int px = cleft; px<=cright;px++){
+                            for (int py = ctop; py<=cbottom;py++){
+                                layer l = layers.get(groundlayer);
+                                int numa = py*Tw+px;
+                                if (l.getTile().get(numa)!=-1) {
+                                    if (tilesets.get(l.getTset().get(numa)).getTiles().get(l.getTile().get(numa)).getProperties().size() > 0) {
+                                        toosmall = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (toosmall) break;
+                        }
+                        if (toosmall) continue;
+
+                        //check if the base area contain at least one res pool
+                        if (poolspr!=-1) {
+                            boolean respool = false;
+                            cleft = p.getX() - pool;
+                            if (cleft < 0) cleft = 0;
+                            cright = p.getX() + pool;
+                            if (cright > Tw - 1) cright = Tw - 1;
+                            ctop = p.getY() - pool;
+                            if (ctop < 0) ctop = 0;
+                            cbottom = p.getY() + pool;
+                            if (cbottom > Th - 1) cbottom = Th - 1;
+                            for (int px = cleft; px <= cright; px++) {
+                                for (int py = ctop; py <= cbottom; py++) {
+                                    if (layers.get(itemslayer).getStr().get(py * Tw + px) == poolspr) {
+                                        respool = true;
+                                        break;
+                                    }
+                                }
+                                if (respool) break;
+                            }
+                            if (!respool) continue;
+                        }
+
+                        curtset = getTsetFromSpr(bases.get(count));
+                        tapTile(num,false,true,false,bases.get(count));
+                        tapTile(num+Tw*3,false,true,false,builders.get(count));
+                        count++;
+                    }
+
                 }
 
-
-
-                curtset=0;
-                selLayer=0;
+                curtset=mytset;
+                selLayer=mylayer;
 
             }
         } );
@@ -13058,25 +13138,29 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         java.util.List<Long> tStrs = new ArrayList<Long>();
                         java.util.List<Integer> tTsets = new ArrayList<Integer>();
+                        java.util.List<Integer> tTiles = new ArrayList<Integer>();
 
                         for (int k = 0; k < Tw; k++) {
                             tStrs.add((long) 0);
                             tTsets.add(-1);
+                            tTiles.add(-1);
                         }
 
                         for (int j = 0; j < layers.size(); j++) {
                             if (layers.get(j).getType()!=layer.Type.TILE) continue;
                             java.util.List<Long> strs = layers.get(j).getStr();
                             java.util.List<Integer> tsets = layers.get(j).getTset();
+                            java.util.List<Integer> tiles = layers.get(j).getTile();
                             for (int i = 0; i < nTh - Th; i++) {
 
                                 if (cb2.isChecked()) {
                                     strs.addAll( 0, tStrs );
                                     tsets.addAll( 0, tTsets );
+                                    tiles.addAll( 0, tTiles );
                                 }else{
                                     strs.addAll( tStrs );
                                     tsets.addAll( tTsets );
-
+                                    tiles.addAll( tTiles );
                                 }
                             }
                         }
@@ -13087,7 +13171,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     if (layers.get(j).getType()!=layer.Type.TILE) continue;
                                     layers.get(j).getStr().remove(layers.get(j).getStr().size() - 1);
                                     layers.get(j).getTset().remove(layers.get(j).getTset().size() - 1);
-
+                                    layers.get(j).getTile().remove(layers.get(j).getTile().size() - 1);
                                 }
                             }
                         }
@@ -13098,22 +13182,26 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (nTw > Tw) {//expand
                         java.util.List<Long> tStrs = new ArrayList<Long>();
                         java.util.List<Integer> tTsets = new ArrayList<Integer>();
+                        java.util.List<Integer> tTiles = new ArrayList<Integer>();
 
                         for (int k = 0; k < nTw - Tw; k++) {
                             tStrs.add((long) 0);
                             tTsets.add(-1);
+                            tTiles.add(-1);
                         }
 
                         for (int j = 0; j < layers.size(); j++) {
                             if (layers.get(j).getType()!=layer.Type.TILE) continue;
                             java.util.List<Long> strs = layers.get(j).getStr();
                             java.util.List<Integer> tsets = layers.get(j).getTset();
+                            java.util.List<Integer> tiles = layers.get(j).getTile();
 
                             for (int i = Th; i > 0; i--) {
                                 int moyeng = i * Tw;
                                 if (cb1.isChecked()) moyeng -=Tw;
                                 strs.addAll(moyeng, tStrs);
                                 tsets.addAll(moyeng, tTsets);
+                                tiles.addAll(moyeng, tTiles);
                             }
                         }
                     } else if (nTw < Tw) {//shrink
@@ -13124,6 +13212,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     for (int k = 1; k <= Tw - nTw; k++) {
                                         layers.get(j).getStr().remove(i - k);
                                         layers.get(j).getTset().remove(i - k);
+                                        layers.get(j).getTile().remove(i - k);
                                     }
                                 }
                             }
