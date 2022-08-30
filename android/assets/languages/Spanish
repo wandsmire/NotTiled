@@ -391,4 +391,8 @@ showcoords: "Mostrar Coordenadas"
 exportastemplate: "Exportar como plantilla"
 selectionastileset: "Selección como Tileset"
 nativefilechooser: "Uso del selector de archivos nativo"
+firstgid: "Primer GID"
+importx: "Importar"
+importok: "Importar ok"
+adjustobjects: "Ajustar objetos"
 }

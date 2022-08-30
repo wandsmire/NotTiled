@@ -391,4 +391,8 @@ showcoords: "паказаць Каардынаты"
 exportastemplate: "Экспарт у шаблон"
 selectionastileset: "Выбар у якасці Tileset"
 nativefilechooser: "Выкарыстанне Native File Chooser"
+firstgid: "Першы Жыд"
+importx: "Імпартаваць"
+importok: "Імпарт ОК"
+adjustobjects: "Адрэгулюйце аб'екты"
 }

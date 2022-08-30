@@ -383,4 +383,8 @@ public class language
 	String exportastemplate;
 	String selectionastileset;
 	String nativefilechooser = "Native file chooser";
+	String firstgid;
+	String importx;
+	String importok;
+	String adjustobjects;
 }

@@ -405,7 +405,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     Table tTsProp;
     TextButton bTsPropOK, bTsPropCancel, bTsPropSaveAsTsx, bTsPropChangeSource, bTsPropSaveAsPNG;
     TextField fTsPropName, fTsPropSource, fTsPropTrans;
-    TextField fTsPropSpacing, fTsPropMargin, fTsPropTsxFile;
+    TextField fTsPropSpacing, fTsPropMargin, fTsPropTsxFile, fTsPropFirstGid;
     TextField fTsPropTsw, fTsPropTsh, fTsPropTc, fTsPropCols;
     CheckBox cbTsPropUseTsx;
     FileChooser fcOpen, fcSaveAs;
@@ -904,7 +904,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
  //                       }
 
                     exitDialog( null );
-                    status("Import ok: "+nativeFilename,3);
+                    status(z.importok+": "+nativeFilename,3);
 //                    tujuanDialog( tujuan, ff );
 
                 }
@@ -5212,10 +5212,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
 
-                uisrect( gui.tool2, mouse, vis( "tool2" ) );
-                uisrect( gui.tool3, mouse, c3);
-                uisrect( gui.tool4, mouse, c2);
-                uisrect( gui.tool5, mouse, c1);
+                uisrect( gui.objtool2, mouse, vis( "objtool2" ) );
+                uisrect( gui.objtool3, mouse, c3);
+                uisrect( gui.objtool4, mouse, c2);
+                uisrect( gui.objtool5, mouse, c1);
 
 
             }
@@ -5654,10 +5654,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 } else if (mode == "object") {
                     uidrawbutton( txundo, z.undo, gui.undo, 3.1f );
                     uidrawbutton( txredo, z.redo, gui.redo, 3.1f );
-                    uidrawbutton( txinfo, "Info", gui.tool2, 3 );
-                    uidrawbutton( txmove, "Edit", gui.tool3, 3 );
-                    uidrawbutton( txrectangle, "Select", gui.tool4, 3 );
-                    uidrawbutton( txpencil, "Create", gui.tool5, 4 );
+                    uidrawbutton( txinfo, "Info", gui.objtool2, 3 );
+                    uidrawbutton( txmove, "Edit", gui.objtool3, 3 );
+                    uidrawbutton( txrectangle, "Select", gui.objtool4, 3 );
+                    uidrawbutton( txpencil, "Create", gui.objtool5, 4 );
 
                     str1draw( ui, shapeName, gui.objectpickermid );
                     uidrawbutton( txLeft, "", gui.objectpickerleft, 3 );
@@ -6910,7 +6910,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bTutorOK = new TextButton( z.ok, skin );
 
         bExporter = new TextButton( z.export, skin );
-        bImporter = new TextButton( "Import", skin);
+        bImporter = new TextButton( z.importx, skin);
         bDiscord = new TextButton( z.discordserver, skin );
         bWhatsapp = new TextButton( z.whatsappgroup, skin );
         bPatreon = new TextButton( z.supportnottiled, skin );
@@ -7445,8 +7445,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             //if (!face.ispro())
             tMap1.add( bPatreon2 ).row();
             //tMap1.add( bFeedback ).row();
-            //tMap1.add( bUIEditor ).row();
-            //tMap1.add( bCollaboration ).row();
+            tMap1.add( bUIEditor ).row();
+            tMap1.add( bCollaboration ).row();
             tMap1.add( bProperties ).row();
             tMap1.add( bBackground ).row();
 
@@ -7463,8 +7463,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tMap.defaults().width( btnx ).height( btny + 3 ).padBottom( 2 );
             tMap.add( bPatreon2 ).row();
             //tMap.add( bFeedback ).row();
-            //tMap.add( bUIEditor ).row();
-            //tMap.add( bCollaboration ).row();
+            tMap.add( bUIEditor ).row();
+            tMap.add( bCollaboration ).row();
             tMap.add( bProperties ).row();
             tMap.add( bBackground ).row();
             tMap.add( bTools ).row();
@@ -7814,6 +7814,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (getTsetFromSpr((int) p7) ==-1) p7=0;
                 int groundlayer=-1,itemslayer=-1,unitslayer=-1;
                 int poolspr=-1;
+
 
                 groundlayer = findLayer("ground");
                 itemslayer = findLayer("items");
@@ -13299,7 +13300,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         fTw.setTextFieldFilter(filter);
         fTh = new TextField("", skin);
         fTh.setTextFieldFilter(filter);
-
         fTsx = new TextField("", skin);
         fTsx.setDisabled(true);
 
@@ -13312,7 +13312,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
         cbUseTsx = new CheckBox(z.usetsxfile, skin);
-        cbAdjustObjects = new CheckBox("Adjust objects", skin);
+        cbAdjustObjects = new CheckBox(z.adjustobjects, skin);
 
         tProperties = new Table();
         tProperties.setFillParent(true);
@@ -13563,6 +13563,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         fTsPropSpacing.setTextFieldFilter(tffint);
         fTsPropMargin = new TextField("", skin);
         fTsPropMargin.setTextFieldFilter(tffint);
+        fTsPropFirstGid = new TextField("", skin);
+        fTsPropFirstGid.setTextFieldFilter(tffint);
         fTsPropTsxFile = new TextField("", skin);
         fTsPropTsxFile.setDisabled(true);
         fTsPropTsw = new TextField("", skin);
@@ -13695,6 +13697,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     t.setMargin(0);
                 }
 
+                if (fTsPropFirstGid.getText() != "") {
+                    t.setFirstgid(Integer.parseInt(fTsPropFirstGid.getText()));
+                }
+
                 if (fTsPropSpacing.getText() != "") {
                     t.setSpacing(Integer.parseInt(fTsPropSpacing.getText()));
                 } else {
@@ -13773,6 +13779,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tp.add(fTsPropSpacing).width(btnx / 2).padBottom(2).row();
         tp.add(new Label(z.margin, skin)).width(btnx / 2);
         tp.add(fTsPropMargin).width(btnx / 2).padBottom(2).row();
+        tp.add(new Label(z.firstgid, skin)).width(btnx / 2);
+        tp.add(fTsPropFirstGid).width(btnx / 2).padBottom(2).row();
         tp.add(bTsPropCustomProp).colspan(2).padBottom(2).row();
         tp.add(bTsPropOK).colspan(2).padBottom(2).row();
         tp.add(bTsPropCancel).colspan(2).padBottom(2).row();
@@ -17462,10 +17470,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             fTsPropMargin.setText(Integer.toString(ct.getMargin()));
                         if (ct.getSpacing() != 0)
                             fTsPropSpacing.setText(Integer.toString(ct.getSpacing()));
-
                         if (ct.getColumns() != 0)
                             fTsPropCols.setText(Integer.toString(ct.getColumns()));
                         if (ct.getTrans() != null) fTsPropTrans.setText(ct.getTrans());
+                        fTsPropFirstGid.setText(Integer.toString(ct.getFirstgid()));
 
                         gotoStage(tTsProp);
                     }
@@ -19600,7 +19608,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     broadcast(request.text);
                     lcollabstatus.setText(request.text);
 
-
                 } else if (object instanceof command) {
                     command cmd = (command) object;
                     switch (cmd.command){
@@ -19728,6 +19735,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         case "data":
                         case "startDataAll":
                         case "dataAll":
+                        case "draw":
+                            //try {
                             server.sendToAllTCP( cmd );
 
                             break;
@@ -19751,13 +19760,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
                             break;
-                        case "draw":
-                            //try {
-                                server.sendToAllTCP( cmd );
-                            //}catch(Exception e){
+                        //}catch(Exception e){
                             //    ErrorBung( e,"MOMON.TXT" );
                             //}
-                            break;
                         case "disconnect":
                             logNet("[S] Disconnect Request...");
                             int flag=-1;
@@ -19927,17 +19932,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     long toe = h.to;
                                     int frmts = h.oldtset;
                                     int toets = h.newtset;
+                                    int frmtl = h.oldtile;
+                                    int toetl = h.newtile;
                                     h.from = toe;
                                     h.to = frm;
                                     h.oldtset = toets;
                                     h.newtset = frmts;
                                     h.undo = false;
-
+                                    h.oldtile = toetl;
+                                    h.newtile = frmtl;
                                 }
                                 undolayer.add(h);
                                 redolayer.clear();
                                 layers.get(h.getLayer()).getStr().set(h.getLocation(), h.getTo());
                                 layers.get(h.getLayer()).getTset().set(h.getLocation(), h.getNewtset());
+                                layers.get(h.getLayer()).getTile().set(h.getLocation(), h.getNewtile());
+                                updateCache(h.getLocation());
                             }
                             break;
                     }
@@ -20836,23 +20846,23 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 return true;
             }
         }else if (mode=="object"){
-            if (tapped(touch2, gui.tool2)) {
-                if (!cue("tool2") && lockUI) return true;
+            if (tapped(touch2, gui.objtool2)) {
+                if (!cue("objtool2") && lockUI) return true;
                 if (selobjs.size()>0) showPropBox2D( selobjs.get(0));
                 return true;
             }
-            if (tapped(touch2, gui.tool3)) {
-                if (!cue("tool3") && lockUI) return true;
+            if (tapped(touch2, gui.objtool3)) {
+                if (!cue("objtool3") && lockUI) return true;
                 activeobjtoolmode = 2; //edit
                 return true;
             }
-            if (tapped(touch2, gui.tool4)) {
-                if (!cue("tool4") && lockUI) return true;
+            if (tapped(touch2, gui.objtool4)) {
+                if (!cue("objtool4") && lockUI) return true;
                 activeobjtoolmode = 1; //select
                 return true;
             }
-            if (tapped(touch2, gui.tool5)) {
-                if (!cue("tool5") && lockUI) return true;
+            if (tapped(touch2, gui.objtool5)) {
+                if (!cue("objtool5") && lockUI) return true;
                 activeobjtoolmode = 0; //create
                 selobjs.clear();
                 return true;
@@ -21530,6 +21540,35 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     return true;
 
                 }
+            }else if (mode=="object"){
+                /*
+                if (tapped( touch2, gui.objtool1 )) {
+                    editGUI( gui.objtool1 );
+                    return true;
+                }
+
+                 */
+                if (tapped( touch2, gui.objtool2 )) {
+                    editGUI( gui.objtool2 );
+                    return true;
+
+                }
+                if (tapped( touch2, gui.objtool3 )) {
+                    editGUI( gui.objtool3 );
+                    return true;
+
+                }
+                if (tapped( touch2, gui.objtool4 )) {
+                    editGUI( gui.objtool4 );
+                    return true;
+
+                }
+                if (tapped( touch2, gui.objtool5 )) {
+                    editGUI( gui.objtool5 );
+                    return true;
+
+                }
+
             }
 
             //tool selector (btm right)
@@ -22908,22 +22947,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     //status("Object picker",1);
                     return true;
                 }
-                if (tapped(touch2, gui.tool5)) { //actually add new layer...
+                if (tapped(touch2, gui.objtool5)) { //actually add new layer...
                     //getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                     //do nothing, just to prevent longpressing.
                     return true;
                 }
-                if (tapped(touch2, gui.tool4)) { //actually add new layer...
+                if (tapped(touch2, gui.objtool4)) { //actually add new layer...
                     //getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                     //do nothing, just to prevent longpressing.
                     return true;
                 }
-                if (tapped(touch2, gui.tool3)) { //actually add new layer...
+                if (tapped(touch2, gui.objtool3)) { //actually add new layer...
                     //getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                     //do nothing, just to prevent longpressing.
                     return true;
                 }
-                if (tapped(touch2, gui.tool2)) { //actually add new layer...
+                if (tapped(touch2, gui.objtool2)) { //actually add new layer...
                     //getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                     //do nothing, just to prevent longpressing.
                     return true;

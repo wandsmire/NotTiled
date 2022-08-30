@@ -391,4 +391,8 @@ showcoords: "Tampilkan Koordinat"
 exportastemplate: "Ekspor sebagai Template"
 selectionastileset: "Seleksi sebagai Tileset"
 nativefilechooser: "Gunakan Native Pemilih Berkas"
+firstgid: "Gid pertama"
+importx: "Impor"
+importok: "Impor ok"
+adjustobjects: "Sesuaikan objek"
 }

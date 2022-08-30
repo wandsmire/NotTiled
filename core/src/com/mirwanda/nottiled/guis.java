@@ -16,6 +16,12 @@ public class guis
 	public gui tool3=new gui();
 	public gui tool4=new gui();
 	public gui tool5=new gui();
+	public gui objtool1=new gui();
+	public gui objtool2=new gui();
+	public gui objtool3=new gui();
+	public gui objtool4=new gui();
+	public gui objtool5=new gui();
+
 	public gui pickertool1=new gui();
 	public gui pickertool2=new gui();
 	public gui pickertool3=new gui();
@@ -100,6 +106,11 @@ public class guis
 		tool3.setp(85,100,37,46);
 		tool4.setp(85,100,46,55);
 		tool5.setp(85,100,55,64);
+		objtool1.setp(85,100,19,28);
+		objtool2.setp(85,100,28,37);
+		objtool3.setp(85,100,37,46);
+		objtool4.setp(85,100,46,55);
+		objtool5.setp(85,100,55,64);
 		pickertool1.setp(85,100,19,28);
 		pickertool2.setp(85,100,28,37);
 		pickertool3.setp(85,100,37,46);
@@ -193,6 +204,11 @@ public class guis
 		tool4.setl(90,100,50,60);
 		tool3.setl(90,100,40,50);
 		tool2.setl(90,100,30,40);
+		objtool1.setl(90,100,20,30);
+		objtool5.setl(90,100,60,70);
+		objtool4.setl(90,100,50,60);
+		objtool3.setl(90,100,40,50);
+		objtool2.setl(90,100,30,40);
 		tool1.setl(90,100,20,30);
 		pickertool5.setl(90,100,60,70);
 		pickertool4.setl(90,100,50,60);

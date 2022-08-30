@@ -391,4 +391,8 @@ showcoords: "göster Koordinatlar"
 exportastemplate: "Şablon olarak İhracat"
 selectionastileset: "Tileset olarak Seçimi"
 nativefilechooser: "Kullanım Doğal Dosya Seçici"
+firstgid: "İlk GID"
+importx: "İçe aktarmak"
+importok: "İçe Aktar"
+adjustobjects: "Nesneleri Ayarla"
 }

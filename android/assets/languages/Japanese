@@ -391,4 +391,8 @@ showcoords: "座標を示し、"
 exportastemplate: "テンプレートとしてエクスポート"
 selectionastileset: "タイルセットとして選定"
 nativefilechooser: "使用ネイティブファイル選択"
+firstgid: "最初のgid"
+importx: "輸入"
+importok: "OKをインポートします"
+adjustobjects: "オブジェクトを調整します"
 }

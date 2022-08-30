@@ -391,4 +391,8 @@ showcoords: "Показать координаты"
 exportastemplate: "Экспортировать как шаблон"
 selectionastileset: "Selection as Tileset"
 nativefilechooser: "Свой файловый менеджер"
+firstgid: "Первый Гид"
+importx: "импорт"
+importok: "Импорт ОК"
+adjustobjects: "Отрегулируйте объекты"
 }
