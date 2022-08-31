@@ -20067,7 +20067,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Label lTitle = new Label(z.collaboration,skin);
         tbHost = new TextButton(z.runserver,skin);
         Label lRemote = new Label(z.remoteip,skin);
-        tfRemoteIP = new TextField("127.0.0.1",skin);
+        tfRemoteIP = new TextField("38.242.149.137",skin);
         tfPort = new TextField("11112",skin);
         tbJoin = new TextButton(z.join,skin);
         roomName = new TextField("room1", skin);
@@ -20191,11 +20191,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         });
 
         tCollab1.add(lTitle).colspan(2).row();
-        tCollab1.add(new Label(z.port,skin)).width(btnx/2);
-        tCollab1.add(tfPort).width(btnx/2).row();
-        tCollab1.add(tbHost).colspan(2).row();
-        tCollab1.add(lRemote).width(btnx/2);
-        tCollab1.add(tfRemoteIP).width(btnx/2).row();
+        //tCollab1.add(new Label(z.port,skin)).width(btnx/2);
+        //tCollab1.add(tfPort).width(btnx/2).row();
+        //tCollab1.add(tbHost).colspan(2).row();
+        //tCollab1.add(lRemote).width(btnx/2);
+        //tCollab1.add(tfRemoteIP).width(btnx/2).row();
         tCollab1.add(new Label(z.uniqueid,skin)).width(btnx/2);
         tCollab1.add(uniqueID).width(btnx/2).row();
         tCollab1.add(tbJoin).colspan(2).row();
