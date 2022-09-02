@@ -11885,7 +11885,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (autotiles.size() > 0) {
             srr = new String[autotiles.size()];
             for (int i = 0; i < autotiles.size(); i++) {
-                srr[i] = autotiles.get(i).getName();
+                srr[i] = "["+i+"] "+autotiles.get(i).getName();
             }
         }
 
@@ -12859,6 +12859,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         fh.writeString(json.prettyPrint(recents), false);
     }
 
+    private void refreshTsetList(){
+        int saiz = tilesets.size();
+        String[] srr = new String[saiz];
+        for (int i = 0; i < saiz; i++) {
+            srr[i] = "["+i+"] "+tilesets.get(i).getName();
+        }
+        ltsetlist.setItems(srr);
+    }
+
     public void loadTsetManagement() {
 
         bAddTset = new TextButton(z.addimagetileset, skin);
@@ -12933,16 +12942,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bTsetMgmt.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                int saiz = tilesets.size();
-
-
-                String[] srr = new String[saiz];
-                for (int i = 0; i < saiz; i++) {
-                    srr[i] = tilesets.get(i).getName();
-                }
-                ltsetlist.setItems(srr);
-
-
+                refreshTsetList();
                 gotoStage(tTsetMgmt);
                 frompick = false;
             }
@@ -13015,17 +13015,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     CacheAllTset();
                     //reindexing
                     templastID = 1;
-						/*
-						for (int i=0;i<tilesets.size();i++){
-							tilesets.get(i).setFirstgid(templastID);
-							templastID+=tilesets.get(i).getTilecount();
-						}
-						*/
-                    String[] srr = new String[saiz];
-                    for (int i = 0; i < saiz; i++) {
-                        srr[i] = tilesets.get(i).getName();
-                    }
-                    ltsetlist.setItems(srr);
+                    refreshTsetList();
                     ltsetlist.setSelectedIndex(dex - 1);
                 }
             }
@@ -13051,12 +13041,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 						}
 						*/
                     saiz -= 1;
-                    String[] srr = new String[saiz];
-                    for (int i = 0; i < saiz; i++) {
-                        srr[i] = tilesets.get(i).getName();
-                    }
-                    if (srr != null) ltsetlist.setItems(srr);
-
+                    refreshTsetList();
                     if (dex > 0) {
                         if (saiz > 0) ltsetlist.setSelectedIndex(dex - 1);
                     } else {
@@ -16730,6 +16715,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 tempTset = new tileset();
                                 tempTset.setFirstgid(requestGid());
                             }
+
                             tempTset.setUsetsx(true);
                             tempTset.setTsxfile(convertToRelativePath(curdir,source));
 
@@ -16775,7 +16761,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         }
                         if (name.equals("frame")) {
-
                             tempTile.getAnimation().add(new frame(Integer.parseInt(myParser.getAttributeValue(null, "tileid")), Integer.parseInt(myParser.getAttributeValue(null, "duration"))));
 
 
