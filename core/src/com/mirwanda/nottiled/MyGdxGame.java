@@ -7669,30 +7669,43 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         //if no ground layer, the random map will be drawn on the current layer
         if (groundlayer!=-1) selLayer=groundlayer;
 
-        //Natural Map
-        if (genType==0){
-            //this is the basis of random map, does not matter RW or not.
-            if (p5!=0) curtset = getTsetFromSpr((int) p5);
+        int tset1 = -1; if (p5!=0) tset1 = getTsetFromSpr((int) p5);
+        int tset2 = -1; if (p7!=0) tset2 = getTsetFromSpr((int) p7);
+        boolean singles =false;
+        if (tset1==-1 || tset2==-1) singles=true;
+        curpickAuto=true;
+
+        if (singles){
+            layers.get(selLayer).clearLayer();
+        }else{
             for (int cl = 0;cl<Tw*Th;cl++){
+                curtset = tset1;
                 tapTile(cl,true,false,false,(int) p5);
             }
-
-            if (p7!=0) curtset = getTsetFromSpr((int) p7);
+        }
+        //Natural Map
+        if (genType==0){
             //use perlin noise to draw cool map
             PerlinNoiseGenerator pn = new PerlinNoiseGenerator();
             float[][] pgn = pn.generatePerlinNoise(Tw,Th,p1);
             int fx = 0, fy =0;
+
+
             for (float[] eachRow : pgn) {
                 fy=0;
                 for (float j : eachRow) {
-                    if (j>0.5f){
-                        curpickAuto=true;
-                        tapTile(fy*Tw+fx,true,true,false,(int) p7);
+                    if (j<=0.5f){
+                        curtset = tset1;
+                        if (p5!=0 && singles) tapTile(fy*Tw+fx,true,true,false,(int) p5);
+                    }else{
+                        curtset = tset2;
+                        if (p7!=0) tapTile(fy*Tw+fx,true,true,false,(int) p7);
                     }
                     fy++;
                 }
                 fx++;
             }
+
             //Dungeon & Maze
         }else if (genType==1 || genType==2){
             //default to dungeon
@@ -7700,14 +7713,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (genType==2){
                 attempt=500; maxroom = 3; minroom=1; tolerance=5;
             }
-            //////
-            //this is the basis of random map, does not matter RW or not.
-            if (p5!=0) curtset = getTsetFromSpr((int) p5);
-            for (int cl = 0;cl<Tw*Th;cl++){
-                tapTile(cl,true,false,false,(int) p5);
-            }
-            if (p7!=0) curtset = getTsetFromSpr((int) p7);
-
             final Grid grid = new Grid(Tw,Th); // This algorithm likes odd-sized maps, although it works either way.
 
             final DungeonGenerator dungeonGenerator = new DungeonGenerator();
@@ -7720,7 +7725,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             for (int x = 0; x < grid.getWidth(); x++) {
                 for (int y = 0; y < grid.getHeight(); y++) {
                     if (grid.get(x,y)<=0.5f){
-                        tapTile(y*Tw+x,true,true,false,(int) p7);
+                        curtset=tset2;
+                        if (p7!=0) tapTile(y*Tw+x,true,true,false,(int) p7);
+                    }else{
+                        curtset=tset1;
+                        if (p5!=0 && singles) tapTile(y*Tw+x,true,true,false,(int) p5);
                     }
                 }
             }
@@ -7737,13 +7746,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 tolerance = 5;
             }
             //////
-            //this is the basis of random map, does not matter RW or not.
-            if (p5 != 0) curtset = getTsetFromSpr((int) p5);
-            for (int cl = 0; cl < Tw * Th; cl++) {
-                tapTile(cl, true, false, false, (int) p5);
-            }
-            if (p7 != 0) curtset = getTsetFromSpr((int) p7);
-
             final Grid grid = new Grid(Tw, Th); // This algorithm likes odd-sized maps, although it works either way.
 
             final CellularAutomataGenerator cellularGenerator = new CellularAutomataGenerator();
@@ -7757,18 +7759,25 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             for (int x = 0; x < grid.getWidth(); x++) {
                 for (int y = 0; y < grid.getHeight(); y++) {
                     if (grid.get(x, y) > 0.5f) {
-                        tapTile(y * Tw + x, true, true, false, (int) p7);
+                        curtset = tset2;
+                        if (p7!=0) tapTile(y * Tw + x, true, true, false, (int) p7);
+                    } else{
+                        curtset = tset1;
+                        if (p5!=0 && singles) tapTile(y * Tw + x, true, true, false, (int) p5);
                     }
+
                 }
             }
+
         }
 
         else if (genType==4){
             //////
             //this is the basis of random map, does not matter RW or not.
-            if (p7!=0) curtset = getTsetFromSpr((int) p7);
-            for (int cl = 0;cl<Tw*Th;cl++){
-                tapTile(cl,true,false,false,(int) p7);
+            if (p7!=0) {
+                for (int cl = 0; cl < Tw * Th; cl++) {
+                    tapTile(cl, true, false, false, (int) p7);
+                }
             }
 
         }
@@ -7778,9 +7787,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             selLayer=itemslayer;
 
             //clear the data
-            for (int cl = 0;cl<Tw*Th;cl++){
-                tapTile(cl,true,false,false,(int) 0);
-            }
+            layers.get(selLayer).clearLayer();
 
             //get the data for pool
             mainloop:
@@ -7846,9 +7853,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             selLayer=unitslayer;
 
             //clear the data
-            for (int cl = 0;cl<Tw*Th;cl++){
-                tapTile(cl,true,false,false,(int) 0);
-            }
+            layers.get(selLayer).clearLayer();
 
             //get bases data
             List<Integer> bases = new ArrayList<>();
@@ -8123,6 +8128,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         pickrnda.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                pickAuto=false;
                 pickTile( "rnda" );
             }
         } );
@@ -8137,6 +8143,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         pickrndb.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                pickAuto=false;
                 pickTile( "rndb" );
             }
         } );
@@ -8179,6 +8186,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         pickrepa.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                pickAuto=false;
                 pickTile( "repa" );
             }
         } );
@@ -8193,6 +8201,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         pickrepb.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                pickAuto=false;
                 pickTile( "repb" );
             }
         } );
