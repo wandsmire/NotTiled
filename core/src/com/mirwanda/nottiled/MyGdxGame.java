@@ -14330,61 +14330,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 tfCustomFont.setText(openedfile);
                 break;
             case "imagesource":
-                String nn = file.name();
                 FileHandle f = file;
-                if (f.name().indexOf(".") > 0) {
-                    nn = f.name().substring(0, f.name().lastIndexOf("."));
-                }
+                tfImageSource.setText(convertToRelativePath(curdir,f.path()));
 
-                String[] tc = curdir.split("/");
-                String[] ts = f.path().split("/");
-
-                boolean git = false;
-                String pre = "", post = "";
-                for (int i = 0; i < tc.length; i++) {
-                    if (git) {
-                        pre += "../";
-                        continue;
-                    }
-                    if (ts.length <= i) {
-                        git = true;
-                        pre += "../";
-                        continue;
-                    }
-                    if (!ts[i].equalsIgnoreCase(tc[i])) {
-                        git = true;
-                        pre += "../";
-                    }
-                }
-
-                git = false;
-                for (int i = 0; i < ts.length; i++) {
-                    if (git) {
-                        post += ts[i];
-                        if (i < ts.length - 1) post += "/";
-                        continue;
-                    }
-                    if (tc.length <= i) {
-                        git = true;
-                        post += ts[i];
-                        if (1 < ts.length - 1) post += "/";
-                        continue;
-                    }
-                    if (!tc[i].equalsIgnoreCase(ts[i])) {
-                        git = true;
-                        post += ts[i];
-                        if (i < ts.length - 1) post += "/";
-                    }
-                }
-                String cocos = pre + post;
-                if (cocos.endsWith("/")) cocos = cocos.substring(0, cocos.length() - 1);
-
-                tfImageSource.setText(cocos);
                 break;
             case "saveas":
                 saveasdir = file.path();
-
-
                 getNewTextInput(pSaveAs, z.saveas, "new.tmx", "");
 
                 break;
@@ -14477,12 +14428,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 //change source button
             case "replacetset":
-                File fd = file.file();
-                fd = file.file();
-                fTsPropSource.setText(fd.getAbsoluteFile().getName());
+                f = file;
+                fTsPropSource.setText(convertToRelativePath(curdir,f.path()));
                 CacheAllTset();
-
-
                 break;
         }
     }
@@ -14497,52 +14445,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
             t.setName(nn);
 
+            t.setSource(convertToRelativePath(curdir,f.path()));
 
-            String[] tc = curdir.split("/");
-            String[] ts = f.path().split("/");
-
-            boolean git = false;
-            String pre = "", post = "";
-            for (int i = 0; i < tc.length; i++) {
-                if (git) {
-                    pre += "../";
-                    continue;
-                }
-                if (ts.length <= i) {
-                    git = true;
-                    pre += "../";
-                    continue;
-                }
-                if (!ts[i].equalsIgnoreCase(tc[i])) {
-                    git = true;
-                    pre += "../";
-                }
-            }
-
-            git = false;
-            for (int i = 0; i < ts.length; i++) {
-                if (git) {
-                    post += ts[i];
-                    if (i < ts.length - 1) post += "/";
-                    continue;
-                }
-                if (tc.length <= i) {
-                    git = true;
-                    post += ts[i];
-                    if (1 < ts.length - 1) post += "/";
-                    continue;
-                }
-                if (!tc[i].equalsIgnoreCase(ts[i])) {
-                    git = true;
-                    post += ts[i];
-                    if (i < ts.length - 1) post += "/";
-                }
-            }
-            String cocos = pre + post;
-            if (cocos.endsWith("/")) cocos = cocos.substring(0, cocos.length() - 1);
-
-
-            t.setSource(f.name());
             int Tswa = s.getWidth();
             int Tsha = s.getHeight();
             if (!fImportWidth.getText().equalsIgnoreCase( "" )) {
@@ -16840,51 +16744,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 tempTset.setFirstgid(requestGid());
                             }
                             tempTset.setUsetsx(true);
-
-                            String[] tc = curdir.split("/");
-                            String[] ts = source.split("/");
-
-                            boolean git = false;
-                            String pre = "", post = "";
-                            for (int i = 0; i < tc.length; i++) {
-                                if (git) {
-                                    pre += "../";
-                                    continue;
-                                }
-                                if (ts.length <= i) {
-                                    git = true;
-                                    pre += "../";
-                                    continue;
-                                }
-                                if (!ts[i].equalsIgnoreCase(tc[i])) {
-                                    git = true;
-                                    pre += "../";
-                                }
-                            }
-
-                            git = false;
-                            for (int i = 0; i < ts.length; i++) {
-                                if (git) {
-                                    post += ts[i];
-                                    if (i < ts.length - 1) post += "/";
-                                    continue;
-                                }
-                                if (tc.length <= i) {
-                                    git = true;
-                                    post += ts[i];
-                                    if (1 < ts.length - 1) post += "/";
-                                    continue;
-                                }
-                                if (!tc[i].equalsIgnoreCase(ts[i])) {
-                                    git = true;
-                                    post += ts[i];
-                                    if (i < ts.length - 1) post += "/";
-                                }
-                            }
-                            String cocos = pre + post;
-                            if (cocos.endsWith("/")) cocos = cocos.substring(0, cocos.length() - 1);
-                            tempTset.setTsxfile(cocos);
-
+                            tempTset.setTsxfile(convertToRelativePath(curdir,source));
 
                             if (myParser.getAttributeValue(null, "columns") != null) {
                                 tempTset.setColumns(Integer.parseInt(myParser.getAttributeValue(null, "columns")));
@@ -23881,7 +23741,54 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     }
 
+    public static String convertToRelativePath(String absolutePath, String relativeTo) {
+        StringBuilder relativePath = null;
 
+// Thanks to:
+// http://mrpmorris.blogspot.com/2007/05/convert-absolute-path-to-relative-path.html
+        absolutePath = absolutePath.replaceAll("\\\\", "/");
+        relativeTo = relativeTo.replaceAll("\\\\", "/");
+
+        if (absolutePath.equals(relativeTo) == true) {
+
+        } else {
+            String[] absoluteDirectories = absolutePath.split("/");
+            String[] relativeDirectories = relativeTo.split("/");
+
+//Get the shortest of the two paths
+            int length = absoluteDirectories.length < relativeDirectories.length ?
+                    absoluteDirectories.length : relativeDirectories.length;
+
+//Use to determine where in the loop we exited
+            int lastCommonRoot = -1;
+            int index;
+
+//Find common root
+            for (index = 0; index < length; index++) {
+                if (absoluteDirectories[index].equals(relativeDirectories[index])) {
+                    lastCommonRoot = index;
+                } else {
+                    break;
+//If we didn't find a common prefix then throw
+                }
+            }
+            if (lastCommonRoot != -1) {
+//Build up the relative path
+                relativePath = new StringBuilder();
+//Add on the ..
+                for (index = lastCommonRoot + 1; index < absoluteDirectories.length; index++) {
+                    if (absoluteDirectories[index].length() > 0) {
+                        relativePath.append("../");
+                    }
+                }
+                for (index = lastCommonRoot + 1; index < relativeDirectories.length - 1; index++) {
+                    relativePath.append(relativeDirectories[index] + "/");
+                }
+                relativePath.append(relativeDirectories[relativeDirectories.length - 1]);
+            }
+        }
+        return relativePath == null ? null : relativePath.toString();
+    }
 
 
     private boolean longpressobj(float p1, float p2) {
