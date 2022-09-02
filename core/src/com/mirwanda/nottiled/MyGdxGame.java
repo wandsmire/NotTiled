@@ -6591,99 +6591,75 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         } );
     }
 
+    private void exportastmx(String fn){
+        saveMap( curdir + "/" + curfile );
+        FileHandle map = Gdx.files.absolute( curdir + "/" + curfile );
+        byte[] b = map.readBytes();
+        face.saveasFile( b,fn+".tmx" );
+        status(z.filesaved,5);
+
+    }
     public void loadExport() {
         tExport = new Table();
         tExport.setFillParent( true );
         tExport.defaults().width( btnx ).padBottom( 2 );
         fExportFilename = new TextField( "export", skin );
-        TextButton totemplate = new TextButton( z.exportastemplate, skin );
-        TextButton topng = new TextButton( z.exporttopng, skin );
-        TextButton astileset = new TextButton( z.exportastileset, skin );
-        TextButton selastset = new TextButton( z.selectionastileset, skin );
-        TextButton tolua = new TextButton( z.exporttolua, skin );
-        TextButton tojson = new TextButton( z.exporttojson, skin );
-        TextButton tomidi = new TextButton( z.exporttomidi, skin );
-        TextButton towav = new TextButton( z.recordwav, skin );
         TextButton toback = new TextButton( z.back, skin );
+        TextButton toExport = new TextButton( z.export, skin );
+        SelectBox sbExport = new SelectBox(skin);
+
+        if (Gdx.app.getType()==Android){
+            sbExport.setItems((Object[]) new String[]{"Export to storage", z.exportastemplate, z.exporttopng, z.selectionastileset, z.exportastileset,z.exporttolua,z.exporttojson,z.exporttomidi});
+        }else{
+            sbExport.setItems((Object[]) new String[]{"Export as...", z.exportastemplate, z.exporttopng, z.selectionastileset, z.exportastileset,z.exporttolua,z.exporttojson,z.exporttomidi});
+        }
+
         tExport.add( new Label( z.filename, skin ) ).row();
         tExport.add( fExportFilename ).row();
-        tExport.add( totemplate ).row();
-        tExport.add( selastset ).row();
-        tExport.add( topng ).row();
-        tExport.add( astileset ).row();
-        tExport.add( tolua ).row();
-        tExport.add( tojson ).row();
-        tExport.add( tomidi ).row();
-        tExport.add( towav ).row();
+        tExport.add(sbExport).row();
+        tExport.add( toExport ).row();
         tExport.add( toback ).row();
 
-        totemplate.addListener( new ChangeListener() {
+        toExport.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                exportastemplate( fExportFilename.getText() );
-                cue( "exportastemplate" );
+                switch (sbExport.getSelectedIndex()){
+                    case 0:
+                        exportastmx(fExportFilename.getText());
+                        cue( "exporttostorage");
+                        break;
+                    case 1:
+                        exportastemplate( fExportFilename.getText() );
+                        cue( "exportastemplate" );
+                        break;
+                    case 2:
+                        exporttopng( fExportFilename.getText() );
+                        cue( "exporttopng" );
+                        break;
+                    case 3:
+                        selectionastset( fExportFilename.getText() );
+                        cue( "selastset" );
+                        break;
+                    case 4:
+                        exportastileset( fExportFilename.getText() );
+                        cue( "astset" );
+                        break;
+                    case 5:
+                        exporttolua( fExportFilename.getText() );
+                        cue( "tolua" );
+                        break;
+                    case 6:
+                        exporttojson( fExportFilename.getText() );
+                        cue( "tojson" );
+                        break;
+                    case 7:
+                        exporttomidi( fExportFilename.getText() );
+                        cue( "tomidi" );
+                        break;
+                }
             }
         } );
 
-
-
-        topng.addListener( new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                exporttopng( fExportFilename.getText() );
-                cue( "exporttopng" );
-
-            }
-        } );
-
-        selastset.addListener( new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                selectionastset( fExportFilename.getText() );
-                cue( "selastset" );
-
-            }
-        } );
-
-        astileset.addListener( new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                exportastileset( fExportFilename.getText() );
-            }
-        } );
-
-        tolua.addListener( new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                exporttolua( fExportFilename.getText() );
-            }
-        } );
-
-        tojson.addListener( new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                exporttojson( fExportFilename.getText() );
-            }
-
-
-        } );
-
-        tomidi.addListener( new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                exporttomidi( fExportFilename.getText() );
-            }
-
-
-        } );
-        towav.addListener( new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                recordwav( fExportFilename.getText() );
-            }
-
-
-        } );
 
         toback.addListener( new ChangeListener() {
             @Override
@@ -7497,8 +7473,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tMenu1.add( bRecent ).row();
             tMenu1.add( bSave ).row();
             tMenu1.add( bSaveAs ).row();
-            tMenu1.add( bExporter ).row();
             if (Gdx.app.getType()==Android) tMenu2.add( bImporter).row();
+            tMenu1.add( bExporter ).row();
             tMenu2.add( bTutorial ).row();
             tMenu2.add( bPreference ).row();
             tMenu2.add( bLinks ).row();
@@ -7519,8 +7495,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tMenu.add( bRecent ).row();
             tMenu.add( bSave ).row();
             tMenu.add( bSaveAs ).row();
-            tMenu.add( bExporter ).row();
             if (Gdx.app.getType()==Android)  tMenu.add( bImporter).row();
+            tMenu.add( bExporter ).row();
             tMenu.add( bTutorial ).row();
             tMenu.add( bPreference ).row();
             tMenu.add( bLinks ).row();
