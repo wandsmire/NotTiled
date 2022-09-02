@@ -11005,6 +11005,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         resetCaches();
     }
 
+    private void refreshLayerList(){
+        String[] srr = new String[layers.size()];
+        for (int i = 0; i < layers.size(); i++) {
+            srr[i] = "["+i+"] "+layers.get(i).getName();
+
+        }
+        llayerlist.setItems(srr);
+        llayerlist.setSelectedIndex(layers.size() - 1);
+    }
+
     public void loadLayerManagement() {
         bAddLayer = new TextButton(z.addnew, skin);
         bRemoveLayer = new TextButton(z.remove, skin);
@@ -11028,12 +11038,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bTileMgmt.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                String[] srr = new String[layers.size()];
-                for (int i = 0; i < layers.size(); i++) {
-                    srr[i] = layers.get(i).getName();
-
-                }
-                llayerlist.setItems(srr);
+                refreshLayerList();
                 gotoStage(tLayerMgmt);
             }
         });
@@ -11051,12 +11056,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 lay.setName(lay.getName()+" (copy)");
                 layers.add(lay);
 
-                String[] srr = new String[layers.size()];
-                for (int i = 0; i < layers.size(); i++) {
-                    srr[i] = layers.get(i).getName();
-                }
-                llayerlist.setItems(srr);
-                llayerlist.setSelectedIndex(layers.size()-1);
+                refreshLayerList();
+
 
 
             }
@@ -11083,13 +11084,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 newlayer.setTset(newtset);
                 newlayer.setName(input);
                 layers.add(newlayer);
-                String[] srr = new String[layers.size()];
-                for (int i = 0; i < layers.size(); i++) {
-                    srr[i] = layers.get(i).getName();
+                refreshLayerList();
 
-                }
-                llayerlist.setItems(srr);
-                llayerlist.setSelectedIndex(layers.size() - 1);
             }
 
             @Override
@@ -11293,13 +11289,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 int dex = llayerlist.getSelectedIndex();
                 if (dex > 0) {
                     java.util.Collections.swap(layers, dex, dex - 1);
-                    String[] srr = new String[layers.size()];
-                    for (int i = 0; i < layers.size(); i++) {
-                        srr[i] = layers.get(i).getName();
+                    refreshLayerList();
+                    //update caches
+                    updateObjectCollision();
+                    resetCaches();
 
-                    }
-                    llayerlist.setItems(srr);
-                    llayerlist.setSelectedIndex(dex - 1);
                 }
             }
         });
@@ -11311,14 +11305,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     int dex = llayerlist.getSelectedIndex();
                     layers.remove(dex);
                     selLayer = layers.size() - 1;
-                    String[] srr = new String[layers.size()];
-                    for (int i = 0; i < layers.size(); i++) {
-                        srr[i] = layers.get(i).getName();
-
-                    }
-                    llayerlist.setItems(srr);
-                    if (dex < 1) dex = 1;
-                    llayerlist.setSelectedIndex(dex - 1);
+                    refreshLayerList();
                     updateObjectCollision();
                     resetCaches();
 
@@ -20231,7 +20218,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         try {
             //server.stop();
             if (!isClient){
-                logNet("Not connected to server0" );
+                logNet("Not connected to server" );
                 return;
             }
             if (isJoinRoom){
