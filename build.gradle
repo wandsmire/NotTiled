@@ -17,7 +17,7 @@ buildscript {
 allprojects {
 
     buildDir = "../../${rootProject.name}_build/${project.name}"
-    version = '1.8.1'
+    version = '1.8.2'
     ext {
         appName = "NotTiled"
         gdxVersion = '1.11.0'
