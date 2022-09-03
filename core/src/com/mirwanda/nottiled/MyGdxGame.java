@@ -6131,15 +6131,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         l.setName( "Tile 1" );
         java.util.List<Long> ls = new ArrayList<Long>();
         java.util.List<Integer> lts = new ArrayList<Integer>();
+        java.util.List<Integer> ltl = new ArrayList<Integer>();
 
         for (long i = 0; i < Tw * Th; i++) {
             ls.add( (long) 0 );
             lts.add( -1 );
+            ltl.add( -1 );
         }
 
 
         l.setStr( ls );
         l.setTset( lts );
+        l.setTile( ltl );
         layers.add( l );
 
         kartu = "world";
@@ -14466,8 +14469,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             t.setSource(convertToRelativePath(curdir,f.path()));
 
-            int Tswa = s.getWidth();
-            int Tsha = s.getHeight();
+            int Tswa = Tsw;
+            int Tsha = Tsh;
             if (!fImportWidth.getText().equalsIgnoreCase( "" )) {
                 Tswa = Integer.parseInt( fImportWidth.getText() );
                 Tsha = Integer.parseInt( fImportHeight.getText() );
