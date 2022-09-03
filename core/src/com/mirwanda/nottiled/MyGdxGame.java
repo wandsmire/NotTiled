@@ -15768,8 +15768,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (name.equals("object")) {
                             log("BOS:"+xtree.get(xtree.size()-2));
                             switch (xtree.get(xtree.size()-2)) {
-                                case "tile":
                                 case "map":
+                                case "tile":
+                                    xtree.add("object");
                                 tempobj = new obj();
                                 if (myParser.getAttributeValue(null, "id") != null) {
                                     int pID = Integer.parseInt(myParser.getAttributeValue(null, "id"));
@@ -15850,7 +15851,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         break;
                     case XmlPullParser.END_TAG:
                         if (name.equals("object")) {
-                            switch (xtree.get(xtree.size()-2)){
+                            switch (xtree.get(xtree.size()-3)){
                                 case "tile":
                                     tempTile.getObjects().add(tempobj);
                                     log("OBJECT ADDED ON TILE!");
@@ -15859,6 +15860,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     layers.get(layers.size() - 1).getObjects().add(tempobj);
                                     curid=lastPid+1;
                             }
+                            xtree.remove(xtree.size()-1);
+
                         }
                         if (name.equals("tile")) {
                             if (xtree.get(xtree.size()-2).equalsIgnoreCase("tileset")) {
