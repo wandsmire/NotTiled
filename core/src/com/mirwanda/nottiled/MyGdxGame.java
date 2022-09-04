@@ -13716,7 +13716,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 tileset t = tilesets.get(selTsetID);
                 if (fTsPropName.getText() != "") t.setName(fTsPropName.getText());
-                if (!t.getSource().equalsIgnoreCase(fTsPropSource.getText())){
+                String tso = "";
+                if  (t.getSource()!=null) tso=t.getSource();
+                if (!tso.equalsIgnoreCase(fTsPropSource.getText())){
 
                     //Gdx.app.log( "LLL","LL" );
                     ///
