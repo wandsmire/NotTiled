@@ -19245,7 +19245,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         gogo = num;
                         break;
                 }
-                if (layers.get(selLayer).getStr().get( gogo )==layers.get(selLayer).getStr().get( num )) continue;
+                //why is this here?
+                //if (layers.get(selLayer).getStr().get( gogo )==layers.get(selLayer).getStr().get( num )) continue;
 
                 //nyum is to find the str of gogo location
                 long nyum = layers.get( selLayer ).getStr().get( gogo );
