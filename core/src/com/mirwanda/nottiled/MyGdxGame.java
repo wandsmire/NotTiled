@@ -18897,7 +18897,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         //this loop detect the surrounding of a tile
                         final int numa = num;
 
-                                Terrainify(numa, t, new int[]{0,1,2,3,4,5,6,7,8},false);
+                                Terrainify(numa, t, new int[]{8,0,1,2,3,4,5,6,7},false);
                                 //log(numanuma.size()+"");
 
                                 while(!numanuma.isEmpty()) {
@@ -19180,6 +19180,102 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     java.util.List<tung> numanuma = new ArrayList<tung>();
 
+    private boolean newTerrainify(int num, tile nx, int[] directions, boolean fill) {
+        if (!nx.isTerrainForEditor()) return false;
+        if (!nx.isCenter()) return true;
+        java.util.List<Integer> lint = new ArrayList<>();
+        int[] aa = null, bb=null, cc=null;
+
+        if (nx != null) {
+            if (nx.isTerrainForEditor()) {
+                aa = nx.getTerrain();
+            }
+        }
+        if (aa == null) aa = new int[]{-1, -1, -1, -1};
+
+        for (int i : directions) { //check start here
+            int gogo = num;
+            switch (i) {
+                case 0:
+                    if (num <= Tw || num % Tw == 0) continue;
+                    gogo = num - Tw - 1;
+                    break;
+                case 1:
+                    if (num <= Tw) continue;
+                    gogo = num - Tw;
+                    break;
+                case 2:
+                    if (num <= Tw || num % Tw == Tw - 1) continue;
+                    gogo = num - Tw + 1;
+                    break;
+                case 3:
+                    if (num <= 1 || num % Tw == 0) continue;
+                    gogo = num - 1;
+                    break;
+                case 4:
+                    if (num >= Tw * Th || num % Tw == Tw - 1) continue;
+                    gogo = num + 1;
+                    break;
+                case 5:
+                    if (num >= Tw * Th - Tw || num % Tw == 0) continue;
+                    gogo = num + Tw - 1;
+                    break;
+                case 6:
+                    if (num >= Tw * Th - Tw) continue;
+                    gogo = num + Tw;
+                    break;
+                case 7:
+                    if (num >= Tw * Th - Tw || num % Tw == Tw - 1) continue;
+                    gogo = num + Tw + 1;
+                    break;
+                case 8:
+                    gogo = num;
+                    break;
+            }
+
+            if (layers.get(selLayer).getTile().get(gogo) != -1) {
+                tile trleft = tilesets.get(curtset).getTiles().get(layers.get(selLayer).getTile().get(gogo));
+                bb = trleft.getTerrain();
+            } else {
+                bb = new int[]{-1, -1, -1, -1};
+            }
+            cc = terrainInt(i, aa, bb);
+
+            ///
+            lint.clear();
+            for (int u = 0; u < tilesets.get(curtset).getTiles().size(); u++) {
+                tile x = tilesets.get(curtset).getTiles().get(u);
+                if (x.getTerrainString().equalsIgnoreCase(cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3])) {
+                    lint.add(u);
+                }
+            }
+            //if it is found.
+            if (lint.size() > 0) {
+                int tileindex = lint.get((int) (Math.random() * lint.size()));
+                tile y = tilesets.get(curtset).getTiles().get(tileindex);
+                updateTileData(selLayer, gogo, (long) y.getTileID() + tilesets.get(curtset).getFirstgid(), curtset, tileindex);
+            }else{
+                // do nothing if it is not found because of inadequate terrain
+
+                List<Integer> ll = new ArrayList<>();
+                for (int d=0;d<4;d++){
+                    if (!ll.contains(cc[d])) ll.add(d);
+                }
+                //if there is a foreign tile
+                if (ll.size()>2){
+                }
+
+            }
+            ///
+
+        }
+
+        return false;
+
+        //
+
+    }
+
     private boolean Terrainify(int numx, tile nx, int[] directionsx, boolean fillx){
         int num = numx;
         tile n = nx;
@@ -19246,29 +19342,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         break;
                 }
                 //why is this here?
-                //if (layers.get(selLayer).getStr().get( gogo )==layers.get(selLayer).getStr().get( num )) continue;
-
-                //nyum is to find the str of gogo location
-                long nyum = layers.get( selLayer ).getStr().get( gogo );
-                hex = Long.toHexString( nyum );
-                trailer = "00000000" + hex;
-                hex = trailer.substring( trailer.length() - 8 );
-                long noi = Long.decode( "#" + 00 + hex.substring( 2 ) ) - tilesets.get( curtset ).getFirstgid();
-
-                tile t = null;
-
-                for (int k = 0; k < tilesets.get( curtset ).getTiles().size(); k++) {
-                    if (tilesets.get( curtset ).getTiles().get( k ).getTileID() == noi) {
-                        t = tilesets.get( curtset ).getTiles().get( k );
-                    }
-                }
 
                 int[] bb;
-                if (t == null) {
-                    bb = new int[]{-1, -1, -1, -1};
+                if (layers.get(selLayer).getTile().get(gogo) != -1) {
+                    tile trleft = tilesets.get(curtset).getTiles().get(layers.get(selLayer).getTile().get(gogo));
+                    bb = trleft.getTerrain();
                 } else {
-                    bb = t.getTerrain();
+                    bb = new int[]{-1, -1, -1, -1};
                 }
+
                 //so basically aa is for the mid, bb is for surrouding
 
                 int[] cc = null;
@@ -19310,9 +19392,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         int ATid = ATPath.get( 1 ).name;
 
                         for (int u = 0; u < tilesets.get( curtset ).getTiles().size(); u++) {
-                            x = tilesets.get( curtset ).getTiles().get( u );
-                            if (x.getTerrainString().equalsIgnoreCase( ATid + "," + ATid + "," + ATid + "," + ATid )) {
-                                lint.add( u );
+                            if (bb[0]==ATid && bb[1]==ATid && bb[2]==ATid && bb[3]==ATid) {
+                                //it means it will become an endless loop, so do not add.
+                            }else{
+                                tile tu = tilesets.get(curtset).getTiles().get(u);
+                                if (tu.getTerrainString().equalsIgnoreCase( ATid + "," + ATid + "," + ATid + "," + ATid ))
+                                lint.add(u);
                             }
                         }
 
