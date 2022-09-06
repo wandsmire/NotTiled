@@ -130,6 +130,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -2388,18 +2389,46 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     int ypos2 = (int) (ist) / wd;
                     int margin = ts.getMargin();
                     int spacing = ts.getSpacing();
-
-                    sr.setColor( 1, 0, 0, .5f );
+                    Color c = new Color(1,0,0,.5f);
+                    Color c2 = new Color(0,0,.5f,.5f);
                     if (terrain) {
                         curTerrain = tilesets.get( selTsetID ).getSelTerrain();
-                        if (curNodes[0] == curTerrain)
+                        if (curNodes[0] == curTerrain){
+                            sr.setColor( c);
                             sr.rect( xpos * ts.getTilewidth(), -ypos * ts.getTileheight() + ts.getTileheight() / 2, ts.getTilewidth() / 2, ts.getTileheight() / 2 );
-                        if (curNodes[1] == curTerrain)
+                        }else if (curNodes[0] == -1){
+                        }else{
+                            sr.setColor( c2);
+                            sr.rect( xpos * ts.getTilewidth(), -ypos * ts.getTileheight() + ts.getTileheight() / 2, ts.getTilewidth() / 2, ts.getTileheight() / 2 );
+                        }
+
+                        if (curNodes[1] == curTerrain){
+                            sr.setColor( c);
                             sr.rect( xpos * ts.getTilewidth() + ts.getTilewidth() / 2, -ypos * ts.getTileheight() + ts.getTileheight() / 2, ts.getTilewidth() / 2, ts.getTileheight() / 2 );
-                        if (curNodes[2] == curTerrain)
+                        }else if (curNodes[1] == -1){
+                        }else{
+                            sr.setColor( c2 );
+                            sr.rect( xpos * ts.getTilewidth() + ts.getTilewidth() / 2, -ypos * ts.getTileheight() + ts.getTileheight() / 2, ts.getTilewidth() / 2, ts.getTileheight() / 2 );
+                        }
+
+                        if (curNodes[2] == curTerrain){
+                            sr.setColor( c );
                             sr.rect( xpos * ts.getTilewidth(), -ypos * ts.getTileheight(), ts.getTilewidth() / 2, ts.getTileheight() / 2 );
-                        if (curNodes[3] == curTerrain)
+                        }else if (curNodes[2] == -1){
+                        }else{
+                            sr.setColor( c2 );
+                            sr.rect( xpos * ts.getTilewidth(), -ypos * ts.getTileheight(), ts.getTilewidth() / 2, ts.getTileheight() / 2 );
+
+                        }
+                        if (curNodes[3] == curTerrain){
+                            sr.setColor( c );
                             sr.rect( xpos * ts.getTilewidth() + ts.getTilewidth() / 2, -ypos * ts.getTileheight(), ts.getTilewidth() / 2, ts.getTileheight() / 2 );
+                        }else if (curNodes[3] == -1){
+                        }else{
+                            sr.setColor( c2 );
+                            sr.rect( xpos * ts.getTilewidth() + ts.getTilewidth() / 2, -ypos * ts.getTileheight(), ts.getTilewidth() / 2, ts.getTileheight() / 2 );
+
+                        }
 
 
                     }
@@ -7075,7 +7104,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bOpen.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                FileDialog( z.opentmxfile, "open", "file", new String[]{".tmx", ".ntp"}, null );
+                FileDialog( z.opentmxfile, "open", "file", new String[]{".tmx", ".png", ".ntp"}, null );
             }
         } );
 
@@ -14323,7 +14352,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 break;
             case "open":
                     if (file.extension().equalsIgnoreCase( "ntp" )) {
-                        log("ntp");
+                        log("loading ntp");
                         backToMap();
                         curdir = file.parent().path();
                         log("file :"+file.name());
@@ -14336,11 +14365,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         requesttomainthread( "play","" );
                         addandsaverecent( file.path(), file.name());
                     } else if (file.extension().equalsIgnoreCase( "tmx" )) {
-                        log("tmx");
+                        log("loading tmx");
                         curdir = file.parent().path();
                         loadtmx( openedfile );
 
                         addandsaverecent( file.path(), file.name());
+                    } else if (file.extension().equalsIgnoreCase( "png" )) {
+                        log("loading png");
+                        curdir = file.parent().path();
+                        loadpng(file);
                     } else  {
                         status(z.error,5);
                     }
@@ -15289,6 +15322,160 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return sb.toString();
     }
 
+    public void loadpng(final FileHandle f){
+        stamp=false;
+        assemblymode=false;
+        loadingfile = true;
+        newfile = true;
+        selLayer = 0;
+        background = null;
+        ///////////////
+        Tw = 10;
+        Th = 10;
+        try {
+            SimpleImageInfo s = new SimpleImageInfo(f.file());
+            curfile = f.nameWithoutExtension()+".tmx";
+            Tw = s.getWidth();
+            Th = s.getHeight();
+        } catch (Exception e) {
+            errors += "\nError: " + f.name();
+            ErrorBung( e, "eRRROBUNG.txt" );
+        }
+
+        Tsw = 1;
+        Tsh = 1;
+        mapFormat = "csv";
+        renderorder = "right-down";
+        orientation = "orthogonal";
+        undolayer.clear();
+        redolayer.clear();
+        cliplayer = null;
+        clipsource = 0;
+        String isi = "";
+        String prName = "";
+        String prValue = "";
+        int lastPid = 0;
+        selgroup = 0;
+        selLayer = 0;
+        templastID = 1;
+        seltset = 0;
+        layers.clear();
+        properties.clear();
+        tilesets.clear();
+        autotiles.clear();
+
+        int curgroupid = -1;
+        int curobjid = -1;
+        curid = 1;
+        layer l = new layer();
+        l.setType( layer.Type.TILE );
+        l.setVisible( true );
+        l.setName( "Tile 1" );
+        java.util.List<Long> ls = new ArrayList<Long>();
+        java.util.List<Integer> lts = new ArrayList<Integer>();
+        java.util.List<Integer> ltl = new ArrayList<Integer>();
+
+        for (long i = 0; i < Tw * Th; i++) {
+            ls.add( (long) 0 );
+            lts.add( -1 );
+            ltl.add( -1 );
+        }
+
+
+        l.setStr( ls );
+        l.setTset( lts );
+        l.setTile( ltl );
+        layers.add( l );
+
+        kartu = "world";
+        mode = "tile";
+        curspr = 0;
+        cam.position.set( Tsw * Tw / 2, -Tsh * Th / 2, 0 );
+        cam.zoom = .5f;
+        cam.update();
+        panTo( Tsw * Tw / 2, -Tsh * Th / 2, .25f, 1f );
+
+///////
+        Texture txt = new Texture(f);
+        Pixmap px = pixmapfromtexture(txt, "FF00FF");
+
+        List<Color> colors = new ArrayList<>();
+
+        for (int y=0;y<Th;y++){
+            for (int x = 0;x<Tw;x++){
+                Color c= new Color(px.getPixel(x,y));
+                if (!colors.contains(c)) colors.add(c);
+                l.getStr().set(y*Tw+x,(long) colors.indexOf(c)+1);
+                l.getTset().set(y*Tw+x,0);
+            }
+        }
+
+        colors.add(new Color(1,1,1,1));
+        colors.add(new Color(0.5f,0.5f,0.5f,1));
+        colors.add(new Color(0,0,0,1));
+        colors.add(new Color(0,0,0,0.9f));
+        colors.add(new Color(0,0,0,0.8f));
+        colors.add(new Color(0,0,0,0.7f));
+        colors.add(new Color(0,0,0,0.6f));
+        colors.add(new Color(0,0,0,0.5f));
+        colors.add(new Color(0,0,0,0.4f));
+        colors.add(new Color(0,0,0,0.3f));
+        colors.add(new Color(0,0,0,0.2f));
+        colors.add(new Color(0,0,0,0.1f));
+        log("colors size "+colors.size());
+
+        double wide = Math.ceil(Math.sqrt(colors.size()));
+        double tall = Math.ceil(colors.size()/wide);
+        int tl = (int) tall;
+        int wd = (int) wide;
+
+        log("wd="+wd+"/tl="+tl);
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Pixmap pm2 = new Pixmap(wd, tl, Pixmap.Format.RGBA8888);
+        log("tagbl");
+        int cnt=0;
+        int xx=0,yy=0;
+        for (Color c: colors){
+            pm2.drawPixel(xx,yy,Color.rgba8888(c));
+            xx+=1;
+            if (xx==wd){
+                xx=0; yy+=1;
+            }
+        }
+          cnt++;
+        log("tagal");
+        log("drawing to pixel ok");
+/////////////
+        //save it to PNG
+        FileHandle fh = Gdx.files.absolute(basepath+"NotTiled/Temp/"+swatches+".png");
+        PixmapIO.writePNG(fh, pm2);
+        log("written to file");
+
+        //import it
+        fImportWidth.setText( 1 + "" );
+        fImportHeight.setText( 1 + "" );
+        cImportEmbed.setChecked( true );
+        fh = Gdx.files.absolute(basepath+"NotTiled/Temp/"+swatches+".png");
+        log("adding image tset");
+
+        addImageTset( fh );
+        CacheAllTset();
+        log("cached tset");
+        seltset = tilesets.size() - 1;
+        curtset = tilesets.size() - 1;
+        backToMap();
+        cue( "importok" );
+        fh.delete();
+
+        //////
+        resetCaches();
+        resetSwatches();
+        firstload = loadtime;
+        resetMinimap();
+        resetcam( false );
+        loadingfile = false;
+        log("open png ok");
+    }
     public void loadtmx(final String filepath) {
         loadingfile = true;
         newfile=false;
