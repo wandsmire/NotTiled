@@ -541,13 +541,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private float redraw = 0f;
     private float rotator = 0f;
     private float undohistory = 0f;
-    private Table trandomgen, treplacetiles;
+    private Table trandomgen, treplacetiles, tgenerateterrain;
     private TextField ffirstgen;
     private TextField fgencount;
     private TextField fbirthlim;
     private TextField fdeathlim;
     private TextField flivestr, fprevstr;
-    SelectBox sbGenerate;
+    private TextField fgen1, fgen2;
+    SelectBox sbGenerate,sbGenTerrain;
     private TextField flivetset;
     private TextField fdeadstr, fnextstr;
     private TextField fdeadtset;
@@ -2177,6 +2178,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "rndb":
                     case "repa":
                     case "repb":
+                    case "gena":
+                    case "genb":
                     case "sw1":
                     case "sw2":
                     case "sw3":
@@ -2490,6 +2493,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 case "rndb":
                 case "repa":
                 case "repb":
+                case "gena":
+                case "genb":
                 case "sw1":
                 case "sw2":
                 case "sw3":
@@ -2644,6 +2649,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "rndb":
                     case "repa":
                     case "repb":
+                    case "gena":
+                    case "genb":
                     case "sw1":
                     case "sw2":
                     case "sw3":
@@ -6933,7 +6940,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bReload = new TextButton( z.reloadsamples, skin );
         bCopyto = new TextButton( z.copytorustedwarfare, skin );
         bRusted = new TextButton( "Rusted Warfare", skin );
-        bWardate = new TextButton( "Rusted WarDate", skin );
+        bWardate = new TextButton( "Ruster WarDate", skin );
         bManual = new TextButton( z.manualbook, skin );
         bVideos = new TextButton( z.videotutorials, skin );
 
@@ -7017,8 +7024,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 //Json json = new Json();
                 //writeThis( "testtut.json", json.prettyPrint( tutor ) );
-                //showCredits();
-                createTerrainSet();
+                showCredits();
             }
         } );
 
@@ -8118,6 +8124,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         TextButton hvmirrorrev = new TextButton( z.mirrorreverse, skin );
         TextButton randomize = new TextButton( z.randommap, skin );
         TextButton replacetiles = new TextButton( z.replacetiles, skin );
+        TextButton generateterrain = new TextButton( "Generate Terrain Set", skin );
         TextButton tracebackground = new TextButton( "Trace Background", skin );
         TextButton toback = new TextButton( z.back, skin );
 
@@ -8131,6 +8138,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         ttools.add( hvmirrorrev ).row();
         ttools.add( randomize ).row();
         ttools.add( replacetiles ).row();
+        ttools.add( generateterrain ).row();
         ttools.add( tracebackground ).row();
         ttools.add( toback ).row();
         //ttools.add(replacetile).row();
@@ -8184,6 +8192,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 fprevstr.setText( curspr+"" );
                 gotoStage( treplacetiles );
+            }
+        } );
+
+        generateterrain.addListener( new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                gotoStage( tgenerateterrain );
             }
         } );
 
@@ -8262,7 +8277,89 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         } );
 
+////////////////////////////////////////////////////////
+        tgenerateterrain = new Table();
+        tgenerateterrain.setFillParent( true );
+        tgenerateterrain.defaults().width( btnx / 2 ).padBottom( 2 ).height( btny );
 
+        fgen1 = new TextField( "0", skin );
+        fgen1.setTextFieldFilter(tffint);
+        fgen2 = new TextField( "0", skin );
+        fgen2.setTextFieldFilter(tffint);
+
+        TextButton rungenerate = new TextButton( "Generate Terrain Set", skin );
+        TextButton pickgena = new TextButton( z.picktile1, skin );
+        TextButton pickgenb = new TextButton( z.picktile2, skin );
+        TextButton genback = new TextButton( z.back, skin );
+        sbGenTerrain = new SelectBox(skin);
+
+        /////////////
+        List<String> srr = new ArrayList<>();
+        FileHandle del = Gdx.files.absolute( basepath+"NotTiled/sample/generator/" );
+        FileHandle[] handle = del.list();
+
+        if (handle.length > 0) {
+            for (FileHandle file : handle) {
+                if (file.extension().equalsIgnoreCase("png")) {
+                    srr.add(file.nameWithoutExtension());
+                }
+            }
+            sbGenTerrain.setItems( srr.toArray() );
+        }
+
+
+        pickgena.addListener( new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                pickAuto=false;
+                pickTile( "gena" );
+            }
+        } );
+
+        genback.addListener( new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                gotoStage( ttools );
+            }
+        } );
+
+        pickgenb.addListener( new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                pickAuto=false;
+                pickTile( "genb" );
+            }
+        } );
+
+        tgenerateterrain.add( new Label( "GID 1", skin ) );
+        tgenerateterrain.add( fgen1 ).row();
+        tgenerateterrain.add();
+        tgenerateterrain.add( pickgena ).row();
+        tgenerateterrain.add( new Label( "GID 2", skin ) );
+        tgenerateterrain.add( fgen2 ).row();
+        tgenerateterrain.add();
+        tgenerateterrain.add( pickgenb ).row();
+        tgenerateterrain.add();
+        tgenerateterrain.add( sbGenTerrain ).row();
+        tgenerateterrain.add( rungenerate ).width( btnx ).colspan( 2 ).row();
+        tgenerateterrain.add( genback ).width( btnx ).colspan( 2 );
+
+        rungenerate.addListener( new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                try {
+                    int p1 = Integer.parseInt(fgen1.getText());
+                    int p2 = Integer.parseInt(fgen2.getText());
+                    String mask = sbGenTerrain.getSelected().toString()+".png";
+                    log(mask);
+                    createTerrainSet(p1, p2, mask);
+                }catch(Exception e){
+
+                }
+            }
+        } );
+
+        ///////////////////
         treplacetiles = new Table();
         treplacetiles.setFillParent( true );
         treplacetiles.defaults().width( btnx / 2 ).padBottom( 2 ).height( btny );
@@ -8319,6 +8416,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 replacetiles( p1, p2, p3, p4 );
             }
         } );
+        ///////////////////
     }
 
     private void replacetiles(long p1, int p2, long p3, int p4) {
@@ -15347,15 +15445,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return sb.toString();
     }
 
-    public void createTerrainSet(){
-        int GID1=176;
-        int GID2=26;
-        String bitmask = "bitmask.png";
-
+    public void createTerrainSet(int GID1, int GID2, String bitmask){
         try {
             Gdx.gl.glEnable(GL20.GL_BLEND);
             //first, open the bitmask file, turn it into pixmap
-            FileHandle f = Gdx.files.absolute(basepath+"/NotTiled/"+bitmask);
+            FileHandle f = Gdx.files.absolute(basepath+"/NotTiled/sample/generator/"+bitmask);
             Texture t = new Texture(f);
             Pixmap px = pixmapfromtexture(t, "FF00FF");
 
@@ -15365,42 +15459,48 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             Pixmap pg2 = new Pixmap(Tsw, Tsh, Pixmap.Format.RGBA8888);
 
             //create pixmap of GID1
-            initset = getTsetFromSpr(GID1);
-            tileset tt = tilesets.get(initset);
-            Pixmap tg1 = tt.getPixmap();
+            if (GID1!=0) {
+                initset = getTsetFromSpr(GID1);
+                tileset tt = tilesets.get(initset);
+                Pixmap tg1 = tt.getPixmap();
 
-            int index = GID1 - tt.getFirstgid();
-            int sprx = index % tt.getWidth();
-            int spry = index / tt.getWidth();
-            int margin = tt.getMargin();
-            int spacing = tt.getSpacing();
-            int Twa = tt.getTilewidth();
-            int Tha = tt.getTileheight();
+                int index = GID1 - tt.getFirstgid();
+                int sprx = index % tt.getWidth();
+                int spry = index / tt.getWidth();
+                int margin = tt.getMargin();
+                int spacing = tt.getSpacing();
+                int Twa = tt.getTilewidth();
+                int Tha = tt.getTileheight();
 
-            for (int y=0;y<Tha;y++){
-                for(int x=0;x<Twa;x++){
-                    Color c = new Color(tg1.getPixel(sprx*(Twa+spacing)+margin+x,spry*(Tha+spacing)+margin+y));
-                    pg1.drawPixel(x,y,Color.rgba8888(c));
+                for (int y=0;y<Tsh;y++){
+                    for(int x=0;x<Tsw;x++){
+                        Color c = new Color(tg1.getPixel(sprx*(Twa+spacing)+margin+x,spry*(Tha+spacing)+margin+y));
+                        pg1.drawPixel(x,y,Color.rgba8888(c));
+                    }
                 }
+
             }
 
-            //create pixmap of GID2
-            initset = getTsetFromSpr(GID2);
-            tt = tilesets.get(initset);
-            tg1 = tt.getPixmap();
+            if (GID2!=0) {
 
-             index = GID2 - tt.getFirstgid();
-             sprx = index % tt.getWidth();
-             spry = index / tt.getWidth();
-             margin = tt.getMargin();
-             spacing = tt.getSpacing();
-             Twa = tt.getTilewidth();
-             Tha = tt.getTileheight();
+                //create pixmap of GID2
+                initset = getTsetFromSpr(GID2);
+                tileset tt = tilesets.get(initset);
+                Pixmap tg1 = tt.getPixmap();
 
-            for (int y=0;y<Tha;y++){
-                for(int x=0;x<Twa;x++){
-                    Color c = new Color(tg1.getPixel(sprx*(Twa+spacing)+margin+x,spry*(Tha+spacing)+margin+y));
-                    pg2.drawPixel(x,y,Color.rgba8888(c));
+                int index = GID2 - tt.getFirstgid();
+                int sprx = index % tt.getWidth();
+                int spry = index / tt.getWidth();
+                int margin = tt.getMargin();
+                int spacing = tt.getSpacing();
+                int Twa = tt.getTilewidth();
+                int Tha = tt.getTileheight();
+
+                for (int y = 0; y < Tha; y++) {
+                    for (int x = 0; x < Twa; x++) {
+                        Color c = new Color(tg1.getPixel(sprx * (Twa + spacing) + margin + x, spry * (Tha + spacing) + margin + y));
+                        pg2.drawPixel(x, y, Color.rgba8888(c));
+                    }
                 }
             }
 ///////////////////////////////////////////
@@ -15409,8 +15509,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 for(int x=0;x<t.getWidth();x++) {
                     Color n = null;
                     Color c = new Color(px.getPixel(x, y));
-                    Color d = new Color(pg1.getPixel(x % Twa, y % Tha));
-                    Color e = new Color(pg2.getPixel(x % Twa, y % Tha));
+                    Color d = new Color(pg1.getPixel(x % Tsw, y % Tsh));
+                    Color e = new Color(pg2.getPixel(x % Tsw, y % Tsh));
 
                     if (c.a != 1){
                         n = e;
@@ -17548,6 +17648,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "repa": case "repb":
                         gotoStage(treplacetiles);
                         return true;
+                    case "gena": case "genb":
+                        gotoStage(tgenerateterrain);
+                        return true;
                     case "sw1":
                     case "sw2":
                     case "sw3":
@@ -17879,6 +17982,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         case "rndb":
                         case "repa":
                         case "repb":
+                        case "gena":
+                        case "genb":
                         case "sw1":
                         case "sw2":
                         case "sw3":
@@ -17948,7 +18053,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (tilesets.size() == 0) return true;
         Vector3 touch = new Vector3();
         tilecam.unproject(touch.set(p1, p2, 0));
-        if (kartu == "tile" || tilePicker == "newimgobj" || tilePicker == "props" || tilePicker == "rnda" || tilePicker == "rndb" || tilePicker == "repa" || tilePicker == "repb" || tilePicker == "sw1" || tilePicker == "sw2" || tilePicker == "sw3" || tilePicker == "sw4" || tilePicker == "sw5" || tilePicker == "sw6") {
+        if (kartu == "tile" || tilePicker == "newimgobj" || tilePicker == "props" || tilePicker == "rnda" || tilePicker == "rndb" || tilePicker == "repa" || tilePicker == "repb" || tilePicker == "gena" || tilePicker == "genb" || tilePicker == "sw1" || tilePicker == "sw2" || tilePicker == "sw3" || tilePicker == "sw4" || tilePicker == "sw5" || tilePicker == "sw6") {
             seltset = this.seltset;
         } else {
             seltset = this.selTsetID;
@@ -18036,6 +18141,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "repb":
                         gotoStage(treplacetiles);
                         fnextstr.setText(Integer.toString(num));
+                        break;
+                    case "gena":
+                        gotoStage(tgenerateterrain);
+                        fgen1.setText(Integer.toString(num));
+                        break;
+                    case "genb":
+                        gotoStage(tgenerateterrain);
+                        fgen2.setText(Integer.toString(num));
                         break;
                     case "sw1":
                         backToMap();
@@ -24594,6 +24707,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             case "rndb":
                             case "repa":
                             case "repb":
+                            case "gena":
+                            case "genb":
 
                                 t = tilesets.get(seltset);
                         }
