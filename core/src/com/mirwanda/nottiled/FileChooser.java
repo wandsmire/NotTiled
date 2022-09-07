@@ -96,6 +96,7 @@ public class FileChooser extends Dialog
 		this.mode = mode;
 		this.filter=filter;
 		this.button("Cancel", "Cancel");
+		this.button("New Folder", "New Folder");
 		this.button("OK", "OK");
 
 		this.setModal(false);

@@ -14235,7 +14235,31 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     } catch (Exception e) {
                         exitDialog(exitpoint);
                     }
-                } else {
+                } else if (object.equals("New Folder")) {
+                    TextPromptListener newfolder = new TextPromptListener() {
+
+                        @Override
+                        public void confirm(String input) {
+                            if (input == "") {
+                                return;
+                            }
+                            FileHandle fl = Gdx.files.absolute(getDirectory().path()+"/"+input);
+                            fl.mkdirs();
+
+                        }
+
+                        @Override
+                        public void cancel() {
+                        }
+
+                    };
+                    getNewTextInput(newfolder,"Enter new folder name","folder1","Anything...");
+                    exitDialog(exitpoint);
+                    return;
+
+
+
+                } else if (object.equals("Cancel")) {
                     exitDialog(exitpoint);
                 }
             }
