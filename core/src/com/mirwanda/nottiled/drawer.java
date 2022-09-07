@@ -84,7 +84,7 @@ public class drawer implements Comparable
 		}
 	}
 	
-	public void draw(Pixmap pm2, List<tileset> tilesets,int Tsw,int Tsh)
+	public void draw(Pixmap pm2, List<tileset> tilesets, int Tsw, int Tsh)
 	{
 		if (tilesets.get(initset).getTexture()!=null){
 			for (int xa = 0; xa < Tsw; xa++) {
