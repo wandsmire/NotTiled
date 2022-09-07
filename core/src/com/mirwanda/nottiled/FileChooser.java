@@ -150,14 +150,15 @@ public class FileChooser extends Dialog
 		};
 		Label label;
 		if (!directory.path().equalsIgnoreCase("")) {
+			if (directory.path().length()>Gdx.files.getExternalStoragePath().length()) {
 			table.row();
 			Image img = new Image(txback);
 			table.add( img );
-
-			label = new Label("..", skin);
-			label.setName("..");
-			label.addListener(fileClickListener);
-			table.add(label).expandX().fillX().colspan( 2 );
+				label = new Label("..", skin);
+				label.setName("..");
+				label.addListener(fileClickListener);
+				table.add(label).expandX().fillX().colspan(2);
+			}
 		}
 		for (FileHandle file : files)
 		{
@@ -198,7 +199,6 @@ public class FileChooser extends Dialog
 							if (fn.length()>str.length()){
 							if (fn.substring(fn.length()-str.length()).equalsIgnoreCase(str)){
 								table.row();
-								table.add();
 
 								Image img = new Image(txfile);
 								table.add( img );

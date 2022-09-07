@@ -15324,8 +15324,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     public void createTerrainSet(){
-        int GID1=254;
-        int GID2=176;
+        int GID1=176;
+        int GID2=26;
         String bitmask = "bitmask.png";
 
         try {
@@ -15410,209 +15410,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             FileHandle fh = Gdx.files.absolute(basepath+"NotTiled/test4.png");
             PixmapIO.writePNG(fh, pm2);
 
-            ////////////
-
-            /*
-            FileHandle fh = Gdx.files.absolute(basepath+"NotTiled/Temp/"+filenamenya+".png");
-            PixmapIO.writePNG(fh, pm2);
-
-
-            List<Color> colors = new ArrayList<>();
-
-            for (int y=0;y<Th;y++){
-                for (int x = 0;x<Tw;x++){
-                    Color c= new Color(px.getPixel(x,y));
-                    if (!colors.contains(c)) colors.add(c);
-                    l.getStr().set(y*Tw+x,(long) colors.indexOf(c)+1);
-                    l.getTset().set(y*Tw+x,0);
-                }
-            }
-
-            tileset t = new tileset();
-            int posx = mapstartSelect % Tw;
-            int posy = mapstartSelect / Tw;
-            int posx2 = mapendSelect % Tw +1;
-            int posy2 = mapendSelect / Tw +1;
-            int widih = mapendSelect % Tw - mapstartSelect % Tw +1;
-            int heih = mapendSelect / Tw - mapstartSelect / Tw +1;
-            status(posx+"-"+posx2+","+posy+"-"+posy2+ "("+widih+","+heih+")",5);
-            Pixmap pm2 = new Pixmap(widih * Tsw, heih * Tsh, Pixmap.Format.RGBA8888);
-            tilesetsize = tilesets.size();
-            if (tilesetsize > 0 && !loadingfile) {
-                int offsetx = 0, offsety = 0;
-                int jon = 0, joni = 0;
-                long ini;
-                int total = widih * heih;
-                int startx = posx, stopx = posx2;
-                int starty = posy, stopy = posy2;
-
-                int aa = 0, bb = 0, cc = 0, dd = 0;
-                switch (renderorder) {
-                    case "right-down":
-                        aa = starty;
-                        bb = stopy;
-                        cc = startx;
-                        dd = stopx;
-                        break;
-                    case "left-down":
-                        aa = starty;
-                        bb = stopy;
-                        cc = -stopx + 1;
-                        dd = -startx + 1;
-                        break;
-                    case "right-up":
-                        aa = -stopy + 1;
-                        bb = -starty + 1;
-                        cc = startx;
-                        dd = stopx;
-                        break;
-                    case "left-up":
-                        aa = -stopy + 1;
-                        bb = -starty + 1;
-                        cc = -stopx + 1;
-                        dd = -startx + 1;
-                        break;
-                }
-
-                String flag;
-                Long mm = null;
-                flag = "00";
-                int jo = selLayer;
-                if (layers.get(jo).getType() == layer.Type.TILE && layers.get(jo).isVisible()) {
-                    java.util.List<drawer> drawers = new ArrayList<drawer>();
-                    drawers.clear();
-                    for (int a = aa; a < bb; a++) {
-                        for (int b = cc; b < dd; b++) {
-                            //position=(Math.abs(a)*Tw)+Math.abs(b);
-
-                            //num
-                            position = (abs(a) * Tw) + abs(b);
-
-
-
-                            ini = layers.get(jo).getStr().get(position);
-                            initset = layers.get(jo).getTset().get(position);
-                            if (initset == -1) continue;
-                            if (ini == 0) continue;//dont draw empty, amazing performance boost
-                            xpos = (b - posx);
-                            ypos = (a - posy);
-
-
-
-                            if (orientation.equalsIgnoreCase("isometric")) {
-                                offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
-                                offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
-                            }
-
-                            mm = ini;
-                            flag = "00";
-                            if (ini > total) {
-                                hex = Long.toHexString(ini);
-                                trailer = "00000000" + hex;
-                                hex = trailer.substring(trailer.length() - 8);
-                                flag = hex.substring(0, 2);
-                                mm = Long.decode("#00" + hex.substring(2, 8));
-                            }
-                            tiles = tilesets.get(initset).getTiles();
-                            tilesize = tiles.size();
-                            int poss =-1;
-                            if (tilesize > 0) {
-                                for (int n = 0; n < tilesize; n++) {
-                                    if (tiles.get(n).getAnimation().size() > 0) {
-                                        if (mm == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
-                                            mm = (long) tiles.get(n).getActiveFrameID() + tilesets.get(initset).getFirstgid();
-                                        }
-                                    }
-
-                                    if (tiles.get(n).getTileID()==ini - tilesets.get(initset).getFirstgid()){
-                                        poss=n;
-                                    }
-
-                                }
-
-                                if (poss>-1) {
-                                    tile tt = new tile();
-                                    tt.setTileID( ypos * widih + xpos );
-                                    tt.setProperties( tiles.get( poss ).getProperties() );
-                                    t.getTiles().add( tt );
-                                }
-
-                            }
-
-
-                            sprX = (int) (mm - tilesets.get(initset).getFirstgid()) % (tilesets.get(initset).getWidth());
-                            sprY = (int) (mm - tilesets.get(initset).getFirstgid()) / (tilesets.get(initset).getWidth());
-                            margin = tilesets.get(initset).getMargin();
-                            spacing = tilesets.get(initset).getSpacing();
-                            Tswa = tilesets.get(initset).getTilewidth();
-                            Tsha = tilesets.get(initset).getTileheight();
-
-
-                            tempdrawer = new drawer();
-                            tempdrawer.mm = mm;
-                            int Tswad = 0;
-                            int Tshad = 0;
-                            int ttx=0;
-                            int tty=0;
-
-                            Tswad = Tswa;
-                            Tshad = Tsha;
-
-                            switch (flag) {
-                                case "20"://diagonal flip 'THIS ONE"
-                                    tempdrawer.setdrawer(initset, xpos * Tsw  + ttx - offsetx, ypos * Tsh + tty  - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
-                                    break;
-                                case "40"://flipy nd
-                                    tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
-                                    break;
-                                case "60"://270 degrees clockwise nd
-                                    tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
-                                    break;
-                                case "80"://flipx nd
-                                    tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
-                                    break;
-                                case "a0"://90 degress cw
-                                    tempdrawer.setdrawer(initset, xpos * Tsw + ttx   - offsetx, ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
-                                    break;
-                                case "c0"://180 degrees cw nd
-                                    tempdrawer.setdrawer(initset, xpos * Tsw + ttx   - offsetx, ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
-                                    break;
-                                case "e0"://180 degrees ccw "AND THIS ONE"
-                                    tempdrawer.setdrawer(initset, xpos * Tsw + ttx  - offsetx, ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
-                                    break;
-                                case "00":
-                                    tempdrawer.setdrawer(initset, xpos * Tsw + ttx   - offsetx, ypos * Tsh +tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
-                                    break;
-                            }
-                            drawers.add(tempdrawer);
-
-                        } //for  b
-                    }//for a
-
-                    //java.util.Collections.sort(drawers);//fps hogger
-
-                    for (drawer drawer : drawers) {
-                        drawer.draw(pm2, tilesets, Tsw, Tsh);
-                    }
-                }
-
-
-            }//no tileswt
-
-
-            //save it to PNG
-            FileHandle fh = Gdx.files.absolute(basepath+"NotTiled/Temp/"+filenamenya+".png");
-            PixmapIO.writePNG(fh, pm2);
-
-            //import it
             loadingfile = true;
             errors = " ";
             fImportWidth.setText( Tsw + "" );
             fImportHeight.setText( Tsh + "" );
             cImportEmbed.setChecked( true );
-            fh = Gdx.files.absolute(basepath+"NotTiled/Temp/"+filenamenya+".png");
+            fh = Gdx.files.absolute(basepath+"NotTiled/test4.png");
             addImageTset( fh );
-            tilesets.get(tilesets.size()-1).setTiles( t.getTiles());
             CacheAllTset();
             loadingfile = false;
             seltset = tilesets.size() - 1;
@@ -15622,10 +15426,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             cue( "importtilesetok" );
             status(z.exportfinished,3);
             fh.delete();
-
-
-*/
-
 
         } catch (Exception e) {
             msgbox(z.error);
