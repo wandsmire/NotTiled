@@ -32,13 +32,10 @@ public class recents
 
 	public void addrecent(String path, String filename, String type){
 		try {
-			int ny = paths.size() - 1;
 
-			for (int i = ny; i >= 0; i--) {
-				//Gdx.app.log("A",paths.get(i)+"/"+i);
-
-				if (filenames.get( i ) != null) {
-					if (filenames.get( i ).equalsIgnoreCase( filename )) {
+			for (int i = paths.size() - 1; i >= 0; i--) {
+				if (paths.get( i ) != null) {
+					if (paths.get( i ).equalsIgnoreCase( path )) {
 						paths.remove( i );
 						filenames.remove( i );
 						types.remove( i );
@@ -46,14 +43,14 @@ public class recents
 				}
 			}
 
+			paths.add(0, path);
+			filenames.add(0, filename );
+			types.add( 0, type );
 
-			paths.add( path );
-			filenames.add( filename );
-			types.add( type );
 			if (paths.size() > 20) {
-				paths.remove( 0 );
-				filenames.remove( 0 );
-				types.remove( 0 );
+				paths.remove( paths.size()-1 );
+				filenames.remove( filenames.size()-1 );
+				types.remove( types.size()-1 );
 			}
 		}catch(Exception e){
 			paths.clear();
