@@ -15917,7 +15917,7 @@ private void refreshGenerator(){
                         j.properties = tmprops.toArray(new jsonmap.property[tmprops.size()]);
                     }
 
-                    if (t.terrains != null) {
+                    if (t.terrains.size()>0) {
                         List<jsonmap.terrain> tmp = new ArrayList<>();
                         for (int x = 0; x < t.terrains.size(); x++) {
                             jsonmap.terrain trj = new jsonmap.terrain();
@@ -15935,7 +15935,7 @@ private void refreshGenerator(){
                             jsonmap.tile jt = new jsonmap.tile();
                             tile tt = t.tiles.get(x);
                             jt.id = tt.getTileID();
-                            jt.terrain = tt.getTerrainString();
+                            if (!tt.getTerrainString().equalsIgnoreCase("-1,-1,-1,-1")) jt.terrain = tt.getTerrainString();
 
                             //need to complete for terrain, wangset, objects, animations
                             if (tt.properties != null) {
@@ -16004,33 +16004,32 @@ private void refreshGenerator(){
                         case OBJECT:
                             lj.type = "objectgroup";
 
-                        /*
-                        if (lj.objects != null) {
-                            for (int f = 0; f < lj.objects.length; f++) {
-                                jsonmap.object jo = lj.objects[f];
-                                obj o = new obj();
-                                o.setName(jo.name);
-                                o.setX(jo.x);
-                                o.setY(jo.y);
-                                o.setW(jo.width);
-                                o.setH(jo.height);
-                                o.setRotation(jo.rotation);
-                                if (o.getW() == 0 && o.getH() == 0) o.setType("point");
+                        if (l.getObjects()!=null) {
+                            List<jsonmap.object> ojs = new ArrayList<>();
+                            for (int f = 0; f < l.getObjects().size(); f++) {
+                                jsonmap.object jo = new jsonmap.object();
+                                obj o = l.getObjects().get(f);
+                                jo.name=o.getName();
+                                jo.x=o.getX();
+                                jo.y=o.getY();
+                                jo.width=(int) o.getW();
+                                jo.height=(int) o.getH();
+                                jo.rotation=(int) o.getRotation();
 
-                                if (jo.properties != null) {
-                                    for (int y = 0; y < jo.properties.length; y++) {
-                                        jsonmap.property p = jo.properties[y];
-                                        o.getProperties().add(new property(p.name, p.type, p.value));
-                                    }
+                                List<jsonmap.property> tmprops = new ArrayList<>();
+                                for (int z = 0; z < o.getProperties().size(); z++) {
+                                    property p = o.getProperties().get(z);
+                                    jsonmap.property pj = new jsonmap.property();
+                                    pj.name = p.getName();
+                                    pj.type = p.getType();
+                                    pj.value = p.getValue();
+                                    tmprops.add(pj);
                                 }
-
-                                l.getObjects().add(o);
+                                jo.properties = tmprops.toArray(new jsonmap.property[tmprops.size()]);
+                                ojs.add(jo);
                             }
+                            lj.objects = ojs.toArray(new jsonmap.object[ojs.size()]);
                         }
-
-                         */
-
-
                             break;
                         case IMAGE:
                             lj.type = "imagelayer";
