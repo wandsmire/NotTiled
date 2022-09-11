@@ -4,10 +4,10 @@ import java.util.*;
 
 public class tileset
 {
-	private java.util.List<tile>tiles = new ArrayList<tile>();
-	private java.util.List<terrain> terrains = new ArrayList<terrain>();
-	private java.util.List<property> properties = new java.util.ArrayList<property>();
-	private java.util.List<Color> colors = new java.util.ArrayList<Color>();
+	public java.util.List<tile>tiles = new ArrayList<tile>();
+	public java.util.List<terrain> terrains = new ArrayList<terrain>();
+	public java.util.List<property> properties = new java.util.ArrayList<property>();
+	public java.util.List<Color> colors = new java.util.ArrayList<Color>();
 
 	public List<obj> getCollision() {
 		return collision;
@@ -17,7 +17,7 @@ public class tileset
 		this.collision = collision;
 	}
 
-	private java.util.List<obj> collision = new ArrayList<obj>();
+	public java.util.List<obj> collision = new ArrayList<obj>();
 
 	private String name;
 	private String source;

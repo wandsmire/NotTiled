@@ -7,8 +7,8 @@ import java.util.*;
 
 public class layer
 {
-	private List<Long> gid = new ArrayList<Long>();
-	private List<Integer> tset = new ArrayList<Integer>();
+	public List<Long> gid = new ArrayList<Long>();
+	public List<Integer> tset = new ArrayList<Integer>();
 
 	public List<Integer> getTile() {
 		return tile;
@@ -18,9 +18,9 @@ public class layer
 		this.tile = tile;
 	}
 
-	private List<Integer> tile = new ArrayList<Integer>();
-	private List<Color> color = new ArrayList<Color>();
-	private List<property> properties = new ArrayList<property>();
+	public List<Integer> tile = new ArrayList<Integer>();
+	public List<Color> color = new ArrayList<Color>();
+	public List<property> properties = new ArrayList<property>();
 	private String name="";
 	private boolean visible;
 	private float opacity;

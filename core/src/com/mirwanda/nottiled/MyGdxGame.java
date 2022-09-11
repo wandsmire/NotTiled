@@ -73,6 +73,8 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Base64Coder;
 import com.badlogic.gdx.utils.BufferUtils;
 import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.utils.JsonValue;
+import com.badlogic.gdx.utils.JsonWriter;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.async.AsyncExecutor;
 import com.badlogic.gdx.utils.async.AsyncResult;
@@ -234,6 +236,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     float bgr, bgg, bgb;
     String renderorder = "right-down";
     String orientation = "orthogonal";
+    String tiledversion = "1.9.1";
+    String maptype = "map";
     java.util.List<Long> spr;
 
     enum ViewMode {STACK, SINGLE, ALL, CUSTOM}
@@ -6125,6 +6129,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     log("loading png");
                     curdir = file.parent().path();
                     loadpng(file);
+                } else if (file.extension().equalsIgnoreCase( "json" )) {
+                    log("loading json");
+                    curdir = file.parent().path();
+                    loadjsonmap(file);
                 }
 
             } else {
@@ -7138,7 +7146,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bOpen.addListener( new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                FileDialog( z.opentmxfile, "open", "file", new String[]{".tmx", ".png", ".ntp"}, null );
+                FileDialog( z.opentmxfile, "open", "file", new String[]{".tmx", ".png", ".ntp",".json"}, null );
             }
         } );
 
@@ -7197,9 +7205,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             log("loading png");
                             curdir = file.parent().path();
                             loadpng(file);
+                        } else if (file.extension().equalsIgnoreCase( "json" )) {
+                            log("loading json");
+                            curdir = file.parent().path();
+                            loadjsonmap(file);
                         }
 
-                }
+                        }
                 }catch(Exception e){
 
                 }
@@ -13428,7 +13440,8 @@ private void refreshGenerator(){
                 try {
                     //loadingfile=true;
                     int nTh = Integer.parseInt(fTh.getText());
-                    if (nTh > Th) {//expand
+
+                    if (nTh > Th) {//expand height
 
                         java.util.List<Long> tStrs = new ArrayList<Long>();
                         java.util.List<Integer> tTsets = new ArrayList<Integer>();
@@ -13458,14 +13471,21 @@ private void refreshGenerator(){
                                 }
                             }
                         }
-                    } else if (nTh < Th) {//shrink
+                    } else if (nTh < Th) {//shrink height
                         for (int i = 0; i < Th - nTh; i++) {
                             for (int k = 0; k < Tw; k++) {
                                 for (int j = 0; j < layers.size(); j++) {
                                     if (layers.get(j).getType()!=layer.Type.TILE) continue;
-                                    layers.get(j).getStr().remove(layers.get(j).getStr().size() - 1);
-                                    layers.get(j).getTset().remove(layers.get(j).getTset().size() - 1);
-                                    layers.get(j).getTile().remove(layers.get(j).getTile().size() - 1);
+                                    if (cb2.isChecked()) {
+                                        layers.get(j).getStr().remove(0);
+                                        layers.get(j).getTset().remove(0);
+                                        layers.get(j).getTile().remove(0);
+                                    }else{
+                                        layers.get(j).getStr().remove(layers.get(j).getStr().size() - 1);
+                                        layers.get(j).getTset().remove(layers.get(j).getTset().size() - 1);
+                                        layers.get(j).getTile().remove(layers.get(j).getTile().size() - 1);
+
+                                    }
                                 }
                             }
                         }
@@ -13473,7 +13493,7 @@ private void refreshGenerator(){
                     Th = nTh;
 
                     int nTw = Integer.parseInt(fTw.getText());
-                    if (nTw > Tw) {//expand
+                    if (nTw > Tw) {//expand width
                         java.util.List<Long> tStrs = new ArrayList<Long>();
                         java.util.List<Integer> tTsets = new ArrayList<Integer>();
                         java.util.List<Integer> tTiles = new ArrayList<Integer>();
@@ -13498,15 +13518,25 @@ private void refreshGenerator(){
                                 tiles.addAll(moyeng, tTiles);
                             }
                         }
-                    } else if (nTw < Tw) {//shrink
+                    } else if (nTw < Tw) {//shrink width
                         for (int i = Tw * Th; i > 0; i--) {
                             for (int j = 0; j < layers.size(); j++) {
                                 if (layers.get(j).getType()!=layer.Type.TILE) continue;
-                                if ((i) % Tw == 0) {
-                                    for (int k = 1; k <= Tw - nTw; k++) {
-                                        layers.get(j).getStr().remove(i - k);
-                                        layers.get(j).getTset().remove(i - k);
-                                        layers.get(j).getTile().remove(i - k);
+                                if (cb1.isChecked()) {
+                                    if ((i) % Tw == 1) {
+                                        for (int k = 1; k <= Tw - nTw; k++) {
+                                            layers.get(j).getStr().remove(i);
+                                            layers.get(j).getTset().remove(i);
+                                            layers.get(j).getTile().remove(i);
+                                        }
+                                    }
+                                }else{
+                                    if ((i) % Tw == 0) {
+                                        for (int k = 1; k <= Tw - nTw; k++) {
+                                            layers.get(j).getStr().remove(i - k);
+                                            layers.get(j).getTset().remove(i - k);
+                                            layers.get(j).getTile().remove(i - k);
+                                        }
                                     }
                                 }
                             }
@@ -14537,6 +14567,10 @@ private void refreshGenerator(){
                         log("loading png");
                         curdir = file.parent().path();
                         loadpng(file);
+                    } else if (file.extension().equalsIgnoreCase( "json" )) {
+                        log("loading json");
+                        curdir = file.parent().path();
+                        loadjsonmap(file);
                     } else  {
                         status(z.error,5);
                     }
@@ -14760,6 +14794,14 @@ private void refreshGenerator(){
 
         if (actualFile.extension().equalsIgnoreCase("png")){
             exporttopng(actualFile.nameWithoutExtension(),false);
+            return;
+        }
+
+        if (actualFile.extension().equalsIgnoreCase("json")){
+            log("setting json map...");
+            setjsonmap();
+            log("saving json map...");
+            savejsonmap(actualFile);
             return;
         }
 
@@ -15603,6 +15645,455 @@ private void refreshGenerator(){
             ErrorBung(e, "errorlog.txt");
         }
 
+    }
+
+    jsonmap jsn;
+
+    public void getjsonmap(){
+        try {
+            //Clean up first
+            loadingfile = true;
+            layers.clear();
+            tilesets.clear();
+            properties.clear();
+            //Get map data
+            orientation = jsn.orientation; if(orientation==null) orientation="orthographic";
+            renderorder = jsn.renderorder; if(renderorder==null) renderorder="right-down";
+            Tw = jsn.width;
+            Th = jsn.height;
+            Tsw = jsn.tilewidth;
+            Tsh = jsn.tileheight;
+            maptype = jsn.type; if(maptype==null) maptype="map";
+            tiledversion = jsn.tiledversion; if(tiledversion==null) tiledversion="1.9.1";
+            if (jsn.properties!=null) {
+                for (int i = 0; i < jsn.properties.length; i++) {
+                    jsonmap.property p = jsn.properties[i];
+                    properties.add(new property(p.name, p.type, p.value));
+                }
+            }
+
+            //Get tilesets
+            if (jsn.tilesets!=null) {
+                for (int i = 0; i < jsn.tilesets.length; i++) {
+                    jsonmap.tileset j = jsn.tilesets[i];
+                    tileset t = new tileset();
+                    t.setName(j.name);
+                    t.setFirstgid(j.firstgid);
+                    t.setTilewidth(j.tilewidth);
+                    t.setTileheight(j.tileheight);
+                    t.setTilecount(j.tilecount);
+                    t.setColumns(j.columns);
+                    t.setMargin(j.margin);
+                    t.setSpacing(j.spacing);
+                    t.setOriginalwidth(j.imagewidth);
+                    t.setOriginalheight(j.imageheight);
+                    t.setWidth(j.columns);
+                    t.setHeight(j.tilecount/j.columns);
+                    t.setSource(j.image);
+                    String sp = convertToAbsolutepath(t.getSource(),curdir);
+                    log(sp);
+                    t.setTexture(new Texture(Gdx.files.absolute(sp)));
+                    t.setPixmap(pixmapfromtexture(t.getTexture(), t.getTrans()));
+                    if (j.properties != null) {
+                        for (int x = 0; x < j.properties.length; x++) {
+                            jsonmap.property p = j.properties[x];
+                            t.properties.add(new property(p.name, p.type, p.value));
+                        }
+                    }
+
+                    if(j.terraintypes!=null){
+                        for(int x=0; x<j.terraintypes.length;x++){
+                            jsonmap.terrain trj = j.terraintypes[x];
+                            terrain tr = new terrain();
+                            tr.setName(trj.name);
+                            tr.setTile(trj.tile);
+                            t.terrains.add(tr);
+                        }
+                    }
+                    //tiles
+                    for (int x = 0; x < j.tiles.length; x++) {
+                        jsonmap.tile jt = j.tiles[x];
+                        tile tt = new tile();
+                        tt.setTileID(jt.id);
+                        tt.setTerrain(jt.terrain);
+
+                        //need to complete for terrain, wangset, objects, animations
+                        if (jt.properties!=null) {
+                            for (int y = 0; y < jt.properties.length; y++) {
+                                jsonmap.property p = jt.properties[y];
+                                tt.properties.add(new property(p.name, p.type, p.value));
+                            }
+                        }
+                        if (jt.animation!=null) {
+                            for (int y = 0; y < jt.animation.length; y++) {
+                                jsonmap.animate p = jt.animation[y];
+                                frame f = new frame(p.tileid,p.duration);
+                                tt.animation.add(f);
+                            }
+                        }
+
+                        t.tiles.add(tt);
+                    }
+                    tilesets.add(t);
+                }
+            }
+
+            //Get layers
+            for (int i = 0; i < jsn.layers.length; i++) {
+                jsonmap.layer lj = jsn.layers[i];
+                layer l = new layer();
+                l.setName(lj.name);
+                l.setOpacity(lj.opacity);
+                l.setVisible(lj.visible);
+                switch (lj.type){
+                    case "tilelayer":
+                        ////
+                        l.setType(layer.Type.TILE);
+                        encoding = lj.encoding;
+                        compression = lj.compression;
+
+                        spr = new ArrayList<Long>();
+
+                        if (encoding==null) encoding="csv";
+                        if (encoding.equalsIgnoreCase("csv")) {
+                            mapFormat = "csv";
+                            String data = lj.data.replace("\n", "");
+                            data = data.replace(" ", "");
+
+                            String[] parts = data.split(",");
+
+                            for (int io = 0; io < Tw * Th; io++) {
+                                spr.add(Long.parseLong(parts[io]));
+                            }
+
+                        } else if (encoding.equalsIgnoreCase("base64") && compression.equalsIgnoreCase("zlib")) {
+                            mapFormat = "base64-zlib";
+                            String data = lj.data.replace("\n", "");
+                            data = data.replace(" ", "");
+                            spr = decoder.decodeZlib(data, Tw * Th * 4);
+
+                        } else if (encoding.equalsIgnoreCase("base64") && compression.equalsIgnoreCase("gzip")) {
+                            mapFormat = "base64-gzip";
+                            String data = lj.data.replace("\n", "");
+                            data = data.replace(" ", "");
+                            spr = decoder.decodeGzip(data);
+                            //writeThis(tempLayer.getName()+ "fkyu.txt",spr.toString());
+
+                        } else if (encoding.equalsIgnoreCase("base64")) {
+                            mapFormat = "base64";
+                            String data = lj.data.replace("\n", "");
+                            data = data.replace(" ", "");
+                            spr = decoder.decode(data);
+
+                        } else if (encoding.equalsIgnoreCase("xml")) {
+                            mapFormat = "xml";
+                            //not supported
+                        }
+
+                        l.setStr(spr);
+                        for (int o=0;o<l.getStr().size();o++){
+                            l.tset.add(-1);
+                            l.tile.add(-1);
+                        }
+
+                        ////
+                        break;
+                    case "objectgroup":
+                        l.setType(layer.Type.OBJECT);
+
+                        if (lj.objects!=null){
+                            for(int f=0;f<lj.objects.length;f++){
+                                jsonmap.object jo = lj.objects[f];
+                                obj o = new obj();
+                                o.setName(jo.name);
+                                o.setX(jo.x);
+                                o.setY(jo.y);
+                                o.setW(jo.width);
+                                o.setH(jo.height);
+                                o.setRotation(jo.rotation);
+                                if (o.getW()==0 && o.getH()==0) o.setType("point");
+
+                                if (jo.properties!=null) {
+                                    for (int y = 0; y < jo.properties.length; y++) {
+                                        jsonmap.property p = jo.properties[y];
+                                        o.getProperties().add(new property(p.name, p.type, p.value));
+                                    }
+                                }
+
+                                l.getObjects().add(o);
+                            }
+                        }
+
+
+                        break;
+                    case "imagelayer":
+                        l.setType(layer.Type.IMAGE);
+                        if (lj.image != null) {
+                            l.setImage(lj.image);
+                            String ss = convertToAbsolutepath(l.getImage(),curdir);
+                            l.setTexture(new Texture(Gdx.files.absolute(ss)));
+                        }
+
+                        break;
+                }
+
+                if (lj.properties!=null) {
+                    for (int y = 0; y < lj.properties.length; y++) {
+                        jsonmap.property p = lj.properties[y];
+                        l.properties.add(new property(p.name, p.type, p.value));
+                    }
+                }
+                layers.add(l);
+            }
+
+            //finishing
+            curtset = 0;
+            seltset = 0;
+            selLayer = 0;
+            CacheAllTset();
+            resetSwatches();
+            resetCaches();
+            loadingfile = false;
+        }catch(Exception e)
+        {
+            newtmxfile(false);
+            e.printStackTrace();
+        }
+    }
+
+    public void setjsonmap(){
+///////////////////////////
+        try {
+            jsn = new jsonmap();
+            jsn.orientation = orientation;
+            jsn.renderorder = "right-down";
+            jsn.width = Tw;
+            jsn.height = Th;
+            jsn.tilewidth = Tsw;
+            jsn.tileheight = Tsh;
+            jsn.type = "map";
+            jsn.tiledversion = "1.9.1";
+            if (properties != null) {
+                List<jsonmap.property> props = new ArrayList<>();
+                for (int i = 0; i < properties.size(); i++) {
+                    property p = properties.get(i);
+                    jsonmap.property pj = new jsonmap.property();
+                    pj.name = p.getName();
+                    pj.type = p.getType();
+                    pj.value = p.getValue();
+                    props.add(pj);
+                }
+                jsn.properties = props.toArray(new jsonmap.property[props.size()]);
+            }
+
+            //Get tilesets
+            if (tilesets != null) {
+                List<jsonmap.tileset> jtsets = new ArrayList<>();
+                for (int i = 0; i < tilesets.size(); i++) {
+                    tileset t = tilesets.get(i);
+                    jsonmap.tileset j = new jsonmap.tileset();
+                    j.name = t.getName();
+                    j.firstgid = t.getFirstgid();
+                    j.tilewidth = t.getTilewidth();
+                    j.tileheight = t.getTileheight();
+                    j.tilecount = t.getTilecount();
+                    j.columns = t.getColumns();
+                    j.margin = t.getMargin();
+                    j.spacing = t.getSpacing();
+                    j.imagewidth = t.getOriginalwidth();
+                    j.imageheight = t.getOriginalheight();
+                    j.image = t.getSource();
+
+                    if (t.properties != null) {
+                        List<jsonmap.property> tmprops = new ArrayList<>();
+                        for (int x = 0; x < t.properties.size(); x++) {
+                            property p = t.properties.get(x);
+                            jsonmap.property pj = new jsonmap.property();
+                            pj.name = p.getName();
+                            pj.type = p.getType();
+                            pj.value = p.getValue();
+                            tmprops.add(pj);
+                        }
+                        j.properties = tmprops.toArray(new jsonmap.property[tmprops.size()]);
+                    }
+
+                    if (t.terrains != null) {
+                        List<jsonmap.terrain> tmp = new ArrayList<>();
+                        for (int x = 0; x < t.terrains.size(); x++) {
+                            jsonmap.terrain trj = new jsonmap.terrain();
+                            terrain tr = t.terrains.get(x);
+                            trj.name = tr.getName();
+                            trj.tile = tr.getTile();
+                            tmp.add(trj);
+                        }
+                        j.terraintypes = tmp.toArray(new jsonmap.terrain[tmp.size()]);
+                    }
+                    //tiles
+                    if (t.tiles != null) {
+                        List<jsonmap.tile> tls = new ArrayList<>();
+                        for (int x = 0; x < t.tiles.size(); x++) {
+                            jsonmap.tile jt = new jsonmap.tile();
+                            tile tt = t.tiles.get(x);
+                            jt.id = tt.getTileID();
+                            jt.terrain = tt.getTerrainString();
+
+                            //need to complete for terrain, wangset, objects, animations
+                            if (tt.properties != null) {
+                                List<jsonmap.property> tmprops = new ArrayList<>();
+                                for (int z = 0; z < t.properties.size(); z++) {
+                                    property p = t.properties.get(z);
+                                    jsonmap.property pj = new jsonmap.property();
+                                    pj.name = p.getName();
+                                    pj.type = p.getType();
+                                    pj.value = p.getValue();
+                                    tmprops.add(pj);
+                                }
+                                jt.properties = tmprops.toArray(new jsonmap.property[tmprops.size()]);
+                            }
+
+                            if (tt.animation != null) {
+                                List<jsonmap.animate> tmp = new ArrayList<>();
+                                for (int y = 0; y < tt.animation.size(); y++) {
+                                    jsonmap.animate p = new jsonmap.animate();
+                                    frame f = tt.animation.get(y);
+                                    p.tileid = f.getTileID();
+                                    p.duration = f.getDuration();
+                                }
+                                jt.animation = tmp.toArray(new jsonmap.animate[tmp.size()]);
+                            }
+                            tls.add(jt);
+                        }
+                        j.tiles = tls.toArray(new jsonmap.tile[tls.size()]);
+                    }
+                    jtsets.add(j);
+                }
+                jsn.tilesets = jtsets.toArray(new jsonmap.tileset[jtsets.size()]);
+            }
+
+            //Set layers
+            if (layers != null) {
+                List<jsonmap.layer> lays = new ArrayList<>();
+                for (int i = 0; i < layers.size(); i++) {
+                    jsonmap.layer lj = new jsonmap.layer();
+                    layer l = layers.get(i);
+                    lj.name = l.getName();
+                    lj.opacity = l.getOpacity();
+                    lj.visible = l.isVisible();
+
+                    switch (l.getType()) {
+                        case TILE:
+                            ////
+                            lj.type = "tilelayer";
+                            lj.encoding = encoding;
+                            lj.compression = compression;
+
+                        if (encoding == null) encoding = "csv";
+                        if (encoding.equalsIgnoreCase("csv")) {
+                            lj.data=savecsv(i);
+                        } else if (encoding.equalsIgnoreCase("base64") && compression.equalsIgnoreCase("zlib")) {
+                            lj.data = decoder.savebase64zlib(i,layers);
+                        } else if (encoding.equalsIgnoreCase("base64") && compression.equalsIgnoreCase("gzip")) {
+                            lj.data = decoder.savebase64gzip(i,layers);
+                        } else if (encoding.equalsIgnoreCase("base64")) {
+                            lj.data = decoder.savebase64(i,layers);
+                        } else if (encoding.equalsIgnoreCase("xml")) {
+                            //not supported
+                        }
+
+                            break;
+                        case OBJECT:
+                            lj.type = "objectgroup";
+
+                        /*
+                        if (lj.objects != null) {
+                            for (int f = 0; f < lj.objects.length; f++) {
+                                jsonmap.object jo = lj.objects[f];
+                                obj o = new obj();
+                                o.setName(jo.name);
+                                o.setX(jo.x);
+                                o.setY(jo.y);
+                                o.setW(jo.width);
+                                o.setH(jo.height);
+                                o.setRotation(jo.rotation);
+                                if (o.getW() == 0 && o.getH() == 0) o.setType("point");
+
+                                if (jo.properties != null) {
+                                    for (int y = 0; y < jo.properties.length; y++) {
+                                        jsonmap.property p = jo.properties[y];
+                                        o.getProperties().add(new property(p.name, p.type, p.value));
+                                    }
+                                }
+
+                                l.getObjects().add(o);
+                            }
+                        }
+
+                         */
+
+
+                            break;
+                        case IMAGE:
+                            lj.type = "imagelayer";
+                            if (l.getImage() != null) {
+                                lj.image = l.getImage();
+                            }
+
+                            break;
+                    }
+
+
+                    if (l.properties != null) {
+                        List<jsonmap.property> tmprops = new ArrayList<>();
+                        for (int z = 0; z < l.properties.size(); z++) {
+                            property p = l.properties.get(z);
+                            jsonmap.property pj = new jsonmap.property();
+                            pj.name = p.getName();
+                            pj.type = p.getType();
+                            pj.value = p.getValue();
+                            tmprops.add(pj);
+                        }
+                        lj.properties = tmprops.toArray(new jsonmap.property[tmprops.size()]);
+                    }
+                    lays.add(lj);
+                }
+                jsn.layers = lays.toArray(new jsonmap.layer[lays.size()]);
+            }
+
+            ////////////////////////
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    public void loadjsonmap(final FileHandle f) {
+        try {
+            Json json = new Json();
+            if (f.exists()) {
+                String ss = f.readString();
+                ss = ss.replace("\"class\"","\"class_x\"");
+                jsn = json.fromJson(jsonmap.class, ss);
+                curdir=f.parent().path();
+                curfile=f.name();
+                getjsonmap();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void savejsonmap(final FileHandle f) {
+        try {
+            Json json = new Json();
+            JsonValue.PrettyPrintSettings pps = new JsonValue.PrettyPrintSettings();
+            JsonWriter.OutputType op = JsonWriter.OutputType.json;
+            op.quoteName("name");
+            pps.outputType=op;
+            String se = json.prettyPrint(jsn,pps);
+            se = se.replace("\"class_x\"","\"class\"");
+            writeThis(f.path(), se);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void loadpng(final FileHandle f){
@@ -17194,6 +17685,7 @@ private void refreshGenerator(){
         String isi = "";
         String fname = "";
         try {
+
             XmlPullParserFactory xmlFactoryObject = XmlPullParserFactory.newInstance();
             XmlPullParser myParser = xmlFactoryObject.newPullParser();
             String internalpath = "rusted_warfare/assets/tilesets";
@@ -17216,19 +17708,30 @@ private void refreshGenerator(){
                     tempdiro = tempdiro.substring(3);
                     foredirext = foredirext.substring(0, foredirext.lastIndexOf("/"));
                 }
+                /*
+                while (tempdiro.substring(0, 3).equalsIgnoreCase("..\\")) {
+                    tempdiro = tempdiro.substring(3);
+                    foredirext = foredirext.substring(0, foredirext.lastIndexOf("\\"));
+                }
+
+                 */
             } catch (Exception e) {
             }
 
-            FileHandle filehand = Gdx.files.internal(foredirint + "/" + tempdiri);
 
+            FileHandle filehand = Gdx.files.internal(foredirint + "/" + tempdiri);
             if (!filehand.exists()) {
                 filehand = Gdx.files.absolute(source);
             }
-            tsxpath = filehand.path().substring(0, filehand.path().lastIndexOf("/"));
 
+            if (!filehand.exists()){
+                status("File not found!",3);
+                return;
+            }
+            tsxpath = filehand.path().substring(0, filehand.path().lastIndexOf("/"));
+            //tsxpath = filehand.parent().path();
             fname = filehand.name();
             InputStream stream = filehand.read();
-
 
             myParser.setInput(stream, null);
             int event = myParser.getEventType();
@@ -24349,6 +24852,22 @@ private void refreshGenerator(){
 
     }
 
+
+    public static String convertToAbsolutepath(String relativePath, String curdir){
+        String ss="";
+        if (relativePath.contains("../")){
+            String sr = relativePath;
+            String sb = curdir;
+            while(sr.contains("../")){
+                sb=sb.substring(0,curdir.lastIndexOf("/"));
+                sr = sr.substring(3);
+            }
+            ss = sb+sr;
+        }else{
+            ss = curdir+"/"+relativePath;
+        }
+        return ss;
+    }
     public static String convertToRelativePath(String absolutePath, String relativeTo) {
         StringBuilder relativePath = null;
 

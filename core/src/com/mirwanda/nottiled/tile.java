@@ -11,8 +11,8 @@ public class tile
 	private int activeFrameID;
 	private int activeFrameDuration;
 	private float timer;
-	private java.util.List<frame> animation = new java.util.ArrayList<frame>();
-	private java.util.List<property> properties = new java.util.ArrayList<property>();
+	public java.util.List<frame> animation = new java.util.ArrayList<frame>();
+	public java.util.List<property> properties = new java.util.ArrayList<property>();
 
 	public List<obj> getObjects() {
 		return objects;
@@ -35,6 +35,7 @@ public class tile
 
 	public void setTerrain(String s)
 	{
+		if (s==null) return;
 		if (s.equalsIgnoreCase( "" )) return;
 		String sp[]=s.split(",",-1);
 		int[] tr = new int[]{-1,-1,-1,-1};

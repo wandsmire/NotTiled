@@ -151,7 +151,7 @@ public class FileChooser extends Dialog
 		};
 		Label label;
 		if (!directory.path().equalsIgnoreCase("")) {
-			if (directory.path().length()>Gdx.files.getExternalStoragePath().length()) {
+			if (directory.path().length()>Gdx.files.getExternalStoragePath().length() || Gdx.app.getType()!= Application.ApplicationType.Android) {
 			table.row();
 			Image img = new Image(txback);
 			table.add( img );
