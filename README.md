@@ -25,4 +25,4 @@ Link: <br>
 <a href="https://play.google.com/store/apps/details?id=com.mirwanda.nottiled">Download on Playstore</a><br>
 <a href="https://www.youtube.com/channel/UCbH_vLnWmCxgwW3UUApnVfg">Demos in my Youtube channel</a><br>
 <a href="https://www.mirwanda.com">Main website (you can download desktop version here)</a><br>
-<a href="https://www.patreon.com/wandsmire">Please supportt us on patreon</a><br>
+<a href="https://www.patreon.com/wandsmire">Please support us on Patreon</a><br>
