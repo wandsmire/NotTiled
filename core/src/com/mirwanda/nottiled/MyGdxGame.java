@@ -6795,7 +6795,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         fImportHeight.setText( Tsh + "" );
                     }
                     if (thefile.file().getName().toLowerCase().contains( ".tsx" )) {
-                        loadtsx( openedfile, tilesets, curdir );
+                        loadtsx(convertToRelativePath(curdir,openedfile), tilesets, curdir);
                     } else {
                         addImageTset( thefile );
                     }
@@ -11498,7 +11498,7 @@ private void refreshGenerator(){
         bEditLayer.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                getNewTextInput(pEditLayer, z.edit + ", " + z.layer + " " + z.name, llayerlist.getSelected(), "");
+                getNewTextInput(pEditLayer, z.edit + ", " + z.layer + " " + z.name, layers.get(llayerlist.getSelectedIndex()).getName(), "");
 
             }
         });
@@ -14634,7 +14634,7 @@ private void refreshGenerator(){
                 errors = "";
 
                 loadingfile = true;
-                loadtsx(openedfile, tilesets, curdir);
+                loadtsx(convertToRelativePath(curdir,openedfile), tilesets, curdir);
 
                 saiz = tilesets.size();
                 srr = new String[saiz];
@@ -15233,8 +15233,8 @@ private void refreshGenerator(){
                         srz.attribute("", "opacity", Float.toString(lay.getOpacity()));
 
                     srz.startTag(null, "image");
-                    srz.attribute("", "source", lay.getImage());
-                    srz.attribute("", "trans", lay.getTrans());
+                    if (lay.getImage()!=null) srz.attribute("", "source", lay.getImage());
+                    if (lay.getTrans()!=null) srz.attribute("", "trans", lay.getTrans());
                     srz.attribute("", "width", Integer.toString(lay.getImagewidth()));
                     srz.attribute("", "height", Integer.toString(lay.getImageheight()));
                     srz.endTag(null, "image");
@@ -16533,15 +16533,7 @@ private void refreshGenerator(){
                                 tilesets.add(tempTset);
                             } else {
 
-
-                                String foredir, tempdir;
-                                foredir = curdir;
-                                if (foredir.substring(foredir.length() - 1).equalsIgnoreCase("/")) {
-                                    foredir = foredir.substring(0, foredir.length() - 1);
-                                }
-                                tempdir = source;
-
-                                loadtsx(foredir + "/" + tempdir,tilesets, curdir);
+                                loadtsx(source,tilesets, curdir);
                                 loadingfile = true;
                             }
                         }
@@ -16799,7 +16791,6 @@ private void refreshGenerator(){
 
                         }
                         if (name.equals("object")) {
-                            log("BOS:"+xtree.get(xtree.size()-2));
                             switch (xtree.get(xtree.size()-2)) {
                                 case "map":
                                 case "tile":
@@ -17688,6 +17679,30 @@ private void refreshGenerator(){
             XmlPullParserFactory xmlFactoryObject = XmlPullParserFactory.newInstance();
             XmlPullParser myParser = xmlFactoryObject.newPullParser();
             String internalpath = "rusted_warfare/assets/tilesets";
+
+            String inter = convertToAbsolutepath(source,internalpath);
+            String exter = convertToAbsolutepath(source,curdir);
+            log("S:"+source);
+            log("I:"+internalpath);
+            log("C:"+curdir);
+            log("In:"+inter);
+            log("Ex:"+exter);
+            FileHandle finter = Gdx.files.internal(inter);
+            FileHandle fexter = Gdx.files.absolute(exter);
+            FileHandle filehand;
+            if (finter.exists()){
+                log("inter exist");
+                filehand =finter;
+            }else{
+                if(fexter.exists()){
+                    log("exter exist");
+                    filehand=fexter;
+                }else{
+                    log("tsx not found");
+                    filehand=null;
+                }
+            }
+            /*
             String tempdiro = "", tempdiri = "", foredirint = "", foredirext = "";
 
             try {
@@ -17707,13 +17722,7 @@ private void refreshGenerator(){
                     tempdiro = tempdiro.substring(3);
                     foredirext = foredirext.substring(0, foredirext.lastIndexOf("/"));
                 }
-                /*
-                while (tempdiro.substring(0, 3).equalsIgnoreCase("..\\")) {
-                    tempdiro = tempdiro.substring(3);
-                    foredirext = foredirext.substring(0, foredirext.lastIndexOf("\\"));
-                }
 
-                 */
             } catch (Exception e) {
             }
 
@@ -17723,12 +17732,15 @@ private void refreshGenerator(){
                 filehand = Gdx.files.absolute(source);
             }
 
-            if (!filehand.exists()){
+             */
+
+
+            if (filehand==null){
                 status("File not found!",3);
                 return;
             }
-            tsxpath = filehand.path().substring(0, filehand.path().lastIndexOf("/"));
-            //tsxpath = filehand.parent().path();
+
+            tsxpath = filehand.parent().path();
             fname = filehand.name();
             InputStream stream = filehand.read();
 
@@ -17750,7 +17762,7 @@ private void refreshGenerator(){
                             }
 
                             tempTset.setUsetsx(true);
-                            tempTset.setTsxfile(convertToRelativePath(curdir,source));
+                            tempTset.setTsxfile(source);
 
                             if (myParser.getAttributeValue(null, "columns") != null) {
                                 tempTset.setColumns(Integer.parseInt(myParser.getAttributeValue(null, "columns")));
@@ -17864,6 +17876,25 @@ private void refreshGenerator(){
                             if (foredir.substring(foredir.length() - 1).equalsIgnoreCase("/")) {
                                 foredir = foredir.substring(0, foredir.length() - 1);
                             }
+
+                            ///////////////////
+                            inter = convertToAbsolutepath(tempTset.getSource(),internalpath);
+                            exter = convertToAbsolutepath(tempTset.getSource(),tsxpath);
+                            finter = Gdx.files.internal(inter);
+                            fexter = Gdx.files.absolute(exter);
+
+                            if (finter.exists()){
+                                filehand =finter;
+                            }else{
+                                if(fexter.exists()){
+                                    filehand=fexter;
+                                }else{
+                                    filehand = Gdx.files.internal("empty.jpeg");
+                                }
+                            }
+
+                            ////////////////////
+                            /*
                             tempdiro = tempTset.getSource();
                             tempdiri = tempTset.getSource();
 
@@ -17895,6 +17926,8 @@ private void refreshGenerator(){
                                     filehand = Gdx.files.internal("empty.jpeg");
                                 }
                             }
+
+                             */
                             //errors+=filehand.path()+"\n";
                             try {
                                 if (!alreadyloaded) {
@@ -17917,7 +17950,7 @@ private void refreshGenerator(){
                             } catch (Exception e) {
                                 tempTset.setOriginalwidth(0);
                                 tempTset.setOriginalheight(0);
-                                errors += "Not Found: " + tempdiro + "\n" + e;
+                                errors += "Not Found\n" + e;
                             }
                             if (tempTset.getColumns() == 0) {
                                 tempTset.setColumns((tempTset.getOriginalwidth() - tempTset.getMargin() * 2 + tempTset.getSpacing()) / (tempTset.getTilewidth() + tempTset.getSpacing()));
@@ -23675,8 +23708,7 @@ private void refreshGenerator(){
                             int num = newnum;
                                 if (num <0) continue;
                                 if (num >= Tw*Th) continue;
-
-                                updateTileData(selLayer,num,oi,curtset);
+                                updateTileData(selLayer,num,oi,atst);
 
 
                         } //comma
@@ -24857,11 +24889,21 @@ private void refreshGenerator(){
         if (relativePath.contains("../")){
             String sr = relativePath;
             String sb = curdir;
+
             while(sr.contains("../")){
-                sb=sb.substring(0,curdir.lastIndexOf("/"));
-                sr = sr.substring(3);
+                if(sb.lastIndexOf("/")!=-1)
+                {
+                    sb = sb.substring(0,sb.lastIndexOf("/"));
+                }else{
+                    sb="";
+                }
+                if (sr.length()>3) sr = sr.substring(3);
             }
-            ss = sb+sr;
+            if (sb.equalsIgnoreCase("")){
+                ss = sr;
+            }else{
+                ss = sb+"/"+sr;
+            }
         }else{
             ss = curdir+"/"+relativePath;
         }

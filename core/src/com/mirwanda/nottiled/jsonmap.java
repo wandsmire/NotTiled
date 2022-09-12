@@ -130,6 +130,7 @@ public class jsonmap {
 
     public static class property{
         String name;
+        String propertytype;
         String type;
         String value;
     }

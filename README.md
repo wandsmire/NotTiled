@@ -7,7 +7,7 @@ However, NotTiled features might be quite lacking for game developers (for examp
 
 Sample maps & tilesets included (credit to their own respective creators).
 
-Features:
+Features:  
 - Create custom maps for games that support it, for example: Rusted Warfare.
 - Built in PNG editor.
 - Multiplatform, available for Android, Windows, MacOS, and Linux. (iOS version can be made but it is currently not available in app store).
