@@ -6795,9 +6795,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         fImportHeight.setText( Tsh + "" );
                     }
                     if (thefile.file().getName().toLowerCase().contains( ".tsx" )) {
-                        loadtsx(convertToRelativePath(curdir,openedfile), tilesets, curdir);
+                        if (Gdx.files.getExternalStoragePath().contains("\\")){
+                            loadtsx(thefile, tilesets, curdir);
+                        }else{
+                            loadtsx(thefile, tilesets, curdir);
+                        }
+
                     } else {
-                        addImageTset( thefile );
+                        //sending filehandle, drive letter is irrelevant
+                            addImageTset( thefile );
                     }
 
                     CacheAllTset();
@@ -14046,6 +14052,7 @@ private void refreshGenerator(){
 						templastID+=tilesets.get(i).getTilecount();
 					}
 					*/
+                /*
                 int saiz = tilesets.size();
                 String[] srr = new String[saiz];
                 for (int i = 0; i < saiz; i++) {
@@ -14059,6 +14066,8 @@ private void refreshGenerator(){
                 } else {
                     gotoStage(tTsetMgmt);
                 }
+
+                 */
                 resetCaches();
             }
 
@@ -14378,6 +14387,7 @@ private void refreshGenerator(){
                             file = getFile();
 
                             if (file.path().length() >= 0) {
+
                                 openedfile = file.path();
                                 lastpath = file.parent().path();
                                 log(lastpath);
@@ -14608,7 +14618,7 @@ private void refreshGenerator(){
 
                         switch (filehandles[i].extension().toLowerCase()) {
                             case "tsx":
-                                loadtsx( filehandles[i].path(), tilesets, curdir );
+                                loadtsx( filehandles[i], tilesets, curdir );
                                 break;
                             case "png":
                             case "jpg":
@@ -14634,7 +14644,7 @@ private void refreshGenerator(){
                 errors = "";
 
                 loadingfile = true;
-                loadtsx(convertToRelativePath(curdir,openedfile), tilesets, curdir);
+                loadtsx(file, tilesets, curdir);
 
                 saiz = tilesets.size();
                 srr = new String[saiz];
@@ -14889,7 +14899,7 @@ private void refreshGenerator(){
                     tileset t = tilesets.get(i);
                     if (t.isUsetsx()) {
                         srz.startTag(null, "tileset");
-                        srz.attribute("", "source", t.getTsxfile());
+                        if (t.getTsxfile()!=null) srz.attribute("", "source", t.getTsxfile());
                         srz.attribute("", "firstgid", Integer.toString(t.getFirstgid()));
                         srz.endTag(null, "tileset");
                         saveTsx(i);
@@ -16496,7 +16506,7 @@ private void refreshGenerator(){
                             String source = "";
 
                             source = myParser.getAttributeValue(null, "source");
-
+                            log("Loading tileset..."+source);
                             xtree.add("tileset");
                             alreadyloaded = false;
 
@@ -16533,7 +16543,35 @@ private void refreshGenerator(){
                                 tilesets.add(tempTset);
                             } else {
 
-                                loadtsx(source,tilesets, curdir);
+                                ////////////
+                                //if it is in windows, it is not internal, and if it is not started with C:
+                                if (Gdx.files.getExternalStoragePath().contains("\\"))
+                                {
+                                        if(!curdir.startsWith("C:")) curdir="C:"+curdir;
+                                }
+
+
+                                String internalpath = "rusted_warfare/assets/tilesets";
+                                String inter = convertToAbsolutepath(source,internalpath);
+                                String exter = convertToAbsolutepath(source,curdir);
+                                FileHandle finter = Gdx.files.internal(inter);
+                                FileHandle fexter = Gdx.files.absolute(exter);
+                                FileHandle filehand;
+                                if (finter.exists()){
+                                    log("inter exist");
+                                    filehand =finter;
+                                }else{
+                                    if(fexter.exists()){
+                                        log("exter exist");
+                                        filehand=fexter;
+                                    }else{
+                                        log("tsx not found");
+                                        filehand=null;
+                                    }
+                                }
+
+                                ////////////
+                                loadtsx(filehand,tilesets, curdir);
                                 loadingfile = true;
                             }
                         }
@@ -17238,7 +17276,7 @@ private void refreshGenerator(){
                                 }
                                 tempdir = source;
 
-                                loadtsx(foredir + "/" + tempdir,tilesets2, tempcurdir);
+                                loadtsx(Gdx.files.absolute(foredir + "/" + tempdir),tilesets2, tempcurdir);
                                 //loadingfile = true;
                             }
                         }
@@ -17667,82 +17705,24 @@ private void refreshGenerator(){
         return 1;
     }
 
-    public void loadtsx(String source, java.util.List<tileset> tilesets, String curdir){
-        //msgbox(source);
-        //loadingfile = true;
+    public void loadtsx(FileHandle source, java.util.List<tileset> tilesets, String curdir){
         String tsxpath = "";
         String owner = "";
         String isi = "";
         String fname = "";
         try {
-
+            log("loading tsx..."+source.path());
             XmlPullParserFactory xmlFactoryObject = XmlPullParserFactory.newInstance();
             XmlPullParser myParser = xmlFactoryObject.newPullParser();
-            String internalpath = "rusted_warfare/assets/tilesets";
 
-            String inter = convertToAbsolutepath(source,internalpath);
-            String exter = convertToAbsolutepath(source,curdir);
-            log("S:"+source);
-            log("I:"+internalpath);
-            log("C:"+curdir);
-            log("In:"+inter);
-            log("Ex:"+exter);
-            FileHandle finter = Gdx.files.internal(inter);
-            FileHandle fexter = Gdx.files.absolute(exter);
-            FileHandle filehand;
-            if (finter.exists()){
-                log("inter exist");
-                filehand =finter;
-            }else{
-                if(fexter.exists()){
-                    log("exter exist");
-                    filehand=fexter;
-                }else{
-                    log("tsx not found");
-                    filehand=null;
-                }
-            }
-            /*
-            String tempdiro = "", tempdiri = "", foredirint = "", foredirext = "";
-
-            try {
-                tempdiri = source.substring(curdir.length() + 1);
-                foredirint = internalpath;
-                if (tempdiri.lastIndexOf("/", tempdiri.lastIndexOf("/") - 1) != -1) {
-                    tempdiri = tempdiri.substring(tempdiri.lastIndexOf("/", tempdiri.lastIndexOf("/") - 1));
-                    tempdiri = tempdiri.replace("tilesets/", "");
-                }
-            } catch (Exception e) {
-            }
-
-            try {
-                tempdiro = source.substring(curdir.length() + 1);
-                foredirext = curdir;
-                while (tempdiro.substring(0, 3).equalsIgnoreCase("../")) {
-                    tempdiro = tempdiro.substring(3);
-                    foredirext = foredirext.substring(0, foredirext.lastIndexOf("/"));
-                }
-
-            } catch (Exception e) {
-            }
-
-
-            FileHandle filehand = Gdx.files.internal(foredirint + "/" + tempdiri);
-            if (!filehand.exists()) {
-                filehand = Gdx.files.absolute(source);
-            }
-
-             */
-
-
-            if (filehand==null){
-                status("File not found!",3);
+            if (!source.exists()){
+                status("File does not exist!",3);
                 return;
             }
 
-            tsxpath = filehand.parent().path();
-            fname = filehand.name();
-            InputStream stream = filehand.read();
+            tsxpath = source.parent().path();
+            fname = source.name();
+            InputStream stream = source.read();
 
             myParser.setInput(stream, null);
             int event = myParser.getEventType();
@@ -17762,7 +17742,33 @@ private void refreshGenerator(){
                             }
 
                             tempTset.setUsetsx(true);
-                            tempTset.setTsxfile(source);
+                            String tsxs = source.path();
+
+                            //if it is in windows, it is not internal, and if it is not started with C:
+                            if (Gdx.files.getExternalStoragePath().contains("\\"))
+                            {
+                                if (!tsxs.startsWith("rusted_warfare")){
+                                    if(!tsxs.startsWith("C:")) tsxs="C:"+tsxs;
+                                    if(!curdir.startsWith("C:")) curdir="C:"+curdir;
+                                }
+                            }
+
+
+                            if (!tsxs.startsWith("rusted_warfare")){
+                                log("this tsx is external.");
+                                tempTset.setTsxfile(convertToRelativePath(curdir,tsxs));
+                                log("curdir:"+curdir);
+                                log("tsxs:"+tsxs);
+                                log("convert:"+tempTset.getTsxfile());
+
+                            }else{
+                                String internalpath = "rusted_warfare/assets/tilesets";
+                                tempTset.setTsxfile(convertToRelativePath(internalpath,tsxs));
+                                log("this tsx is internal.");
+                                log("curdir:"+curdir);
+                                log("tsxs:"+tsxs);
+                                log("convert:"+tempTset.getTsxfile());
+                            }
 
                             if (myParser.getAttributeValue(null, "columns") != null) {
                                 tempTset.setColumns(Integer.parseInt(myParser.getAttributeValue(null, "columns")));
@@ -17787,7 +17793,6 @@ private void refreshGenerator(){
                             } else {
                                 tempTset.setTileheight(Tsh);
                             }
-                            tilesets.add(tempTset);
                         }
                         if (name.equals("terrain")) {
                             terrain tr = new terrain();
@@ -17799,7 +17804,8 @@ private void refreshGenerator(){
                         if (name.equals("tile")) {
                             tempTile = new tile();
                             owner = "tile";
-                            tempTile.setTileID(Integer.parseInt(myParser.getAttributeValue(null, "id")));
+                            String id=myParser.getAttributeValue(null, "id");
+                            if (!id.equalsIgnoreCase("")) tempTile.setTileID(Integer.parseInt(id));
                             if (myParser.getAttributeValue(null, "terrain") != null) {
                                 tempTile.setTerrain(myParser.getAttributeValue(null, "terrain"));
                             }
@@ -17829,31 +17835,33 @@ private void refreshGenerator(){
 
                                     Texture bucket;
                                     String base64 = v;
-                                    byte[] decodedBytes = Base64Coder.decode(base64);
-                                    bucket = new Texture(new Pixmap(decodedBytes, 0, decodedBytes.length));
+                                    if(base64!=null) {
+                                        byte[] decodedBytes = Base64Coder.decode(base64);
+                                        bucket = new Texture(new Pixmap(decodedBytes, 0, decodedBytes.length));
 
 
-                                    tempTset.setTexture(bucket);
+                                        tempTset.setTexture(bucket);
 
-                                    if (tempTset.getTrans() != null) {
-                                        tempTset.setTexture(chromaKey(tempTset.getTexture(), tempTset.getTrans()));
+                                        if (tempTset.getTrans() != null) {
+                                            tempTset.setTexture(chromaKey(tempTset.getTexture(), tempTset.getTrans()));
+                                        }
+
+                                        tempTset.setPixmap(pixmapfromtexture(bucket, tempTset.getTrans()));
+
+
+                                        tempTset.setOriginalwidth(bucket.getWidth());
+                                        tempTset.setOriginalheight(bucket.getHeight());
+                                        if (tempTset.getColumns() == 0) {
+                                            tempTset.setColumns((tempTset.getOriginalwidth() - tempTset.getMargin() * 2 + tempTset.getSpacing()) / (tempTset.getTilewidth() + tempTset.getSpacing()));
+                                            tempTset.setWidth(tempTset.getColumns());
+                                            tempTset.setHeight((tempTset.getOriginalheight() - tempTset.getMargin() * 2 + tempTset.getSpacing()) / (tempTset.getTileheight() + tempTset.getSpacing()));
+                                            tempTset.setTilecount(tempTset.getWidth() * tempTset.getHeight());
+                                        }
+
+                                        templastID += tempTset.getWidth() * tempTset.getHeight();
+
+                                        alreadyloaded = true;
                                     }
-
-                                    tempTset.setPixmap(pixmapfromtexture(bucket, tempTset.getTrans()));
-
-
-                                    tempTset.setOriginalwidth(bucket.getWidth());
-                                    tempTset.setOriginalheight(bucket.getHeight());
-                                    if (tempTset.getColumns() == 0) {
-                                        tempTset.setColumns((tempTset.getOriginalwidth() - tempTset.getMargin() * 2 + tempTset.getSpacing()) / (tempTset.getTilewidth() + tempTset.getSpacing()));
-                                        tempTset.setWidth(tempTset.getColumns());
-                                        tempTset.setHeight((tempTset.getOriginalheight() - tempTset.getMargin() * 2 + tempTset.getSpacing()) / (tempTset.getTileheight() + tempTset.getSpacing()));
-                                        tempTset.setTilecount(tempTset.getWidth() * tempTset.getHeight());
-                                    }
-
-                                    templastID += tempTset.getWidth() * tempTset.getHeight();
-
-                                    alreadyloaded = true;
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                    // ErrorBung(e, "okok.txt");
@@ -17878,10 +17886,13 @@ private void refreshGenerator(){
                             }
 
                             ///////////////////
-                            inter = convertToAbsolutepath(tempTset.getSource(),internalpath);
-                            exter = convertToAbsolutepath(tempTset.getSource(),tsxpath);
-                            finter = Gdx.files.internal(inter);
-                            fexter = Gdx.files.absolute(exter);
+                            String internalpath = "rusted_warfare/assets/tilesets";
+
+                            String inter = convertToAbsolutepath(tempTset.getSource(),internalpath);
+                            String exter = convertToAbsolutepath(tempTset.getSource(),tsxpath);
+                            FileHandle finter = Gdx.files.internal(inter);
+                            FileHandle fexter = Gdx.files.absolute(exter);
+                            FileHandle filehand;
 
                             if (finter.exists()){
                                 filehand =finter;
@@ -17893,42 +17904,6 @@ private void refreshGenerator(){
                                 }
                             }
 
-                            ////////////////////
-                            /*
-                            tempdiro = tempTset.getSource();
-                            tempdiri = tempTset.getSource();
-
-                            foredirint = tsxpath;
-                            foredirext = tsxpath;
-
-                            while (tempdiro.substring(0, 3).equalsIgnoreCase("../")) {
-                                tempdiro = tempdiro.substring(3);
-                                if (foredirext.lastIndexOf("/")==-1){
-                                    foredirext = "";
-
-                                }else
-                                {
-                                    foredirext = foredirext.substring(0, foredirext.lastIndexOf("/"));
-                                }
-                            }
-
-                            if (tempdiri.lastIndexOf("/", tempdiri.lastIndexOf("/") - 1) != -1) {
-                                tempdiri = tempdiri.substring(tempdiri.lastIndexOf("/", tempdiri.lastIndexOf("/") - 1));
-                                tempdiri = tempdiri.replace("tilesets/", "");
-                            }
-
-
-                            filehand = Gdx.files.internal(foredirint + "/" + tempdiri);
-
-                            if (!filehand.exists()) {
-                                filehand = Gdx.files.absolute(foredirext + "/" + tempdiro);
-                                if (!filehand.exists()) {
-                                    filehand = Gdx.files.internal("empty.jpeg");
-                                }
-                            }
-
-                             */
-                            //errors+=filehand.path()+"\n";
                             try {
                                 if (!alreadyloaded) {
                                     tempTset.setTexture( new Texture( filehand ) );
@@ -17974,7 +17949,7 @@ private void refreshGenerator(){
                             owner = "tileset";
                         }
                         if (name.equals("tileset")) {
-
+                            tilesets.add(tempTset);
                             tempTset = null;
                         }
                         if (name.equals("property")) {
@@ -17995,7 +17970,8 @@ private void refreshGenerator(){
                 }
                 event = myParser.next();
             }
-            tsxFile = source;
+            tsxFile = source.path();
+
             tempTset = null;
             stream.close();
         } catch (Exception e) {
@@ -18431,11 +18407,14 @@ private void refreshGenerator(){
                     int saiz = tilesets.size();
 
 
+                    /*
                     String[] srr = new String[saiz];
                     for (int i = 0; i < saiz; i++) {
                         srr[i] = tilesets.get(i).getName();
                     }
                     ltsetlist.setItems(srr);
+
+                     */
 
 
                     if (tilesets.size() > 0) {
@@ -24909,11 +24888,11 @@ private void refreshGenerator(){
         }
         return ss;
     }
+
+
     public static String convertToRelativePath(String absolutePath, String relativeTo) {
         StringBuilder relativePath = null;
 
-// Thanks to:
-// http://mrpmorris.blogspot.com/2007/05/convert-absolute-path-to-relative-path.html
         absolutePath = absolutePath.replaceAll("\\\\", "/");
         relativeTo = relativeTo.replaceAll("\\\\", "/");
 
@@ -24944,6 +24923,8 @@ private void refreshGenerator(){
 //Build up the relative path
                 relativePath = new StringBuilder();
 //Add on the ..
+
+
                 for (index = lastCommonRoot + 1; index < absoluteDirectories.length; index++) {
                     if (absoluteDirectories[index].length() > 0) {
                         relativePath.append("../");
@@ -24953,6 +24934,12 @@ private void refreshGenerator(){
                     relativePath.append(relativeDirectories[index] + "/");
                 }
                 relativePath.append(relativeDirectories[relativeDirectories.length - 1]);
+            }
+        }
+
+        if (relativePath==null){
+            if (relativeTo.length()>absolutePath.length()){
+                relativePath = new StringBuilder().append( relativeTo.substring(absolutePath.length()));
             }
         }
         return relativePath == null ? null : relativePath.toString();
