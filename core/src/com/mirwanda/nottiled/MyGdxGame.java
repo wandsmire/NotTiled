@@ -16548,6 +16548,9 @@ private void refreshGenerator(){
                                 if (Gdx.files.getExternalStoragePath().contains("\\"))
                                 {
                                         if(!curdir.startsWith("C:")) curdir="C:"+curdir;
+                                    curdir=curdir.replace("\\","/");
+                                    source=source.replace("\\","/");
+
                                 }
 
 
@@ -17710,6 +17713,7 @@ private void refreshGenerator(){
         String owner = "";
         String isi = "";
         String fname = "";
+        alreadyloaded=false;
         try {
             log("loading tsx..."+source.path());
             XmlPullParserFactory xmlFactoryObject = XmlPullParserFactory.newInstance();
@@ -17743,7 +17747,6 @@ private void refreshGenerator(){
 
                             tempTset.setUsetsx(true);
                             String tsxs = source.path();
-
                             //if it is in windows, it is not internal, and if it is not started with C:
                             if (Gdx.files.getExternalStoragePath().contains("\\"))
                             {
@@ -17751,23 +17754,17 @@ private void refreshGenerator(){
                                     if(!tsxs.startsWith("C:")) tsxs="C:"+tsxs;
                                     if(!curdir.startsWith("C:")) curdir="C:"+curdir;
                                 }
+                                curdir=curdir.replace("\\","/");
+                                tsxs=tsxs.replace("\\","/");
                             }
 
 
                             if (!tsxs.startsWith("rusted_warfare")){
-                                log("this tsx is external.");
                                 tempTset.setTsxfile(convertToRelativePath(curdir,tsxs));
-                                log("curdir:"+curdir);
-                                log("tsxs:"+tsxs);
-                                log("convert:"+tempTset.getTsxfile());
 
                             }else{
                                 String internalpath = "rusted_warfare/assets/tilesets";
                                 tempTset.setTsxfile(convertToRelativePath(internalpath,tsxs));
-                                log("this tsx is internal.");
-                                log("curdir:"+curdir);
-                                log("tsxs:"+tsxs);
-                                log("convert:"+tempTset.getTsxfile());
                             }
 
                             if (myParser.getAttributeValue(null, "columns") != null) {
@@ -17831,42 +17828,39 @@ private void refreshGenerator(){
                             if (tempe.getName().equalsIgnoreCase("embedded_png")) {
 
                                 String foredir = "", tempdir = "", combo = "";
-                                try {
 
                                     Texture bucket;
                                     String base64 = v;
                                     if(base64!=null) {
-                                        byte[] decodedBytes = Base64Coder.decode(base64);
-                                        bucket = new Texture(new Pixmap(decodedBytes, 0, decodedBytes.length));
+                                        try {
+                                            byte[] decodedBytes = Base64Coder.decode(base64);
+                                            bucket = new Texture(new Pixmap(decodedBytes, 0, decodedBytes.length));
+                                            tempTset.setTexture(bucket);
 
+                                            if (tempTset.getTrans() != null) {
+                                                tempTset.setTexture(chromaKey(tempTset.getTexture(), tempTset.getTrans()));
+                                            }
 
-                                        tempTset.setTexture(bucket);
+                                            tempTset.setPixmap(pixmapfromtexture(bucket, tempTset.getTrans()));
 
-                                        if (tempTset.getTrans() != null) {
-                                            tempTset.setTexture(chromaKey(tempTset.getTexture(), tempTset.getTrans()));
+                                            tempTset.setOriginalwidth(bucket.getWidth());
+                                            tempTset.setOriginalheight(bucket.getHeight());
+                                            if (tempTset.getColumns() == 0) {
+                                                tempTset.setColumns((tempTset.getOriginalwidth() - tempTset.getMargin() * 2 + tempTset.getSpacing()) / (tempTset.getTilewidth() + tempTset.getSpacing()));
+                                                tempTset.setWidth(tempTset.getColumns());
+                                                tempTset.setHeight((tempTset.getOriginalheight() - tempTset.getMargin() * 2 + tempTset.getSpacing()) / (tempTset.getTileheight() + tempTset.getSpacing()));
+                                                tempTset.setTilecount(tempTset.getWidth() * tempTset.getHeight());
+                                            }
+
+                                            templastID += tempTset.getWidth() * tempTset.getHeight();
+
+                                            alreadyloaded = true;
+                                        }catch(Exception e){
+                                            e.printStackTrace();
+                                            log("reading base64 failed");
+                                            log("alreadyloaded="+alreadyloaded);
                                         }
-
-                                        tempTset.setPixmap(pixmapfromtexture(bucket, tempTset.getTrans()));
-
-
-                                        tempTset.setOriginalwidth(bucket.getWidth());
-                                        tempTset.setOriginalheight(bucket.getHeight());
-                                        if (tempTset.getColumns() == 0) {
-                                            tempTset.setColumns((tempTset.getOriginalwidth() - tempTset.getMargin() * 2 + tempTset.getSpacing()) / (tempTset.getTilewidth() + tempTset.getSpacing()));
-                                            tempTset.setWidth(tempTset.getColumns());
-                                            tempTset.setHeight((tempTset.getOriginalheight() - tempTset.getMargin() * 2 + tempTset.getSpacing()) / (tempTset.getTileheight() + tempTset.getSpacing()));
-                                            tempTset.setTilecount(tempTset.getWidth() * tempTset.getHeight());
-                                        }
-
-                                        templastID += tempTset.getWidth() * tempTset.getHeight();
-
-                                        alreadyloaded = true;
                                     }
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                   // ErrorBung(e, "okok.txt");
-                                }
-
 
                             }
 
@@ -17874,39 +17868,59 @@ private void refreshGenerator(){
 
                         }
                         if (name.equals("image")) {
+                            log("loading image from tsx...");
                             tempTset.setTrans(myParser.getAttributeValue(null, "trans"));
+                            log("trans="+tempTset.getTrans());
                             tempTset.setSource(myParser.getAttributeValue(null, "source"));
-
-
-                            String foredir, tempdir, combo;
-                            foredir = tsxpath;//should be tsxpath to folloe tsx pathing but whatever!!
-                            //errors+=tsxpath+"ole\n";
-                            if (foredir.substring(foredir.length() - 1).equalsIgnoreCase("/")) {
-                                foredir = foredir.substring(0, foredir.length() - 1);
-                            }
+                            log("source="+tempTset.getSource());
 
                             ///////////////////
                             String internalpath = "rusted_warfare/assets/tilesets";
+
+
+                            if (Gdx.files.getExternalStoragePath().contains("\\"))
+                            {
+                                log("Backslash found!\n");
+                                log("Current Directory="+curdir+"\n");
+                                log("TSX Path="+tsxpath+"\n");
+                                if (!tsxpath.startsWith("rusted_warfare")){
+                                    if(!tsxpath.startsWith("C:")) tsxpath="C:"+tsxpath;
+                                }
+                                tsxpath=tsxpath.replace("\\","/");
+                                log("New TSX Path="+tsxpath+"\n");
+                            }
 
                             String inter = convertToAbsolutepath(tempTset.getSource(),internalpath);
                             String exter = convertToAbsolutepath(tempTset.getSource(),tsxpath);
                             FileHandle finter = Gdx.files.internal(inter);
                             FileHandle fexter = Gdx.files.absolute(exter);
                             FileHandle filehand;
+                            log("internalpath="+internalpath);
+                            log("tsxpath="+tsxpath);
+                            log("source="+tempTset.getSource());
+                            log("inter="+inter);
+                            log("exter="+exter);
 
                             if (finter.exists()){
+                                log("inter exists");
                                 filehand =finter;
                             }else{
                                 if(fexter.exists()){
+                                    log("exter exists");
                                     filehand=fexter;
+                                    log("filehand set as fexter");
                                 }else{
+                                    log("Does not exists");
                                     filehand = Gdx.files.internal("empty.jpeg");
                                 }
                             }
 
                             try {
+                                log("checking already loaded var");
                                 if (!alreadyloaded) {
+                                    log("Texture is not yet loaded from embedded_png");
                                     tempTset.setTexture( new Texture( filehand ) );
+                                    if (tempTset.getTexture()!=null) log("Texture is set!");
                                     tempTset.setPixmap( pixmapfromtexture( tempTset.getTexture(), tempTset.getTrans() ) );
                                 }
                                 if (tempTset.getTrans() != null) {
@@ -17923,9 +17937,7 @@ private void refreshGenerator(){
                                     tempTset.setOriginalheight(sii.getHeight());
                                 }
                             } catch (Exception e) {
-                                tempTset.setOriginalwidth(0);
-                                tempTset.setOriginalheight(0);
-                                errors += "Not Found\n" + e;
+                                e.printStackTrace();
                             }
                             if (tempTset.getColumns() == 0) {
                                 tempTset.setColumns((tempTset.getOriginalwidth() - tempTset.getMargin() * 2 + tempTset.getSpacing()) / (tempTset.getTilewidth() + tempTset.getSpacing()));
@@ -17949,6 +17961,10 @@ private void refreshGenerator(){
                             owner = "tileset";
                         }
                         if (name.equals("tileset")) {
+                            if (tempTset.getTexture()==null){
+                                log("NO TEXTURE!");
+                                return;
+                            }
                             tilesets.add(tempTset);
                             tempTset = null;
                         }
