@@ -6673,6 +6673,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         status(z.filesaved,5);
 
     }
+
+
     public void loadExport() {
         tExport = new Table();
         tExport.setFillParent( true );
@@ -6683,9 +6685,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         SelectBox sbExport = new SelectBox(skin);
 
         if (Gdx.app.getType()==Android){
-            sbExport.setItems((Object[]) new String[]{"Export to storage", z.exportastemplate, z.exporttopng, z.selectionastileset, z.exportastileset,z.exporttolua,z.exporttojson,z.exporttomidi});
+            sbExport.setItems((Object[]) new String[]{"Export to storage", z.exportastemplate, z.exporttopng, z.selectionastileset, z.exportastileset,"Export as Remixed Dungeon map", z.exporttolua,z.exporttojson,z.exporttomidi});
         }else{
-            sbExport.setItems((Object[]) new String[]{"Export as...", z.exportastemplate, z.exporttopng, z.selectionastileset, z.exportastileset,z.exporttolua,z.exporttojson,z.exporttomidi});
+            sbExport.setItems((Object[]) new String[]{"Export as...", z.exportastemplate, z.exporttopng, z.selectionastileset, z.exportastileset,"Export as Remixed Dungeon map", z.exporttolua,z.exporttojson,z.exporttomidi});
         }
 
         tExport.add( new Label( z.filename, skin ) ).row();
@@ -6719,14 +6721,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         cue( "astset" );
                         break;
                     case 5:
+                        exporttorpd( fExportFilename.getText() );
+                        cue( "torpd" );
+                        break;
+                    case 6:
                         exporttolua( fExportFilename.getText() );
                         cue( "tolua" );
                         break;
-                    case 6:
+                    case 7:
                         exporttojson( fExportFilename.getText() );
                         cue( "tojson" );
                         break;
-                    case 7:
+                    case 8:
                         exporttomidi( fExportFilename.getText() );
                         cue( "tomidi" );
                         break;
@@ -16104,6 +16110,224 @@ private void refreshGenerator(){
             e.printStackTrace();
         }
     }
+
+
+    public void exporttorpd(final String filename) {
+        try {
+            setRPDmap();
+            Json json = new Json();
+            JsonValue.PrettyPrintSettings pps = new JsonValue.PrettyPrintSettings();
+            JsonWriter.OutputType op = JsonWriter.OutputType.json;
+            op.quoteName("name");
+            pps.outputType=op;
+            String se = json.prettyPrint(rd,pps);
+            FileHandle fh = Gdx.files.absolute(curdir+"/"+filename+".json");
+            fh.writeString(se,false);
+            byte[] b = fh.readBytes();
+            face.saveasFile(b, "export.json");
+            status(z.exportfinished, 3);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public String filenameOnly(String path){
+        int el = path.lastIndexOf("/");
+        if (el!=-1){
+            return path.substring(el+1);
+        }else{
+            return path;
+        }
+    }
+
+    rpd rd;
+    public void setRPDmap(){
+///////////////////////////
+        try {
+            rd = new rpd();
+            rd.width = Tw;
+            rd.height = Th;
+            rd.water="water0.png";
+            rd.tiles="tiles0.png";
+            List<Integer[]> exits = new ArrayList<>();
+            List<rpd.obj> robjects = new ArrayList<>();
+            List<rpd.obj> rmob = new ArrayList<>();
+            List<rpd.obj> ritems = new ArrayList<>();
+            for (int i=0;i<layers.size();i++){
+                layer l = layers.get(i);
+                log("-"+l.getName()+"-");
+                switch(l.getName()){
+                        //object layers
+                    case "objects":
+                    case "mob":
+                    case "items":
+                        for(obj o : l.getObjects()){
+                        rpd.obj ro = new rpd.obj();
+                        rpd.tele tl = new rpd.tele();
+                        ro.kind = o.getName();
+                        ro.x = (int) (o.getX() / Tsw);
+                        ro.y = (int) (o.getY() / Tsh);
+                        if (o.getProperties().size()>0){
+                            for(property p: o.getProperties()){
+                                try {
+                                    if (p.getName().equalsIgnoreCase("text"))
+                                        ro.text = p.getValue();
+                                    if (p.getName().equalsIgnoreCase("levelId"))
+                                        ro.levelId = p.getValue();
+                                    if (p.getName().equalsIgnoreCase("depth"))
+                                        ro.depth = Integer.parseInt(p.getValue());
+                                    if (p.getName().equalsIgnoreCase("uses"))
+                                        ro.uses = Integer.parseInt(p.getValue());
+                                    if (p.getName().equalsIgnoreCase("trapKind"))
+                                        ro.trapKind = p.getValue();
+                                    if (p.getName().equalsIgnoreCase("script"))
+                                        ro.script = p.getValue();
+                                    if (p.getName().equalsIgnoreCase("object_desc"))
+                                        ro.object_desc = p.getValue();
+                                    if (p.getName().equalsIgnoreCase("target_levelId"))
+                                        tl.levelId = p.getValue();
+                                    if (p.getName().equalsIgnoreCase("target_x"))
+                                        tl.x = Integer.parseInt(p.getValue());
+                                    if (p.getName().equalsIgnoreCase("target_y"))
+                                        tl.y = Integer.parseInt(p.getValue());
+
+                                }catch(Exception e){}
+                            }
+                        }
+
+                            if (tl.levelId!=null){
+                                ro.target=tl;
+                            }
+
+                            switch(o.getType().toLowerCase()){
+                                case "mob":
+                                    rmob.add(ro);
+                                    break;
+                                case "object":
+                                    robjects.add(ro);
+                                    break;
+                                case "item":
+                                    ritems.add(ro);
+                                    break;
+                            }
+                        }
+                        break;
+
+                        //tile layers
+                    case "logic":
+                    case "base":
+                    case "deco":
+                    case "deco2":
+                    case "roof_base":
+                    case "roof_deco":
+                        List<Integer> tmp = new ArrayList<>();
+                        String tset ="";int itset=-1;
+                        for(int j=0;j<Tw*Th;j++) {
+                            if (l.getTset().get(j)!=-1) {
+                                tileset t = tilesets.get(l.getTset().get(j));
+                                if (!tset.equalsIgnoreCase("")) {
+                                    if (!tset.equalsIgnoreCase(filenameOnly(t.getSource()))) {
+                                        status("Layer" + i + "contains more than 1 tileset", 3);
+                                        log("Layer" + i + "contains more than 1 tileset");
+                                        return;
+                                    }
+                                } else {
+                                    tset = filenameOnly(t.getSource());
+                                    itset = l.getTset().get(j);
+                                }
+                                int idx = l.getStr().get(j).intValue()-t.getFirstgid();
+                                tmp.add(idx);
+                                if(l.getName().equalsIgnoreCase("logic")){
+                                    if (idx==7){
+                                        rd.entrance = new Integer[2];
+                                        rd.entrance[0] = j % Tw;
+                                        rd.entrance[1] = j / Tw;
+                                    }
+                                    if (idx==8 || idx==25 || idx==26){
+                                        Integer[] toadd = new Integer[2];
+                                        toadd[0] = j % Tw;
+                                        toadd[1] = j / Tw;
+                                        exits.add(toadd);
+                                    }
+                                }
+                            }else{
+                                tmp.add(-1);
+                            }
+                        }
+                        rd.multiExit = exits.toArray(new Integer[exits.size()][]);
+
+                        if (tset.equalsIgnoreCase("")){
+                            status("Layer" + i + "is empty!", 3);
+                            log("Layer" + i + "is empty!");
+                            return;
+                        }
+                        switch (l.getName()){
+                            case "logic":
+                                rd.tiles_logic=tset;
+                                rd.map = tmp.toArray(new Integer[tmp.size()]);
+                                break;
+                            case "base":
+                                rd.tiles_base = tset;
+                                rd.baseTileVar = tmp.toArray(new Integer[tmp.size()]);
+                                rd.customTiles=true;
+                                rd.tiles=rd.tiles_base;
+                                break;
+                            case "deco":
+                                rd.tiles_deco =tset;
+                                rd.decoTileVar = tmp.toArray(new Integer[tmp.size()]);
+
+                                tileset t = tilesets.get(itset);
+                                rd.decoName = new String[t.getTilecount()];
+                                rd.decoDesc = new String[t.getTilecount()];
+
+                                for(int k=0;k<t.getTilecount();k++){
+                                    rd.decoName[k]="";
+                                    rd.decoDesc[k]="";
+                                }
+
+                                for(int k=0;k<t.getTiles().size();k++){
+                                    tile tt = t.getTiles().get(k);
+                                    int indek = tt.getTileID();
+                                    for (property p : tt.getProperties()) {
+                                        if (p.getName().equalsIgnoreCase("deco_name")) {
+                                            rd.decoName[indek]=p.getValue();
+                                        }
+                                        if (p.getName().equalsIgnoreCase("deco_desc")) {
+                                            rd.decoDesc[indek]=p.getValue();
+                                        }
+                                    }
+                                }
+                                break;
+                            case "deco2":
+                                rd.tiles_deco2=tset;
+                                rd.deco2TileVar = tmp.toArray(new Integer[tmp.size()]);
+                                break;
+                            case "roof_base":
+                                rd.tiles_roof_base=tset;
+                                rd.roofBaseTileVar = tmp.toArray(new Integer[tmp.size()]);
+                                break;
+                            case "roof_deco":
+                                rd.tiles_roof_deco=tset;
+                                rd.roofDecoTileVar = tmp.toArray(new Integer[tmp.size()]);
+                                break;
+
+
+                        }
+
+                        break;
+
+                }
+            }
+            if (rmob.size()>0) rd.mobs = rmob.toArray(new rpd.obj[rmob.size()]);
+            if (robjects.size()>0) rd.objects = robjects.toArray(new rpd.obj[robjects.size()]);
+            if (ritems.size()>0) rd.items = ritems.toArray(new rpd.obj[ritems.size()]);
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
 
     public void loadpng(final FileHandle f){
         stamp=false;
