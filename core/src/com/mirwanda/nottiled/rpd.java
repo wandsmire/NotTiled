@@ -34,23 +34,23 @@ public class rpd {
     obj[] objects; //
 
     public static class obj {
-        String kind;
-        int x;
-        int y;
-        String levelId;
-        int depth;
+        String kind;//
+        Integer x;//
+        Integer y;//
+        String levelId;//
+        Integer depth;//
+        String text;//
+        Integer uses;//
+        String trapKind;//
+        String script;//
+        String object_desc;//
+        Integer level;//
         tele target;
-        String text;
-        int uses;
-        String trapKind;
-        String script;
-        String object_desc;
-        int level;
     }
 
     public static class tele{
         String levelId;
-        int x;
-        int y;
+        Integer x;
+        Integer y;
     }
 }

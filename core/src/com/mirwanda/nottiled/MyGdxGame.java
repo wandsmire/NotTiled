@@ -6721,7 +6721,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         cue( "astset" );
                         break;
                     case 5:
-                        exporttorpd( fExportFilename.getText() );
+                        exporttorpd( fExportFilename.getText(),true );
                         cue( "torpd" );
                         break;
                     case 6:
@@ -14867,6 +14867,14 @@ private void refreshGenerator(){
         }
 
         if (actualFile.extension().equalsIgnoreCase("json")){
+            for(property p:properties){
+                if (p.getName().equalsIgnoreCase("tag") && p.getValue().equalsIgnoreCase("remixed_dungeon")){
+                    exporttorpd(actualFile.path(),false);
+                    log("exporting to rpd format");
+                    return;
+                }
+            }
+            //standard json map
             log("setting json map...");
             setjsonmap();
             log("saving json map...");
@@ -15726,7 +15734,7 @@ private void refreshGenerator(){
             tilesets.clear();
             properties.clear();
             //Get map data
-            orientation = jsn.orientation; if(orientation==null) orientation="orthographic";
+            orientation = jsn.orientation; if(orientation==null) orientation="orthogonal";
             renderorder = jsn.renderorder; if(renderorder==null) renderorder="right-down";
             Tw = jsn.width;
             Th = jsn.height;
@@ -15780,28 +15788,32 @@ private void refreshGenerator(){
                         }
                     }
                     //tiles
-                    for (int x = 0; x < j.tiles.length; x++) {
-                        jsonmap.tile jt = j.tiles[x];
-                        tile tt = new tile();
-                        tt.setTileID(jt.id);
-                        tt.setTerrain(jt.terrain);
+                    if (j.tiles != null) {
 
-                        //need to complete for terrain, wangset, objects, animations
-                        if (jt.properties!=null) {
-                            for (int y = 0; y < jt.properties.length; y++) {
-                                jsonmap.property p = jt.properties[y];
-                                tt.properties.add(new property(p.name, p.type, p.value));
-                            }
-                        }
-                        if (jt.animation!=null) {
-                            for (int y = 0; y < jt.animation.length; y++) {
-                                jsonmap.animate p = jt.animation[y];
-                                frame f = new frame(p.tileid,p.duration);
-                                tt.animation.add(f);
-                            }
-                        }
 
-                        t.tiles.add(tt);
+                        for (int x = 0; x < j.tiles.length; x++) {
+                            jsonmap.tile jt = j.tiles[x];
+                            tile tt = new tile();
+                            tt.setTileID(jt.id);
+                            tt.setTerrain(jt.terrain);
+
+                            //need to complete for terrain, wangset, objects, animations
+                            if (jt.properties != null) {
+                                for (int y = 0; y < jt.properties.length; y++) {
+                                    jsonmap.property p = jt.properties[y];
+                                    tt.properties.add(new property(p.name, p.type, p.value));
+                                }
+                            }
+                            if (jt.animation != null) {
+                                for (int y = 0; y < jt.animation.length; y++) {
+                                    jsonmap.animate p = jt.animation[y];
+                                    frame f = new frame(p.tileid, p.duration);
+                                    tt.animation.add(f);
+                                }
+                            }
+
+                            t.tiles.add(tt);
+                        }
                     }
                     tilesets.add(t);
                 }
@@ -15921,7 +15933,11 @@ private void refreshGenerator(){
             selLayer = 0;
             CacheAllTset();
             resetSwatches();
+            firstload = loadtime;
+
             resetCaches();
+            backToMap();
+            resetcam(true);
             loadingfile = false;
         }catch(Exception e)
         {
@@ -15942,7 +15958,7 @@ private void refreshGenerator(){
             jsn.tileheight = Tsh;
             jsn.type = "map";
             jsn.tiledversion = "1.9.1";
-            if (properties != null) {
+            if (properties.size()>0) {
                 List<jsonmap.property> props = new ArrayList<>();
                 for (int i = 0; i < properties.size(); i++) {
                     property p = properties.get(i);
@@ -15973,7 +15989,7 @@ private void refreshGenerator(){
                     j.imageheight = t.getOriginalheight();
                     j.image = t.getSource();
 
-                    if (t.properties != null) {
+                    if (t.properties.size()>0) {
                         List<jsonmap.property> tmprops = new ArrayList<>();
                         for (int x = 0; x < t.properties.size(); x++) {
                             property p = t.properties.get(x);
@@ -15998,7 +16014,7 @@ private void refreshGenerator(){
                         j.terraintypes = tmp.toArray(new jsonmap.terrain[tmp.size()]);
                     }
                     //tiles
-                    if (t.tiles != null) {
+                    if (t.tiles.size()>0) {
                         List<jsonmap.tile> tls = new ArrayList<>();
                         for (int x = 0; x < t.tiles.size(); x++) {
                             jsonmap.tile jt = new jsonmap.tile();
@@ -16007,10 +16023,10 @@ private void refreshGenerator(){
                             if (!tt.getTerrainString().equalsIgnoreCase("-1,-1,-1,-1")) jt.terrain = tt.getTerrainString();
 
                             //need to complete for terrain, wangset, objects, animations
-                            if (tt.properties != null) {
+                            if (tt.properties.size()>0) {
                                 List<jsonmap.property> tmprops = new ArrayList<>();
-                                for (int z = 0; z < t.properties.size(); z++) {
-                                    property p = t.properties.get(z);
+                                for (int z = 0; z < tt.properties.size(); z++) {
+                                    property p = tt.properties.get(z);
                                     jsonmap.property pj = new jsonmap.property();
                                     pj.name = p.getName();
                                     pj.type = p.getType();
@@ -16020,7 +16036,7 @@ private void refreshGenerator(){
                                 jt.properties = tmprops.toArray(new jsonmap.property[tmprops.size()]);
                             }
 
-                            if (tt.animation != null) {
+                            if (tt.animation.size()>0) {
                                 List<jsonmap.animate> tmp = new ArrayList<>();
                                 for (int y = 0; y < tt.animation.size(); y++) {
                                     jsonmap.animate p = new jsonmap.animate();
@@ -16073,7 +16089,7 @@ private void refreshGenerator(){
                         case OBJECT:
                             lj.type = "objectgroup";
 
-                        if (l.getObjects()!=null) {
+                        if (l.getObjects().size()>0) {
                             List<jsonmap.object> ojs = new ArrayList<>();
                             for (int f = 0; f < l.getObjects().size(); f++) {
                                 jsonmap.object jo = new jsonmap.object();
@@ -16085,16 +16101,18 @@ private void refreshGenerator(){
                                 jo.height=(int) o.getH();
                                 jo.rotation=(int) o.getRotation();
 
-                                List<jsonmap.property> tmprops = new ArrayList<>();
-                                for (int z = 0; z < o.getProperties().size(); z++) {
-                                    property p = o.getProperties().get(z);
-                                    jsonmap.property pj = new jsonmap.property();
-                                    pj.name = p.getName();
-                                    pj.type = p.getType();
-                                    pj.value = p.getValue();
-                                    tmprops.add(pj);
+                                if (o.getProperties().size()>0) {
+                                    List<jsonmap.property> tmprops = new ArrayList<>();
+                                    for (int z = 0; z < o.getProperties().size(); z++) {
+                                        property p = o.getProperties().get(z);
+                                        jsonmap.property pj = new jsonmap.property();
+                                        pj.name = p.getName();
+                                        pj.type = p.getType();
+                                        pj.value = p.getValue();
+                                        tmprops.add(pj);
+                                    }
+                                    jo.properties = tmprops.toArray(new jsonmap.property[tmprops.size()]);
                                 }
-                                jo.properties = tmprops.toArray(new jsonmap.property[tmprops.size()]);
                                 ojs.add(jo);
                             }
                             lj.objects = ojs.toArray(new jsonmap.object[ojs.size()]);
@@ -16110,7 +16128,7 @@ private void refreshGenerator(){
                     }
 
 
-                    if (l.properties != null) {
+                    if (l.properties.size()>0) {
                         List<jsonmap.property> tmprops = new ArrayList<>();
                         for (int z = 0; z < l.properties.size(); z++) {
                             property p = l.properties.get(z);
@@ -16138,13 +16156,12 @@ private void refreshGenerator(){
             Json json = new Json();
             if (f.exists()) {
                 String ss = f.readString();
-                ss = ss.replace("\"class\"","\"class_x\"");
-                if (!ss.contains("multiExits"))
+                if (ss.contains("multiexit"))
                 {
                     loadrpdmap(f);
                     return;
                 }
-
+                ss = ss.replace("\"class\"","\"class_x\"");
                 jsn = json.fromJson(jsonmap.class, ss);
                 curdir=f.parent().path();
                 curfile=f.name();
@@ -16187,7 +16204,7 @@ private void refreshGenerator(){
     }
 
 
-    public void exporttorpd(final String filename) {
+    public void exporttorpd(final String filename,boolean export) {
         try {
             setRPDmap();
             Json json = new Json();
@@ -16198,9 +16215,15 @@ private void refreshGenerator(){
             String se = json.prettyPrint(rd,pps);
             FileHandle fh = Gdx.files.absolute(curdir+"/"+filename+".json");
             fh.writeString(se,false);
-            byte[] b = fh.readBytes();
-            face.saveasFile(b, "export.json");
-            status(z.exportfinished, 3);
+            if(export) {
+                byte[] b = fh.readBytes();
+                face.saveasFile(b, "export.json");
+                status(z.exportfinished, 3);
+                backToMap();
+            }else{
+                status(z.yourmaphasbeensaved, 3);
+                backToMap();
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -16219,6 +16242,7 @@ private void refreshGenerator(){
     rpd rd;
 
     public void getRPDmap(){
+        log("parsing rpd map...");
         loadingfile=true;
         layers.clear();
         properties.clear();
@@ -16228,8 +16252,10 @@ private void refreshGenerator(){
             Tw=rd.width;
             Th=rd.height;
             Tsw=16;Tsh=16;
-            orientation="orthographic";
+            orientation="orthogonal";
             renderorder="right-down";
+            if (rd.boss_level) properties.add(new property("boss_level",""));
+            properties.add(new property("tag","remixed_dungeon"));
 
             //adding image tileset
             if (rd.tiles_logic==null) rd.tiles_logic="tiles0.png";
@@ -16257,19 +16283,51 @@ private void refreshGenerator(){
             loadrpdlayer(rd.roofBaseTileVar,"roof_base",1);
             loadrpdlayer(rd.roofDecoTileVar,"roof_deco",1);
 
+            //load object layer
+            layer l = new layer();
+            l.setName("objects");
+            l.setVisible(true);
+            l.setType(layer.Type.OBJECT);
+            loadrpdobjectlayer(rd.mobs,"mob", l);
+            loadrpdobjectlayer(rd.objects,"object", l);
+            loadrpdobjectlayer(rd.items,"item", l);
+            layers.add(l);
+
+            //load object layer
+            layer l2 = new layer();
+            l2.setName("exits");
+            l2.setVisible(true);
+            l2.setType(layer.Type.OBJECT);
+            for(int i=0;i<rd.multiexit.length;i++){
+                Integer[] ig = rd.multiexit[i];
+                obj o = new obj();
+                o.setName("exit "+i);
+                o.setType("exit");
+                o.setX(ig[0]*Tsw+Tsw/2);
+                o.setY(ig[1]*Tsh+Tsh/2);
+                o.setW(Tsw);
+                o.setH(Tsh);
+                o.setShape("point");
+                l2.getObjects().add(o);
+            }
+            layers.add(l2);
+
+
         }catch(Exception e){
             newtmxfileplus(false);
             return;
         }
         //finishing
-        curtset = 0;
-        seltset = 0;
+        curtset=tilesets.size()-1;
         selLayer = 0;
         CacheAllTset();
-        resetSwatches();
-        resetCaches();
-        resetcam(true);
 
+        resetSwatches();
+        firstload = loadtime;
+        resetCaches();
+        updateObjectCollision();
+        backToMap();
+        resetcam(true);
         loadingfile = false;
     }
 
@@ -16281,6 +16339,8 @@ private void refreshGenerator(){
         FileHandle f1 = Gdx.files.absolute(path1);
         FileHandle f2 = Gdx.files.absolute(path2);
         FileHandle f3 = Gdx.files.internal(path3);
+        fImportWidth.setText("16");
+        fImportHeight.setText("16");
         if (f1.exists()) {
             addImageTset(f1);
         } else if (f2.exists()) {
@@ -16300,11 +16360,17 @@ private void refreshGenerator(){
             java.util.List<Long> ls = new ArrayList<Long>();
             java.util.List<Integer> lts = new ArrayList<Integer>();
             java.util.List<Integer> ltl = new ArrayList<Integer>();
-            log(cmap.toString());
             for (int ia = 0; ia < Tw * Th; ia++) {
-                ls.add((long) cmap[ia]+tilesets.get(tset).getFirstgid());
-                lts.add(-1);
-                ltl.add(-1);
+                if(cmap[ia]!=-1){
+                    ls.add((long) cmap[ia]+tilesets.get(tset).getFirstgid());
+                    lts.add(tset);
+                    ltl.add(getTileFromSpr(cmap[ia]+tilesets.get(tset).getFirstgid(),tilesets.get(tset)));
+                }else{
+                    ls.add((long) 0);
+                    lts.add(-1);
+                    ltl.add(-1);
+
+                }
             }
 
             l.setStr(ls);
@@ -16313,6 +16379,37 @@ private void refreshGenerator(){
             layers.add(l);
         }
     }
+
+    public void loadrpdobjectlayer(rpd.obj[] roj, String type,layer l){
+        if (roj!=null){
+            for(rpd.obj ro : roj){
+                obj o = new obj();
+                o.setName(ro.kind);
+                o.setType(type);
+                o.setX(ro.x*Tsw+Tsw/2);
+                o.setY(ro.y*Tsh+Tsh/2);
+                o.setW(Tsw);
+                o.setH(Tsh);
+                o.setShape("point");
+                if (ro.levelId!=null) o.getProperties().add(new property("levelId",ro.levelId));
+                if (ro.text!=null) o.getProperties().add(new property("text",ro.text));
+                if (ro.trapKind!=null) o.getProperties().add(new property("trapKind",ro.trapKind));
+                if (ro.script!=null) o.getProperties().add(new property("script",ro.script));
+                if (ro.object_desc!=null) o.getProperties().add(new property("object_desc",ro.object_desc));
+                if (ro.level!=null) o.getProperties().add(new property("level",Integer.toString(ro.level)));
+                if (ro.depth!=null) o.getProperties().add(new property("depth",Integer.toString(ro.depth)));
+                if (ro.uses!=null) o.getProperties().add(new property("uses",Integer.toString(ro.uses)));
+                if (ro.target!=null){
+                    if(ro.target.levelId!=null) o.getProperties().add(new property("target_levelId",ro.levelId));
+                    if(ro.target.x!=null) o.getProperties().add(new property("target_x",Integer.toString(ro.x)));
+                    if(ro.target.y!=null) o.getProperties().add(new property("target_y",Integer.toString(ro.y)));
+                }
+                l.getObjects().add(o);
+            }
+
+        }
+    }
+
     public void setRPDmap(){
 ///////////////////////////
         try {
@@ -16334,9 +16431,30 @@ private void refreshGenerator(){
                 log("-"+l.getName()+"-");
                 switch(l.getName()){
                         //object layers
+                    case "exits": //special layer to preserve old exits
+                        if(l.getType()!= layer.Type.OBJECT) continue; //invalid type
+                        //if this layer exists, the exit will be recreated.
+                        for(int n=l.getObjects().size()-1;n>=0;n--){
+                            obj o = l.getObjects().get(n);
+                            int posx = (int) o.getX() / Tsw;
+                            int posy = (int) o.getY() / Tsh;
+                            int dx=-1;
+                            for(int m=0; m<exits.size();m++){
+                                Integer[] ro = exits.get(m);
+                                if (ro[0]==posx && ro[1]==posy) {dx=m;break;}
+                            }
+                            if (dx!=-1){
+                                Integer[] ar = exits.get(dx);
+                                exits.remove(dx);
+                                exits.add(0,ar);
+                            }
+                        }
+                        rd.multiexit = exits.toArray(new Integer[exits.size()][]);
+                        break;
                     case "objects":
                     case "mob":
                     case "items":
+                        if(l.getType()!= layer.Type.OBJECT) continue; //invalid type
                         for(obj o : l.getObjects()){
                         rpd.obj ro = new rpd.obj();
                         rpd.tele tl = new rpd.tele();
@@ -16398,6 +16516,7 @@ private void refreshGenerator(){
                     case "deco2":
                     case "roof_base":
                     case "roof_deco":
+                        if(l.getType()!= layer.Type.TILE) continue; //invalid type
                         List<Integer> tmp = new ArrayList<>();
                         String tset ="";int itset=-1;
                         for(int j=0;j<Tw*Th;j++) {
@@ -18050,11 +18169,8 @@ private void refreshGenerator(){
         for (int lay = 0; lay < layers.size(); lay++) {
 
             if (tilesets.size() >0) {
-                log("layer");
                 layers.get( lay ).setTset( cacheTset( layers.get( lay ).getStr() ) );
             }else{
-
-                log("empty layer");
                 layers.get( lay ).setTset(copy);
 
             }
@@ -18492,6 +18608,7 @@ private void refreshGenerator(){
                     } else if (orientation.equalsIgnoreCase("isometric")) {
                         touched = true;
                     }
+                    log(touched+"");
                     if (mode=="object") touched=true;
                     int num = 0;
 
@@ -18541,6 +18658,7 @@ private void refreshGenerator(){
                     if (mode == "tile" && touched) {
 
                         tapTile(num, false, true,false,curspr);
+                        log(num+"");
                     } else if (mode == "object") {
                         //tapObject(num, ae, ab);
                         if (activeobjtoolmode==1) selobjs.clear();
