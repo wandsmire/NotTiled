@@ -4,6 +4,7 @@ public class rpd {
     Integer width; //
     Integer height; //
     boolean customTiles = false; //
+    boolean boss_level;
 
     String tiles; //
     String tiles_base; //
@@ -13,10 +14,11 @@ public class rpd {
     String tiles_roof_base; //
     String tiles_roof_deco; //
     String tiles_mobs;
+    String tiles_objects;
     String water; //
 
     Integer[]entrance; //
-    Integer[][]multiExit; // **
+    Integer[][]multiexit; // **
     Integer[]compassTarget;
 
     Integer[] map; //
@@ -43,6 +45,7 @@ public class rpd {
         String trapKind;
         String script;
         String object_desc;
+        int level;
     }
 
     public static class tele{

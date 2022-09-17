@@ -14754,6 +14754,59 @@ private void refreshGenerator(){
         }
     }
 
+    public void addImageTset(FileHandle f,boolean internal) {
+        try {
+            if (!internal){
+                addImageTset(f);
+                return;
+            }
+            SimpleImageInfo s = new SimpleImageInfo(f.file());
+            tileset t = new tileset();
+            String nn = f.name();
+            if (f.name().indexOf(".") > 0) {
+                nn = f.name().substring(0, f.name().lastIndexOf("."));
+            }
+            t.setName(nn);
+
+            t.setSource(f.path());
+
+            int Tswa = Tsw;
+            int Tsha = Tsh;
+            if (!fImportWidth.getText().equalsIgnoreCase( "" )) {
+                Tswa = Integer.parseInt( fImportWidth.getText() );
+                Tsha = Integer.parseInt( fImportHeight.getText() );
+            }
+            t.setOriginalwidth(s.getWidth());
+            t.setOriginalheight(s.getHeight());
+            t.setColumns(s.getWidth() / Tswa);
+            t.setTilecount((s.getHeight() / Tswa) * (s.getWidth() / Tsha));
+            if (t.getTilecount()==0) t.setTilecount( 1 );
+            t.setWidth(s.getWidth() / Tswa);
+            t.setHeight(s.getHeight() / Tsha);
+            t.setTilewidth(Tswa);
+            t.setTileheight(Tsha);
+            t.setTrans("");
+            t.setTexture(new Texture(f));
+            t.setPixmap(pixmapfromtexture(t.getTexture(), t.getTrans()));
+
+            t.setFirstgid(requestGid());
+
+            if (cImportEmbed.isChecked()) {
+                byte[] fileContent = f.readBytes();
+                String asu = android.util.Base64.encodeToString(fileContent, 0);
+                property po = new property("embedded_png", asu);
+                t.getProperties().add(po);
+                cImportEmbed.setChecked(false);
+            }
+            curspr = t.getFirstgid();
+            tilesets.add(t);
+            recenterpick();
+        } catch (Exception e) {
+            errors += "\nError: " + f.name();
+            ErrorBung( e, "eRRROBUNG.txt" );
+        }
+    }
+
     public void backToMap() {
         kartu = "world";
         Gdx.input.setInputProcessor(im);
@@ -16086,6 +16139,12 @@ private void refreshGenerator(){
             if (f.exists()) {
                 String ss = f.readString();
                 ss = ss.replace("\"class\"","\"class_x\"");
+                if (!ss.contains("multiExits"))
+                {
+                    loadrpdmap(f);
+                    return;
+                }
+
                 jsn = json.fromJson(jsonmap.class, ss);
                 curdir=f.parent().path();
                 curfile=f.name();
@@ -16106,6 +16165,22 @@ private void refreshGenerator(){
             String se = json.prettyPrint(jsn,pps);
             se = se.replace("\"class_x\"","\"class\"");
             writeThis(f.path(), se);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public void loadrpdmap(final FileHandle f) {
+        try {
+            Json json = new Json();
+            if (f.exists()) {
+                String ss = f.readString();
+                rd = json.fromJson(rpd.class, ss);
+                curdir=f.parent().path();
+                curfile=f.name();
+                getRPDmap();
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -16142,6 +16217,102 @@ private void refreshGenerator(){
     }
 
     rpd rd;
+
+    public void getRPDmap(){
+        loadingfile=true;
+        layers.clear();
+        properties.clear();
+        tilesets.clear();
+
+        try{
+            Tw=rd.width;
+            Th=rd.height;
+            Tsw=16;Tsh=16;
+            orientation="orthographic";
+            renderorder="right-down";
+
+            //adding image tileset
+            if (rd.tiles_logic==null) rd.tiles_logic="tiles0.png";
+            loadrpdtileset(rd.tiles_logic);
+            loadrpdtileset(rd.tiles);
+
+            //adding deco
+            if(rd.decoName!=null && tilesets.size()>1){
+                for (int k=0;k<rd.decoName.length;k++){
+                    tile t=new tile();
+                    t.setTileID(k);
+                    property p = new property("deco_name",rd.decoName[k]);
+                    if(rd.decoName[k]!=null) t.properties.add(p);
+                    property p2 = new property("deco_desc",rd.decoDesc[k]);
+                    if(rd.decoDesc[k]!=null) t.properties.add(p2);
+                    tilesets.get(1).tiles.add(t);
+                }
+            }
+
+            //adding layers
+            loadrpdlayer(rd.map,"logic",0);
+            loadrpdlayer(rd.baseTileVar,"base",1);
+            loadrpdlayer(rd.decoTileVar,"deco",1);
+            loadrpdlayer(rd.deco2TileVar,"deco2",1);
+            loadrpdlayer(rd.roofBaseTileVar,"roof_base",1);
+            loadrpdlayer(rd.roofDecoTileVar,"roof_deco",1);
+
+        }catch(Exception e){
+            newtmxfileplus(false);
+            return;
+        }
+        //finishing
+        curtset = 0;
+        seltset = 0;
+        selLayer = 0;
+        CacheAllTset();
+        resetSwatches();
+        resetCaches();
+        resetcam(true);
+
+        loadingfile = false;
+    }
+
+    public void loadrpdtileset(String cfile){
+        FileHandle f = null;
+        String path1 = convertToAbsolutepath(cfile, curdir);
+        String path2 = convertToAbsolutepath("../" + cfile, curdir);
+        String path3 = "remixed_dungeon/" + cfile;
+        FileHandle f1 = Gdx.files.absolute(path1);
+        FileHandle f2 = Gdx.files.absolute(path2);
+        FileHandle f3 = Gdx.files.internal(path3);
+        if (f1.exists()) {
+            addImageTset(f1);
+        } else if (f2.exists()) {
+            addImageTset(f2);
+        } else if (f3.exists()) {
+            addImageTset(f3,true);
+        } else {
+            status("Png not found!", 3);
+        }
+    }
+    public void loadrpdlayer(Integer[] cmap, String name, int tset){
+        if (cmap!=null){
+            layer l = new layer();
+            l.setName(name);
+            l.setVisible(true);
+            l.setType(layer.Type.TILE);
+            java.util.List<Long> ls = new ArrayList<Long>();
+            java.util.List<Integer> lts = new ArrayList<Integer>();
+            java.util.List<Integer> ltl = new ArrayList<Integer>();
+            log(cmap.toString());
+            for (int ia = 0; ia < Tw * Th; ia++) {
+                ls.add((long) cmap[ia]+tilesets.get(tset).getFirstgid());
+                lts.add(-1);
+                ltl.add(-1);
+            }
+
+            l.setStr(ls);
+            l.setTset(lts);
+            l.setTile(ltl);
+            layers.add(l);
+        }
+    }
     public void setRPDmap(){
 ///////////////////////////
         try {
@@ -16149,7 +16320,11 @@ private void refreshGenerator(){
             rd.width = Tw;
             rd.height = Th;
             rd.water="water0.png";
+            rd.tiles_logic="tiles0.png";
             rd.tiles="tiles0.png";
+            for(property p: properties){
+                if (p.getName().equalsIgnoreCase("boss_level")) rd.boss_level=true;
+            }
             List<Integer[]> exits = new ArrayList<>();
             List<rpd.obj> robjects = new ArrayList<>();
             List<rpd.obj> rmob = new ArrayList<>();
@@ -16175,6 +16350,8 @@ private void refreshGenerator(){
                                         ro.text = p.getValue();
                                     if (p.getName().equalsIgnoreCase("levelId"))
                                         ro.levelId = p.getValue();
+                                    if (p.getName().equalsIgnoreCase("level"))
+                                        ro.level = Integer.parseInt(p.getValue());
                                     if (p.getName().equalsIgnoreCase("depth"))
                                         ro.depth = Integer.parseInt(p.getValue());
                                     if (p.getName().equalsIgnoreCase("uses"))
@@ -16255,7 +16432,7 @@ private void refreshGenerator(){
                                 tmp.add(-1);
                             }
                         }
-                        rd.multiExit = exits.toArray(new Integer[exits.size()][]);
+                        rd.multiexit = exits.toArray(new Integer[exits.size()][]);
 
                         if (tset.equalsIgnoreCase("")){
                             status("Layer" + i + "is empty!", 3);
