@@ -149,6 +149,11 @@ public class MainActivity extends AndroidApplication implements Interface
 		return SAFstatus;
 	}
 
+	@Override
+	public String getOS() {
+		return vers;
+	}
+
 
 	//private ActivityCheckout mCheckout;
 	private static final String AD_FREE = "adfree";
@@ -235,10 +240,12 @@ public class MainActivity extends AndroidApplication implements Interface
  */
 
 	final static int APP_STORAGE_ACCESS_REQUEST_CODE = 501; // Any value
+	public String vers;
 	public void requestAccess(){
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-
+			vers="android10+";
 		}else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Build.VERSION.SDK_INT < Build.VERSION_CODES.R ) {
+			vers="android9-";
 			if (this.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
 				this.requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1024);
 			}
@@ -716,7 +723,8 @@ public class MainActivity extends AndroidApplication implements Interface
 			Cursor cursor = getContentResolver().query(uri, null, null, null, null);
 			try {
 				if (cursor != null && cursor.moveToFirst()) {
-					result = cursor.getString(cursor.getColumnIndex( OpenableColumns.DISPLAY_NAME));
+					int dx = cursor.getColumnIndex( OpenableColumns.DISPLAY_NAME);
+					if(dx!=-1) result = cursor.getString(dx);
 				}
 			} finally {
 				cursor.close();

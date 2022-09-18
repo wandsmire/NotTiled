@@ -27,6 +27,18 @@ public class FileChooser extends Dialog
 	private String mode;
 	private String[] filter;
 
+	public String getOS() {
+		return OS;
+	}
+
+	public void setOS(String OS) {
+		this.OS = OS;
+	}
+
+	private String OS;
+
+
+
 	public void setMode(String mode)
 	{
 		this.mode = mode;
@@ -88,7 +100,7 @@ public class FileChooser extends Dialog
 		}      
 	}
 
-	public FileChooser(String title, Skin skin, String mode, String[] filter)
+	public FileChooser(String title, Skin skin, String mode, String[] filter, String OS)
 	{
 		super(title, skin);
 		this.getCell(getButtonTable()).expandX().fill();
@@ -96,11 +108,12 @@ public class FileChooser extends Dialog
 		this.mode = mode;
 		this.filter=filter;
 		this.button("Cancel", "Cancel");
+		this.button("Home", "Home");
 		this.button("New Folder", "New Folder");
-		this.button("OK", "OK");
-
+		this.button("-OK->", "OK");
 		this.setModal(false);
 		this.skin = skin;
+		this.setOS(OS);
 	}
 
 	private void buildList()
@@ -151,10 +164,20 @@ public class FileChooser extends Dialog
 		};
 		Label label;
 		if (!directory.path().equalsIgnoreCase("")) {
-			if (directory.path().length()>Gdx.files.getExternalStoragePath().length() || Gdx.app.getType()!= Application.ApplicationType.Android) {
-			table.row();
-			Image img = new Image(txback);
-			table.add( img );
+			if (OS.equalsIgnoreCase("android10+")){
+				if (directory.path().length()>Gdx.files.getExternalStoragePath().length()) {
+					table.row();
+					Image img = new Image(txback);
+					table.add(img);
+					label = new Label("..", skin);
+					label.setName("..");
+					label.addListener(fileClickListener);
+					table.add(label).expandX().fillX().colspan(2);
+				}
+			}else{
+				table.row();
+				Image img = new Image(txback);
+				table.add( img );
 				label = new Label("..", skin);
 				label.setName("..");
 				label.addListener(fileClickListener);

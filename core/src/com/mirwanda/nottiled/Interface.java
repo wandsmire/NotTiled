@@ -15,6 +15,7 @@ public interface Interface
 	public String getFilename();
 	public String getUri();
 	public String getStatus();
+	public String getOS();
 	public void speak(final String s);
 	public void changelanguage(final String lang);
 	public void saveFile(String data);

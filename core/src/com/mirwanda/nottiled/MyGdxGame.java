@@ -416,7 +416,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     TextField fTsPropSpacing, fTsPropMargin, fTsPropTsxFile, fTsPropFirstGid;
     TextField fTsPropTsw, fTsPropTsh, fTsPropTc, fTsPropCols;
     CheckBox cbTsPropUseTsx;
-    FileChooser fcOpen, fcSaveAs;
     Preferences prefs;
     boolean loadingfile;
     boolean bypassads = false;
@@ -643,6 +642,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     @Override
     public void create() {
         log( "Gdx create started!" );
+        OS= face.getOS();
         //Gdx basepath now refere to Android/data/com.mirwanda.nottiled/files/
         basepath = Gdx.files.getExternalStoragePath();
          dialogs = GDXDialogsSystem.install();
@@ -6230,6 +6230,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         resetSwatches();
         //uicam.zoom=0.5f;
         //uicam.update();
+        backToMap();
         firstload = loadtime;
         resetMinimap();
         resetcam( false );
@@ -14380,9 +14381,10 @@ private void refreshGenerator(){
 
     }
 
+    String OS;
     public void FileDialog(String prompt, final String dialog, final String fileordir, String[] filter, final Table exitpoint) {
 
-        FileChooser fc = new FileChooser(prompt, skin, "file", filter) {
+        FileChooser fc = new FileChooser(prompt, skin, "file", filter,OS) {
             @Override
             protected void result(Object object) {
                 if (object.equals("OK")) {
@@ -14429,7 +14431,7 @@ private void refreshGenerator(){
                             }
                             FileHandle fl = Gdx.files.absolute(getDirectory().path()+"/"+input);
                             fl.mkdirs();
-
+                            setDirectory(fl.parent());
                         }
 
                         @Override
@@ -14437,12 +14439,15 @@ private void refreshGenerator(){
                         }
 
                     };
-                    getNewTextInput(newfolder,"Enter new folder name","folder1","Anything...");
-                    exitDialog(exitpoint);
+                    cancel();
+                    getNewTextInput(newfolder,"Enter new folder name","folder1","Folder name:");
+                    //exitDialog(exitpoint);
                     return;
-
-
-
+                } else if (object.equals("Home")) {
+                    FileHandle ifh = Gdx.files.absolute(curdir);
+                    setDirectory(ifh);
+                    cancel();
+                    return;
                 } else if (object.equals("Cancel")) {
                     exitDialog(exitpoint);
                 }
@@ -14760,14 +14765,13 @@ private void refreshGenerator(){
                 addImageTset(f);
                 return;
             }
-            SimpleImageInfo s = new SimpleImageInfo(f.file());
+            //SimpleImageInfo s = new SimpleImageInfo(f.file());
             tileset t = new tileset();
             String nn = f.name();
             if (f.name().indexOf(".") > 0) {
                 nn = f.name().substring(0, f.name().lastIndexOf("."));
             }
             t.setName(nn);
-
             t.setSource(f.path());
 
             int Tswa = Tsw;
@@ -14776,6 +14780,8 @@ private void refreshGenerator(){
                 Tswa = Integer.parseInt( fImportWidth.getText() );
                 Tsha = Integer.parseInt( fImportHeight.getText() );
             }
+            t.setTexture(new Texture(f));
+            Texture s=t.getTexture();
             t.setOriginalwidth(s.getWidth());
             t.setOriginalheight(s.getHeight());
             t.setColumns(s.getWidth() / Tswa);
@@ -14786,7 +14792,6 @@ private void refreshGenerator(){
             t.setTilewidth(Tswa);
             t.setTileheight(Tsha);
             t.setTrans("");
-            t.setTexture(new Texture(f));
             t.setPixmap(pixmapfromtexture(t.getTexture(), t.getTrans()));
 
             t.setFirstgid(requestGid());
@@ -15741,7 +15746,7 @@ private void refreshGenerator(){
             Tsw = jsn.tilewidth;
             Tsh = jsn.tileheight;
             maptype = jsn.type; if(maptype==null) maptype="map";
-            tiledversion = jsn.tiledversion; if(tiledversion==null) tiledversion="1.9.1";
+            tiledversion = jsn.tiledversion; if(tiledversion==null) tiledversion="1.2.3";
             if (jsn.properties!=null) {
                 for (int i = 0; i < jsn.properties.length; i++) {
                     jsonmap.property p = jsn.properties[i];
@@ -16314,7 +16319,7 @@ private void refreshGenerator(){
 
 
         }catch(Exception e){
-            newtmxfileplus(false);
+            newtmxfile(false);
             return;
         }
         //finishing

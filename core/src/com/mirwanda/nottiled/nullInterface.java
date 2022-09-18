@@ -48,6 +48,11 @@ public class nullInterface implements Interface {
     }
 
     @Override
+    public String getOS() {
+        return "desktop";
+    }
+
+    @Override
     public byte[] getData() {
         return null;
     }
