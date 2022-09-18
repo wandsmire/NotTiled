@@ -15840,7 +15840,7 @@ private void refreshGenerator(){
 
                         spr = new ArrayList<Long>();
 
-                        if (encoding==null) encoding="csv";
+                        if (encoding==null) encoding="xml";
                         if (encoding.equalsIgnoreCase("csv")) {
                             mapFormat = "csv";
                             String data = lj.data.replace("\n", "");
@@ -15873,7 +15873,7 @@ private void refreshGenerator(){
 
                         } else if (encoding.equalsIgnoreCase("xml")) {
                             mapFormat = "xml";
-                            //not supported
+
                         }
 
                         l.setStr(spr);

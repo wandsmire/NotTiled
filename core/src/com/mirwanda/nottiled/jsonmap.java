@@ -1,5 +1,8 @@
 package com.mirwanda.nottiled;
 
+import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.utils.JsonValue;
+
 //Tiled JSON latest version
 public class jsonmap {
     String type;
@@ -19,7 +22,7 @@ public class jsonmap {
     tileset[] tilesets;
     property[] properties;
 
-    public static class layer{
+    public static class layer {//implements Json.Serializable {
         String name;
         String type;
         int id;
@@ -37,6 +40,60 @@ public class jsonmap {
         object[] objects;
         String image;
 
+        /*
+        @Override
+        public void write(Json json) {
+            json.writeValue(name);
+            json.writeValue(type);
+            json.writeValue(id);
+            json.writeValue(opacity);
+            json.writeValue(x);
+            json.writeValue(y);
+            json.writeValue(visible);
+            json.writeValue(properties);
+
+            json.writeValue(encoding);
+            json.writeValue(compression);
+            json.writeValue(height);
+            json.writeValue(width);
+            json.writeValue(draworder);
+            json.writeValue(objects);
+            json.writeValue(image);
+        }
+        @Override
+        public void read(Json json, JsonValue jsonData) {
+            //System.out.print(jsonData.toString());
+            for (JsonValue child = jsonData.child; child != null; child = child.next) {
+                System.out.print(child);
+            }
+
+         */
+/*
+            for(JsonValue jv : jsonData){
+                switch(jv.name){
+                    case "name": name = json.readValue(String.class,jv); break;
+                    case "type": type = json.readValue(String.class,jv); break;
+                    case "id": id = json.readValue(Integer.class,jv); break;
+                    case "opacity": opacity = json.readValue(Float.class,jv); break;
+                    case "x": x = json.readValue(Float.class,jv); break;
+                    case "y": y = json.readValue(Float.class,jv); break;
+                    case "visible": visible = json.readValue(Boolean.class,jv);  break;
+                    case "encoding": encoding = json.readValue(String.class,jv); break;
+                    case "compression": compression = json.readValue(String.class,jv); break;
+                    case "width": width = json.readValue(Integer.class,jv); break;
+                    case "height": height = json.readValue(Integer.class,jv); break;
+                    case "draworder": draworder = json.readValue(String.class,jv); break;
+                    case "image": image = json.readValue(String.class,jv); break;
+                    case "properties": properties=json.readValue(property[].class,jv); break;
+                    case "objects": objects=json.readValue(object[].class,jv); break;
+                    case "data":
+
+                }
+            }
+
+
+        }
+*/
     }
 
     public static class object{
