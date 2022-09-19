@@ -249,8 +249,9 @@ public class MainActivity extends AndroidApplication implements Interface
 			if (this.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
 				this.requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1024);
 			}
+		}else{
+			vers="android9-";
 		}
-
 	}
 
 	public void runGDX(){

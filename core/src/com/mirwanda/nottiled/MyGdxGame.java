@@ -14554,6 +14554,7 @@ private void refreshGenerator(){
         textPrompt.setTitle(title);
         textPrompt.setMessage(hint);
         textPrompt.setValue(value);
+        textPrompt.setMaxLength(1000);
         textPrompt.setCancelButtonLabel(z.cancel);
         textPrompt.setConfirmButtonLabel(z.ok);
         textPrompt.setTextPromptListener(tpl);

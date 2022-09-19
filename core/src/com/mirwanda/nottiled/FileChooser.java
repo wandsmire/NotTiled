@@ -164,8 +164,19 @@ public class FileChooser extends Dialog
 		};
 		Label label;
 		if (!directory.path().equalsIgnoreCase("")) {
-			if (OS.equalsIgnoreCase("android10+")){
-				if (directory.path().length()>Gdx.files.getExternalStoragePath().length()) {
+			if (OS!=null) {
+
+				if (OS.equalsIgnoreCase("android10+")) {
+					if (directory.path().length() > Gdx.files.getExternalStoragePath().length()) {
+						table.row();
+						Image img = new Image(txback);
+						table.add(img);
+						label = new Label("..", skin);
+						label.setName("..");
+						label.addListener(fileClickListener);
+						table.add(label).expandX().fillX().colspan(2);
+					}
+				} else {
 					table.row();
 					Image img = new Image(txback);
 					table.add(img);
@@ -177,7 +188,7 @@ public class FileChooser extends Dialog
 			}else{
 				table.row();
 				Image img = new Image(txback);
-				table.add( img );
+				table.add(img);
 				label = new Label("..", skin);
 				label.setName("..");
 				label.addListener(fileClickListener);
