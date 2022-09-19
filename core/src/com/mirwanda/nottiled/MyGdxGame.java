@@ -12749,27 +12749,31 @@ private void refreshGenerator(){
         gotoStage(tblmain);
     }
 
+    List<String> alltemplates;
+
     public void loadPropTemplate() {
         Label lPT = new Label(z.template, skin);
         final com.badlogic.gdx.scenes.scene2d.ui.List<String> lptlist = new com.badlogic.gdx.scenes.scene2d.ui.List<String>(skin);
         TextButton bApplyPT = new TextButton(z.apply, skin);
+        TextField search = new TextField("",skin);
         TextButton bDeletePT = new TextButton(z.remove, skin);
         TextButton bptback = new TextButton(z.back, skin);
+
 
         bPropTemplate.addListener(new ChangeListener() {
 
             @Override
             public void changed(ChangeEvent event, Actor actor) {
 
+                alltemplates=new ArrayList();
                 lptlist.setItems();
-                java.util.List<String> srr = new ArrayList<String>();
                 FileHandle dirHandle;
                 dirHandle = Gdx.files.absolute(basepath+"NotTiled/sample/json/");
                 for (FileHandle entry : dirHandle.list()) {
 
                     String name = entry.file().getName();
                     if (name.contains( "_"+sender )) {
-                        srr.add(name);
+                        alltemplates.add(name);
                     }
 
                     boolean none = true;
@@ -12781,12 +12785,11 @@ private void refreshGenerator(){
                     if (name.contains( "_map" )) none = false;
                     if (name.contains( "_auto" )) none = false;
 
-                    if (none) srr.add(name); //jadi yang ga masuk kategori gak ilang.
+                    if (none) alltemplates.add(name); //jadi yang ga masuk kategori gak ilang.
                 }
-                java.util.Collections.sort(srr);
-                lptlist.setItems(srr.toArray(new String[0]));
+                java.util.Collections.sort(alltemplates);
+                lptlist.setItems(alltemplates.toArray(new String[alltemplates.size()]));
                 gotoStage(tpt);
-
             }
         });
 
@@ -12800,14 +12803,14 @@ private void refreshGenerator(){
                 }catch(Exception e){}
                 if (lptlist.getSelectedIndex()==-1) return;
                 lptlist.setItems();
-                java.util.List<String> srr = new ArrayList<String>();
+                alltemplates=new ArrayList();
                 FileHandle dirHandle;
                 dirHandle = Gdx.files.absolute(basepath+"NotTiled/sample/json/");
                 for (FileHandle entry : dirHandle.list()) {
 
                     String name = entry.file().getName();
                     if (name.contains( "_"+sender )) {
-                        srr.add(name);
+                        alltemplates.add(name);
                     }
 
                     boolean none = true;
@@ -12819,10 +12822,10 @@ private void refreshGenerator(){
                     if (name.contains( "_map" )) none = false;
                     if (name.contains( "_auto" )) none = false;
 
-                    if (none) srr.add(name); //jadi yang ga masuk kategori gak ilang.
+                    if (none) alltemplates.add(name); //jadi yang ga masuk kategori gak ilang.
                 }
-                java.util.Collections.sort(srr);
-                lptlist.setItems(srr.toArray(new String[0]));
+                java.util.Collections.sort(alltemplates);
+                lptlist.setItems(alltemplates.toArray(new String[0]));
 
                 //   gotoStage(tPropsMgmt);
 
@@ -12837,6 +12840,17 @@ private void refreshGenerator(){
                 gotoStage(tPropsMgmt);
 
             }
+        });
+
+        search.setTextFieldListener((textField, c) -> {
+            lptlist.clear();
+            List<String> srr = new ArrayList<>();
+            for (int i = 0; i < alltemplates.size(); i++) {
+                if(alltemplates.get(i).contains(search.getText())){
+                    srr.add(alltemplates.get(i));
+                }
+            }
+            lptlist.setItems(srr.toArray(new String[srr.size()]));
         });
 
         bApplyPT.addListener(new ChangeListener() {
@@ -12907,6 +12921,7 @@ private void refreshGenerator(){
         tpt.setFillParent(true);
         tpt.defaults().width(btnx).padBottom(2);
         tpt.add(lPT).row();
+        tpt.add(search).row();
         ScrollPane spn = new ScrollPane(lptlist);
         tpt.add(spn).height(btnx).row();
         tpt.add(bApplyPT).row();
@@ -14874,15 +14889,12 @@ private void refreshGenerator(){
         if (actualFile.extension().equalsIgnoreCase("json")){
             for(property p:properties){
                 if (p.getName().equalsIgnoreCase("tag") && p.getValue().equalsIgnoreCase("remixed_dungeon")){
-                    exporttorpd(actualFile.path(),false);
-                    log("exporting to rpd format");
+                    exporttorpd(actualFile.nameWithoutExtension(),false);
                     return;
                 }
             }
             //standard json map
-            log("setting json map...");
             setjsonmap();
-            log("saving json map...");
             savejsonmap(actualFile);
             return;
         }
@@ -16211,7 +16223,7 @@ private void refreshGenerator(){
 
     public void exporttorpd(final String filename,boolean export) {
         try {
-            setRPDmap();
+            if (!setRPDmap()) return;
             Json json = new Json();
             JsonValue.PrettyPrintSettings pps = new JsonValue.PrettyPrintSettings();
             JsonWriter.OutputType op = JsonWriter.OutputType.json;
@@ -16222,7 +16234,7 @@ private void refreshGenerator(){
             fh.writeString(se,false);
             if(export) {
                 byte[] b = fh.readBytes();
-                face.saveasFile(b, "export.json");
+                face.saveasFile(b, fExportFilename.getText());
                 status(z.exportfinished, 3);
                 backToMap();
             }else{
@@ -16415,7 +16427,7 @@ private void refreshGenerator(){
         }
     }
 
-    public void setRPDmap(){
+    public boolean setRPDmap(){
 ///////////////////////////
         try {
             rd = new rpd();
@@ -16529,9 +16541,9 @@ private void refreshGenerator(){
                                 tileset t = tilesets.get(l.getTset().get(j));
                                 if (!tset.equalsIgnoreCase("")) {
                                     if (!tset.equalsIgnoreCase(filenameOnly(t.getSource()))) {
-                                        status("Layer" + i + "contains more than 1 tileset", 3);
+                                        msgbox("Layer " + layers.get(i).getName() + " contains more than 1 tileset");
                                         log("Layer" + i + "contains more than 1 tileset");
-                                        return;
+                                        return false;
                                     }
                                 } else {
                                     tset = filenameOnly(t.getSource());
@@ -16559,9 +16571,9 @@ private void refreshGenerator(){
                         rd.multiexit = exits.toArray(new Integer[exits.size()][]);
 
                         if (tset.equalsIgnoreCase("")){
-                            status("Layer" + i + "is empty!", 3);
-                            log("Layer" + i + "is empty!");
-                            return;
+                            msgbox("Layer " + layers.get(i).getName() + " is empty! Fill it first or remove it.");
+                            log("Layer " + i + "is empty!");
+                            return false;
                         }
                         switch (l.getName()){
                             case "logic":
@@ -16623,9 +16635,11 @@ private void refreshGenerator(){
             if (rmob.size()>0) rd.mobs = rmob.toArray(new rpd.obj[rmob.size()]);
             if (robjects.size()>0) rd.objects = robjects.toArray(new rpd.obj[robjects.size()]);
             if (ritems.size()>0) rd.items = ritems.toArray(new rpd.obj[ritems.size()]);
-
+            return true;
         }catch(Exception e){
             e.printStackTrace();
+            status("Error occured."+e.toString(),3);
+            return false;
         }
     }
 
@@ -18711,19 +18725,21 @@ private void refreshGenerator(){
     }
 
     private void recenterpick() {
-        if (tilesets.size()==0) return;
-        float ttsw = tilesets.get( seltset ).getTilewidth();
-        float ttsh = tilesets.get( seltset ).getTileheight();
-        float ttkw = tilesets.get( seltset ).getWidth();
-        float ttkh = tilesets.get( seltset ).getHeight();
+        try {
+            if (tilesets.size() == 0) return;
+            float ttsw = tilesets.get(seltset).getTilewidth();
+            float ttsh = tilesets.get(seltset).getTileheight();
+            float ttkw = tilesets.get(seltset).getWidth();
+            float ttkh = tilesets.get(seltset).getHeight();
 
-        if (pickAuto) {
-            ttkw = 6;
-            ttkh = tilesets.get( seltset ).getTerrains().size();
-        }
+            if (pickAuto) {
+                ttkw = 6;
+                ttkh = tilesets.get(seltset).getTerrains().size();
+            }
 
 
-        panTileTo((int) ttsw * ttkw / 2, (int) -(ttsh * ttkh / 2) + (ttsh) , .5f);
+            panTileTo((int) ttsw * ttkw / 2, (int) -(ttsh * ttkh / 2) + (ttsh), .5f);
+        }catch(Exception e){}
     }
 
     private boolean tapPickUI(float p1, float p2) {
