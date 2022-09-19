@@ -11581,9 +11581,9 @@ private void refreshGenerator(){
             String[] srr = new String[saiz];
             for (int i = 0; i < saiz; i++) {
                 if (at.get(i).getValue().contains("\n")) {
-                    srr[i] = at.get(i).getName() + " : " + at.get(i).getValue().split("\n")[0] + " ...";
+                    srr[i] = "["+i+"] "+at.get(i).getName() + " = " + at.get(i).getValue().split("\n")[0] + " ...";
                 } else {
-                    srr[i] = at.get(i).getName() + " : " + at.get(i).getValue();
+                    srr[i] = "["+i+"] "+at.get(i).getName() + " = " + at.get(i).getValue();
                 }
             }
             lproplist.setItems(srr);
@@ -12110,13 +12110,13 @@ private void refreshGenerator(){
         tPropsMgmt.defaults().width(btnx).height(btny);
         ScrollPane scrollPane7 = new ScrollPane(lproplist);
         tPropsMgmt.add(lPropID).padBottom(2).row();
-        tPropsMgmt.add(scrollPane7).height(btny * 4).padBottom(2).row();
+        tPropsMgmt.add(scrollPane7).height(btny * 6).padBottom(2).row();
         tPropsMgmt.add(bAddProp).padBottom(2).row();
         tPropsMgmt.add(bEditProp).padBottom(2).row();
         tPropsMgmt.add(bMoveProp).padBottom(2).row();
         tPropsMgmt.add(bPropTemplate).padBottom(2).row();
         tPropsMgmt.add(bPropExportAsTemplate).padBottom(2).row();
-        tPropsMgmt.add(bPropParse).padBottom(2).row();
+        //tPropsMgmt.add(bPropParse).padBottom(2).row();
         tPropsMgmt.add(bPropCopy).padBottom(2).row();
         tPropsMgmt.add(bPropPaste).padBottom(2).row();
         tPropsMgmt.add(bRemoveProp).padBottom(2).row();
@@ -12843,7 +12843,7 @@ private void refreshGenerator(){
         });
 
         search.setTextFieldListener((textField, c) -> {
-            lptlist.clear();
+            lptlist.setItems(new String[]{});
             List<String> srr = new ArrayList<>();
             for (int i = 0; i < alltemplates.size(); i++) {
                 if(alltemplates.get(i).contains(search.getText())){
@@ -12851,6 +12851,8 @@ private void refreshGenerator(){
                 }
             }
             lptlist.setItems(srr.toArray(new String[srr.size()]));
+
+
         });
 
         bApplyPT.addListener(new ChangeListener() {
@@ -12895,17 +12897,7 @@ private void refreshGenerator(){
                         break;
                 }
 
-
-                int saiz = at.getProperties().size();
-
-                if (saiz > 0) {
-                    String[] srr = new String[saiz];
-                    for (int i = 0; i < saiz; i++) {
-                        srr[i] = at.getProperties().get(i).getName() + " : " + at.getProperties().get(i).getValue();
-                    }
-                    lproplist.setItems(srr);
-                    lproplist.setSelectedIndex(saiz - 1);
-                }
+                refreshProperties(at.getProperties());
                 gotoStage(tPropsMgmt);
 						/*
 					}catch(Exception e)
