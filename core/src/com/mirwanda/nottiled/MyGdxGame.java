@@ -138,6 +138,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -12765,30 +12766,41 @@ private void refreshGenerator(){
             @Override
             public void changed(ChangeEvent event, Actor actor) {
 
-                alltemplates=new ArrayList();
+                alltemplates=new ArrayList<>();
                 lptlist.setItems();
                 FileHandle dirHandle;
                 dirHandle = Gdx.files.absolute(basepath+"NotTiled/sample/json/");
                 for (FileHandle entry : dirHandle.list()) {
 
                     String name = entry.file().getName();
-                    if (name.contains( "_"+sender )) {
+                    if (name.endsWith( "."+sender+".json" )) {
                         alltemplates.add(name);
                     }
 
                     boolean none = true;
-                    if (name.contains( "_object" )) none = false;
-                    if (name.contains( "_tile" )) none = false;
-                    if (name.contains( "_tilesettings" )) none = false;
-                    if (name.contains( "_tset" )) none = false;
-                    if (name.contains( "_layer" )) none = false;
-                    if (name.contains( "_map" )) none = false;
-                    if (name.contains( "_auto" )) none = false;
+                    if (name.endsWith( ".object.json" )) none = false;
+                    if (name.endsWith( ".tile.json" )) none = false;
+                    if (name.endsWith( ".tilesettings.json" )) none = false;
+                    if (name.endsWith( ".tset.json" )) none = false;
+                    if (name.endsWith( ".layer.json" )) none = false;
+                    if (name.endsWith( ".map.json" )) none = false;
+                    if (name.endsWith( ".auto.json" )) none = false;
 
                     if (none) alltemplates.add(name); //jadi yang ga masuk kategori gak ilang.
                 }
                 java.util.Collections.sort(alltemplates);
                 lptlist.setItems(alltemplates.toArray(new String[alltemplates.size()]));
+                ////////////////fitter the data
+                lptlist.setItems(new String[]{});
+                List<String> srr = new ArrayList<>();
+                for (int i = 0; i < alltemplates.size(); i++) {
+                    if(alltemplates.get(i).toLowerCase().contains(search.getText().toLowerCase())){
+                        srr.add(alltemplates.get(i));
+                    }
+                }
+                lptlist.setItems(srr.toArray(new String[srr.size()]));
+
+                ////////////////
                 gotoStage(tpt);
             }
         });
@@ -12797,37 +12809,56 @@ private void refreshGenerator(){
 
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                try {
-                    FileHandle fh = Gdx.files.absolute( basepath + "NotTiled/sample/json/" + lptlist.getSelected() );
-                    if (fh.exists()) fh.delete();
-                }catch(Exception e){}
-                if (lptlist.getSelectedIndex()==-1) return;
-                lptlist.setItems();
-                alltemplates=new ArrayList();
-                FileHandle dirHandle;
-                dirHandle = Gdx.files.absolute(basepath+"NotTiled/sample/json/");
-                for (FileHandle entry : dirHandle.list()) {
 
-                    String name = entry.file().getName();
-                    if (name.contains( "_"+sender )) {
-                        alltemplates.add(name);
+                ///////////
+                Dialog dialog = new Dialog( z.confirmation, skin, "dialog" ) {
+                    public void result(Object obj) {
+                        System.out.println( "result " + obj );
+                        if ((boolean) obj) {
+                            ////////////
+                            ////////////
+
+                            try {
+                                FileHandle fh = Gdx.files.absolute( basepath + "NotTiled/sample/json/" + lptlist.getSelected() );
+                                if (fh.exists()) fh.delete();
+                            }catch(Exception e){}
+                            if (lptlist.getSelectedIndex()==-1) return;
+                            lptlist.setItems();
+                            alltemplates=new ArrayList();
+                            FileHandle dirHandle;
+                            dirHandle = Gdx.files.absolute(basepath+"NotTiled/sample/json/");
+                            for (FileHandle entry : dirHandle.list()) {
+
+                                String name = entry.file().getName();
+                                if (name.endsWith( "."+sender+".json" )) {
+                                    alltemplates.add(name);
+                                }
+
+                                boolean none = true;
+                                if (name.endsWith( ".object.json" )) none = false;
+                                if (name.endsWith( ".tile.json" )) none = false;
+                                if (name.endsWith( ".tilesettings.json" )) none = false;
+                                if (name.endsWith( ".tset.json" )) none = false;
+                                if (name.endsWith( ".layer.json" )) none = false;
+                                if (name.endsWith( ".map.json" )) none = false;
+                                if (name.endsWith( ".auto.json" )) none = false;
+
+                                if (none) alltemplates.add(name); //jadi yang ga masuk kategori gak ilang.
+                            }
+                            java.util.Collections.sort(alltemplates);
+                            lptlist.setItems(alltemplates.toArray(new String[0]));
+
+                            //   gotoStage(tPropsMgmt);
+
+                            ////////////
+                        }
                     }
+                };
+                dialog.text( "Are you sure?" );
+                dialog.button( z.yes, true ); //sends "true" as the result
+                dialog.button( z.no, false );  //sends "false" as the result
+                dialog.show( stage );
 
-                    boolean none = true;
-                    if (name.contains( "_object" )) none = false;
-                    if (name.contains( "_tile" )) none = false;
-                    if (name.contains( "_tilesettings" )) none = false;
-                    if (name.contains( "_tset" )) none = false;
-                    if (name.contains( "_layer" )) none = false;
-                    if (name.contains( "_map" )) none = false;
-                    if (name.contains( "_auto" )) none = false;
-
-                    if (none) alltemplates.add(name); //jadi yang ga masuk kategori gak ilang.
-                }
-                java.util.Collections.sort(alltemplates);
-                lptlist.setItems(alltemplates.toArray(new String[0]));
-
-                //   gotoStage(tPropsMgmt);
 
             }
         });
@@ -12846,7 +12877,7 @@ private void refreshGenerator(){
             lptlist.setItems(new String[]{});
             List<String> srr = new ArrayList<>();
             for (int i = 0; i < alltemplates.size(); i++) {
-                if(alltemplates.get(i).contains(search.getText())){
+                if(alltemplates.get(i).toLowerCase().contains(search.getText().toLowerCase())){
                     srr.add(alltemplates.get(i));
                 }
             }
@@ -12868,6 +12899,19 @@ private void refreshGenerator(){
 
                 switch (sender) {
                     case "object":
+                        for(int x=at.getProperties().size()-1;x>=0;x--) {
+                            property ap=at.getProperties().get(x);
+                            if (ap.getName().equalsIgnoreCase("object_name")) {
+                                selobjs.get(0).setName(ap.getValue());
+                                tf.get(5).setText(ap.getValue());
+                                at.getProperties().remove(x);
+                            }
+                            if (ap.getName().equalsIgnoreCase("object_type")) {
+                                selobjs.get(0).setType(ap.getValue());
+                                tf.get(6).setText(ap.getValue());
+                                at.getProperties().remove(x);
+                            }
+                        }
                         selobjs.get(0).setProperties(at.getProperties());
 
                         break;
