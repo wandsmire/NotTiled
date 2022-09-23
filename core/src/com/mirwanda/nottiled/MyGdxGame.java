@@ -170,9 +170,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public guis gui = new guis();
     public language z = new language();
 
-    //ThreadPool autotilePool = new ThreadPool(1, 100);
-    ThreadPool autosavePool = new ThreadPool(1, 3);
-
     public drawer tempdrawer = new drawer();
     public Bloom bloom;
     public Curvature curvature;
