@@ -40,17 +40,26 @@ public class rpd {
         String levelId;//
         Integer depth;//
         String text;//
+        String aiState;//
+        Boolean identified;//
+        Integer quantity;//
         Integer uses;//
         String trapKind;//
         String script;//
         String object_desc;//
         Integer level;//
         tele target;
+        drop loot;
     }
 
     public static class tele{
         String levelId;
         Integer x;
         Integer y;
+    }
+
+    public static class drop{
+        String kind;
+        String levelId;
     }
 }

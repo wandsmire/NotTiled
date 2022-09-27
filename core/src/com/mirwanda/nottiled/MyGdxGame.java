@@ -5927,7 +5927,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             uicam = new OrthographicCamera( ssy, ssx );
             cam = new OrthographicCamera( ssy, ssx );
             minicam = new OrthographicCamera( 20, 11 );
-
         }
         minicam.zoom = 10f;
         minicam.update();
@@ -16306,6 +16305,7 @@ private void refreshGenerator(){
             orientation="orthogonal";
             renderorder="right-down";
             if (rd.boss_level) properties.add(new property("boss_level",""));
+            if (rd.water!=null) properties.add(new property("water",rd.water));
             properties.add(new property("tag","remixed_dungeon"));
 
             //adding image tileset
@@ -16445,15 +16445,22 @@ private void refreshGenerator(){
                 if (ro.levelId!=null) o.getProperties().add(new property("levelId",ro.levelId));
                 if (ro.text!=null) o.getProperties().add(new property("text",ro.text));
                 if (ro.trapKind!=null) o.getProperties().add(new property("trapKind",ro.trapKind));
+                if (ro.aiState!=null) o.getProperties().add(new property("aiState",ro.aiState));
                 if (ro.script!=null) o.getProperties().add(new property("script",ro.script));
+                if (ro.identified!=null) o.getProperties().add(new property("identified",Boolean.toString(ro.identified)));
+                if (ro.quantity!=null) o.getProperties().add(new property("quantity",Integer.toString(ro.quantity)));
                 if (ro.object_desc!=null) o.getProperties().add(new property("object_desc",ro.object_desc));
                 if (ro.level!=null) o.getProperties().add(new property("level",Integer.toString(ro.level)));
                 if (ro.depth!=null) o.getProperties().add(new property("depth",Integer.toString(ro.depth)));
                 if (ro.uses!=null) o.getProperties().add(new property("uses",Integer.toString(ro.uses)));
                 if (ro.target!=null){
-                    if(ro.target.levelId!=null) o.getProperties().add(new property("target_levelId",ro.levelId));
-                    if(ro.target.x!=null) o.getProperties().add(new property("target_x",Integer.toString(ro.x)));
-                    if(ro.target.y!=null) o.getProperties().add(new property("target_y",Integer.toString(ro.y)));
+                    if(ro.target.levelId!=null) o.getProperties().add(new property("target_levelId",ro.target.levelId));
+                    if(ro.target.x!=null) o.getProperties().add(new property("target_x",Integer.toString(ro.target.x)));
+                    if(ro.target.y!=null) o.getProperties().add(new property("target_y",Integer.toString(ro.target.y)));
+                }
+                if (ro.loot!=null){
+                    if(ro.loot.levelId!=null) o.getProperties().add(new property("loot_levelId",ro.loot.levelId));
+                    if(ro.loot.kind!=null)  o.getProperties().add(new property("loot_kind",ro.loot.kind));
                 }
                 l.getObjects().add(o);
             }
@@ -16472,6 +16479,7 @@ private void refreshGenerator(){
             rd.tiles="tiles0.png";
             for(property p: properties){
                 if (p.getName().equalsIgnoreCase("boss_level")) rd.boss_level=true;
+                if (p.getName().equalsIgnoreCase("water")) rd.water=p.getValue();
             }
             List<Integer[]> exits = new ArrayList<>();
             List<rpd.obj> robjects = new ArrayList<>();
@@ -16509,6 +16517,7 @@ private void refreshGenerator(){
                         for(obj o : l.getObjects()){
                         rpd.obj ro = new rpd.obj();
                         rpd.tele tl = new rpd.tele();
+                        rpd.drop dr = new rpd.drop();
                         ro.kind = o.getName();
                         ro.x = (int) (o.getX() / Tsw);
                         ro.y = (int) (o.getY() / Tsh);
@@ -16527,6 +16536,12 @@ private void refreshGenerator(){
                                         ro.uses = Integer.parseInt(p.getValue());
                                     if (p.getName().equalsIgnoreCase("trapKind"))
                                         ro.trapKind = p.getValue();
+                                    if (p.getName().equalsIgnoreCase("aiState"))
+                                        ro.aiState = p.getValue();
+                                    if (p.getName().equalsIgnoreCase("quantity"))
+                                        ro.quantity = Integer.parseInt(p.getValue());
+                                    if (p.getName().equalsIgnoreCase("identified"))
+                                        ro.identified = Boolean.parseBoolean(p.getValue());
                                     if (p.getName().equalsIgnoreCase("script"))
                                         ro.script = p.getValue();
                                     if (p.getName().equalsIgnoreCase("object_desc"))
@@ -16537,13 +16552,20 @@ private void refreshGenerator(){
                                         tl.x = Integer.parseInt(p.getValue());
                                     if (p.getName().equalsIgnoreCase("target_y"))
                                         tl.y = Integer.parseInt(p.getValue());
-
+                                    if (p.getName().equalsIgnoreCase("loot_levelId"))
+                                        dr.levelId = p.getValue();
+                                    if (p.getName().equalsIgnoreCase("loot_kind"))
+                                        dr.kind = p.getValue();
                                 }catch(Exception e){}
                             }
                         }
 
                             if (tl.levelId!=null){
                                 ro.target=tl;
+                            }
+
+                            if (dr.levelId!=null){
+                                ro.loot = dr;
                             }
 
                             switch(o.getType().toLowerCase()){
