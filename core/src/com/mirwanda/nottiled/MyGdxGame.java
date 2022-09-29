@@ -24,6 +24,7 @@ import com.badlogic.gdx.graphics.PixmapIO;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.TextureData;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.PixmapPacker;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.SpriteCache;
@@ -5940,6 +5941,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         //dialog=new Dialog(z.info,skin,"");
         //str1 = new BitmapFont();
 
+        /*
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
         FileHandle fileHandl = Gdx.files.internal( "languages/characters" );
         Map<String, String> vars = new HashMap<String, String>();
@@ -5949,9 +5951,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             String[] cuma = cumi[ad].split( ">>>" );
             vars.put( cuma[0], cuma[1] );
         }
+        log(vars.get( language ));
         parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS+ vars.get( language );
         parameter.borderColor = new Color( .5f, .5f, .5f, .9f );
         parameter.borderWidth = 0;
+
         if (ssx < ssy) {
             if (fontsize == 0) fontsize = 48 * ssx / 1080;
 
@@ -5972,13 +5976,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             filenam = "japanese.otf";
         }
 
+        log(filenam);
 
         if (sCustomFont.equalsIgnoreCase( "" )) {
+            log("empty custom font");
+            FileHandle fff = Gdx.files.internal( filenam );
+            if (fff.exists()) log("file exists");
             generator = new FreeTypeFontGenerator( Gdx.files.internal( filenam ) );
         } else {
             try {
+                log("custom font");
                 generator = new FreeTypeFontGenerator( Gdx.files.absolute( sCustomFont ) );
             } catch (Exception e) {
+                log("custom font exception");
                 generator = new FreeTypeFontGenerator( Gdx.files.internal( filenam ) );
             }
         }
@@ -5986,6 +5996,68 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         str1 = generator.generateFont( parameter );
         generator.dispose();
 
+         */
+
+        /////////////////////////
+        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        parameter.borderColor = new Color( .5f, .5f, .5f, .9f );
+        parameter.borderWidth = 0;
+        if (ssx < ssy) {
+            if (fontsize == 0) fontsize = 48 * ssx / 1080;
+        } else {
+            if (fontsize == 0) fontsize = 48 * ssy / 1080;
+        }
+        parameter.size = fontsize;
+        parameter.shadowColor = new Color( 0f, 0f, 0f, .9f );
+        parameter.shadowOffsetY = 4;
+        parameter.incremental = true;
+        parameter.packer = new PixmapPacker(2048, 2048, Pixmap.Format.RGBA8888, 2, false);
+
+        String[] fallbackFontNames = null;
+
+        if (language.equalsIgnoreCase( "Japanese" )) {
+            fallbackFontNames = new String[] {"japanese.otf"};
+        }else if(language.equalsIgnoreCase( "Chinese" )){
+            fallbackFontNames = new String[] {"chinese.ttf"};
+        }
+
+        if (fallbackFontNames!=null) {
+            //glyph stuff
+            HashMap<String, BitmapFont> fallbackFonts = new HashMap<String, BitmapFont>();
+
+            for (String fallbackFontName : fallbackFontNames) {
+                FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal(fallbackFontName));
+                BitmapFont font = generator.generateFont(parameter);
+                fallbackFonts.put(fallbackFontName, font);
+            }
+
+            FreeTypeFontGenerator baseFontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("font.ttf"));
+
+            FreeTypeFontGenerator.FreeTypeBitmapFontData fallbackData = new FreeTypeFontGenerator.FreeTypeBitmapFontData() {
+                @Override
+                public BitmapFont.Glyph getGlyph(char ch) {
+                    BitmapFont.Glyph glyph = super.getGlyph(ch);
+                    if (glyph != null)
+                        return glyph;
+
+                    for (BitmapFont font : fallbackFonts.values()) {
+                        glyph = font.getData().getGlyph(ch);
+                        if (glyph != null) {
+                            return glyph;
+                        }
+                    }
+
+                    return null;
+                }
+            };
+
+            str1 = baseFontGenerator.generateFont(parameter, fallbackData);
+        }else{
+            //normal stuff
+            FreeTypeFontGenerator baseFontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("font.ttf"));
+            str1 = baseFontGenerator.generateFont(parameter);
+        }
+        /////////////////////////
         skin = new Skin();
         skin2 = new Skin( Gdx.files.internal( "skins/skin/skin.json" ));
         skin.add( "font", str1, BitmapFont.class );
