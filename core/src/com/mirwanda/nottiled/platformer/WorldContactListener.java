@@ -216,6 +216,12 @@ public class WorldContactListener implements ContactListener {
                 mygame.message = o.get( "notice" ).toString();
             }
 
+            if(o.get("alert")!=null){
+                //////////
+                mygame.msgbox(o.get("alert").toString());
+                //////////
+            }
+
             if (o.get( "message" ) != null) {
                 mygame.msgindex = 0;
                 String mbr = mygame.replaceVars(o.get( "message" ).toString());

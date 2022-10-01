@@ -699,6 +699,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             @Override
             public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+
                 waittoloadlist=0.25f;
 
                 if (markermode)

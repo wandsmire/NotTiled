@@ -14,10 +14,13 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.PixmapPacker;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -43,14 +46,20 @@ import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.Box2D;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
 import com.badlogic.gdx.physics.box2d.World;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Button;
+import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.Touchpad;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
@@ -61,7 +70,6 @@ import com.mirwanda.nottiled.myShapeRenderer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.ALLSENSOR;
 import static com.mirwanda.nottiled.platformer.gameobject.objecttype.BLOCK;
@@ -91,20 +99,18 @@ public class game implements ControllerListener {
     public Vector2 move;
     public boolean camlockx;
     public boolean camlocky;
-    //public RayHandler rayHandler;
 /////////////////////
     float delta;
-    public Stage stage;
+    public Stage stage,stage2;
 
     SpriteBatch batch, ui;
     myShapeRenderer uis;
-    public Skin skin2;
+    public Skin skin2, skin;
     BitmapFont str1;
     int ssx = 480;
     int ssy = 800;
     int fontsize;
 
-    private Table control;
     private Touchpad tpad;
     private boolean tanalog;
     private boolean tslot1,tslot2,tslot3,tslot4;
@@ -216,42 +222,88 @@ public class game implements ControllerListener {
         uicamVP.apply(true);
         gamecamVP.apply(true);
         stage = new Stage( new ExtendViewport( 3840 ,2160) );
+        stage2 = new Stage( new ExtendViewport( 1920 ,1080) );
 
 
         fontsize = 48;
 
         ui = new SpriteBatch();
         uis = new myShapeRenderer();
-        skin2 = new Skin( Gdx.files.internal( "skins/skin/skin.json" ));
+        String language = "English";
 
-
+        //////////////////////////
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        FileHandle fileHandl = Gdx.files.internal("languages/characters");
-        Map<String, String> vars = new HashMap<>();
-        String allstr = fileHandl.readString();
-        String[] cumi = allstr.split("\r\n");
-        for (String s : cumi) {
-            String[] cuma = s.split( ":" );
-            vars.put( cuma[0], cuma[1] );
+        parameter.borderColor = new Color( .5f, .5f, .5f, .9f );
+        parameter.borderWidth = 0;
+        if (ssx < ssy) {
+            if (fontsize == 0) fontsize = 48 * ssx / 1080;
+        } else {
+            if (fontsize == 0) fontsize = 48 * ssy / 1080;
+        }
+        parameter.size = fontsize;
+        parameter.shadowColor = new Color( 0f, 0f, 0f, .9f );
+        parameter.shadowOffsetY = 4;
+        parameter.incremental = true;
+        parameter.packer = new PixmapPacker(2048, 2048, Pixmap.Format.RGBA8888, 2, false);
+
+        String[] fallbackFontNames = null;
+
+        if (language.equalsIgnoreCase( "Japanese" )) {
+            fallbackFontNames = new String[] {"japanese.otf"};
+        }else if(language.equalsIgnoreCase( "Chinese" )){
+            fallbackFontNames = new String[] {"chinese.ttf"};
         }
 
-        String language = "English";
-        parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS + vars.get( language );
-        parameter.borderColor = new Color(.5f, .5f, .5f, .9f);
-        parameter.borderWidth = 0;
-        parameter.size = fontsize;
+        if (fallbackFontNames!=null) {
+            //glyph stuff
+            HashMap<String, BitmapFont> fallbackFonts = new HashMap<>();
 
+            for (String fallbackFontName : fallbackFontNames) {
+                FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal(fallbackFontName));
+                BitmapFont font = generator.generateFont(parameter);
+                fallbackFonts.put(fallbackFontName, font);
+            }
 
-        parameter.shadowColor = new Color(0f, 0f, 0f, .9f);
-        parameter.shadowOffsetY = 4;
-        FreeTypeFontGenerator generator;
+            FreeTypeFontGenerator baseFontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("font.ttf"));
 
-        String filenam = "retro.ttf";
+            FreeTypeFontGenerator.FreeTypeBitmapFontData fallbackData = new FreeTypeFontGenerator.FreeTypeBitmapFontData() {
+                @Override
+                public BitmapFont.Glyph getGlyph(char ch) {
+                    BitmapFont.Glyph glyph = super.getGlyph(ch);
+                    if (glyph != null)
+                        return glyph;
 
-        generator = new FreeTypeFontGenerator(Gdx.files.internal(filenam));
-        FreeTypeFontGenerator.setMaxTextureSize( 99999 );
-        str1 = generator.generateFont(parameter);
-        generator.dispose();
+                    for (BitmapFont font : fallbackFonts.values()) {
+                        glyph = font.getData().getGlyph(ch);
+                        if (glyph != null) {
+                            return glyph;
+                        }
+                    }
+
+                    return null;
+                }
+            };
+
+            str1 = baseFontGenerator.generateFont(parameter, fallbackData);
+        }else{
+            //normal stuff
+            FreeTypeFontGenerator baseFontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("font.ttf"));
+            str1 = baseFontGenerator.generateFont(parameter);
+        }
+        skin = new Skin();
+        skin2 = new Skin( Gdx.files.internal( "skins/skin/skin.json" ));
+        skin.add( "font", str1, BitmapFont.class );
+
+//        FileHandle fileHandle = Gdx.files.internal( "skins/neut/neutralizer-ui.json" );
+        FileHandle fileHandle = Gdx.files.internal( "skins/holo/Holo-dark-hdpi.json" );
+        FileHandle atlasFile = fileHandle.sibling( "Holo-dark-hdpi.atlas" );
+
+        if (atlasFile.exists()) {
+            skin.addRegions( new TextureAtlas( atlasFile ) );
+        }
+
+        skin.load( fileHandle );
+///////////////////////////////////////
         loadTouchpad();
         Controllers.addListener(this);
 
@@ -274,8 +326,6 @@ public class game implements ControllerListener {
             initialiseBox2D();
 
             night=true;
-            //rayHandler=new RayHandler( world);
-            //rayHandler.setAmbientLight(0.5f);
 
             if (!initialiseTMX()) return false;
             initialiseMapProperties();
@@ -453,14 +503,9 @@ public class game implements ControllerListener {
                                     tmp.getHeight() / isy );
                             customicons=true;
 
-                        }catch (Exception e){
-                            customicons=false;
+                        }catch (Exception ignored){
                         }
-                    }else{
-                        customicons=false;
                     }
-                } else {
-                    customicons=false;
                 }
             }
 
@@ -534,10 +579,7 @@ public class game implements ControllerListener {
             if (tilelayer) {
                 if (!mlayer.isVisible()) continue;
 
-                boolean over = false;
-                if (mlayer.getName().contains( "*" )) {
-                    over = true;
-                }
+                boolean over = mlayer.getName().contains("*");
                 TiledMapTileLayer tlayer = (TiledMapTileLayer) mlayer;
                 this.Tw = tlayer.getWidth();
                 this.Th = tlayer.getHeight();
@@ -567,15 +609,14 @@ public class game implements ControllerListener {
                 MapObjects objects = map.getLayers().get( mlayer.getName() ).getObjects();
                 for (MapObject o : objects) {
                     Rectangle rect;
+
                     if (o instanceof TiledMapTileMapObject) {
                         TiledMapTileMapObject obj = (TiledMapTileMapObject) o;
-                        setGameObject( true, null, obj.getX(), obj.getY(), obj.getTextureRegion().getRegionWidth(), obj.getTextureRegion().getRegionHeight(), false, o, opacity );
-
+                        setGameObject(true, null, obj.getX(), obj.getY(), obj.getTextureRegion().getRegionWidth(), obj.getTextureRegion().getRegionHeight(), false, o, opacity);
                     } else {
                         RectangleMapObject obj = (RectangleMapObject) o;
                         rect = obj.getRectangle();
                         setGameObject( true, null, rect.x, rect.y, rect.width, rect.height, false, o, opacity );
-
 
                     }
                 }
@@ -676,7 +717,7 @@ public class game implements ControllerListener {
     }
 
     public boolean checkvars(String sss){
-        boolean qual=true;
+        boolean qual;
 
             String[] ss = sss.split( "," );
             qual=false;
@@ -839,6 +880,17 @@ public class game implements ControllerListener {
     }
 
     public void drawHUD(SpriteBatch b, BitmapFont str1){
+        /////////////
+        for (gameobject go: objects){
+            if (!go.over & go!=player) {
+                if (go.text!=null) {
+                    Vector3 scrp = gamecam.project(new Vector3(go.getX(), go.getY(), 0f));
+                    Vector3 uicp = uicam.unproject(scrp);
+                    str1.draw(b, go.text, uicp.x, 1080-uicp.y,0,Align.center,false);
+                }
+            }
+        }
+        /////////////
         int index=0;
         for (int i=0; i<save.vars.size();i++){
             KV vr = save.vars.get(i);
@@ -905,7 +957,6 @@ public class game implements ControllerListener {
     public float peektimer;
     public int salto=0;
     public boolean recoil;
-    public OrthographicCamera gc;
     public float zoom=0.2f;
     public List<gameobject> overs = new ArrayList<>();
     public List<gameobject> deads = new ArrayList<>();
@@ -916,8 +967,10 @@ public class game implements ControllerListener {
     public boolean updatephysics;
     public boolean updategameobject;
 
-    public void update(SpriteBatch batch, float delta) {
+    public void update(float delta) {
         if (loadingmap) return;
+        if(isDialog) return;
+
         updateFixedTimeStamp();
         updatePlayerMovement();
         checkGameCondition();
@@ -1146,6 +1199,7 @@ public class game implements ControllerListener {
     //but it will correct the bug that make player speed faster
     //so I don't care... heheh
     public void updatePlayerMovement(){
+
         ladder= touchedladder > 0;
         if (floater){
             player.body.setLinearVelocity(player.body.getLinearVelocity().x,0);
@@ -1271,14 +1325,6 @@ public class game implements ControllerListener {
             //rpg with anim
             if (rpg) {
                 jumping=false;
-                if (player.anim.size()==4) {
-                    if (player.moving) {
-                        TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( playerTime, true );
-                    } else {
-                        TextureRegion currentFramea = player.anim.get( player.dir ).getKeyFrame( 0, true );
-                    }
-                }
-
                 //not rpg with anim
             }else{
                 //moving
@@ -1327,7 +1373,7 @@ public class game implements ControllerListener {
                     }
                 }
 
-                 else if (!player.moving) {
+                 else {
                     //idle
                     for (int k=player.anim.size()-1;k>=0;k--){
                         if (player.animID.get( k ).equalsIgnoreCase( "equipgun+jetpack" )){
@@ -1656,9 +1702,6 @@ public class game implements ControllerListener {
                 }
                 newbrick.setupGameObject( world, null,posx, posy, newbrick.pimagesize.x/2f, newbrick.pimagesize.y/2f, BodyDef.BodyType.DynamicBody, PLAYERPROJECTILE, null ,null ,false,1);
                 this.objects.add( newbrick );
-                //newbrick.myLight = new PointLight( rayHandler, 100, newbrick.lightColor, 4/scale, 0, 0 );
-                //newbrick.myLight.setSoftnessLength( 0f );
-                //newbrick.myLight.attachToBody( newbrick.body );
 
                 go.cooldown=go.pcooldown;
                 break;
@@ -1699,7 +1742,6 @@ public class game implements ControllerListener {
                     if (player.animID.get( i ).equalsIgnoreCase( "usegun+jetpack" )){
                         player.animID.remove( i );
                         player.anim.remove( i );
-                        continue;
                     }
                 }
             }else{
@@ -1839,7 +1881,6 @@ public class game implements ControllerListener {
             objx=obj;
             if (obj.getName()!=null){
                 newbrick.id = obj.getName();
-               // log(newbrick.id);
             }
             o = obj.getProperties();
             if (obj instanceof TiledMapTileMapObject) {
@@ -1889,6 +1930,10 @@ public class game implements ControllerListener {
 
         }
 
+        if (o.containsKey( "text" )) {
+            String txt = o.get("text").toString();
+            newbrick.text = txt;
+        }
 
 
         newbrick.HP = (o.containsKey( "HP" )) ? Integer.parseInt( o.get( "HP" ).toString() ) : 1;
@@ -1920,6 +1965,8 @@ public class game implements ControllerListener {
         if (o.get("name")!=null) {
             newbrick.id=o.get("name").toString();
         }
+
+
 
         if (o.containsKey( "mode" )) {
             if (o.get( "mode" ).toString().equalsIgnoreCase( "rpg" )) {
@@ -2259,6 +2306,7 @@ public class game implements ControllerListener {
         uicamVP.update( width,height );
         gamecamVP.update( width,height );
         stage.getViewport().update( width,height );
+        stage2.getViewport().update( width,height );
     }
 
     public void startgame(String curdir,String filex, boolean playtest){
@@ -2277,13 +2325,14 @@ public class game implements ControllerListener {
         if (shutdown) return false;
         if (player==null) return false;
 
+
         delta = Gdx.graphics.getDeltaTime();
         stateTime += delta;
         if (gamecam.zoom != zoom) gamecam.zoom = zoom;
 
         //update keystroke and logic
         keyinput();
-        update( batch, delta);
+        update( delta);
 
         //draw bgcolor
         Gdx.gl.glClearColor( bgcolor.r,bgcolor.g,bgcolor.b,bgcolor.a);
@@ -2305,15 +2354,6 @@ public class game implements ControllerListener {
         drawObjectsAndParticles();
         batch.end();
 
-        //light
-        /*
-        if(rayHandler != null){
-            rayHandler.setCombinedMatrix(gamecam);
-            rayHandler.updateAndRender();
-        }
-
-         */
-
         //draw box2d debug if needed
         if (debugmode) b2dr.render( world, gamecam.combined );
 
@@ -2323,15 +2363,19 @@ public class game implements ControllerListener {
         drawHUD( ui, str1);
         ui.end();
 
+        control.setVisible(false);
         //draw virtual Controller
         if (Gdx.app.getType() != Application.ApplicationType.Desktop || uitest) {
             if (!starting && player.state != gameobject.states.DEAD  && fade==0) {
                 if (!disablecontrol && gamepad==null) {
-                    stage.act( delta );
-                    stage.draw();
+                    control.setVisible(true);
                 }
             }
         }
+        stage.act( delta );
+        stage.draw();
+        stage2.act( delta );
+        stage2.draw();
 
         //draw fade effect
         uis.setProjectionMatrix( uicam.combined );
@@ -2358,6 +2402,7 @@ public class game implements ControllerListener {
 
     Button slot1,slot2,slot3,slot4;
     Image islot1,islot2,islot3,islot4;
+    Table control;
     public void loadTouchpad(){
 
          slot1 = new Button( skin2 );
@@ -2463,7 +2508,7 @@ public class game implements ControllerListener {
         action.add();
         control.add( action );
         stage.clear();
-        stage.addActor( control );
+        stage.addActor(control);
     }
     boolean pressed = false;
 
@@ -2471,6 +2516,11 @@ public class game implements ControllerListener {
 
         if (Gdx.input.isKeyJustPressed( Input.Keys.ESCAPE )) escapegame();
         if (Gdx.input.isKeyJustPressed( Input.Keys.BACK )) escapegame();
+        if(Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && isDialog){
+            dd.hide();
+            isDialog=false;
+            Gdx.input.setInputProcessor( stage );
+        }
         if (player.state == gameobject.states.DEAD) return;
         if (!disablecontrol) {
             pressed=false;
@@ -2544,8 +2594,8 @@ public class game implements ControllerListener {
             }
 
             if (tanalog || gamepad!=null) {
-                float deltaX=0f;
-                float deltaY=0f;
+                float deltaX;
+                float deltaY;
                 if (gamepad==null) {
                     deltaX = tpad.getKnobPercentX();
                     deltaY = tpad.getKnobPercentY();
@@ -2601,6 +2651,33 @@ public class game implements ControllerListener {
     public void escapegame(){
         if (bgm!=null && bgm.isPlaying()) bgm.stop();
         shutdown=true;
+    }
+
+    boolean isDialog=false;
+    Dialog dd;
+    public void msgbox(String msg) {
+        Gdx.input.setInputProcessor( stage2 );
+        isDialog=true;
+        dd = new Dialog("",skin);
+        dd.row();
+
+        Label lab = new Label( msg, skin );
+        lab.setWrap( true );
+        ScrollPane sp = new ScrollPane(lab);
+        dd.add(sp).maxHeight(400).width(800).pad(5).row();
+
+        TextButton butt = new TextButton("OK",skin);
+        butt.addListener( new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                dd.hide();
+                isDialog=false;
+                Gdx.input.setInputProcessor( stage );
+            }
+        } );
+        dd.add(butt).width(800).row();
+        stage2.setKeyboardFocus(butt);
+        dd.show(stage2);
     }
 
 }

@@ -31,6 +31,8 @@ import static com.mirwanda.nottiled.platformer.gameobject.objecttype.PLAYER;
 public class gameobject extends Sprite {
     public String id="";
     public String name="";
+    public String text=null;
+
     public game mygame;
     public int offsetx;
     public int offsety;
