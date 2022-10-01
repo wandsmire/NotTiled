@@ -29,6 +29,7 @@ public class myContactListener implements ContactListener {
                 }
                 game.hidebody=true;
                 game.bodyc=0.2f;
+
             }
 
             if (fixB.getUserData() == POINTER){
@@ -48,7 +49,6 @@ public class myContactListener implements ContactListener {
             }
 
             //  Gdx.app.log("TEST","COLLIDED");
-
 
         }
 

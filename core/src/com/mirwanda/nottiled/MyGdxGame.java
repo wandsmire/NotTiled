@@ -1556,7 +1556,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         postProcessor.render();
                         drawWorldUI();
                         //draw debug for collision detection
-                        //b2dr.render(world,cam.combined);
+                        b2dr.render(world,cam.combined);
 
                         drawstage( delta );
 

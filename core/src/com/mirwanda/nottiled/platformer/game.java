@@ -2139,7 +2139,7 @@ public class game implements ControllerListener {
                     break;
                 case "touch":
                     if (checkQual( o)) {
-                        newbrick.setupGameObject( world, tlcece, xx, yy, ww, hh, BodyDef.BodyType.DynamicBody, TOUCHSENSOR, objx, t, over  ,opacity);
+                        newbrick.setupGameObject( world, tlcece, xx, yy, 2, 2, BodyDef.BodyType.DynamicBody, TOUCHSENSOR, objx, t, over  ,opacity);
                         touchpoint=newbrick;
                     }
                     break;
@@ -2326,10 +2326,20 @@ public class game implements ControllerListener {
         if (player==null) return false;
 
 
+
         delta = Gdx.graphics.getDeltaTime();
         stateTime += delta;
         if (gamecam.zoom != zoom) gamecam.zoom = zoom;
+        if (touchCooldown>0) touchCooldown--;
+        if(touchCooldown==0)
+        {
+            if (touchpoint != null) {
+                touchpoint.body.setTransform( -5, -5, 0 );
+                touchpoint.body.setAwake( true );
+                touchCooldown=-1;
+            }
 
+        }
         //update keystroke and logic
         keyinput();
         update( delta);
@@ -2634,6 +2644,7 @@ public class game implements ControllerListener {
                     Vector3 touch2 = new Vector3();
                     gamecam.unproject( touch2.set( Gdx.input.getX( i ), Gdx.input.getY( i ), 0 ) );
                     if (touchpoint != null) {
+                        touchCooldown=1f;
                         touchpoint.body.setTransform( touch2.x, touch2.y, 0 );
                         touchpoint.body.setAwake( true );
                     }
@@ -2644,6 +2655,7 @@ public class game implements ControllerListener {
 
     }
 
+    float touchCooldown=-1f;
     public void dispose(){
         batch.dispose();
     }
@@ -2656,6 +2668,7 @@ public class game implements ControllerListener {
     boolean isDialog=false;
     Dialog dd;
     public void msgbox(String msg) {
+        if (isDialog) return;
         Gdx.input.setInputProcessor( stage2 );
         isDialog=true;
         dd = new Dialog("",skin);

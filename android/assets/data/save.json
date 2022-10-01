@@ -12,11 +12,11 @@ vars: [
 	}
 	{
 		key: level
-		value: 2
+		value: 3
 	}
 	{
 		key: score
-		value: 3650
+		value: 6800
 		hud: true
 		keephud: true
 	}
@@ -27,9 +27,6 @@ vars: [
 	}
 	{
 		key: gun
-		iconx: 6
-		hasicon: true
-		icony: 2
 	}
 	{
 		key: jetpack
@@ -37,7 +34,7 @@ vars: [
 		hasicon: true
 	}
 ]
-x: 0.24193548
-y: 27.661291
+x: 0.4032258
+y: 24.918522
 mapname: index.tmx
 }
