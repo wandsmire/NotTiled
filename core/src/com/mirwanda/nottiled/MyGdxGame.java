@@ -685,15 +685,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 
-/*
+
                 if (layers.size()>0 && layers.get(selLayer).getType()== layer.Type.OBJECT){
-                    Vector3 touch = new Vector3();
-                    cam.unproject( touch.set( new Vector3(screenX,screenY,0) ) );
-                    float ae = touch.x;
-                    float ab = touch.y;
-                    updatePointer(ae,-ab);
+                    //move
+                    if (activeobjtoolmode==2) {
+                        Vector3 touch = new Vector3();
+                        cam.unproject(touch.set(new Vector3(screenX, screenY, 0)));
+                        float ae = touch.x;
+                        float ab = touch.y;
+                        updatePointer(ae, -ab);
+                    }
                 }
-*/
+
                 return false;
             }
 
@@ -10851,6 +10854,8 @@ private void refreshGenerator(){
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 gotoStage(tPreference);
+
+
                 cbMinimap.setChecked(sMinimap);
                 cbShowGrid.setChecked(sShowGrid);
                 cbShowFPS.setChecked(sShowFPS);
@@ -14963,6 +14968,7 @@ private void refreshGenerator(){
     public void gotoStage(Table table) {
         stage.clear();
         stage.addActor(table);
+        stage.setScrollFocus(table);
         Gdx.input.setInputProcessor(stage);
         kartu = "stage";
         lastStage = table;
@@ -18723,13 +18729,18 @@ private void refreshGenerator(){
 
                     if (!roll) if (tapWorldMenu(touch2)) return true;
 
+
                     if (layers.size()>0 && layers.get(selLayer).getType()== layer.Type.OBJECT){
-                        Vector3 touch = new Vector3();
-                        cam.unproject( touch.set( new Vector3(p1,p2,0) ) );
-                        float ae = touch.x;
-                        float ab = touch.y;
-                        updatePointer(ae,-ab);
+                        if(activeobjtoolmode!=2) {
+                            Vector3 touch = new Vector3();
+                            cam.unproject(touch.set(new Vector3(p1, p2, 0)));
+                            float ae = touch.x;
+                            float ab = touch.y;
+                            updatePointer(ae, -ab);
+                        }
                     }
+
+
 
 
 

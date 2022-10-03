@@ -55,7 +55,7 @@ public class gameobject extends Sprite {
     public float pspread=0, spread=0;
     public boolean heavy;
     public actions action;
-    public enum actions{JUMP,DASH,SHOOT,JETPACK,NONE}
+    public enum actions{JUMP,DASH,SHOOT,JETPACK,NONE,SLASH}
     public float impulse;
     public float wait;
     public String bindvar;
@@ -63,7 +63,10 @@ public class gameobject extends Sprite {
     public float maxdistance;
     public float distance;
     java.util.List<Animation<TextureRegion>> anim = new ArrayList<>(); // Must declare frame type (TextureRegion)
-    java.util.List<Animation<TextureRegion>> panim = new ArrayList<>(); // Must declare frame type (TextureRegion)
+    java.util.List<Animation<TextureRegion>> idle;
+    java.util.List<Animation<TextureRegion>> jump;
+    java.util.List<Animation<TextureRegion>> slash; // Must declare frame type (TextureRegion)
+    java.util.List<Animation<TextureRegion>> panim; // Must declare frame type (TextureRegion)
     java.util.List<String> animID = new ArrayList<>();
     public Vector2 pimagesize;
     //public ParticleEffect meledak;

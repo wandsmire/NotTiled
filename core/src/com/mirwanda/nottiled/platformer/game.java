@@ -1280,7 +1280,6 @@ public class game implements ControllerListener {
 
     }
     public void updatePlayerSprite(float delta){
-        playerTime += delta;
 
         //no animation whatsoever
         if (player.anim.size()==0){
@@ -1366,7 +1365,11 @@ public class game implements ControllerListener {
                             break;
                         }
                         if (player.animID.get( k ).equalsIgnoreCase( "basic" )){
-                            currentFramea = player.anim.get( k ).getKeyFrame( 0.25f, true );
+                            if (player.jump!=null){
+                                currentFramea = player.jump.get( k ).getKeyFrame( playerTime, true );
+                            }else{
+                                currentFramea = player.anim.get( k ).getKeyFrame( 0.25f, true );
+                            }
                             break;
                         }
 
@@ -1389,7 +1392,11 @@ public class game implements ControllerListener {
                             break;
                         }
                         if (player.animID.get( k ).equalsIgnoreCase( "basic" )){
-                            currentFramea = player.anim.get( k ).getKeyFrame( 0, true );
+                            if (player.idle!=null){
+                                currentFramea = player.idle.get( k ).getKeyFrame( playerTime, true );
+                            }else {
+                                currentFramea = player.anim.get(k).getKeyFrame(0, true);
+                            }
                             break;
                         }
                     }
@@ -1415,6 +1422,15 @@ public class game implements ControllerListener {
                     }
                 }
 
+                if (slashing) {
+                        if (player.slash!=null){
+                            currentFramea = player.slash.get( 0 ).getKeyFrame( playerTime, true );
+                            if (playerTime > player.slash.get( 0 ).getAnimationDuration()) slashing=false;
+                        }else {
+                            currentFramea = player.anim.get(0).getKeyFrame(0, true);
+                        }
+                }
+
                 if (jetpack) {
                     for (int k=player.anim.size()-1;k>=0;k--){
                         if (player.animID.get( k ).equalsIgnoreCase( "usejetpack" )){
@@ -1435,11 +1451,19 @@ public class game implements ControllerListener {
                             break;
                         }
                         if (player.animID.get( k ).equalsIgnoreCase( "usegun" )){
-                            currentFramea = player.anim.get( k ).getKeyFrame( playerTime, true );
+                            if (player.slash!=null){
+                                currentFramea = player.slash.get( k ).getKeyFrame( playerTime, true );
+                            }else {
+                                currentFramea = player.anim.get( k ).getKeyFrame( playerTime, true );
+                            }
                             break;
                         }
                         if (player.animID.get( k ).equalsIgnoreCase( "basic" )){
-                            currentFramea = player.anim.get( k ).getKeyFrame( playerTime, true );
+                            if (player.idle!=null){
+                                currentFramea = player.slash.get( k ).getKeyFrame( playerTime, true );
+                            }else {
+                                currentFramea = player.anim.get( k ).getKeyFrame( playerTime, true );
+                            }
                             break;
                         }
                     }
@@ -1464,6 +1488,8 @@ public class game implements ControllerListener {
 
             } //rpg or not
         } //has anim or not
+        playerTime += delta;
+
     } //void
 
     public void playSfx(Sound s){
@@ -1602,6 +1628,7 @@ public class game implements ControllerListener {
     public boolean disableYaxis = false;
     boolean dashed = false;
     boolean jetpack = false;
+    boolean slashing = false;
     float jetpackcooldown =0f;
     float gravity;
     public float varaccumulator;
@@ -1625,6 +1652,13 @@ public class game implements ControllerListener {
 
                 }
 
+                break;
+            case SLASH:
+                if (go.cooldown>0) return;
+                player.body.setLinearVelocity(0,0);
+                go.cooldown=go.pcooldown;
+                playerTime=0f;
+                slashing=true;
                 break;
             case JETPACK: //jumping ga usah pakai cooldown
                 if (go.cooldown>0) return;
@@ -1904,6 +1938,26 @@ public class game implements ControllerListener {
         newbrick.destructible = o.containsKey( "destructible" );
         //newbrick.light = (o.containsKey( "light" )) ? Float.parseFloat( o.get( "light" ).toString() ) : 0;
 
+        for (int i = 0; i < animids.size(); i++) {
+            if (o.containsKey("jump")) {
+                if (animids.get(i) == Integer.parseInt(o.get("jump").toString())) {
+                    newbrick.jump=new ArrayList<>();
+                    newbrick.jump.add(anims.get(i));
+                }
+            }
+            if (o.containsKey("slash")) {
+                if (animids.get(i) == Integer.parseInt(o.get("slash").toString())) {
+                    newbrick.slash=new ArrayList<>();
+                    newbrick.slash.add(anims.get(i));
+                }
+            }
+            if (o.containsKey("idle")) {
+                if (animids.get(i) == Integer.parseInt(o.get("idle").toString())) {
+                    newbrick.idle=new ArrayList<>();
+                    newbrick.idle.add(anims.get(i));
+                }
+            }
+        }
 
 
         if (o.containsKey( "lightcolor" )){

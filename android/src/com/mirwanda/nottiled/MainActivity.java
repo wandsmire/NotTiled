@@ -503,7 +503,7 @@ public class MainActivity extends AndroidApplication implements Interface
 		tmpdata = data;
 		SAFdata = null;
 		SAFstatus="";
-		Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
 		intent.addCategory(Intent.CATEGORY_OPENABLE);
 		intent.setType("*/*");
 		intent.putExtra(Intent.EXTRA_TITLE, filenamesuggestion);
@@ -673,9 +673,7 @@ public class MainActivity extends AndroidApplication implements Interface
 			fileOutputStream.write( data );
 			fileOutputStream.close();
 			pfd.close();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}

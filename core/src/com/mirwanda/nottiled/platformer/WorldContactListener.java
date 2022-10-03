@@ -652,6 +652,10 @@ public class WorldContactListener implements ContactListener {
                         newbrick.action = gameobject.actions.NONE;
 
                         break;
+                    case "slash":
+                        newbrick.action = gameobject.actions.SLASH;
+
+                        break;
                     case "shoot":
                         newbrick.action = gameobject.actions.SHOOT;
 
@@ -670,6 +674,7 @@ public class WorldContactListener implements ContactListener {
                                 txMonster = new Texture( Gdx.files.internal( "platformer/shoot.png" ) );
                             }
 
+
                             TextureRegion[][] tmp = TextureRegion.split( txMonster,
                                     txMonster.getWidth() / 4,
                                     txMonster.getHeight() / 4 );
@@ -683,6 +688,7 @@ public class WorldContactListener implements ContactListener {
                                 Animation<TextureRegion> tempAnim = new Animation<>( 0.1f, walkFrames );
                                 newbrick.panim.add( tempAnim );
                             }
+
 
                         try {
                             int panimID = Integer.parseInt(o.get( "panim" ).toString());
