@@ -16314,6 +16314,7 @@ private void refreshGenerator(){
     public void loadrpdmap(final FileHandle f) {
         try {
             Json json = new Json();
+            json.setIgnoreUnknownFields(true);
             if (f.exists()) {
                 String ss = f.readString();
                 rd = json.fromJson(rpd.class, ss);
