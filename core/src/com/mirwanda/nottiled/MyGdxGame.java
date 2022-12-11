@@ -16385,6 +16385,8 @@ private void refreshGenerator(){
             //adding image tileset
             if (rd.tiles_logic==null) rd.tiles_logic="tiles0.png";
             loadrpdtileset(rd.tiles_logic);
+
+            if (rd.tiles==null) rd.tiles="tiles0.png";
             loadrpdtileset(rd.tiles);
 
             //adding deco
