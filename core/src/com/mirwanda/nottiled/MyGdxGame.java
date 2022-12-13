@@ -16480,13 +16480,20 @@ private void refreshGenerator(){
     }
     public void loadrpdlayer(Integer[] cmap, String name, int tset){
         if (cmap!=null){
+
+            if(cmap.length != Tw * Th) {
+                status(String.format("Bad array size (%d) for %s, %d is required.",
+                        cmap.length, name, Th * Tw), 5);
+                return;
+            }
+
             layer l = new layer();
             l.setName(name);
             l.setVisible(true);
             l.setType(layer.Type.TILE);
-            java.util.List<Long> ls = new ArrayList<Long>();
-            java.util.List<Integer> lts = new ArrayList<Integer>();
-            java.util.List<Integer> ltl = new ArrayList<Integer>();
+            List<Long> ls = new ArrayList<>();
+            List<Integer> lts = new ArrayList<>();
+            List<Integer> ltl = new ArrayList<>();
             for (int ia = 0; ia < Tw * Th; ia++) {
                 if(cmap[ia]!=-1){
                     ls.add((long) cmap[ia]+tilesets.get(tset).getFirstgid());
