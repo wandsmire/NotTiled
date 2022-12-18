@@ -16387,7 +16387,19 @@ private void refreshGenerator(){
             loadrpdtileset(rd.tiles_logic);
 
             if (rd.tiles==null) rd.tiles="tiles0.png";
+
+            if (rd.tiles_base==null) rd.tiles_base=rd.tiles;
+            if (rd.tiles_deco==null) rd.tiles_deco=rd.tiles;
+            if (rd.tiles_deco2==null) rd.tiles_deco2=rd.tiles;
+            if (rd.tiles_roof_base==null) rd.tiles_roof_base=rd.tiles;
+            if (rd.tiles_roof_deco==null) rd.tiles_roof_deco=rd.tiles;
+
             loadrpdtileset(rd.tiles);
+            loadrpdtileset(rd.tiles_base);
+            loadrpdtileset(rd.tiles_deco);
+            loadrpdtileset(rd.tiles_deco2);
+            loadrpdtileset(rd.tiles_roof_base);
+            loadrpdtileset(rd.tiles_roof_deco);
 
             //adding deco
             if(rd.decoName!=null && tilesets.size()>1){
@@ -16404,11 +16416,11 @@ private void refreshGenerator(){
 
             //adding layers
             loadrpdlayer(rd.map,"logic",0);
-            loadrpdlayer(rd.baseTileVar,"base",1);
-            loadrpdlayer(rd.decoTileVar,"deco",1);
-            loadrpdlayer(rd.deco2TileVar,"deco2",1);
-            loadrpdlayer(rd.roofBaseTileVar,"roof_base",1);
-            loadrpdlayer(rd.roofDecoTileVar,"roof_deco",1);
+            loadrpdlayer(rd.baseTileVar,"base",2);
+            loadrpdlayer(rd.decoTileVar,"deco",3);
+            loadrpdlayer(rd.deco2TileVar,"deco2",4);
+            loadrpdlayer(rd.roofBaseTileVar,"roof_base",5);
+            loadrpdlayer(rd.roofDecoTileVar,"roof_deco",6);
 
             //load object layer
             layer l = new layer();
@@ -16475,7 +16487,7 @@ private void refreshGenerator(){
         } else if (f3.exists()) {
             addImageTset(f3,true);
         } else {
-            status("Png not found!", 3);
+            status(String.format("%s not found!", cfile), 3);
         }
     }
     public void loadrpdlayer(Integer[] cmap, String name, int tset){
@@ -16496,9 +16508,10 @@ private void refreshGenerator(){
             List<Integer> ltl = new ArrayList<>();
             for (int ia = 0; ia < Tw * Th; ia++) {
                 if(cmap[ia]!=-1){
-                    ls.add((long) cmap[ia]+tilesets.get(tset).getFirstgid());
+                    tileset tileset = tilesets.get(tset);
+                    ls.add((long) cmap[ia]+ tileset.getFirstgid());
                     lts.add(tset);
-                    ltl.add(getTileFromSpr(cmap[ia]+tilesets.get(tset).getFirstgid(),tilesets.get(tset)));
+                    ltl.add(getTileFromSpr(cmap[ia]+ tileset.getFirstgid(), tileset));
                 }else{
                     ls.add((long) 0);
                     lts.add(-1);
