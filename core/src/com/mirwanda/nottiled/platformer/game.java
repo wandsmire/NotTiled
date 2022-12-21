@@ -1654,7 +1654,7 @@ public class game implements ControllerListener {
 
                 break;
             case SLASH:
-                if (go.cooldown>0) return;
+                if (slashing) return;
                 player.body.setLinearVelocity(0,0);
                 go.cooldown=go.pcooldown;
                 playerTime=0f;
@@ -2106,7 +2106,7 @@ public class game implements ControllerListener {
         newbrick.canshoot = o.containsKey( "canshoot" );
         newbrick.dirlocked = o.containsKey( "dirlocked" );
         newbrick.pspread = (o.containsKey( "pspread" )) ? Float.parseFloat( o.get( "pspread" ).toString() ) : 0;
-        newbrick.pcooldown = (o.containsKey( "pcooldown" )) ? Float.parseFloat( o.get( "pcooldown" ).toString() ) : 1f;
+        newbrick.pcooldown = (o.containsKey( "pcooldown" )) ? Float.parseFloat( o.get( "pcooldown" ).toString() ) : 0f;
         newbrick.pspeed = (o.containsKey( "pspeed" )) ? Float.parseFloat( o.get( "pspeed" ).toString() ) : 4;
         newbrick.pmaxdistance = (o.containsKey( "pmaxdistance" )) ? Integer.parseInt( o.get( "pmaxdistance" ).toString() ) : 300;
         newbrick.pdamage = (o.containsKey( "pdamage" )) ? Integer.parseInt( o.get( "pdamage" ).toString() ) : 1;

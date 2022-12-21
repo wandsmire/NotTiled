@@ -1625,8 +1625,8 @@ public class gameobject extends Sprite {
 
     }
 
-    public float cooldown;
-    public float pcooldown =1;
+    public float cooldown=0;
+    public float pcooldown =0;
     public float pspeed =4;
     public float pmaxdistance =300;
     public int pdamage =1;
