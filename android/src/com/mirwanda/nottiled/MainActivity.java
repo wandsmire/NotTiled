@@ -278,7 +278,7 @@ public class MainActivity extends AndroidApplication implements Interface
 			e.printStackTrace();
 		}
 
-
+		//throw new RuntimeException("Test Crash"); // Force a crash
 		requestAccess();
 		runGDX();
 

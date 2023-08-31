@@ -3,6 +3,7 @@
 *.class
 *.war
 *.ear
+*.apk
 hs_err_pid*
 
 ## Robovm
@@ -130,3 +131,5 @@ Thumbs.db
 !/ios-moe/xcode/*.xcodeproj/xcshareddata
 !/ios-moe/xcode/*.xcodeproj/project.pbxproj
 /ios-moe/xcode/native/
+android/google-services.json
+android/release/android-release.apk
