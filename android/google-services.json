@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "867738111543",
+    "project_id": "nottiled-7f946",
+    "storage_bucket": "nottiled-7f946.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:867738111543:android:cf1cceba629e0fb0eaf9b2",
+        "android_client_info": {
+          "package_name": "com.mirwanda.nottiled"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "867738111543-m29n045vifa6meju7cmevitdma5at5op.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCExJwhq9tAxmN4aoxH2ZuXskfonS2uS0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "867738111543-m29n045vifa6meju7cmevitdma5at5op.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
