@@ -21120,8 +21120,7 @@ private void refreshGenerator(){
                                 //it means it will become an endless loop, so do not add.
                             }else{
                                 tile tu = tilesets.get(curtset).getTiles().get(u);
-                                if (tu.getTerrainString().equalsIgnoreCase( ATid + "," + ATid + "," + ATid + "," + ATid ))
-                                lint.add(u);
+                                if (tu.getTerrainString().equalsIgnoreCase( ATid + "," + ATid + "," + ATid + "," + ATid )) lint.add(u);
                             }
                         }
 

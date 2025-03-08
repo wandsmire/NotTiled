@@ -7,8 +7,8 @@ android {
             keyPassword 'android'
         }
     }
-    buildToolsVersion "33.0.0"
-    compileSdkVersion 33
+    buildToolsVersion "34.0.0"
+    compileSdkVersion 34
     sourceSets {
         main {
             manifest.srcFile 'AndroidManifest.xml'
