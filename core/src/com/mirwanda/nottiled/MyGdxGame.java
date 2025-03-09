@@ -201,6 +201,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     ////////////////////////////////////////////////////////////////
     float delta;
 
+    String[] fallbackFontNames = null;
+
 
 
     public enum selectTool {PICKER, COPY, MOVE, FLIP, CLONE}
@@ -4956,8 +4958,56 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     }
 
-    public void uidrawbutton(Texture tx, String strin, gui gui, float margin) {
-        //margin=1;
+    private static boolean isGlyphAvailable(BitmapFont font, char ch) {
+        // Check if the glyph for the given character exists in the font
+        BitmapFont.Glyph glyph = font.getData().getGlyph(ch);
+        return glyph != null;
+    }
+
+    private BitmapFont addGlyphToFont(BitmapFont font, char ch) {
+        BitmapFont newFont =null;
+        for (String fallbackFontName : fallbackFontNames) {
+            // Create a FreeTypeFontGenerator for the specified TTF font file
+            FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal(fallbackFontName));
+            FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+
+            // Manually specify the characters to include (existing + new character)
+            parameter.characters = getExistingCharacters(font) + ch;
+
+            // Generate a new font with the updated character set
+            newFont = generator.generateFont(parameter);
+            generator.dispose();
+        }
+        return newFont;
+    }
+
+    private static String getExistingCharacters(BitmapFont font) {
+        // Extract all characters currently in the font
+        StringBuilder characters = new StringBuilder();
+        for (int i = 0; i < font.getData().glyphs.length; i++) {
+            if (font.getData().glyphs[i] != null) {
+                for (BitmapFont.Glyph glyph : font.getData().glyphs[i]) {
+                    if (glyph != null) {
+                        characters.append((char) glyph.id);
+                    }
+                }
+            }
+        }
+        return characters.toString();
+    }
+
+
+
+        public void uidrawbutton(Texture tx, String strin, gui gui, float margin) {
+        //heiyo
+        for (char targetChar : strin.toCharArray()) {
+            if (!isGlyphAvailable(str1, targetChar)) {
+                str1 = addGlyphToFont(str1, targetChar);
+            }
+        }
+
+
+            //margin=1;
         float x = 0, y = 0, w = 0, h = 0;
         if (landscape) {
             x = gui.getXl();// + margin + 1;
@@ -6017,7 +6067,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         parameter.incremental = true;
         parameter.packer = new PixmapPacker(2048, 2048, Pixmap.Format.RGBA8888, 2, false);
 
-        String[] fallbackFontNames = null;
 
         if (language.equalsIgnoreCase( "Japanese" )) {
             fallbackFontNames = new String[] {"japanese.otf"};
@@ -26562,5 +26611,8 @@ private void refreshGenerator(){
 
          */
     }
+
+
+
 
 }
