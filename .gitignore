@@ -145,3 +145,6 @@ android/assets/export.keystore
 
 # Local experiments and logs (may contain paths or test credentials)
 /scratch/
+
+# Built artifacts — build locally with ./start_collab_server.sh or gradlew :desktop:distCollabServer
+NotTiled-CollabServer.jar
