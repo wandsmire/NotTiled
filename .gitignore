@@ -133,3 +133,15 @@ Thumbs.db
 /ios-moe/xcode/native/
 android/google-services.json
 android/release/android-release.apk
+
+# Generated from samples/ by build scripts
+android/assets/sample.zip
+android/assets/newfile-kinds.json
+
+# Signing keys and local secrets — never commit
+keystore/
+*.jks
+android/assets/export.keystore
+
+# Local experiments and logs (may contain paths or test credentials)
+/scratch/

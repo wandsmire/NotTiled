@@ -239,11 +239,41 @@ public class MainActivity extends AndroidApplication implements Interface
 
  */
 
+	private boolean isPermissionDeclared(String permission) {
+		try {
+			PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), PackageManager.GET_PERMISSIONS);
+			if (info.requestedPermissions != null) {
+				for (String p : info.requestedPermissions) {
+					if (p.equals(permission)) {
+						return true;
+					}
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+
 	final static int APP_STORAGE_ACCESS_REQUEST_CODE = 501; // Any value
 	public String vers;
 	public void requestAccess(){
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
 			vers="android10+";
+			if (isPermissionDeclared("android.permission.MANAGE_EXTERNAL_STORAGE")) {
+				if (!Environment.isExternalStorageManager()) {
+					try {
+						Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+						intent.addCategory("android.intent.category.DEFAULT");
+						intent.setData(Uri.parse(String.format("package:%s", getPackageName())));
+						startActivityForResult(intent, APP_STORAGE_ACCESS_REQUEST_CODE);
+					} catch (Exception e) {
+						Intent intent = new Intent();
+						intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+						startActivityForResult(intent, APP_STORAGE_ACCESS_REQUEST_CODE);
+					}
+				}
+			}
 		}else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Build.VERSION.SDK_INT < Build.VERSION_CODES.R ) {
 			vers="android9-";
 			if (this.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
@@ -460,7 +490,7 @@ public class MainActivity extends AndroidApplication implements Interface
 	@Override
 	public void setOrientation(int ori) {
 		switch (ori){
-			case 0: //both
+			case 0: //both (ignore lock)
 				setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
 				break;
 			case 1: //landscape
@@ -468,6 +498,13 @@ public class MainActivity extends AndroidApplication implements Interface
 				break;
 			case 2: //portrait
 				setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+				break;
+			case 3: //auto (respect lock)
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+					setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
+				} else {
+					setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER);
+				}
 				break;
 		}
 	}
@@ -579,20 +616,16 @@ public class MainActivity extends AndroidApplication implements Interface
 			else if (requestCode == REQUEST_TREE_CODE) {
 
 				if (resultData != null) {
-					java.util.List<Uri> docs = readFiles( this,resultData );
-					SAFdatas.clear(); SAFfilenames.clear();
-					for (Uri u : docs){
-						try {
-							byte[] b = readBytes( u );
-							String s = getFileName( u );
-							SAFdatas.add( b );
-							SAFfilenames.add( s );
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
+					final Uri treeUri = resultData.getData();
+					final String treeDocumentId = DocumentsContract.getTreeDocumentId(treeUri);
+					SAFstatus = "";
+					SAFdatas.clear();
+					SAFfilenames.clear();
+					SAFfilename = "";
 
-					}
-					SAFstatus = "OK";
+					new Thread(new CopyTreeRunnable(treeUri, treeDocumentId)).start();
+				} else {
+					SAFstatus = "cancel";
 				}
 			}
 			else if (requestCode == OPEN_REQUEST_CODE) {
@@ -773,5 +806,142 @@ public class MainActivity extends AndroidApplication implements Interface
 
 		//return the list
 		return uriList;
+	}
+
+	@Override
+	public String getFilesDirPath() {
+		try {
+			java.io.File dir = getExternalFilesDir(null);
+			if (dir != null) {
+				return dir.getAbsolutePath() + "/";
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return "";
+	}
+
+	@Override
+	public String getApkPath() {
+		return getPackageCodePath();
+	}
+
+	@Override
+	public boolean isAccessAllFilesGranted() {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+			return Environment.isExternalStorageManager();
+		}
+		return true;
+	}
+
+	@Override
+	public String getExternalStoragePath() {
+		return Environment.getExternalStorageDirectory().getAbsolutePath() + "/";
+	}
+
+	private String mainTmxRelativePath = null;
+
+	private void copyDocumentTree(Uri rootUri, String rootDocId, java.io.File destDir) {
+		deleteRecursive(destDir);
+		destDir.mkdirs();
+		mainTmxRelativePath = null;
+		traverseAndCopy(rootUri, rootDocId, destDir, "");
+	}
+
+	private void traverseAndCopy(Uri treeUri, String parentDocId, java.io.File destDir, String relativePath) {
+		Uri childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentDocId);
+		Cursor cursor = null;
+		try {
+			cursor = getContentResolver().query(childrenUri, new String[]{
+					DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+					DocumentsContract.Document.COLUMN_MIME_TYPE,
+					DocumentsContract.Document.COLUMN_DISPLAY_NAME
+			}, null, null, null);
+
+			if (cursor != null && cursor.moveToFirst()) {
+				do {
+					String docId = cursor.getString(0);
+					String mimeType = cursor.getString(1);
+					String displayName = cursor.getString(2);
+
+					if (DocumentsContract.Document.MIME_TYPE_DIR.equals(mimeType)) {
+						java.io.File newDestDir = new java.io.File(destDir, displayName);
+						newDestDir.mkdirs();
+						traverseAndCopy(treeUri, docId, newDestDir,
+								relativePath.isEmpty() ? displayName : relativePath + "/" + displayName);
+					} else {
+						java.io.File destFile = new java.io.File(destDir, displayName);
+						Uri fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId);
+						copyFile(fileUri, destFile);
+
+						String relFilePath = relativePath.isEmpty() ? displayName : relativePath + "/" + displayName;
+						SAFfilenames.add(relFilePath);
+
+						if (displayName.toLowerCase().endsWith(".tmx") && mainTmxRelativePath == null) {
+							mainTmxRelativePath = relFilePath;
+						}
+					}
+				} while (cursor.moveToNext());
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			if (cursor != null) {
+				cursor.close();
+			}
+		}
+	}
+
+	private void copyFile(Uri srcUri, java.io.File destFile) throws IOException {
+		InputStream in = null;
+		FileOutputStream out = null;
+		try {
+			in = getContentResolver().openInputStream(srcUri);
+			out = new FileOutputStream(destFile);
+			byte[] buffer = new byte[8192];
+			int bytesRead;
+			while ((bytesRead = in.read(buffer)) != -1) {
+				out.write(buffer, 0, bytesRead);
+			}
+		} finally {
+			if (in != null) in.close();
+			if (out != null) out.close();
+		}
+	}
+
+	private void deleteRecursive(java.io.File fileOrDirectory) {
+		if (fileOrDirectory.isDirectory()) {
+			java.io.File[] children = fileOrDirectory.listFiles();
+			if (children != null) {
+				for (java.io.File child : children) {
+					deleteRecursive(child);
+				}
+			}
+		}
+		fileOrDirectory.delete();
+	}
+
+	private class CopyTreeRunnable implements Runnable {
+		private final Uri treeUri;
+		private final String treeDocumentId;
+
+		CopyTreeRunnable(Uri treeUri, String treeDocumentId) {
+			this.treeUri = treeUri;
+			this.treeDocumentId = treeDocumentId;
+		}
+
+		@Override
+		public void run() {
+			try {
+				java.io.File destDir = new java.io.File(getExternalFilesDir(null), "NotTiled/Temp");
+				copyDocumentTree(treeUri, treeDocumentId, destDir);
+
+				SAFfilename = mainTmxRelativePath != null ? mainTmxRelativePath : "";
+				SAFstatus = "OK";
+			} catch (Exception e) {
+				e.printStackTrace();
+				SAFstatus = "error";
+			}
+		}
 	}
 }

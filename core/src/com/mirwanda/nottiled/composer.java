@@ -292,6 +292,7 @@ public class composer {
         String sequence = chord.toLowerCase();
 
         for (int i = 0; i < 2; i++) {
+            if (i >= sequence.length()) break;
             String c = sequence.substring( i, i + 1 );
             if ("abcdefgr#".contains( c )) {
                 command += c;
@@ -302,13 +303,18 @@ public class composer {
         //C#10
         command = new String( "" );
         for (int i = 0; i < 4; i++) {
+            if (i >= sequence.length()) break;
             String c = sequence.substring( i, i + 1 );
             if ("0123456789".contains( c )) {
                 command += c;
             }
         }
         String ttoctave = (command.equalsIgnoreCase( "" )) ? "" : command;
-        toctave = (command.equalsIgnoreCase( "" )) ? 4 : Integer.parseInt( command );
+        try {
+            toctave = (command.equalsIgnoreCase( "" )) ? 4 : Integer.parseInt( command );
+        } catch (NumberFormatException e) {
+            toctave = 4;
+        }
 
         int inote = 0;
         switch (tnote) {
@@ -933,75 +939,81 @@ public class composer {
 
 
         for (String com : commands) {
-            Gdx.app.log( "COM",com );
-            if (com.length()==0) continue;
-            switch (com.substring( 0, 1 )) {
-                case "T":
-                    Tempo tempo = new Tempo();
-                    tempo.setBpm(Integer.parseInt( com.substring( 1 )));
-                    tempoTrack.insertEvent(tempo);
-                    break;
-                case "@":
-                    ctick= (int) (1920*Float.parseFloat( com.substring( 1 )));//ini kalo yang 120... kalo 80?
-                    break;
-                case ":":
-                    if (com.substring( 1,3 ).equalsIgnoreCase( "ce" )) {
-                        com = com.replaceAll( "[:CE()]", "" );
-                        String[] come = com.split( "," );
-                        controllerEvent( Integer.parseInt( come[0] ), Integer.parseInt( come[1] ) );
-                        Gdx.app.log( "CE", com );
-                    }
-                    if (com.substring( 1,3 ).equalsIgnoreCase( "pw" )) {
-                        com = com.replaceAll( "[:PW()]", "" );
-                        String[] come = com.split( "," );
-                        PitchWheel( Integer.parseInt( come[0] ), Integer.parseInt( come[1] ) );
-                        Gdx.app.log( "PW", com );
-                    }
+            try {
+                Gdx.app.log( "COM",com );
+                if (com.length()==0) continue;
+                switch (com.substring( 0, 1 )) {
+                    case "T":
+                        Tempo tempo = new Tempo();
+                        tempo.setBpm(Integer.parseInt( com.substring( 1 )));
+                        tempoTrack.insertEvent(tempo);
+                        break;
+                    case "@":
+                        ctick= (int) (1920*Float.parseFloat( com.substring( 1 )));//ini kalo yang 120... kalo 80?
+                        break;
+                    case ":":
+                        if (com.length() >= 3) {
+                            if (com.substring( 1,3 ).equalsIgnoreCase( "ce" )) {
+                                com = com.replaceAll( "[:CE()]", "" );
+                                String[] come = com.split( "," );
+                                controllerEvent( Integer.parseInt( come[0] ), Integer.parseInt( come[1] ) );
+                                Gdx.app.log( "CE", com );
+                            }
+                            if (com.substring( 1,3 ).equalsIgnoreCase( "pw" )) {
+                                com = com.replaceAll( "[:PW()]", "" );
+                                String[] come = com.split( "," );
+                                PitchWheel( Integer.parseInt( come[0] ), Integer.parseInt( come[1] ) );
+                                Gdx.app.log( "PW", com );
+                            }
+                        }
 
-                    break;
-                case "V":
-                    setVoice( Integer.parseInt( com.substring( 1 ) ) );
-                    break;
-                case "L":
-                    setLayer( Integer.parseInt( com.substring( 1 ) ) );
-                    break;
-                case "I":
-                    setInstrument( com.substring( 1 ) );
-                    break;
-                case "A":
-                case "a":
-                case "B":
-                case "b":
-                case "C":
-                case "c":
-                case "D":
-                case "d":
-                case "E":
-                case "e":
-                case "F":
-                case "f":
-                case "G":
-                case "g":
-                case "R":
-                case "r":
-                    boolean chord=false;
-                    if (com.contains( "MAJ" )) chord=true;
-                    if (com.contains( "MIN" )) chord=true;
-                    if (com.contains( "AUG" )) chord=true;
-                    if (com.contains( "ADD" )) chord=true;
-                    if (com.contains( "DOM" )) chord=true;
-                    if (com.contains( "DIM" )) chord=true;
-                    if (com.contains( "SUS" )) chord=true;
-                    if (chord){
-                        addChord(com);
-                    }else{
-                        addNote(com);
-                    }
-                    break;
-                case "[":
-                    addDrum( com );
-                    break;
-                default:
+                        break;
+                    case "V":
+                        setVoice( Integer.parseInt( com.substring( 1 ) ) );
+                        break;
+                    case "L":
+                        setLayer( Integer.parseInt( com.substring( 1 ) ) );
+                        break;
+                    case "I":
+                        setInstrument( com.substring( 1 ) );
+                        break;
+                    case "A":
+                    case "a":
+                    case "B":
+                    case "b":
+                    case "C":
+                    case "c":
+                    case "D":
+                    case "d":
+                    case "E":
+                    case "e":
+                    case "F":
+                    case "f":
+                    case "G":
+                    case "g":
+                    case "R":
+                    case "r":
+                        boolean chord=false;
+                        if (com.contains( "MAJ" )) chord=true;
+                        if (com.contains( "MIN" )) chord=true;
+                        if (com.contains( "AUG" )) chord=true;
+                        if (com.contains( "ADD" )) chord=true;
+                        if (com.contains( "DOM" )) chord=true;
+                        if (com.contains( "DIM" )) chord=true;
+                        if (com.contains( "SUS" )) chord=true;
+                        if (chord){
+                            addChord(com);
+                        }else{
+                            addNote(com);
+                        }
+                        break;
+                    case "[":
+                        addDrum( com );
+                        break;
+                    default:
+                }
+            } catch (Exception e) {
+                Gdx.app.error("Composer", "Failed to parse command: " + com, e);
             }
         }
 

@@ -150,7 +150,10 @@ public class obj implements Cloneable
 	public void setupBox2D(World world){
 	}
 	public void destroyBody(World world){
-		world.destroyBody( body );
+		if (body != null) {
+			world.destroyBody( body );
+			body = null;
+		}
 	}
 
 	public void updateVertices(World world, int Tsh){
@@ -204,13 +207,29 @@ public class obj implements Cloneable
 			body = world.createBody(bdef);
 
 			for(int i=0;i<points.size()-1;i++){
-					eshape = new EdgeShape();
-					eshape.set(points.get( i ).x,-points.get( i ).y,points.get( i+1 ).x,-points.get( i+1 ).y);
-					fdef.shape = eshape;
+				float x1 = points.get(i).x;
+				float y1 = -points.get(i).y;
+				float x2 = points.get(i+1).x;
+				float y2 = -points.get(i+1).y;
+				float dx = x2 - x1;
+				float dy = y2 - y1;
+				float len = (float) Math.sqrt(dx * dx + dy * dy);
+				if (len > 0.1f) {
+					float nx = -dy / len;
+					float ny = dx / len;
+					float r = 12f; // Selection padding radius
+					Vector2[] verts = new Vector2[4];
+					verts[0] = new Vector2(x1 + r * nx, y1 + r * ny);
+					verts[1] = new Vector2(x1 - r * nx, y1 - r * ny);
+					verts[2] = new Vector2(x2 - r * nx, y2 - r * ny);
+					verts[3] = new Vector2(x2 + r * nx, y2 + r * ny);
+					PolygonShape polySeg = new PolygonShape();
+					polySeg.set(verts);
+					fdef.shape = polySeg;
 					fixture = body.createFixture(fdef);
 					fixture.setUserData(this);
-
 				}
+			}
 
 		}else if (shape=="point"){
 			bdef.position.set(x,-y+Tsh);
@@ -244,10 +263,14 @@ public class obj implements Cloneable
 
 		float angle = (float) ((360-rotation)*DEGREES_TO_RADIANS);
 		body.setTransform( body.getPosition(),angle);
+		body.setUserData(this);
 	}
 
 	public void updateVerticesActive(World world, int Tsh){
-		if (body!=null) world.destroyBody( body );
+		if (body!=null) {
+			world.destroyBody( body );
+			body = null;
+		}
 		bdef.type = BodyDef.BodyType.StaticBody;
 		fdef.filter.categoryBits = DEFAULT_BIT;
 		fdef.filter.maskBits = PLAYER_BIT;
@@ -300,12 +323,28 @@ public class obj implements Cloneable
 			body = world.createBody(bdef);
 
 			for(int i=0;i<points.size()-1;i++){
-				eshape = new EdgeShape();
-				eshape.set(points.get( i ).x,-points.get( i ).y,points.get( i+1 ).x,-points.get( i+1 ).y);
-				fdef.shape = eshape;
-				fixture = body.createFixture(fdef);
-				fixture.setUserData(this);
-
+				float x1 = points.get(i).x;
+				float y1 = -points.get(i).y;
+				float x2 = points.get(i+1).x;
+				float y2 = -points.get(i+1).y;
+				float dx = x2 - x1;
+				float dy = y2 - y1;
+				float len = (float) Math.sqrt(dx * dx + dy * dy);
+				if (len > 0.1f) {
+					float nx = -dy / len;
+					float ny = dx / len;
+					float r = 12f; // Selection padding radius
+					Vector2[] verts = new Vector2[4];
+					verts[0] = new Vector2(x1 + r * nx, y1 + r * ny);
+					verts[1] = new Vector2(x1 - r * nx, y1 - r * ny);
+					verts[2] = new Vector2(x2 - r * nx, y2 - r * ny);
+					verts[3] = new Vector2(x2 + r * nx, y2 + r * ny);
+					PolygonShape polySeg = new PolygonShape();
+					polySeg.set(verts);
+					fdef.shape = polySeg;
+					fixture = body.createFixture(fdef);
+					fixture.setUserData(this);
+				}
 			}
 			//addMarker( "R" );
 
@@ -383,6 +422,7 @@ public class obj implements Cloneable
 
 		float angle = (float) ((360-rotation)*DEGREES_TO_RADIANS);
 		body.setTransform( body.getPosition(),angle);
+		body.setUserData(this);
 	}
 
 	private void addMarker(String markerstring){

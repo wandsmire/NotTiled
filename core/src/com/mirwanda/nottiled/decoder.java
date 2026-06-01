@@ -54,7 +54,7 @@ public class decoder
 			decompresser.end();
 			java.util.List<Long> lint = new ArrayList<Long>();
 
-			for (int i = 0; i < result.length; i += 4)
+			for (int i = 0; i + 3 < result.length; i += 4)
 			{ 
 				//Integer inet = Byte.toUnsignedInt();
 				byte[] wrap= {result[i],result[i + 1],result[i + 2],result[i + 3]};
@@ -137,7 +137,7 @@ public class decoder
 
 			java.util.List<Long> lint = new ArrayList<Long>();
 
-			for (int i = 0; i < result.length; i += 4)
+			for (int i = 0; i + 3 < result.length; i += 4)
 			{ 
 				//Integer inet = Byte.toUnsignedInt();
 				byte[] wrap= {result[i],result[i + 1],result[i + 2],result[i + 3]};
@@ -205,7 +205,7 @@ public class decoder
 
 			java.util.List<Long> lint = new ArrayList<Long>();
 
-			for (int i = 0; i < data.length; i += 4)
+			for (int i = 0; i + 3 < data.length; i += 4)
 			{ 
 				//Integer inet = Byte.toUnsignedInt();
 				byte[] wrap= {data[i],data[i + 1],data[i + 2],data[i + 3]};

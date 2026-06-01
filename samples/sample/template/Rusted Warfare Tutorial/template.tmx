@@ -1,0 +1,100 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+<map version="1.2" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="20" tileheight="20" nextobjectid="1">
+  <tileset source="units.tsx" firstgid="1" />
+  <tileset source="misc.tsx" firstgid="280" />
+  <tileset firstgid="1522" name="Stone Lava - Ridge" columns="3" tilecount="15" tileheight="20" tilewidth="20">
+    <image source="bitmaps/stone2lava.png" width="60" height="100" trans="008a76" />
+    <tile id="0">
+      <properties>
+        <property name="lava-cliff" value="" />
+        <property name="lava-ridge" value="" />
+      </properties>
+    </tile>
+    <tile id="1">
+      <properties>
+        <property name="lava-cliff" value="" />
+        <property name="lava-ridge" value="" />
+      </properties>
+    </tile>
+    <tile id="2">
+      <properties>
+        <property name="lava-cliff" value="" />
+        <property name="lava-ridge" value="" />
+      </properties>
+    </tile>
+    <tile id="3">
+      <properties>
+        <property name="lava-cliff" value="" />
+        <property name="lava-ridge" value="" />
+      </properties>
+    </tile>
+    <tile id="5">
+      <properties>
+        <property name="lava-cliff" value="" />
+        <property name="lava-ridge" value="" />
+      </properties>
+    </tile>
+    <tile id="6">
+      <properties>
+        <property name="lava-cliff" value="" />
+        <property name="lava-ridge" value="" />
+      </properties>
+    </tile>
+    <tile id="7">
+      <properties>
+        <property name="lava-cliff" value="" />
+        <property name="lava-ridge" value="" />
+      </properties>
+    </tile>
+    <tile id="8">
+      <properties>
+        <property name="lava-cliff" value="" />
+        <property name="lava-ridge" value="" />
+      </properties>
+    </tile>
+    <tile id="10">
+      <properties>
+        <property name="lava-cliff" value="" />
+        <property name="lava-ridge" value="" />
+      </properties>
+    </tile>
+    <tile id="11">
+      <properties>
+        <property name="lava-cliff" value="" />
+        <property name="lava-ridge" value="" />
+      </properties>
+    </tile>
+    <tile id="13">
+      <properties>
+        <property name="lava-cliff" value="" />
+        <property name="lava-ridge" value="" />
+      </properties>
+    </tile>
+    <tile id="14">
+      <properties>
+        <property name="lava-cliff" value="" />
+        <property name="lava-ridge" value="" />
+      </properties>
+    </tile>
+    <tile id="4">
+      <properties>
+        <property name="lava" value="" />
+      </properties>
+    </tile>
+  </tileset>
+  <layer name="Ground" width="50" height="50">
+    <data encoding="base64" compression="gzip">
+   H4sIAAAAAAAAAO2YyxKCMAxFs6n//60q+BgVWWYYAqVpmmjv4uyYtCd9hGZMRCMAxtCJ6JHqMzX2uM18DBg68CjdA1tr7OFROqZFTHjAAx7wgAc84AGPKDHhQfSeuSy4CnHO7JuXg8c9HXtTSfPIfces5SYXKYclc9F6aMhdS3jE8uBnReLp6HHk3rG49yKsUUQP3v+Q9scveFjVoJ48tP1QXqM9PbRjDxVjwUM/Nq9tte+olh6tgEcs4BELaw/+bq79j9vS41/qBzzgAY+8+Joe2B5bPcTaHp5oc7iXJ9AXX435o6sQJwAA
+  </data>
+  </layer>
+  <layer name="Items" width="50" height="50">
+    <data encoding="base64" compression="gzip">
+   H4sIAAAAAAAAAO3YywmAUAwEwLwu/Gv/VZoWRMEEZmDvm8seEgHQ3zQi5swy/m7yzpr9t8ze/I4j+5+Zq/kdYFtqsS0AAADAV/x9avH3AZ6y47XYcaCaG2UDhSgQJwAA
+  </data>
+  </layer>
+  <layer name="Units" width="50" height="50">
+    <data encoding="base64" compression="gzip">
+   H4sIAAAAAAAAAO3OMRHAIAAEMK4LclhwwoJ/JajgHkqiIKUAAC/q6cDFZjpwsJYOXGykAwAAAAAcraYD/NKXDgDABguQgm5fECcAAA==
+  </data>
+  </layer>
+</map>

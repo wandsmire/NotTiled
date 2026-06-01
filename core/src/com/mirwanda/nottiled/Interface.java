@@ -26,5 +26,9 @@ public interface Interface
 	public void selectFolder();
 	public String getdatafromURI(String URI);
 	public void setOrientation(int ori);
+	public String getFilesDirPath();
+	public String getApkPath();
+	public boolean isAccessAllFilesGranted();
+	public String getExternalStoragePath();
 
 }

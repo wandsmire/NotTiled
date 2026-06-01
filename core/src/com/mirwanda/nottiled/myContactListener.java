@@ -26,6 +26,9 @@ public class myContactListener implements ContactListener {
                     if (game.markermode) return;
                     game.markerstring=(String) fixB.getUserData();
                     game.markermode=true;
+                    if (fixB.getBody().getUserData() instanceof obj) {
+                        game.activeDraggedObject = (obj) fixB.getBody().getUserData();
+                    }
                 }
                 game.hidebody=true;
                 game.bodyc=0.2f;
@@ -39,6 +42,9 @@ public class myContactListener implements ContactListener {
                    if (game.markermode) return;
                     game.markerstring=(String) fixA.getUserData();
                     game.markermode=true;
+                    if (fixA.getBody().getUserData() instanceof obj) {
+                        game.activeDraggedObject = (obj) fixA.getBody().getUserData();
+                    }
 
                 }
                 game.hidebody=true;

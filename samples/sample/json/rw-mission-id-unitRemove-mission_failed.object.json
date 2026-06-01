@@ -1,0 +1,1 @@
+{properties:[{name:object_type,type:String,value:unitRemove},{name:activatedBy,type:String},{name:globalMessage,type:String,value:Mission Failed.},{name:globalMessage_delayPerChar,value:slow},{name:showOnMap,value:"true"},{name:team,type:String,value:0},{name:warmup,type:String,value:3s}]}

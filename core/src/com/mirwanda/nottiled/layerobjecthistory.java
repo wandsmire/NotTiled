@@ -28,8 +28,17 @@ public class layerobjecthistory {
         this.data = data;
     }
 
+    public boolean isFollower() {
+        return follower;
+    }
+
+    public void setFollower(boolean follower) {
+        this.follower = follower;
+    }
+
     obj relatedobj;
      int layer;
      String data;
+     boolean follower;
 
 }

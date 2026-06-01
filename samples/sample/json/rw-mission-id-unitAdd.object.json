@@ -1,0 +1,1 @@
+{properties:[{name:object_type,type:String,value:unitAdd},{name:activatedBy,type:String},{name:spawnUnits,type:String,value:mechBunker*1(falling=true)},{name:team,value:0},{name:warmup,value:3s}]}

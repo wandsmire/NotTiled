@@ -15,6 +15,13 @@ task run(dependsOn: classes, type: JavaExec) {
     ignoreExitValue = true
 }
 
+task runCollabServer(dependsOn: classes, type: JavaExec) {
+    mainClass = "com.mirwanda.nottiled.desktop.CollabServerLauncher"
+    classpath = sourceSets.main.runtimeClasspath
+    standardInput = System.in
+    ignoreExitValue = true
+}
+
 task debug(dependsOn: classes, type: JavaExec) {
     mainClass = project.mainClassName
     classpath = sourceSets.main.runtimeClasspath
@@ -36,6 +43,22 @@ task dist(type: Jar) {
     with jar
 }
 
+task distCollabServer(type: Jar) {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveClassifier = 'collabserver'
+
+    manifest {
+        attributes 'Main-Class': 'com.mirwanda.nottiled.desktop.CollabServerLauncher'
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+    with jar
+}
 
 dist.dependsOn classes
+distCollabServer.dependsOn classes
 

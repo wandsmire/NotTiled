@@ -40,13 +40,17 @@ public class tile
 		String sp[]=s.split(",",-1);
 		int[] tr = new int[]{-1,-1,-1,-1};
 		//Gdx.app.log("A",s+"}}}"+sp.length);
-		if (!sp[0].equalsIgnoreCase( "" )) tr[0]=Integer.parseInt( sp[0] );
-		if (!sp[1].equalsIgnoreCase( "" )) tr[1]=Integer.parseInt( sp[1] );
-		if (!sp[2].equalsIgnoreCase( "" )) tr[2]=Integer.parseInt( sp[2] );
-		if (!sp[3].equalsIgnoreCase( "" )) tr[3]=Integer.parseInt( sp[3] );
+		for (int i = 0; i < 4; i++) {
+			if (i < sp.length && !sp[i].equalsIgnoreCase( "" )) {
+				try {
+					tr[i] = Integer.parseInt( sp[i] );
+				} catch (NumberFormatException e) {
+					tr[i] = -1;
+				}
+			}
+		}
 
 		this.terrain=tr;
-		
 	}
 	public void setTerrain(int a, int b, int c, int d)
 	{

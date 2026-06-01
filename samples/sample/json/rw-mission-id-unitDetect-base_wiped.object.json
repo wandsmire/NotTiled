@@ -1,0 +1,1 @@
+{properties:[{name:object_type,type:String,value:unitDetect},{name:globalMessage,type:String,value:Enemy base wiped out.},{name:globalMessage_delayPerChar,value:slow},{name:id,value:baseWipedOut},{name:maxUnits,value:0},{name:onlyMainBuildings,value:"true"},{name:showOnMap,value:"true"},{name:team,value:1}]}

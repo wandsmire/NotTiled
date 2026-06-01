@@ -29,7 +29,7 @@ public class nullInterface implements Interface {
 
     @Override
     public String getVersione() {
-        return "1.8.7";
+        return "2.0.0";
     }
 
     @Override
@@ -176,6 +176,26 @@ public class nullInterface implements Interface {
     @Override
     public void setOrientation(int ori) {
 
+    }
+
+    @Override
+    public String getFilesDirPath() {
+        return "";
+    }
+
+    @Override
+    public String getApkPath() {
+        return null;
+    }
+
+    @Override
+    public boolean isAccessAllFilesGranted() {
+        return true;
+    }
+
+    @Override
+    public String getExternalStoragePath() {
+        return com.badlogic.gdx.Gdx.files.getExternalStoragePath();
     }
 
 

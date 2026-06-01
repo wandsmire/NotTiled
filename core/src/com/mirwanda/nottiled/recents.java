@@ -19,18 +19,36 @@ public class recents
 
 	public java.util.List<String> getPaths()
 	{
+		if (paths == null) {
+			paths = new ArrayList<String>();
+		}
 		return paths;
 	}
 	public java.util.List<String> getFilenames()
 	{
+		if (filenames == null) {
+			filenames = new ArrayList<String>();
+		}
 		return filenames;
 	}
 	public java.util.List<String> getTypes()
 	{
+		if (types == null) {
+			types = new ArrayList<String>();
+		}
 		return types;
 	}
 
 	public void addrecent(String path, String filename, String type){
+		if (paths == null) {
+			paths = new ArrayList<String>();
+		}
+		if (filenames == null) {
+			filenames = new ArrayList<String>();
+		}
+		if (types == null) {
+			types = new ArrayList<String>();
+		}
 		try {
 
 			for (int i = paths.size() - 1; i >= 0; i--) {

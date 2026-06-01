@@ -1,0 +1,1 @@
+{properties:[{name:object_type,type:String,value:unitDetect},{name:globalMessage,type:String,value:Extractor built.},{name:globalMessage_delayPerChar,value:slow},{name:minUnits,value:1},{name:onlyOnResourcePool,value:"true"},{name:showOnMap,value:"true"},{name:team,value:0}]}

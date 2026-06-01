@@ -1,0 +1,1 @@
+{properties:[{name:object_type,type:String,value:unitDetect},{name:globalMessage,type:String,value:Anti-air destroyed!},{name:globalMessage_delayPerChar,value:slow},{name:maxUnits,value:0},{name:onlyAttackAir,value:"true"},{name:onlyBuildings,value:"true"},{name:showOnMap,value:"true"},{name:team,value:1}]}

@@ -1,3 +1,15 @@
+def signingProperties = new Properties()
+def signingPropertiesFile = rootProject.file('local.properties')
+if (signingPropertiesFile.exists()) {
+    signingPropertiesFile.withInputStream { signingProperties.load(it) }
+}
+
+def releaseStoreFile = signingProperties.getProperty('RELEASE_STORE_FILE')
+def releaseStorePassword = signingProperties.getProperty('RELEASE_STORE_PASSWORD')
+def releaseKeyAlias = signingProperties.getProperty('RELEASE_KEY_ALIAS')
+def releaseKeyPassword = signingProperties.getProperty('RELEASE_KEY_PASSWORD')
+def hasReleaseSigning = releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword
+
 android {
     signingConfigs {
         debug {
@@ -5,6 +17,14 @@ android {
             storePassword 'android'
             keyAlias 'androiddebugkey'
             keyPassword 'android'
+        }
+        release {
+            if (hasReleaseSigning) {
+                storeFile rootProject.file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
         }
     }
     buildToolsVersion "34.0.0"
@@ -19,41 +39,101 @@ android {
             assets.srcDirs = ['assets']
             jniLibs.srcDirs = ['libs']
         }
+        playStoreDebug {
+            res.srcDirs = ['variants/playStoreDebug/res']
+        }
+        playStoreApkRelease {
+            res.srcDirs = ['variants/playStoreApkRelease/res']
+        }
+        standaloneDebug {
+            res.srcDirs = ['variants/standaloneDebug/res']
+        }
+        standaloneRelease {
+            res.srcDirs = ['variants/standaloneRelease/res']
+        }
+        standaloneApkRelease {
+            res.srcDirs = ['variants/standaloneApkRelease/res']
+        }
 
     }
     packagingOptions {
         exclude 'META-INF/robovm/ios/robovm.xml'
+        jniLibs {
+            useLegacyPackaging true
+        }
     }
     defaultConfig {
         applicationId "com.mirwanda.nottiled"
         minSdkVersion 19
-        targetSdkVersion 33
-        versionCode 90
-        versionName "1.8.8"
+        targetSdkVersion 35
+        versionCode 105
+        versionName "2.0.0"
         multiDexEnabled true
+        manifestPlaceholders = [appName: "NotTiled"]
+    }
+    flavorDimensions "distributor"
+    productFlavors {
+        playStore {
+            dimension "distributor"
+        }
+        standalone {
+            dimension "distributor"
+            applicationIdSuffix ".standalone"
+            versionNameSuffix "-standalone"
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+            applicationIdSuffix ".debug"
+        }
         release {
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+        apkRelease {
+            initWith release
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
+            applicationIdSuffix ".release"
+            matchingFallbacks = ['release']
+        }
+    }
+
+    applicationVariants.all { variant ->
+        def flavor = variant.flavorName
+        def buildType = variant.buildType.name
+        
+        def name = "NotTiled"
+        if (flavor == "standalone") {
+            name += " Standalone"
+        }
+        if (buildType == "debug") {
+            name += " Debug"
+        } else if (buildType == "apkRelease") {
+            name += " Release"
+        }
+        
+        variant.mergedFlavor.manifestPlaceholders.appName = name
     }
 }
 
 dependencies {
     implementation project(':core')
-    // Import the Firebase BoM
-    implementation platform('com.google.firebase:firebase-bom:31.4.0')
+
+    // AndroidX Core
+    implementation 'androidx.core:core:1.12.0'
 
     //MDEX
     implementation 'com.android.support:multidex:1.0.3'
-    // Declare the dependencies for the Crashlytics and Analytics libraries
-    // When using the BoM, you don't specify versions in Firebase library dependencies
-    implementation 'com.google.firebase:firebase-crashlytics'
-    implementation 'com.google.firebase:firebase-analytics'
-
-    // Add the dependencies for any other desired Firebase products
-    // https://firebase.google.com/docs/android/setup#available-libraries
 }
 
 // called every time gradle gets executed, takes the native dependencies of

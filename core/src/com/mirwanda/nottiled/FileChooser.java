@@ -36,6 +36,7 @@ public class FileChooser extends Dialog
 	}
 
 	private String OS;
+	private String basePath = "";
 
 
 
@@ -100,7 +101,7 @@ public class FileChooser extends Dialog
 		}      
 	}
 
-	public FileChooser(String title, Skin skin, String mode, String[] filter, String OS)
+	public FileChooser(String title, Skin skin, String mode, String[] filter, String OS, String basePath)
 	{
 		super(title, skin);
 		this.getCell(getButtonTable()).expandX().fill();
@@ -114,6 +115,7 @@ public class FileChooser extends Dialog
 		this.setModal(false);
 		this.skin = skin;
 		this.setOS(OS);
+		this.basePath = basePath;
 	}
 
 	private void buildList()
@@ -167,7 +169,8 @@ public class FileChooser extends Dialog
 			if (OS!=null) {
 
 				if (OS.equalsIgnoreCase("android10+")) {
-					if (directory.path().length() > Gdx.files.getExternalStoragePath().length()) {
+					String limitPath = (basePath != null && !basePath.isEmpty()) ? basePath : Gdx.files.getExternalStoragePath();
+					if (directory.path().length() > limitPath.length()) {
 						table.row();
 						Image img = new Image(txback);
 						table.add(img);

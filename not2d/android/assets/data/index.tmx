@@ -1,0 +1,2496 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+<map version="1.2" orientation="orthogonal" renderorder="right-down" width="160" height="200" tilewidth="20" tileheight="20" nextobjectid="541">
+  <properties>
+    <property name="type" value="nottiled platformer" />
+    <property name="scale" value="124" />
+    <property name="icons" value="dave5.png" />
+    <property name="iconsize" value="8,12" />
+    <property name="zoom" value="0.16" />
+    <property name="sw3" value="10" />
+    <property name="sw4" value="20" />
+    <property name="sw6" value="3" />
+    <property name="sw2" value="8" />
+    <property name="sw5" value="36" />
+    <property name="sw1" value="13" />
+    <property name="orientation" value="landscape" />
+    <property name="bgcolor" value="000000" />
+  </properties>
+  <tileset firstgid="1" name="dave" columns="8" tilecount="80" tileheight="20" tilewidth="20">
+    <image source="dave5.png" width="48" height="48" trans="" />
+    <tile id="1">
+      <properties>
+        <property name="object" value="brick" />
+        <property name="color" value="ff0000" />
+      </properties>
+    </tile>
+    <tile id="0">
+      <animation>
+        <frame tileid="0" duration="100" />
+        <frame tileid="53" duration="200" />
+        <frame tileid="54" duration="200" />
+        <frame tileid="53" duration="200" />
+      </animation>
+      <properties>
+        <property name="object" value="player" />
+        <property name="size" value="10,10" />
+        <property name="speed" value="0.5" />
+        <property name="deadanim" value="1" />
+        <property name="panim" value="14" />
+        <property name="pdeadanim" value="1" />
+        <property name="sfxdead" value="dead.wav" />
+        <property name="offsety" value="3" />
+      </properties>
+    </tile>
+    <tile id="4">
+      <properties>
+        <property name="object" value="brick" />
+      </properties>
+    </tile>
+    <tile id="3">
+      <properties>
+        <property name="object" value="item" />
+        <property name="setvar" value="trophy=1" />
+        <property name="sethud" value="trophy" />
+        <property name="icon" value="3,0" />
+        <property name="notice" value="GO THRU THE DOOR!" />
+        <property name="once" value="" />
+        <property name="addvar" value="score=1000" />
+        <property name="sfx" value="trophy.wav" />
+      </properties>
+    </tile>
+    <tile id="13">
+      <animation>
+        <frame tileid="13" duration="200" />
+        <frame tileid="14" duration="200" />
+        <frame tileid="15" duration="200" />
+      </animation>
+      <properties>
+        <property name="object" value="block" />
+        <property name="size" value="12,12" />
+        <property name="damage" value="999" />
+      </properties>
+    </tile>
+    <tile id="9">
+      <animation>
+        <frame tileid="9" duration="200" />
+        <frame tileid="10" duration="200" />
+        <frame tileid="11" duration="200" />
+      </animation>
+      <properties>
+        <property name="object" value="block" />
+        <property name="size" value="12,12" />
+        <property name="damage" value="999" />
+      </properties>
+    </tile>
+    <tile id="16">
+      <animation>
+        <frame tileid="16" duration="200" />
+        <frame tileid="17" duration="200" />
+        <frame tileid="18" duration="200" />
+        <frame tileid="17" duration="200" />
+      </animation>
+      <properties>
+        <property name="object" value="block" />
+        <property name="size" value="10,10" />
+        <property name="damage" value="999" />
+        <property name="color" value="ff00ff" />
+      </properties>
+    </tile>
+    <tile id="12">
+      <properties>
+        <property name="object" value="brick" />
+      </properties>
+    </tile>
+    <tile id="8">
+      <properties>
+        <property name="object" value="brick" />
+        <property name="color" value="0000ff" />
+      </properties>
+    </tile>
+    <tile id="2" />
+    <tile id="6">
+      <properties>
+        <property name="object" value="item" />
+        <property name="sethud" value="jetpack" />
+        <property name="icon" value="6,0" />
+        <property name="once" value="" />
+        <property name="setvar" value="jetpack=1000" />
+        <property name="setaction" value="jetpack" />
+        <property name="cooldown" value="0" />
+        <property name="slot" value="4" />
+        <property name="label" value="fly" />
+        <property name="bindvar" value="jetpack" />
+        <property name="impulse" value="0.5" />
+        <property name="sfx" value="bonus.wav" />
+        <property name="equipjetpack" value="57" />
+        <property name="usejetpack" value="60" />
+        <property name="equipgun+jetpack" value="68" />
+        <property name="usegun+jetpack" value="66" />
+        <property name="climb+jetpack" value="71" />
+      </properties>
+    </tile>
+    <tile id="7">
+      <properties>
+        <property name="object" value="brick" />
+        <property name="color" value="998855" />
+      </properties>
+    </tile>
+    <tile id="19">
+      <properties>
+        <property name="object" value="item" />
+        <property name="once" value="" />
+        <property name="addvar" value="score=100" />
+        <property name="sfx" value="coin.wav" />
+      </properties>
+    </tile>
+    <tile id="20">
+      <properties>
+        <property name="object" value="item" />
+        <property name="once" value="" />
+        <property name="addvar" value="score=150" />
+        <property name="sfx" value="coin.wav" />
+      </properties>
+    </tile>
+    <tile id="24">
+      <properties>
+        <property name="object" value="item" />
+        <property name="once" value="" />
+        <property name="addvar" value="score=200" />
+        <property name="sfx" value="coin.wav" />
+      </properties>
+    </tile>
+    <tile id="25">
+      <properties>
+        <property name="object" value="item" />
+        <property name="once" value="" />
+        <property name="addvar" value="score=500" />
+        <property name="sfx" value="coin.wav" />
+      </properties>
+    </tile>
+    <tile id="26">
+      <properties>
+        <property name="object" value="item" />
+        <property name="once" value="" />
+        <property name="addvar" value="score=300" />
+        <property name="sfx" value="coin.wav" />
+      </properties>
+    </tile>
+    <tile id="21">
+      <properties>
+        <property name="object" value="item" />
+        <property name="once" value="" />
+        <property name="addvar" value="score=50" />
+        <property name="sfx" value="coin.wav" />
+      </properties>
+    </tile>
+    <tile id="5">
+      <properties>
+        <property name="object" value="monster" />
+        <property name="canshoot" value="" />
+        <property name="damage" value="1" />
+        <property name="path" value="up,right,right,down,left,left" />
+        <property name="chaseRadius" value="300" />
+        <property name="pcooldown" value="1.5" />
+        <property name="chase" value="" />
+        <property name="heavy" value="" />
+        <property name="dir" value="left" />
+        <property name="dirlocked" value="" />
+      </properties>
+    </tile>
+    <tile id="23">
+      <properties>
+        <property name="object" value="brick" />
+      </properties>
+    </tile>
+    <tile id="22">
+      <properties>
+        <property name="setaction" value="shoot" />
+        <property name="slot" value="3" />
+        <property name="once" value="" />
+        <property name="label" value="shoot" />
+        <property name="sethud" value="gun" />
+        <property name="setvar" value="gun=1" />
+        <property name="icon" value="6,2" />
+        <property name="sfx" value="bonus.wav" />
+        <property name="asfx" value="shot.wav" />
+        <property name="pmaxdistance" value="150" />
+        <property name="equipgun" value="67" />
+        <property name="usegun" value="65" />
+        <property name="equipgun+jetpack" value="68" />
+        <property name="usegun+jetpack" value="68" />
+      </properties>
+    </tile>
+    <tile id="39">
+      <properties>
+        <property name="object" value="brick" />
+        <property name="color" value="998855" />
+      </properties>
+    </tile>
+    <tile id="35">
+      <properties>
+        <property name="object" value="brick" />
+      </properties>
+    </tile>
+    <tile id="30">
+      <properties>
+        <property name="object" value="ladder" />
+      </properties>
+    </tile>
+    <tile id="31">
+      <properties>
+        <property name="object" value="ladder" />
+      </properties>
+    </tile>
+    <tile id="40">
+      <properties>
+        <property name="object" value="ladder" />
+      </properties>
+    </tile>
+    <tile id="37">
+      <properties>
+        <property name="object" value="brick" />
+      </properties>
+    </tile>
+    <tile id="38">
+      <properties>
+        <property name="object" value="brick" />
+      </properties>
+    </tile>
+    <tile id="55">
+      <properties>
+        <property name="object" value="brick" />
+      </properties>
+    </tile>
+    <tile id="27">
+      <animation>
+        <frame tileid="27" duration="500" />
+      </animation>
+      <properties>
+        <property name="object" value="monster" />
+        <property name="canshoot" value="" />
+        <property name="damage" value="1" />
+        <property name="path" value="up,right,right,down,left,left" />
+        <property name="chaseRadius" value="350" />
+        <property name="pcooldown" value="1.5" />
+        <property name="chase" value="" />
+        <property name="heavy" value="" />
+        <property name="dir" value="left" />
+        <property name="dirlocked" value="" />
+        <property name="deadanim" value="28" />
+        <property name="sfxdead" value="monster.wav" />
+      </properties>
+    </tile>
+    <tile id="28">
+      <animation>
+        <frame tileid="28" duration="500" />
+      </animation>
+      <properties>
+        <property name="object" value="monster" />
+        <property name="canshoot" value="" />
+        <property name="damage" value="1" />
+        <property name="path" value="left,left,left,left,down,down,right,right,right,down,down,down,right,right,right,right,up,up,left,up,up,up,left,left" />
+        <property name="chaseRadius" value="300" />
+        <property name="pcooldown" value="1.5" />
+        <property name="chase" value="" />
+        <property name="heavy" value="" />
+        <property name="dir" value="left" />
+        <property name="rotating" value="" />
+        <property name="speed" value="2" />
+        <property name="deadanim" value="29" />
+        <property name="sfxdead" value="monster.wav" />
+      </properties>
+    </tile>
+    <tile id="33">
+      <animation>
+        <frame tileid="33" duration="500" />
+      </animation>
+      <properties>
+        <property name="object" value="monster" />
+        <property name="canshoot" value="" />
+        <property name="damage" value="1" />
+        <property name="path" value="left,down,down,down,down,right,right,up,up,up,up,left" />
+        <property name="chaseRadius" value="300" />
+        <property name="pcooldown" value="1.5" />
+        <property name="chase" value="" />
+        <property name="heavy" value="" />
+        <property name="dir" value="left" />
+        <property name="dirlocked" value="" />
+        <property name="deadanim" value="34" />
+        <property name="sfxdead" value="monster.wav" />
+      </properties>
+    </tile>
+    <tile id="41">
+      <animation>
+        <frame tileid="41" duration="500" />
+      </animation>
+      <properties>
+        <property name="object" value="monster" />
+        <property name="canshoot" value="" />
+        <property name="damage" value="1" />
+        <property name="path" value="left,down,down,down,right,right,up,up,up,left" />
+        <property name="chaseRadius" value="300" />
+        <property name="pcooldown" value="1.5" />
+        <property name="chase" value="" />
+        <property name="heavy" value="" />
+        <property name="dir" value="left" />
+        <property name="dirlocked" value="" />
+        <property name="pspeed" value="3" />
+        <property name="deadanim" value="42" />
+        <property name="sfxdead" value="monster.wav" />
+      </properties>
+    </tile>
+    <tile id="36">
+      <animation>
+        <frame tileid="36" duration="500" />
+      </animation>
+      <properties>
+        <property name="object" value="monster" />
+        <property name="canshoot" value="" />
+        <property name="damage" value="1" />
+        <property name="path" value="left,left,left,right,right,right,right,right,right,left,left,left" />
+        <property name="chaseRadius" value="300" />
+        <property name="pcooldown" value="1.5" />
+        <property name="chase" value="" />
+        <property name="heavy" value="" />
+        <property name="dir" value="left" />
+        <property name="dirlocked" value="" />
+        <property name="rotating" value="" />
+        <property name="deadanim" value="37" />
+        <property name="sfxdead" value="monster.wav" />
+      </properties>
+    </tile>
+    <tile id="42">
+      <animation>
+        <frame tileid="42" duration="500" />
+      </animation>
+      <properties>
+        <property name="object" value="monster" />
+        <property name="canshoot" value="" />
+        <property name="damage" value="1" />
+        <property name="path" value="left,down,down,right,right,up,up,left" />
+        <property name="chaseRadius" value="300" />
+        <property name="pcooldown" value="1.5" />
+        <property name="chase" value="" />
+        <property name="heavy" value="" />
+        <property name="dir" value="left" />
+        <property name="dirlocked" value="" />
+        <property name="deadanim" value="43" />
+        <property name="sfxdead" value="monster.wav" />
+      </properties>
+    </tile>
+    <tile id="43">
+      <animation>
+        <frame tileid="43" duration="500" />
+      </animation>
+      <properties>
+        <property name="object" value="monster" />
+        <property name="canshoot" value="" />
+        <property name="damage" value="1" />
+        <property name="path" value="left,left,right,right,right,right,left,left" />
+        <property name="chaseRadius" value="300" />
+        <property name="pcooldown" value="1.5" />
+        <property name="chase" value="" />
+        <property name="heavy" value="" />
+        <property name="dir" value="left" />
+        <property name="dirlocked" value="" />
+        <property name="speed" value="2" />
+        <property name="deadanim" value="44" />
+        <property name="sfxdead" value="monster.wav" />
+      </properties>
+    </tile>
+    <tile id="44">
+      <animation>
+        <frame tileid="44" duration="500" />
+      </animation>
+      <properties>
+        <property name="object" value="monster" />
+        <property name="canshoot" value="" />
+        <property name="damage" value="1" />
+        <property name="path" value="left,left,right,right,right,right,left,left" />
+        <property name="chaseRadius" value="300" />
+        <property name="pcooldown" value="1.5" />
+        <property name="chase" value="" />
+        <property name="heavy" value="" />
+        <property name="dir" value="left" />
+        <property name="dirlocked" value="" />
+        <property name="speed" value="2" />
+        <property name="deadanim" value="45" />
+        <property name="sfxdead" value="monster.wav" />
+      </properties>
+    </tile>
+    <tile id="56">
+      <animation>
+        <frame tileid="56" duration="100" />
+        <frame tileid="57" duration="100" />
+        <frame tileid="58" duration="100" />
+        <frame tileid="57" duration="100" />
+      </animation>
+    </tile>
+    <tile id="59">
+      <animation>
+        <frame tileid="59" duration="100" />
+        <frame tileid="61" duration="100" />
+        <frame tileid="60" duration="100" />
+      </animation>
+    </tile>
+    <tile id="68">
+      <animation>
+        <frame tileid="68" duration="200" />
+        <frame tileid="69" duration="200" />
+      </animation>
+    </tile>
+    <tile id="70">
+      <animation>
+        <frame tileid="70" duration="200" />
+        <frame tileid="71" duration="200" />
+      </animation>
+    </tile>
+    <tile id="66">
+      <animation>
+        <frame tileid="66" duration="100" />
+        <frame tileid="53" duration="100" />
+        <frame tileid="64" duration="100" />
+        <frame tileid="53" duration="100" />
+      </animation>
+    </tile>
+    <tile id="67">
+      <animation>
+        <frame tileid="67" duration="100" />
+        <frame tileid="57" duration="100" />
+        <frame tileid="65" duration="100" />
+        <frame tileid="57" duration="100" />
+      </animation>
+    </tile>
+    <tile id="64">
+      <animation>
+        <frame tileid="64" duration="300" />
+      </animation>
+    </tile>
+    <tile id="65">
+      <animation>
+        <frame tileid="65" duration="300" />
+      </animation>
+    </tile>
+    <tile id="72">
+      <properties>
+        <property name="object" value="item" />
+        <property name="light" value="1" />
+        <property name="lightcolor" value="ff9988" />
+      </properties>
+    </tile>
+  </tileset>
+  <layer name="Tile 1" width="160" height="200">
+    <data encoding="base64" compression="gzip">
+   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
+  </data>
+  </layer>
+  <objectgroup name="Layer 2">
+    <object name="level1" id="2" x="40" y="100" width="20" height="20">
+      <properties>
+        <property name="save" value="" />
+        <property name="notice" value="LEVEL 01" />
+        <property name="cam" value="1a" />
+        <property name="once" value="" />
+        <property name="setvar" value="jetpack=0" />
+        <property name="setaction" value="none" />
+        <property name="slot" value="134" />
+        <property name="enablecontrol" value="" />
+      </properties>
+    </object>
+    <object name="2a" id="3" x="180" y="480" width="40" height="20" />
+    <object name="2b" id="5" x="480" y="480" width="40" height="20" />
+    <object name="next" id="6" x="360" y="400" width="20" height="200">
+      <properties>
+        <property name="cam" value="2b" />
+      </properties>
+    </object>
+    <object name="back" id="7" x="320" y="400" width="20" height="200">
+      <properties>
+        <property name="cam" value="2a" />
+      </properties>
+    </object>
+    <object name="next" id="8" x="660" y="400" width="20" height="200">
+      <properties>
+        <property name="cam" value="2c" />
+      </properties>
+    </object>
+    <object name="2c" id="9" x="780" y="480" width="40" height="20" />
+    <object name="1a" id="15" x="180" y="80" width="40" height="20" />
+    <object id="18" x="240" gid="3" y="180" width="20" height="20">
+      <properties>
+        <property name="condition" value="trophy=1" />
+        <property name="transfer" value="" />
+        <property name="move" value="wait" />
+        <property name="notice" value="" />
+        <property name="setvar" value="trophy=0,tunnel=1,jetpack=0,gun=0" />
+        <property name="addvar" value="score=2000,level=1" />
+        <property name="transfercam" value="1z" />
+        <property name="disablecontrol" value="" />
+        <property name="slot" value="4" />
+        <property name="setaction" value="none" />
+        <property name="sfx" value="door.mp3" />
+      </properties>
+    </object>
+    <object name="3a" id="24" x="180" y="880" width="40" height="20" />
+    <object name="3b" id="26" x="480" y="880" width="40" height="20" />
+    <object name="3c" id="27" x="780" y="880" width="40" height="20" />
+    <object name="3d" id="28" x="1080" y="880" width="40" height="20" />
+    <object name="3e" id="29" x="1380" y="880" width="40" height="20" />
+    <object name="back" id="30" x="320" y="800" width="20" height="200">
+      <properties>
+        <property name="cam" value="3a" />
+      </properties>
+    </object>
+    <object name="back" id="31" x="620" y="800" width="20" height="200">
+      <properties>
+        <property name="cam" value="3b" />
+      </properties>
+    </object>
+    <object name="back" id="32" x="920" y="800" width="20" height="200">
+      <properties>
+        <property name="cam" value="3c" />
+      </properties>
+    </object>
+    <object name="back" id="33" x="1220" y="800" width="20" height="200">
+      <properties>
+        <property name="cam" value="3d" />
+      </properties>
+    </object>
+    <object name="next" id="34" x="360" y="800" width="20" height="200">
+      <properties>
+        <property name="cam" value="3b" />
+      </properties>
+    </object>
+    <object name="next" id="35" x="660" y="800" width="20" height="200">
+      <properties>
+        <property name="cam" value="3c" />
+      </properties>
+    </object>
+    <object name="next" id="36" x="960" y="800" width="20" height="200">
+      <properties>
+        <property name="cam" value="3d" />
+      </properties>
+    </object>
+    <object name="next" id="37" x="1260" y="800" width="20" height="200">
+      <properties>
+        <property name="cam" value="3e" />
+      </properties>
+    </object>
+    <object id="44" x="500" y="2980" width="40" height="20" />
+    <object name="level2" id="47" x="20" y="560" width="20" height="20">
+      <properties>
+        <property name="save" value="" />
+        <property name="notice" value="LEVEL 02" />
+        <property name="cam" value="2a" />
+        <property name="once" value="" />
+        <property name="setvar" value="jetpack=0" />
+        <property name="setaction" value="none" />
+        <property name="slot" value="134" />
+        <property name="enablecontrol" value="" />
+      </properties>
+    </object>
+    <object name="level3" id="48" x="40" y="900" width="20" height="20">
+      <properties>
+        <property name="save" value="" />
+        <property name="notice" value="LEVEL 03" />
+        <property name="cam" value="3a" />
+        <property name="once" value="" />
+        <property name="setvar" value="jetpack=0" />
+        <property name="setaction" value="none" />
+        <property name="slot" value="134" />
+        <property name="enablecontrol" value="" />
+      </properties>
+    </object>
+    <object name="menu" id="57" x="2980" y="100" width="40" height="20">
+      <properties>
+        <property name="object" value="item" />
+        <property name="cam" value="menu" />
+      </properties>
+    </object>
+    <object name="wait" id="59" x="2980" y="858" width="20" height="20" />
+    <object name="moving" id="62" x="2700" gid="1" y="540" width="20" height="20">
+      <properties>
+        <property name="path" value="right" />
+        <property name="requires" value="menu=1" />
+        <property name="object" value="item" />
+      </properties>
+    </object>
+    <object name="1z" id="64" x="2380" y="80" width="40" height="20" />
+    <object id="65" x="2580" y="80" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="transfer" value="" />
+        <property name="move" value="level2" />
+        <property name="transfercam" value="2a" />
+        <property name="setvar" value="tunnel=0" />
+      </properties>
+    </object>
+    <object id="67" x="2200" gid="1" y="100" width="20" height="20">
+      <properties>
+        <property name="object" value="item" />
+        <property name="requires" value="tunnel=1" />
+        <property name="path" value="right" />
+      </properties>
+    </object>
+    <object name="autorun" id="68" x="3060" y="360" width="20" height="20">
+      <properties>
+        <property name="object" value="listener" />
+        <property name="transfer" value="" />
+        <property name="setvar" value="menu=1,level=1,score=0,trophy=0,gun=0,jetpack=0" />
+        <property name="requires" value="menu=0" />
+        <property name="disablecontrol" value="" />
+        <property name="transfercam" value="menu" />
+      </properties>
+    </object>
+    <object name="2z" id="69" x="2380" y="480" width="40" height="20" />
+    <object name="3z" id="70" x="2380" y="880" width="40" height="20" />
+    <object name="4z" id="71" x="2380" y="1280" width="40" height="20" />
+    <object name="5z" id="72" x="2380" y="1680" width="40" height="20" />
+    <object name="6z" id="73" x="2380" y="2080" width="40" height="20" />
+    <object name="7z" id="74" x="2380" y="2480" width="40" height="20" />
+    <object name="8z" id="75" x="2380" y="2880" width="40" height="20" />
+    <object name="9z" id="76" x="2380" y="3280" width="40" height="20" />
+    <object id="77" x="2200" gid="1" y="500" width="20" height="20">
+      <properties>
+        <property name="object" value="item" />
+        <property name="requires" value="tunnel=2" />
+        <property name="path" value="right" />
+      </properties>
+    </object>
+    <object id="78" x="2200" gid="1" y="900" width="20" height="20">
+      <properties>
+        <property name="object" value="item" />
+        <property name="requires" value="tunnel=3" />
+        <property name="path" value="right" />
+      </properties>
+    </object>
+    <object id="79" x="2200" gid="1" y="1300" width="20" height="20">
+      <properties>
+        <property name="object" value="item" />
+        <property name="requires" value="tunnel=4" />
+        <property name="path" value="right" />
+      </properties>
+    </object>
+    <object id="80" x="2200" gid="1" y="1700" width="20" height="20">
+      <properties>
+        <property name="object" value="item" />
+        <property name="requires" value="tunnel=5" />
+        <property name="path" value="right" />
+      </properties>
+    </object>
+    <object id="81" x="2200" gid="1" y="2100" width="20" height="20">
+      <properties>
+        <property name="object" value="item" />
+        <property name="requires" value="tunnel=6" />
+        <property name="path" value="right" />
+      </properties>
+    </object>
+    <object id="82" x="2200" gid="1" y="2500" width="20" height="20">
+      <properties>
+        <property name="object" value="item" />
+        <property name="requires" value="tunnel=7" />
+        <property name="path" value="right" />
+      </properties>
+    </object>
+    <object id="83" x="2200" gid="1" y="2900" width="20" height="20">
+      <properties>
+        <property name="object" value="item" />
+        <property name="requires" value="tunnel=8" />
+        <property name="path" value="right" />
+      </properties>
+    </object>
+    <object id="84" x="2200" gid="1" y="3300" width="20" height="20">
+      <properties>
+        <property name="object" value="item" />
+        <property name="requires" value="tunnel=9" />
+        <property name="path" value="right" />
+      </properties>
+    </object>
+    <object id="87" x="2580" y="480" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="transfer" value="" />
+        <property name="move" value="level3" />
+        <property name="transfercam" value="3a" />
+        <property name="setvar" value="tunnel=0" />
+      </properties>
+    </object>
+    <object id="88" x="2580" y="880" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="transfer" value="" />
+        <property name="move" value="level4" />
+        <property name="transfercam" value="4a" />
+        <property name="setvar" value="tunnel=0" />
+        <property name="changebgm" value="music.mp3" />
+      </properties>
+    </object>
+    <object id="89" x="2580" y="1280" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="transfer" value="" />
+        <property name="move" value="level5" />
+        <property name="transfercam" value="5a" />
+        <property name="setvar" value="tunnel=0,warp=0" />
+      </properties>
+    </object>
+    <object id="90" x="2580" y="1680" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="transfer" value="" />
+        <property name="move" value="level6" />
+        <property name="transfercam" value="6a" />
+        <property name="setvar" value="tunnel=0" />
+        <property name="changebgm" value="music3.mp3" />
+      </properties>
+    </object>
+    <object id="91" x="2580" y="2080" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="transfer" value="" />
+        <property name="move" value="level7" />
+        <property name="transfercam" value="7a" />
+        <property name="setvar" value="tunnel=0" />
+      </properties>
+    </object>
+    <object id="92" x="2580" y="2480" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="transfer" value="" />
+        <property name="move" value="level8" />
+        <property name="transfercam" value="8a" />
+        <property name="setvar" value="tunnel=0,warp=0" />
+        <property name="changebgm" value="music2.mp3" />
+      </properties>
+    </object>
+    <object id="93" x="2580" y="2880" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="transfer" value="" />
+        <property name="move" value="level9" />
+        <property name="transfercam" value="9a" />
+        <property name="setvar" value="tunnel=0,warp=0" />
+      </properties>
+    </object>
+    <object id="94" x="2580" y="3280" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="transfer" value="" />
+        <property name="move" value="level10" />
+        <property name="transfercam" value="10a" />
+        <property name="setvar" value="tunnel=0,warp=0" />
+        <property name="changebgm" value="music.mp3" />
+      </properties>
+    </object>
+    <object id="95" x="2220" y="80" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="notice">
+LEVEL 01
+
+
+
+
+
+GOOD WORK! ONLY 9 MORE TO GO!
+</property>
+      </properties>
+    </object>
+    <object id="96" x="2220" y="480" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="notice">
+LEVEL 02
+
+
+
+
+
+GOOD WORK! ONLY 8 MORE TO GO!
+</property>
+      </properties>
+    </object>
+    <object id="97" x="2220" y="880" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="notice">
+LEVEL 03
+
+
+
+
+
+GOOD WORK! ONLY 7 MORE TO GO!
+</property>
+      </properties>
+    </object>
+    <object id="98" x="2220" y="1280" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="notice">
+LEVEL 04
+
+
+
+
+
+GOOD WORK! ONLY 6 MORE TO GO!
+</property>
+        <property name="requires" value="warp=0" />
+      </properties>
+    </object>
+    <object id="99" x="2220" y="1680" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="notice">
+LEVEL 05
+
+
+
+
+
+GOOD WORK! ONLY 5 MORE TO GO!
+</property>
+      </properties>
+    </object>
+    <object id="100" x="2220" y="2080" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="notice">
+LEVEL 06
+
+
+
+
+
+GOOD WORK! ONLY 4 MORE TO GO!
+</property>
+      </properties>
+    </object>
+    <object id="101" x="2220" y="2480" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="notice">
+LEVEL 07
+
+
+
+
+
+GOOD WORK! ONLY 3 MORE TO GO!
+</property>
+        <property name="requires" value="warp=0" />
+      </properties>
+    </object>
+    <object id="102" x="2220" y="2880" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="notice">
+LEVEL 08
+
+
+
+
+
+GOOD WORK! ONLY 2 MORE TO GO!
+</property>
+        <property name="requires" value="warp=0" />
+      </properties>
+    </object>
+    <object id="103" x="2220" y="3280" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="notice">
+LEVEL 09
+
+
+
+
+
+THIS IS THE LAST LEVEL!!!
+</property>
+        <property name="requires" value="warp=0" />
+      </properties>
+    </object>
+    <object name="level4" id="104" x="20" y="1300" width="20" height="20">
+      <properties>
+        <property name="save" value="" />
+        <property name="notice" value="LEVEL 04" />
+        <property name="cam" value="4a" />
+        <property name="once" value="" />
+        <property name="setvar" value="jetpack=0" />
+        <property name="setaction" value="none" />
+        <property name="slot" value="134" />
+        <property name="enablecontrol" value="" />
+      </properties>
+    </object>
+    <object name="level5" id="105" x="40" y="1760" width="20" height="20">
+      <properties>
+        <property name="save" value="" />
+        <property name="notice" value="LEVEL 05" />
+        <property name="cam" value="5a" />
+        <property name="once" value="" />
+        <property name="setvar" value="jetpack=0" />
+        <property name="setaction" value="none" />
+        <property name="slot" value="134" />
+        <property name="enablecontrol" value="" />
+      </properties>
+    </object>
+    <object name="level6" id="106" x="40" y="2160" width="20" height="20">
+      <properties>
+        <property name="save" value="" />
+        <property name="notice" value="LEVEL 06" />
+        <property name="cam" value="6a" />
+        <property name="once" value="" />
+        <property name="setvar" value="jetpack=0" />
+        <property name="setaction" value="none" />
+        <property name="slot" value="134" />
+        <property name="enablecontrol" value="" />
+      </properties>
+    </object>
+    <object name="level7" id="107" x="20" y="2440" width="20" height="20">
+      <properties>
+        <property name="save" value="" />
+        <property name="notice" value="LEVEL 07" />
+        <property name="cam" value="7a" />
+        <property name="once" value="" />
+        <property name="setvar" value="jetpack=0" />
+        <property name="setaction" value="none" />
+        <property name="slot" value="134" />
+        <property name="enablecontrol" value="" />
+      </properties>
+    </object>
+    <object name="level8" id="108" x="40" y="2960" width="20" height="20">
+      <properties>
+        <property name="save" value="" />
+        <property name="notice" value="LEVEL 08" />
+        <property name="cam" value="8a" />
+        <property name="once" value="" />
+        <property name="setvar" value="jetpack=0" />
+        <property name="setaction" value="none" />
+        <property name="slot" value="134" />
+        <property name="enablecontrol" value="" />
+      </properties>
+    </object>
+    <object name="level9" id="109" x="120" y="3220" width="20" height="20">
+      <properties>
+        <property name="save" value="" />
+        <property name="notice" value="LEVEL 09" />
+        <property name="cam" value="9a" />
+        <property name="once" value="" />
+        <property name="setvar" value="jetpack=0" />
+        <property name="setaction" value="none" />
+        <property name="slot" value="134" />
+        <property name="enablecontrol" value="" />
+      </properties>
+    </object>
+    <object name="level10" id="110" x="40" y="3760" width="20" height="20">
+      <properties>
+        <property name="save" value="" />
+        <property name="notice" value="LEVEL 10" />
+        <property name="cam" value="10a" />
+        <property name="once" value="" />
+        <property name="setvar" value="jetpack=0" />
+        <property name="setaction" value="none" />
+        <property name="slot" value="134" />
+        <property name="enablecontrol" value="" />
+      </properties>
+    </object>
+    <object id="111" x="940" gid="3" y="440" width="20" height="20">
+      <properties>
+        <property name="condition" value="trophy=1" />
+        <property name="transfer" value="" />
+        <property name="move" value="wait" />
+        <property name="notice" value="" />
+        <property name="setvar" value="trophy=0,tunnel=2,jetpack=0,gun=0" />
+        <property name="addvar" value="score=2000,level=1" />
+        <property name="transfercam" value="2z" />
+        <property name="disablecontrol" value="" />
+        <property name="slot" value="4" />
+        <property name="setaction" value="none" />
+        <property name="sfx" value="door.mp3" />
+      </properties>
+    </object>
+    <object id="112" x="1380" gid="3" y="840" width="20" height="20">
+      <properties>
+        <property name="condition" value="trophy=1" />
+        <property name="transfer" value="" />
+        <property name="move" value="wait" />
+        <property name="notice" value="" />
+        <property name="setvar" value="trophy=0,tunnel=3,jetpack=0,gun=0" />
+        <property name="addvar" value="score=2000,level=1" />
+        <property name="transfercam" value="3z" />
+        <property name="disablecontrol" value="" />
+        <property name="slot" value="4" />
+        <property name="setaction" value="none" />
+        <property name="sfx" value="door.mp3" />
+      </properties>
+    </object>
+    <object id="113" x="1940" gid="3" y="1260" width="20" height="20">
+      <properties>
+        <property name="condition" value="trophy=1" />
+        <property name="transfer" value="" />
+        <property name="move" value="wait" />
+        <property name="notice" value="" />
+        <property name="setvar" value="trophy=0,tunnel=4,jetpack=0,gun=0" />
+        <property name="addvar" value="score=2000,level=1" />
+        <property name="transfercam" value="4z" />
+        <property name="disablecontrol" value="" />
+        <property name="slot" value="4" />
+        <property name="setaction" value="none" />
+        <property name="sfx" value="door.mp3" />
+      </properties>
+    </object>
+    <object id="114" x="1940" gid="3" y="1680" width="20" height="20">
+      <properties>
+        <property name="condition" value="trophy=1" />
+        <property name="transfer" value="" />
+        <property name="move" value="wait" />
+        <property name="notice" value="" />
+        <property name="setvar" value="trophy=0,tunnel=5,jetpack=0,gun=0" />
+        <property name="addvar" value="score=2000,level=1" />
+        <property name="transfercam" value="5z" />
+        <property name="disablecontrol" value="" />
+        <property name="slot" value="4" />
+        <property name="setaction" value="none" />
+        <property name="sfx" value="door.mp3" />
+      </properties>
+    </object>
+    <object id="115" x="80" gid="3" y="2020" width="20" height="20">
+      <properties>
+        <property name="condition" value="trophy=1" />
+        <property name="transfer" value="" />
+        <property name="move" value="wait" />
+        <property name="notice" value="" />
+        <property name="setvar" value="trophy=0,tunnel=6,jetpack=0,gun=0" />
+        <property name="addvar" value="score=2000,level=1" />
+        <property name="transfercam" value="6z" />
+        <property name="disablecontrol" value="" />
+        <property name="slot" value="4" />
+        <property name="setaction" value="none" />
+        <property name="sfx" value="door.mp3" />
+      </properties>
+    </object>
+    <object id="116" x="1160" gid="3" y="2480" width="20" height="20">
+      <properties>
+        <property name="condition" value="trophy=1" />
+        <property name="transfer" value="" />
+        <property name="move" value="wait" />
+        <property name="notice" value="" />
+        <property name="setvar" value="trophy=0,tunnel=7,jetpack=0,gun=0" />
+        <property name="addvar" value="score=2000,level=1" />
+        <property name="transfercam" value="7z" />
+        <property name="disablecontrol" value="" />
+        <property name="slot" value="4" />
+        <property name="setaction" value="none" />
+        <property name="sfx" value="door.mp3" />
+      </properties>
+    </object>
+    <object id="117" x="1940" gid="3" y="2860" width="20" height="20">
+      <properties>
+        <property name="condition" value="trophy=1" />
+        <property name="transfer" value="" />
+        <property name="move" value="wait" />
+        <property name="notice" value="" />
+        <property name="setvar" value="trophy=0,tunnel=8,jetpack=0,gun=0" />
+        <property name="addvar" value="score=2000,level=1" />
+        <property name="transfercam" value="8z" />
+        <property name="disablecontrol" value="" />
+        <property name="slot" value="4" />
+        <property name="setaction" value="none" />
+        <property name="sfx" value="door.mp3" />
+      </properties>
+    </object>
+    <object id="118" x="1180" gid="3" y="3280" width="20" height="20">
+      <properties>
+        <property name="condition" value="trophy=1" />
+        <property name="transfer" value="" />
+        <property name="move" value="wait" />
+        <property name="notice" value="" />
+        <property name="setvar" value="trophy=0,tunnel=9,jetpack=0,gun=0" />
+        <property name="addvar" value="score=2000,level=1" />
+        <property name="transfercam" value="9z" />
+        <property name="disablecontrol" value="" />
+        <property name="slot" value="4" />
+        <property name="setaction" value="none" />
+        <property name="sfx" value="door.mp3" />
+      </properties>
+    </object>
+    <object id="119" x="300" gid="3" y="3640" width="20" height="20">
+      <properties>
+        <property name="condition" value="trophy=1" />
+        <property name="transfer" value="" />
+        <property name="move" value="wait" />
+        <property name="notice" value="" />
+        <property name="setvar" value="trophy=0,tunnel=10,jetpack=0,gun=0" />
+        <property name="addvar" value="score=2000,level=1" />
+        <property name="transfercam" value="10z" />
+        <property name="disablecontrol" value="" />
+        <property name="slot" value="4" />
+        <property name="setaction" value="none" />
+        <property name="sfx" value="door.mp3" />
+      </properties>
+    </object>
+    <object id="120" x="0" gid="1" y="4000" width="20" height="20">
+      <properties>
+        <property name="object" value="item" />
+        <property name="requires" value="tunnel=11" />
+        <property name="path" value="right" />
+      </properties>
+    </object>
+    <object id="121" x="3180" y="3980" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="transfer" value="" />
+        <property name="transfercam" value="space" />
+        <property name="setvar" value="tunnel=0,menu=0" />
+        <property name="notice" value="" />
+      </properties>
+    </object>
+    <object id="122" x="20" y="3980" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="notice">
+The End
+
+
+
+
+CONGRATULATIONS!
+
+
+You've finished the game.
+
+There are 4 hidden areas in this game.
+They are located at level 5,8,9, and 10.
+Good luck finding them.
+
+
+Thanks for playing!
+</property>
+        <property name="setvar" value="jetpack=0" />
+      </properties>
+    </object>
+    <object id="125" x="2740" y="520" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="notice">
+Dangerous Dave Clone
+Created using NotTiled
+
+
+Made by WandsMire, tileset by RT1_JMJS
+
+
+
+
+
+
+
+Help                                   Play
+
+
+
+Credits                                       
+
+
+
+
+Original game by John Romero (C) 1990 Softdisk, Inc.
+</property>
+        <property name="enabletouch" value="" />
+        <property name="kill" value="moving" />
+        <property name="setbgm" value="music3.mp3" />
+        <property name="requires" value="menu=1" />
+      </properties>
+    </object>
+    <object name="Jump" id="127" x="3060" y="400" width="20" height="20">
+      <properties>
+        <property name="object" value="listener" />
+        <property name="setaction" value="jump" />
+        <property name="label" value="jump" />
+        <property name="slot" value="2" />
+        <property name="once" value="" />
+        <property name="impulse" value="1.5" />
+        <property name="cooldown" value="0.1" />
+        <property name="asfx" value="jump.wav" />
+        <property name="climb" value="69" />
+        <property name="icon" value="6,6" />
+      </properties>
+    </object>
+    <object name="w10a" id="128" x="200" y="3520" width="20" height="20" />
+    <object id="129" x="200" y="3800" width="20" height="20">
+      <properties>
+        <property name="move" value="w10a" />
+      </properties>
+    </object>
+    <object id="131" x="1060" gid="13" y="3680" width="20" height="20" />
+    <object id="132" x="680" y="3000" width="40" height="20">
+      <properties>
+        <property name="moveY" value="w8a" />
+      </properties>
+    </object>
+    <object name="w8a" id="134" x="680" y="2720" width="40" height="20" />
+    <object id="136" x="500" y="3400" width="40" height="20">
+      <properties>
+        <property name="moveY" value="w9a" />
+      </properties>
+    </object>
+    <object name="w9a" id="137" x="500" y="3120" width="40" height="20" />
+    <object name="w9b" id="162" x="1560" y="3160" width="440" height="20" />
+    <object id="184" x="1560" y="3400" width="440" height="20">
+      <properties>
+        <property name="moveY" value="w9b" />
+      </properties>
+    </object>
+    <object name="wz2" id="185" x="2980" y="2880" width="40" height="20" />
+    <object name="wz3" id="186" x="2980" y="3280" width="40" height="20" />
+    <object name="wz1" id="187" x="2980" y="1680" width="40" height="20" />
+    <object name="wz4" id="188" x="2980" y="3680" width="40" height="20" />
+    <object name="w4" id="189" x="2980" y="3600" width="20" height="20">
+      <properties>
+        <property name="setaction" value="none" />
+        <property name="slot" value="134" />
+      </properties>
+    </object>
+    <object name="w3" id="190" x="2980" y="3200" width="20" height="20">
+      <properties>
+        <property name="setaction" value="none" />
+        <property name="slot" value="134" />
+      </properties>
+    </object>
+    <object name="w1" id="192" x="2980" y="1600" width="20" height="20">
+      <properties>
+        <property name="setaction" value="none" />
+        <property name="slot" value="134" />
+      </properties>
+    </object>
+    <object id="193" x="2980" y="1780" width="20" height="20">
+      <properties>
+        <property name="transfer" value="" />
+        <property name="move" value="warp1" />
+        <property name="transfercam" value="w1a" />
+      </properties>
+    </object>
+    <object id="194" x="2980" y="2980" width="20" height="20">
+      <properties>
+        <property name="transfer" value="" />
+        <property name="move" value="warp2" />
+        <property name="transfercam" value="w2a" />
+      </properties>
+    </object>
+    <object id="195" x="2980" y="3380" width="20" height="20">
+      <properties>
+        <property name="transfer" value="" />
+        <property name="move" value="warp3" />
+        <property name="transfercam" value="w3a" />
+      </properties>
+    </object>
+    <object id="196" x="2980" y="3780" width="20" height="20">
+      <properties>
+        <property name="transfer" value="" />
+        <property name="move" value="warp4" />
+        <property name="transfercam" value="w4a" />
+      </properties>
+    </object>
+    <object name="10z" id="197" x="2380" y="3680" width="40" height="20" />
+    <object id="200" x="2200" gid="1" y="3700" width="20" height="20">
+      <properties>
+        <property name="object" value="item" />
+        <property name="requires" value="tunnel=10" />
+        <property name="path" value="right" />
+      </properties>
+    </object>
+    <object id="201" x="2220" y="3680" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="notice">
+LEVEL 10
+
+
+
+
+
+YES! YOU FINISHED THE GAME!!!
+</property>
+      </properties>
+    </object>
+    <object id="202" x="2580" y="3680" width="20" height="20">
+      <properties>
+        <property name="object" value="itemsensor" />
+        <property name="transfer" value="" />
+        <property name="move" value="wait" />
+        <property name="transfercam" value="finish" />
+        <property name="setvar" value="tunnel=11" />
+        <property name="stoptimer" value="" />
+        <property name="changebgm" value="music2.mp3" />
+        <property name="enabletouch" value="" />
+      </properties>
+    </object>
+    <object name="finish" id="203" x="2980" y="2480" width="40" height="20" />
+    <object id="220" x="1360" gid="13" y="3300" width="20" height="20" />
+    <object id="221" x="500" gid="13" y="3780" width="20" height="20" />
+    <object id="222" x="1560" gid="13" y="2120" width="20" height="20" />
+    <object id="223" x="1600" gid="13" y="2120" width="20" height="20" />
+    <object id="224" x="1640" gid="13" y="2120" width="20" height="20" />
+    <object id="225" x="20" y="1600" width="20" height="20">
+      <properties>
+        <property name="transfer" value="" />
+        <property name="move" value="w1" />
+        <property name="transfercam" value="wz1" />
+      </properties>
+    </object>
+    <object name="warp1" id="226" x="1020" y="400" width="20" height="20">
+      <properties>
+        <property name="save" value="" />
+        <property name="cam" value="w1a" />
+        <property name="once" value="" />
+        <property name="setvar" value="jetpack=0" />
+        <property name="setaction" value="none" />
+        <property name="slot" value="134" />
+      </properties>
+    </object>
+    <object name="warp2" id="227" x="1420" y="2000" width="20" height="20">
+      <properties>
+        <property name="save" value="" />
+        <property name="cam" value="w2a" />
+        <property name="once" value="" />
+        <property name="setvar" value="jetpack=0" />
+        <property name="setaction" value="none" />
+        <property name="slot" value="134" />
+      </properties>
+    </object>
+    <object name="warp3" id="228" x="1600" y="2400" width="20" height="20">
+      <properties>
+        <property name="save" value="" />
+        <property name="cam" value="w3a" />
+        <property name="once" value="" />
+        <property name="setvar" value="jetpack=0" />
+        <property name="setaction" value="none" />
+        <property name="slot" value="134" />
+      </properties>
+    </object>
+    <object name="warp4" id="229" x="400" y="0" width="20" height="20">
+      <properties>
+        <property name="save" value="" />
+        <property name="cam" value="w4a" />
+        <property name="once" value="" />
+        <property name="setvar" value="jetpack=0" />
+        <property name="setaction" value="none" />
+        <property name="slot" value="134" />
+      </properties>
+    </object>
+    <object id="230" x="1360" gid="3" y="540" width="20" height="20">
+      <properties>
+        <property name="condition" value="trophy=1" />
+        <property name="transfer" value="" />
+        <property name="move" value="wait" />
+        <property name="notice" value="" />
+        <property name="setvar" value="trophy=0,tunnel=4,warp=1" />
+        <property name="addvar" value="score=2000" />
+        <property name="transfercam" value="4z" />
+        <property name="disablecontrol" value="" />
+        <property name="sfx" value="door.mp3" />
+      </properties>
+    </object>
+    <object id="231" x="1580" gid="3" y="2020" width="20" height="20">
+      <properties>
+        <property name="condition" value="trophy=1" />
+        <property name="transfer" value="" />
+        <property name="move" value="wait" />
+        <property name="notice" value="" />
+        <property name="setvar" value="trophy=0,tunnel=7,warp=1" />
+        <property name="addvar" value="score=2000" />
+        <property name="transfercam" value="7z" />
+        <property name="disablecontrol" value="" />
+        <property name="sfx" value="door.mp3" />
+      </properties>
+    </object>
+    <object id="232" x="1600" gid="3" y="2560" width="20" height="20">
+      <properties>
+        <property name="condition" value="trophy=1" />
+        <property name="transfer" value="" />
+        <property name="move" value="wait" />
+        <property name="notice" value="" />
+        <property name="setvar" value="trophy=0,tunnel=8,warp=1" />
+        <property name="addvar" value="score=2000" />
+        <property name="transfercam" value="8z" />
+        <property name="disablecontrol" value="" />
+        <property name="sfx" value="door.mp3" />
+      </properties>
+    </object>
+    <object id="233" x="1960" gid="3" y="100" width="20" height="20">
+      <properties>
+        <property name="condition" value="trophy=1" />
+        <property name="transfer" value="" />
+        <property name="move" value="wait" />
+        <property name="notice" value="" />
+        <property name="setvar" value="trophy=0,tunnel=9,warp=1" />
+        <property name="addvar" value="score=2000" />
+        <property name="transfercam" value="9z" />
+        <property name="disablecontrol" value="" />
+        <property name="sfx" value="door.mp3" />
+      </properties>
+    </object>
+    <object id="234" x="0" y="1400" width="20" height="250">
+      <properties>
+        <property name="transfer" value="" />
+        <property name="move" value="w1" />
+        <property name="transfercam" value="wz1" />
+      </properties>
+    </object>
+    <object id="235" x="1980" y="1400" width="20" height="250">
+      <properties>
+        <property name="transfer" value="" />
+        <property name="move" value="w1" />
+        <property name="transfercam" value="wz1" />
+      </properties>
+    </object>
+    <object id="237" x="1980" y="2600" width="20" height="200">
+      <properties>
+        <property name="transfer" value="" />
+        <property name="move" value="w2" />
+        <property name="transfercam" value="wz2" />
+      </properties>
+    </object>
+    <object id="239" x="0" y="3000" width="20" height="200">
+      <properties>
+        <property name="transfer" value="" />
+        <property name="move" value="w3" />
+        <property name="transfercam" value="wz3" />
+      </properties>
+    </object>
+    <object id="240" x="1980" y="3460" width="20" height="200">
+      <properties>
+        <property name="transfer" value="" />
+        <property name="move" value="w4" />
+        <property name="transfercam" value="wz4" />
+      </properties>
+    </object>
+    <object id="241" x="0" y="3400" width="20" height="200">
+      <properties>
+        <property name="transfer" value="" />
+        <property name="move" value="w4" />
+        <property name="transfercam" value="wz4" />
+      </properties>
+    </object>
+    <object id="242" x="0" y="2600" width="20" height="200">
+      <properties>
+        <property name="transfer" value="" />
+        <property name="move" value="w2" />
+        <property name="transfercam" value="wz2" />
+      </properties>
+    </object>
+    <object id="243" x="520" gid="13" y="3280" width="20" height="20" />
+    <object id="244" x="2800" gid="4" y="2420" width="20" height="20" />
+    <object id="245" x="2820" gid="4" y="2420" width="20" height="20" />
+    <object id="246" x="2840" gid="4" y="2420" width="20" height="20" />
+    <object id="247" x="2860" gid="4" y="2420" width="20" height="20" />
+    <object id="248" x="2880" gid="4" y="2420" width="20" height="20" />
+    <object id="249" x="2900" gid="4" y="2420" width="20" height="20" />
+    <object id="250" x="2920" gid="4" y="2420" width="20" height="20" />
+    <object id="251" x="2940" gid="4" y="2420" width="20" height="20" />
+    <object id="252" x="2960" gid="4" y="2420" width="20" height="20" />
+    <object id="253" x="3000" gid="4" y="2420" width="20" height="20" />
+    <object id="254" x="2980" gid="4" y="2420" width="20" height="20" />
+    <object id="255" x="3020" gid="4" y="2420" width="20" height="20" />
+    <object id="256" x="3040" gid="4" y="2420" width="20" height="20" />
+    <object id="257" x="3060" gid="4" y="2420" width="20" height="20" />
+    <object id="258" x="3080" gid="4" y="2420" width="20" height="20" />
+    <object id="259" x="3100" gid="4" y="2420" width="20" height="20" />
+    <object id="260" x="3120" gid="4" y="2420" width="20" height="20" />
+    <object id="261" x="3140" gid="4" y="2420" width="20" height="20" />
+    <object id="262" x="3160" gid="4" y="2420" width="20" height="20" />
+    <object id="263" x="3180" gid="4" y="2420" width="20" height="20" />
+    <object id="264" x="3180" gid="4" y="2440" width="20" height="20" />
+    <object id="265" x="3180" gid="4" y="2460" width="20" height="20" />
+    <object id="266" x="3180" gid="4" y="2480" width="20" height="20" />
+    <object id="267" x="3180" gid="4" y="2500" width="20" height="20" />
+    <object id="268" x="3180" gid="4" y="2540" width="20" height="20" />
+    <object id="269" x="3180" gid="4" y="2520" width="20" height="20" />
+    <object id="270" x="3180" gid="4" y="2560" width="20" height="20" />
+    <object id="271" x="3180" gid="4" y="2580" width="20" height="20" />
+    <object id="272" x="3180" gid="4" y="2600" width="20" height="20" />
+    <object id="273" x="3160" gid="4" y="2600" width="20" height="20" />
+    <object id="274" x="3140" gid="4" y="2600" width="20" height="20" />
+    <object id="275" x="3120" gid="4" y="2600" width="20" height="20" />
+    <object id="276" x="3100" gid="4" y="2600" width="20" height="20" />
+    <object id="277" x="3080" gid="4" y="2600" width="20" height="20" />
+    <object id="278" x="3060" gid="4" y="2600" width="20" height="20" />
+    <object id="279" x="3040" gid="4" y="2600" width="20" height="20" />
+    <object id="280" x="3020" gid="4" y="2600" width="20" height="20" />
+    <object id="281" x="3000" gid="4" y="2600" width="20" height="20" />
+    <object id="282" x="2980" gid="4" y="2600" width="20" height="20" />
+    <object id="283" x="2960" gid="4" y="2600" width="20" height="20" />
+    <object id="284" x="2940" gid="4" y="2600" width="20" height="20" />
+    <object id="285" x="2920" gid="4" y="2600" width="20" height="20" />
+    <object id="286" x="2900" gid="4" y="2600" width="20" height="20" />
+    <object id="287" x="2880" gid="4" y="2600" width="20" height="20" />
+    <object id="288" x="2860" gid="4" y="2600" width="20" height="20" />
+    <object id="289" x="2840" gid="4" y="2600" width="20" height="20" />
+    <object id="290" x="2820" gid="4" y="2600" width="20" height="20" />
+    <object id="291" x="2800" gid="4" y="2600" width="20" height="20" />
+    <object id="292" x="2800" gid="4" y="2580" width="20" height="20" />
+    <object id="293" x="2800" gid="4" y="2560" width="20" height="20" />
+    <object id="294" x="2800" gid="4" y="2540" width="20" height="20" />
+    <object id="295" x="2800" gid="4" y="2520" width="20" height="20" />
+    <object id="296" x="2800" gid="4" y="2500" width="20" height="20" />
+    <object id="297" x="2800" gid="4" y="2480" width="20" height="20" />
+    <object id="298" x="2800" gid="4" y="2460" width="20" height="20" />
+    <object id="299" x="2800" gid="4" y="2440" width="20" height="20" />
+    <object id="301" x="1940" gid="13" y="3760" width="20" height="20" />
+    <object id="302" x="1900" gid="13" y="3740" width="20" height="20" />
+    <object id="303" x="1920" gid="13" y="3700" width="20" height="20" />
+    <object id="304" x="1860" gid="13" y="3720" width="20" height="20" />
+    <object id="305" x="1840" gid="13" y="3740" width="20" height="20" />
+    <object id="306" x="1880" gid="13" y="3680" width="20" height="20" />
+    <object id="307" x="1920" gid="13" y="3660" width="20" height="20" />
+    <object id="308" x="1820" gid="13" y="3700" width="20" height="20" />
+    <object id="309" x="1820" gid="13" y="3660" width="20" height="20" />
+    <object id="310" x="1780" gid="13" y="3660" width="20" height="20" />
+    <object id="311" x="940" gid="13" y="3680" width="20" height="20" />
+    <object name="4a" id="312" x="180" y="1280" width="40" height="20" />
+    <object name="4b" id="313" x="480" y="1280" width="40" height="20" />
+    <object name="4c" id="314" x="780" y="1280" width="40" height="20" />
+    <object name="4d" id="315" x="1080" y="1280" width="40" height="20" />
+    <object name="4e" id="316" x="1380" y="1280" width="40" height="20" />
+    <object name="4f" id="317" x="1680" y="1280" width="40" height="20" />
+    <object name="4g" id="318" x="1780" y="1280" width="40" height="20" />
+    <object name="5a" id="321" x="180" y="1680" width="40" height="20" />
+    <object name="5b" id="322" x="480" y="1680" width="40" height="20" />
+    <object name="5c" id="323" x="780" y="1680" width="40" height="20" />
+    <object name="5d" id="324" x="1080" y="1680" width="40" height="20" />
+    <object name="5e" id="325" x="1380" y="1680" width="40" height="20" />
+    <object name="5f" id="326" x="1680" y="1680" width="40" height="20" />
+    <object name="5g" id="327" x="1780" y="1680" width="40" height="20" />
+    <object name="6a" id="328" x="180" y="2080" width="40" height="20" />
+    <object name="6b" id="329" x="480" y="2080" width="40" height="20" />
+    <object name="6c" id="330" x="780" y="2080" width="40" height="20" />
+    <object name="6d" id="331" x="1080" y="2080" width="40" height="20" />
+    <object name="7a" id="333" x="180" y="2480" width="40" height="20" />
+    <object name="7b" id="334" x="480" y="2480" width="40" height="20" />
+    <object name="7c" id="335" x="780" y="2480" width="40" height="20" />
+    <object name="7d" id="336" x="1080" y="2480" width="40" height="20" />
+    <object name="7e" id="337" x="1380" y="2480" width="40" height="20" />
+    <object name="8a" id="340" x="180" y="2880" width="40" height="20" />
+    <object name="8b" id="341" x="480" y="2880" width="40" height="20" />
+    <object name="8c" id="342" x="780" y="2880" width="40" height="20" />
+    <object name="8d" id="344" x="1080" y="2880" width="40" height="20" />
+    <object name="8e" id="345" x="1380" y="2880" width="40" height="20" />
+    <object name="8f" id="346" x="1680" y="2880" width="40" height="20" />
+    <object name="8g" id="347" x="1780" y="2880" width="40" height="20" />
+    <object name="9a" id="349" x="180" y="3280" width="40" height="20" />
+    <object name="9b" id="350" x="480" y="3280" width="40" height="20" />
+    <object name="9c" id="351" x="780" y="3280" width="40" height="20" />
+    <object name="9d" id="352" x="1080" y="3280" width="40" height="20" />
+    <object name="9e" id="353" x="1380" y="3280" width="40" height="20" />
+    <object name="9f" id="354" x="1680" y="3280" width="40" height="20" />
+    <object name="9g" id="355" x="1780" y="3280" width="40" height="20" />
+    <object name="10a" id="356" x="180" y="3680" width="40" height="20" />
+    <object name="10b" id="357" x="480" y="3680" width="40" height="20" />
+    <object name="10c" id="358" x="780" y="3680" width="40" height="20" />
+    <object name="10d" id="359" x="1080" y="3680" width="40" height="20" />
+    <object name="10e" id="360" x="1380" y="3680" width="40" height="20" />
+    <object name="10f" id="361" x="1660" y="3680" width="40" height="20" />
+    <object name="10g" id="362" x="1780" y="3680" width="40" height="20" />
+    <object name="3f" id="363" x="1680" y="880" width="40" height="20" />
+    <object name="3g" id="364" x="1780" y="880" width="40" height="20" />
+    <object id="365" x="1480" y="200" width="20" height="20">
+      <properties>
+        <property name="move" value="sw1" />
+      </properties>
+    </object>
+    <object name="sw1" id="367" x="1480" y="-125" width="20" height="20" />
+    <object name="back" id="368" x="1520" y="800" width="20" height="200">
+      <properties>
+        <property name="cam" value="3e" />
+      </properties>
+    </object>
+    <object name="next" id="369" x="1560" y="800" width="20" height="200">
+      <properties>
+        <property name="cam" value="3f" />
+      </properties>
+    </object>
+    <object name="back" id="370" x="1820" y="800" width="20" height="200">
+      <properties>
+        <property name="cam" value="3f" />
+      </properties>
+    </object>
+    <object name="next" id="371" x="1860" y="800" width="20" height="200">
+      <properties>
+        <property name="cam" value="3g" />
+      </properties>
+    </object>
+    <object id="372" x="2900" y="340" width="20" height="20">
+      <properties>
+        <property name="object" value="touch" />
+      </properties>
+    </object>
+    <object name="back" id="373" x="320" y="1200" width="20" height="200">
+      <properties>
+        <property name="cam" value="4a" />
+      </properties>
+    </object>
+    <object name="back" id="374" x="620" y="1200" width="20" height="200">
+      <properties>
+        <property name="cam" value="4b" />
+      </properties>
+    </object>
+    <object name="back" id="375" x="920" y="1200" width="20" height="200">
+      <properties>
+        <property name="cam" value="4c" />
+      </properties>
+    </object>
+    <object name="back" id="376" x="1220" y="1200" width="20" height="200">
+      <properties>
+        <property name="cam" value="4d" />
+      </properties>
+    </object>
+    <object name="back" id="377" x="1520" y="1200" width="20" height="200">
+      <properties>
+        <property name="cam" value="4e" />
+      </properties>
+    </object>
+    <object name="back" id="378" x="1800" y="1200" width="20" height="200">
+      <properties>
+        <property name="cam" value="4f" />
+      </properties>
+    </object>
+    <object name="next" id="379" x="360" y="1200" width="20" height="200">
+      <properties>
+        <property name="cam" value="4b" />
+      </properties>
+    </object>
+    <object name="next" id="380" x="660" y="1200" width="20" height="200">
+      <properties>
+        <property name="cam" value="4c" />
+      </properties>
+    </object>
+    <object name="next" id="381" x="960" y="1200" width="20" height="200">
+      <properties>
+        <property name="cam" value="4d" />
+      </properties>
+    </object>
+    <object name="next" id="382" x="1260" y="1200" width="20" height="200">
+      <properties>
+        <property name="cam" value="4e" />
+      </properties>
+    </object>
+    <object name="next" id="383" x="1560" y="1200" width="20" height="200">
+      <properties>
+        <property name="cam" value="4f" />
+      </properties>
+    </object>
+    <object name="next" id="384" x="1840" y="1200" width="20" height="200">
+      <properties>
+        <property name="cam" value="4g" />
+      </properties>
+    </object>
+    <object name="back" id="385" x="320" y="1400" width="20" height="400">
+      <properties>
+        <property name="cam" value="5a" />
+      </properties>
+    </object>
+    <object name="next" id="386" x="360" y="1400" width="20" height="400">
+      <properties>
+        <property name="cam" value="5b" />
+      </properties>
+    </object>
+    <object name="back" id="388" x="320" y="2600" width="20" height="400">
+      <properties>
+        <property name="cam" value="8a" />
+      </properties>
+    </object>
+    <object name="back" id="390" x="320" y="2000" width="20" height="200">
+      <properties>
+        <property name="cam" value="6a" />
+      </properties>
+    </object>
+    <object name="back" id="391" x="320" y="2400" width="20" height="200">
+      <properties>
+        <property name="cam" value="7a" />
+      </properties>
+    </object>
+    <object name="next" id="392" x="360" y="2000" width="20" height="200">
+      <properties>
+        <property name="cam" value="6b" />
+      </properties>
+    </object>
+    <object name="next" id="393" x="360" y="2400" width="20" height="200">
+      <properties>
+        <property name="cam" value="7b" />
+      </properties>
+    </object>
+    <object name="next" id="394" x="360" y="2600" width="20" height="400">
+      <properties>
+        <property name="cam" value="8b" />
+      </properties>
+    </object>
+    <object name="next" id="396" x="360" y="3000" width="20" height="400">
+      <properties>
+        <property name="cam" value="9b" />
+      </properties>
+    </object>
+    <object name="back" id="397" x="320" y="3000" width="20" height="400">
+      <properties>
+        <property name="cam" value="9a" />
+      </properties>
+    </object>
+    <object name="back" id="398" x="620" y="1400" width="20" height="400">
+      <properties>
+        <property name="cam" value="5b" />
+      </properties>
+    </object>
+    <object name="back" id="399" x="920" y="1400" width="20" height="400">
+      <properties>
+        <property name="cam" value="5c" />
+      </properties>
+    </object>
+    <object name="back" id="400" x="1220" y="1400" width="20" height="400">
+      <properties>
+        <property name="cam" value="5d" />
+      </properties>
+    </object>
+    <object name="back" id="401" x="1520" y="1400" width="20" height="400">
+      <properties>
+        <property name="cam" value="5e" />
+      </properties>
+    </object>
+    <object name="back" id="402" x="1820" y="1400" width="20" height="400">
+      <properties>
+        <property name="cam" value="5f" />
+      </properties>
+    </object>
+    <object name="back" id="404" x="620" y="2600" width="20" height="400">
+      <properties>
+        <property name="cam" value="8b" />
+      </properties>
+    </object>
+    <object name="back" id="405" x="620" y="3000" width="20" height="400">
+      <properties>
+        <property name="cam" value="9b" />
+      </properties>
+    </object>
+    <object name="next" id="407" x="660" y="1400" width="20" height="400">
+      <properties>
+        <property name="cam" value="5c" />
+      </properties>
+    </object>
+    <object name="next" id="408" x="960" y="1400" width="20" height="400">
+      <properties>
+        <property name="cam" value="5d" />
+      </properties>
+    </object>
+    <object name="next" id="409" x="1260" y="1400" width="20" height="400">
+      <properties>
+        <property name="cam" value="5e" />
+      </properties>
+    </object>
+    <object name="next" id="410" x="1560" y="1400" width="20" height="400">
+      <properties>
+        <property name="cam" value="5f" />
+      </properties>
+    </object>
+    <object name="next" id="411" x="1860" y="1400" width="20" height="400">
+      <properties>
+        <property name="cam" value="5g" />
+      </properties>
+    </object>
+    <object name="back" id="412" x="620" y="2000" width="20" height="200">
+      <properties>
+        <property name="cam" value="6b" />
+      </properties>
+    </object>
+    <object name="back" id="413" x="920" y="2000" width="20" height="200">
+      <properties>
+        <property name="cam" value="6c" />
+      </properties>
+    </object>
+    <object name="next" id="415" x="660" y="2000" width="20" height="200">
+      <properties>
+        <property name="cam" value="6c" />
+      </properties>
+    </object>
+    <object name="next" id="416" x="960" y="2000" width="20" height="200">
+      <properties>
+        <property name="cam" value="6d" />
+      </properties>
+    </object>
+    <object name="back" id="417" x="620" y="2400" width="20" height="200">
+      <properties>
+        <property name="cam" value="7b" />
+      </properties>
+    </object>
+    <object name="back" id="418" x="920" y="2400" width="20" height="200">
+      <properties>
+        <property name="cam" value="7c" />
+      </properties>
+    </object>
+    <object name="back" id="419" x="1220" y="2400" width="20" height="200">
+      <properties>
+        <property name="cam" value="7d" />
+      </properties>
+    </object>
+    <object name="next" id="420" x="660" y="2400" width="20" height="200">
+      <properties>
+        <property name="cam" value="7c" />
+      </properties>
+    </object>
+    <object name="next" id="421" x="960" y="2400" width="20" height="200">
+      <properties>
+        <property name="cam" value="7d" />
+      </properties>
+    </object>
+    <object name="next" id="422" x="1260" y="2400" width="20" height="200">
+      <properties>
+        <property name="cam" value="7e" />
+      </properties>
+    </object>
+    <object name="next" id="423" x="660" y="2600" width="20" height="400">
+      <properties>
+        <property name="cam" value="8c" />
+      </properties>
+    </object>
+    <object name="next" id="424" x="960" y="2600" width="20" height="400">
+      <properties>
+        <property name="cam" value="8d" />
+      </properties>
+    </object>
+    <object name="next" id="425" x="1260" y="2600" width="20" height="400">
+      <properties>
+        <property name="cam" value="8e" />
+      </properties>
+    </object>
+    <object name="back" id="426" x="920" y="2600" width="20" height="400">
+      <properties>
+        <property name="cam" value="8c" />
+      </properties>
+    </object>
+    <object name="back" id="427" x="1220" y="2600" width="20" height="400">
+      <properties>
+        <property name="cam" value="8d" />
+      </properties>
+    </object>
+    <object name="back" id="428" x="1520" y="2600" width="20" height="400">
+      <properties>
+        <property name="cam" value="8e" />
+      </properties>
+    </object>
+    <object name="back" id="429" x="1820" y="2600" width="20" height="400">
+      <properties>
+        <property name="cam" value="8f" />
+      </properties>
+    </object>
+    <object name="next" id="430" x="1560" y="2600" width="20" height="400">
+      <properties>
+        <property name="cam" value="8f" />
+      </properties>
+    </object>
+    <object name="next" id="431" x="1860" y="2600" width="20" height="400">
+      <properties>
+        <property name="cam" value="8g" />
+      </properties>
+    </object>
+    <object name="back" id="432" x="920" y="3000" width="20" height="400">
+      <properties>
+        <property name="cam" value="9c" />
+      </properties>
+    </object>
+    <object name="back" id="434" x="1220" y="3000" width="20" height="400">
+      <properties>
+        <property name="cam" value="9d" />
+      </properties>
+    </object>
+    <object name="back" id="435" x="1520" y="3000" width="20" height="400">
+      <properties>
+        <property name="cam" value="9e" />
+      </properties>
+    </object>
+    <object name="back" id="436" x="1820" y="3000" width="20" height="400">
+      <properties>
+        <property name="cam" value="9f" />
+      </properties>
+    </object>
+    <object name="next" id="438" x="660" y="3040" width="20" height="400">
+      <properties>
+        <property name="cam" value="9c" />
+      </properties>
+    </object>
+    <object name="next" id="439" x="960" y="3000" width="20" height="400">
+      <properties>
+        <property name="cam" value="9d" />
+      </properties>
+    </object>
+    <object name="next" id="440" x="1260" y="3000" width="20" height="400">
+      <properties>
+        <property name="cam" value="9e" />
+      </properties>
+    </object>
+    <object name="next" id="441" x="1560" y="3000" width="20" height="400">
+      <properties>
+        <property name="cam" value="9f" />
+      </properties>
+    </object>
+    <object name="next" id="442" x="1860" y="3000" width="20" height="400">
+      <properties>
+        <property name="cam" value="9g" />
+      </properties>
+    </object>
+    <object name="back" id="446" x="1820" y="3460" width="20" height="400">
+      <properties>
+        <property name="cam" value="10f" />
+      </properties>
+    </object>
+    <object name="back" id="447" x="320" y="3460" width="20" height="400">
+      <properties>
+        <property name="cam" value="10a" />
+      </properties>
+    </object>
+    <object name="back" id="448" x="620" y="3460" width="20" height="400">
+      <properties>
+        <property name="cam" value="10b" />
+      </properties>
+    </object>
+    <object name="back" id="449" x="920" y="3460" width="20" height="400">
+      <properties>
+        <property name="cam" value="10c" />
+      </properties>
+    </object>
+    <object name="back" id="450" x="1220" y="3460" width="20" height="400">
+      <properties>
+        <property name="cam" value="10d" />
+      </properties>
+    </object>
+    <object name="back" id="451" x="1520" y="3460" width="20" height="400">
+      <properties>
+        <property name="cam" value="10e" />
+      </properties>
+    </object>
+    <object name="next" id="452" x="360" y="3460" width="20" height="400">
+      <properties>
+        <property name="cam" value="10b" />
+      </properties>
+    </object>
+    <object name="next" id="453" x="660" y="3460" width="20" height="400">
+      <properties>
+        <property name="cam" value="10c" />
+      </properties>
+    </object>
+    <object name="next" id="454" x="960" y="3460" width="20" height="400">
+      <properties>
+        <property name="cam" value="10d" />
+      </properties>
+    </object>
+    <object name="next" id="455" x="1260" y="3460" width="20" height="400">
+      <properties>
+        <property name="cam" value="10e" />
+      </properties>
+    </object>
+    <object name="next" id="456" x="1560" y="3460" width="20" height="400">
+      <properties>
+        <property name="cam" value="10f" />
+      </properties>
+    </object>
+    <object name="next" id="457" x="1860" y="3460" width="20" height="400">
+      <properties>
+        <property name="cam" value="10g" />
+      </properties>
+    </object>
+    <object name="w1a" id="458" x="1020" y="480" width="40" height="20" />
+    <object name="w1b" id="459" x="1320" y="480" width="40" height="20" />
+    <object name="w1c" id="460" x="1620" y="480" width="40" height="20" />
+    <object name="w1d" id="461" x="1780" y="480" width="40" height="20" />
+    <object name="w4f" id="462" x="1780" y="80" width="40" height="20" />
+    <object name="w2b" id="463" x="1780" y="2080" width="40" height="20" />
+    <object name="w3b" id="464" x="1780" y="2480" width="40" height="20" />
+    <object name="w2a" id="465" x="1520" y="2080" width="40" height="20" />
+    <object name="w2c" id="466" x="1220" y="2080" width="40" height="20" />
+    <object name="w3a" id="467" x="1600" y="2480" width="40" height="20" />
+    <object name="w4a" id="468" x="400" y="80" width="40" height="20" />
+    <object name="w4b" id="469" x="700" y="80" width="40" height="20" />
+    <object name="w4c" id="470" x="1000" y="80" width="40" height="20" />
+    <object name="w4d" id="471" x="1300" y="80" width="40" height="20" />
+    <object name="w4e" id="472" x="1600" y="80" width="40" height="20" />
+    <object name="back" id="473" x="800" y="0" width="20" height="200">
+      <properties>
+        <property name="cam" value="w4b" />
+      </properties>
+    </object>
+    <object name="back" id="474" x="1140" y="0" width="20" height="200">
+      <properties>
+        <property name="cam" value="w4c" />
+      </properties>
+    </object>
+    <object name="back" id="476" x="520" y="0" width="20" height="200">
+      <properties>
+        <property name="cam" value="w4a" />
+      </properties>
+    </object>
+    <object name="back" id="477" x="1440" y="-200" width="20" height="400">
+      <properties>
+        <property name="cam" value="w4d" />
+      </properties>
+    </object>
+    <object name="back" id="479" x="1160" y="400" width="20" height="200">
+      <properties>
+        <property name="cam" value="w1a" />
+      </properties>
+    </object>
+    <object name="back" id="480" x="1480" y="400" width="20" height="200">
+      <properties>
+        <property name="cam" value="w1b" />
+      </properties>
+    </object>
+    <object name="back" id="482" x="1700" y="0" width="20" height="200">
+      <properties>
+        <property name="cam" value="w4e" />
+      </properties>
+    </object>
+    <object name="back" id="483" x="1720" y="400" width="20" height="200">
+      <properties>
+        <property name="cam" value="w1c" />
+      </properties>
+    </object>
+    <object name="next" id="484" x="560" y="0" width="20" height="200">
+      <properties>
+        <property name="cam" value="w4b" />
+      </properties>
+    </object>
+    <object name="next" id="485" x="840" y="0" width="20" height="200">
+      <properties>
+        <property name="cam" value="w4c" />
+      </properties>
+    </object>
+    <object name="next" id="486" x="1180" y="0" width="20" height="200">
+      <properties>
+        <property name="cam" value="w4d" />
+      </properties>
+    </object>
+    <object name="next" id="487" x="1480" y="-200" width="20" height="400">
+      <properties>
+        <property name="cam" value="w4e" />
+      </properties>
+    </object>
+    <object name="next" id="488" x="1740" y="0" width="20" height="200">
+      <properties>
+        <property name="cam" value="w4f" />
+      </properties>
+    </object>
+    <object name="next" id="489" x="1200" y="400" width="20" height="200">
+      <properties>
+        <property name="cam" value="w1b" />
+      </properties>
+    </object>
+    <object name="next" id="490" x="1520" y="400" width="20" height="200">
+      <properties>
+        <property name="cam" value="w1c" />
+      </properties>
+    </object>
+    <object name="next" id="491" x="1760" y="400" width="20" height="200">
+      <properties>
+        <property name="cam" value="w1d" />
+      </properties>
+    </object>
+    <object name="back" id="492" x="1360" y="2000" width="20" height="200">
+      <properties>
+        <property name="cam" value="w2c" />
+      </properties>
+    </object>
+    <object name="back" id="494" x="1680" y="2400" width="20" height="200">
+      <properties>
+        <property name="cam" value="w3a" />
+      </properties>
+    </object>
+    <object name="next" id="495" x="1720" y="2400" width="20" height="200">
+      <properties>
+        <property name="cam" value="w3b" />
+      </properties>
+    </object>
+    <object name="next" id="496" x="1400" y="2000" width="20" height="200">
+      <properties>
+        <property name="cam" value="w2a" />
+      </properties>
+    </object>
+    <object name="back" id="497" x="1640" y="2000" width="20" height="200">
+      <properties>
+        <property name="cam" value="w2a" />
+      </properties>
+    </object>
+    <object name="next" id="498" x="1680" y="2000" width="20" height="200">
+      <properties>
+        <property name="cam" value="w2b" />
+      </properties>
+    </object>
+    <object id="526" x="1700" gid="13" y="3360" width="20" height="20" />
+    <object id="527" x="1800" gid="13" y="3360" width="20" height="20" />
+    <object id="528" x="280" y="3740" width="20" height="20">
+      <properties>
+        <property name="object" value="block" />
+      </properties>
+    </object>
+    <object id="529" x="300" y="3700" width="20" height="20">
+      <properties>
+        <property name="object" value="block" />
+      </properties>
+    </object>
+    <object id="530" x="240" y="3680" width="20" height="20">
+      <properties>
+        <property name="object" value="block" />
+      </properties>
+    </object>
+    <object id="536" x="2880" y="640" width="20" height="20">
+      <properties>
+        <property name="object" value="touch" />
+      </properties>
+    </object>
+    <object id="539" x="3120" gid="55" y="120" width="20" height="20">
+      <properties>
+        <property name="object" value="item" />
+        <property name="transfer" value="" />
+        <property name="move" value="level1" />
+        <property name="transfercam" value="1a" />
+        <property name="requires" value="menu=1" />
+        <property name="setvar" value="menu=2,score=0" />
+        <property name="enablecontrol" value="" />
+        <property name="sethud" value="score" />
+        <property name="keephud" value="" />
+        <property name="gravity" value="3" />
+        <property name="starttimer" value="" />
+        <property name="resettimer" value="" />
+        <property name="disabletouch" value="" />
+        <property name="changebgm" value="music2.mp3" />
+        <property name="setaction" value="none" />
+        <property name="slot" value="1234" />
+      </properties>
+    </object>
+    <object id="540" x="2860" gid="29" y="120" width="20" height="20">
+      <properties>
+        <property name="object" value="item" />
+        <property name="transfer" value="" />
+        <property name="transfercam" value="tut1" />
+        <property name="setvar" value="menu=3" />
+        <property name="enablecontrol" value="" />
+        <property name="disabletouch" value="" />
+        <property name="move" value="tutor" />
+        <property name="setaction" value="none" />
+        <property name="slot" value="1234" />
+      </properties>
+    </object>
+    <object id="541" x="2960" gid="14" y="180" width="20" height="20" />
+    <object id="542" x="3060" gid="14" y="200" width="20" height="20" />
+    <object id="543" x="2960" gid="27" y="100" width="20" height="20" />
+    <object id="544" x="3060" gid="27" y="140" width="20" height="20" />
+    <object id="537" x="3160" gid="55" y="2180" width="20" height="20">
+      <properties>
+        <property name="object" value="item" />
+        <property name="transfer" value="" />
+        <property name="transfercam" value="menu" />
+        <property name="setvar" value="menu=1" />
+      </properties>
+    </object>
+    <object name="tut1" id="538" x="2980" y="1280" width="40" height="20" />
+    <object name="tut2" id="539" x="2980" y="2080" width="40" height="20" />
+    <object id="536" x="2960" gid="4" y="2080" width="20" height="20" />
+    <object id="537" x="3020" gid="3" y="2080" width="20" height="20" />
+    <object id="538" x="2980" gid="28" y="2140" width="20" height="20" />
+    <object id="539" x="3000" gid="29" y="2140" width="20" height="20" />
+    <object id="541" x="2960" gid="34" y="2140" width="20" height="20" />
+    <object id="542" x="3020" gid="37" y="2140" width="20" height="20" />
+    <object id="543" x="2960" gid="42" y="2160" width="20" height="20" />
+    <object id="544" x="2980" gid="43" y="2160" width="20" height="20" />
+    <object id="546" x="3020" gid="45" y="2160" width="20" height="20" />
+    <object id="547" x="3000" gid="44" y="2160" width="20" height="20" />
+    <object id="548" x="2920" gid="10" y="2140" width="20" height="20" />
+    <object id="549" x="3060" gid="14" y="2140" width="20" height="20" />
+    <object id="550" x="2920" gid="17" y="2160" width="20" height="20" />
+    <object name="tutor" id="536" x="2980" y="1300" width="20" height="20">
+      <properties>
+        <property name="notice">
+Tutorial
+
+
+
+Use virtual Analog on the left to move around.
+
+Use action buttons on the right to:
+
+Jump (Bottom button)
+Shoot (Left button)
+Fly using jetpack (Top button)
+</property>
+        <property name="once" value="" />
+        <property name="changebackground" value="wall.jpg" />
+      </properties>
+    </object>
+    <object id="539" x="3160" gid="3" y="1320" width="20" height="20">
+      <properties>
+        <property name="object" value="item" />
+        <property name="transfer" value="" />
+        <property name="transfercam" value="tut2" />
+        <property name="disablecontrol" value="" />
+        <property name="enabletouch" value="" />
+        <property name="move" value="wait" />
+        <property name="setvar" value="gun=0,jetpack=0" />
+        <property name="sfx" value="door.mp3" />
+        <property name="removebackground" value="" />
+        <property name="notice" value="" />
+      </properties>
+    </object>
+    <object name="wait2" id="536" x="3040" y="858" width="20" height="20" />
+    <object id="539" x="2860" gid="4" y="160" width="20" height="20">
+      <properties>
+        <property name="object" value="item" />
+        <property name="transfer" value="" />
+        <property name="transfercam" value="tut2" />
+        <property name="disablecontrol" value="" />
+        <property name="enabletouch" value="" />
+        <property name="move" value="wait2" />
+        <property name="setvar" value="menu=4" />
+        <property name="notice" value="" />
+      </properties>
+    </object>
+    <object id="541" x="2980" y="880" width="20" height="20">
+      <properties>
+        <property name="condition" value="menu=3" />
+        <property name="notice">
+Tutorial
+
+
+
+
+The objective of the game is to acquire trophies. 
+Go to the door to advance to the next level.
+
+
+
+
+
+These things will kill you, beware.
+
+
+
+
+
+
+                                         Continue
+</property>
+      </properties>
+    </object>
+    <object id="542" x="3040" y="880" width="20" height="20">
+      <properties>
+        <property name="condition" value="menu=4" />
+        <property name="notice">
+Credits
+
+Made by: WandsMire
+Tileset by: RT1_JMJS
+
+Font: JoystixMonospace by Typodermic Fonts Inc
+
+Music:
+Documentary_Music by Fesliyan Studio 
+Calm-game-music by Airwolf89 
+Gamemusic by Magntron
+
+Sfx:
+small explosion by dinodilopho
+sharp explosion by Rudmer Rotteveel
+spacey-1up-powerup by GameAudio
+win-spacey by GameAudio
+bettle-squark1 by warrenXG
+sound 8 locker key by musicboy9000
+coin-c-8 &amp; jump-c-05 by cabled-mess
+</property>
+      </properties>
+    </object>
+    <object name="w2" id="541" x="2980" y="2800" width="20" height="20">
+      <properties>
+        <property name="setaction" value="none" />
+        <property name="slot" value="134" />
+      </properties>
+    </object>
+    <object id="543" x="260" gid="13" y="2880" width="20" height="20" />
+  </objectgroup>
+  <objectgroup name="nuke">
+    <object id="500" x="0" y="800" width="2000" height="190">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!3" />
+      </properties>
+    </object>
+    <object id="501" x="0" y="1200" width="2000" height="190">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!4" />
+      </properties>
+    </object>
+    <object id="502" x="0" y="1600" width="2000" height="190">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!5" />
+      </properties>
+    </object>
+    <object id="503" x="0" y="2000" width="2000" height="190">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!6_8" />
+      </properties>
+    </object>
+    <object id="504" x="0" y="2400" width="2000" height="190">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!7_9" />
+      </properties>
+    </object>
+    <object id="505" x="0" y="2800" width="2000" height="190">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!8" />
+      </properties>
+    </object>
+    <object id="506" x="0" y="3200" width="2000" height="190">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!9" />
+      </properties>
+    </object>
+    <object id="507" x="0" y="3600" width="2000" height="190">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!10" />
+      </properties>
+    </object>
+    <object id="508" x="0" y="400" width="2000" height="190">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!2_5" />
+      </properties>
+    </object>
+    <object id="509" x="0" y="0" width="2000" height="190">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!1_10" />
+      </properties>
+    </object>
+    <object id="510" x="2800" y="2400" width="400" height="200">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!11" />
+      </properties>
+    </object>
+    <object id="522" x="2860" y="1600" width="260" height="200">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!5" />
+      </properties>
+    </object>
+    <object id="523" x="2860" y="2800" width="260" height="200">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!8" />
+      </properties>
+    </object>
+    <object id="524" x="2860" y="3200" width="260" height="200">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!9" />
+      </properties>
+    </object>
+    <object id="525" x="2860" y="3600" width="260" height="200">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!10" />
+      </properties>
+    </object>
+    <object id="526" x="2200" y="60" width="400" height="50">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!2" />
+      </properties>
+    </object>
+    <object id="527" x="2200" y="460" width="400" height="50">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!3" />
+      </properties>
+    </object>
+    <object id="528" x="2200" y="860" width="400" height="50">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!4" />
+      </properties>
+    </object>
+    <object id="529" x="2200" y="1260" width="400" height="50">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!5" />
+      </properties>
+    </object>
+    <object id="530" x="2200" y="1660" width="400" height="50">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!6" />
+      </properties>
+    </object>
+    <object id="531" x="2200" y="2060" width="400" height="50">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!7" />
+      </properties>
+    </object>
+    <object id="532" x="2200" y="2460" width="400" height="50">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!8" />
+      </properties>
+    </object>
+    <object id="533" x="2200" y="2860" width="400" height="50">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!9" />
+      </properties>
+    </object>
+    <object id="534" x="2200" y="3260" width="400" height="50">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!10" />
+      </properties>
+    </object>
+    <object id="535" x="2200" y="3660" width="400" height="50">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="level!11" />
+      </properties>
+    </object>
+    <object id="536" x="2900" y="2120" width="200" height="40">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="menu=4" />
+      </properties>
+    </object>
+    <object id="537" x="2940" y="2040" width="100" height="30">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="menu=4" />
+      </properties>
+    </object>
+    <object id="538" x="2800" y="2000" width="400" height="19">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="menu=4" />
+      </properties>
+    </object>
+    <object id="539" x="2800" y="2020" width="20" height="150">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="menu=4" />
+      </properties>
+    </object>
+    <object id="540" x="3190" y="2020" width="20" height="150">
+      <properties>
+        <property name="object" value="nuke" />
+        <property name="requires" value="menu=4" />
+      </properties>
+    </object>
+  </objectgroup>
+</map>

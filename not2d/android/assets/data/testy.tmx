@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+<map version="1.2" orientation="orthogonal" renderorder="right-down" width="10" height="10" tilewidth="20" tileheight="20" nextobjectid="9">
+  <tileset firstgid="1" name="dave5" columns="8" tilecount="96" tileheight="20" tilewidth="20">
+    <image source="dave5.png" width="160" height="240" />
+  </tileset>
+  <objectgroup name="asf">
+    <object id="1" x="4820" y="5020" width="20" height="20" />
+    <object id="2" x="4860" y="5020" width="20" height="20" />
+    <object id="3" x="4820" y="5060" width="20" height="20" />
+    <object id="4" x="4860" y="5060" width="20" height="20" />
+    <object id="5" x="4060" y="1560" width="20" height="20" />
+    <object id="6" rotation="40" x="10" y="10" width="50" height="80" />
+    <object id="7" rotation="10" x="90" y="70" width="170" height="30" />
+    <object id="8" rotation="25" x="110" y="-10" width="100" height="50" />
+  </objectgroup>
+</map>

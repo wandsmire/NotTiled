@@ -1,0 +1,23 @@
+{
+  "title": "What do you want to create?",
+  "kinds": [
+    {
+      "title": "Rusted Warfare map",
+      "description": "100×100 map, 20×20 tiles, Rusted Warfare V3 tilesets and layers.",
+      "template": "Rusted Warfare V3",
+      "icon": "images/map.png"
+    },
+    {
+      "title": "Pixel art",
+      "description": "16×16 canvas with a 32-color palette; paint and export PNG.",
+      "template": "Pixel Editor",
+      "icon": "images/pencil.png"
+    },
+    {
+      "title": "Empty map",
+      "description": "Blank map only — you add tilesets yourself.",
+      "template": "",
+      "icon": "images/add.png"
+    }
+  ]
+}

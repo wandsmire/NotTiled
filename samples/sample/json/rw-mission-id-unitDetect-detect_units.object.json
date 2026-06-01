@@ -1,0 +1,1 @@
+{properties:[{name:object_type,type:String,value:unitDetect},{name:globalMessage,type:String,value:5 hovercraft detected.},{name:globalMessage_delayPerChar,value:slow},{name:minUnits,type:String,value:5},{name:showOnMap,value:"true"},{name:team,value:0},{name:unitType,type:String,value:hoverCraft}]}

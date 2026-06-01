@@ -11,20 +11,16 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:7.4.2'
         classpath 'com.mobidevelop.robovm:robovm-gradle-plugin:2.3.18'
-        classpath 'com.google.gms:google-services:4.3.15'
-
-        //noinspection GradleDependency
-        classpath 'com.google.firebase:firebase-crashlytics-gradle:2.9.2'
     }
 }
 
 allprojects {
 
     buildDir = "../../${rootProject.name}_build/${project.name}"
-    version = '1.8.7'
+    version = '2.0.0'
     ext {
         appName = "NotTiled"
-        gdxVersion = '1.11.0'
+        gdxVersion = '1.13.0'
         roboVMVersion = '2.3.12'
         box2DLightsVersion = '1.5'
         ashleyVersion = '1.7.0'
@@ -41,6 +37,7 @@ allprojects {
         maven { url "https://oss.sonatype.org/content/repositories/releases/" }
         maven { url "https://repo.clojars.org/" }
         maven { url "https://maven.sing-group.org/repository/maven/" }
+        maven { url "https://jitpack.io" }
     }
 
 
@@ -52,7 +49,6 @@ project(":desktop") {
     dependencies {
         implementation project(":core")
         api "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
-        api "com.badlogicgames.gdx:gdx-lwjgl3-glfw-awt-macos:$gdxVersion"
         api "com.badlogicgames.gdx:gdx-lwjgl3-angle:$gdxVersion"
         implementation 'org.bouncycastle:bcpkix-jdk15on:1.56'
         //api "com.badlogicgames.gdx:gdx-backend-lwjgl:$gdxVersion"
@@ -152,6 +148,8 @@ project(":core") {
         api "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
         api "com.badlogicgames.gdx:gdx-ai:$aiVersion"
         implementation 'org.bouncycastle:bcpkix-jdk15on:1.56'
+        implementation 'com.android.tools.build:apksig:7.4.2'
+        implementation 'com.github.iyxan23:zipalign-java:1.2.2'
         implementation (group: 'kryonet', name: 'kryonet', version: '2.21') {
             exclude group: 'com.esotericsoftware.reflectasm', module: 'reflectasm'
             exclude group: 'com.esotericsoftware.minlog', module: 'minlog'
@@ -165,5 +163,45 @@ project(":core") {
 
     }
 }
+
+task runNot2d(type: GradleBuild) {
+    dir = file('not2d')
+    tasks = ['desktop:run']
+}
+
+task buildNot2dApk(type: GradleBuild) {
+    dir = file('not2d')
+    tasks = ['android:assembleRelease']
+}
+
+task embedNot2d {
+    dependsOn buildNot2dApk
+    doLast {
+        def apkSource = file('not2d/android/build/outputs/apk/release/android-release-unsigned.apk')
+        def androidDest = file('android/assets/not2d.apk')
+        def desktopDest = file('desktop/bin/main/not2d.apk')
+        
+        if (apkSource.exists()) {
+            copy {
+                from apkSource
+                into androidDest.parentFile
+                rename { 'not2d.apk' }
+            }
+            println "Copied Not2D APK to Android assets: ${androidDest}"
+            
+            if (desktopDest.parentFile.exists()) {
+                copy {
+                    from apkSource
+                    into desktopDest.parentFile
+                    rename { 'not2d.apk' }
+                }
+                println "Copied Not2D APK to Desktop assets: ${desktopDest}"
+            }
+        } else {
+            throw new GradleException("Built Not2D APK not found at ${apkSource.absolutePath}")
+        }
+    }
+}
+
 
 

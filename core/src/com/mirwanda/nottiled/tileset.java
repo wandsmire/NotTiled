@@ -130,6 +130,7 @@ public class tileset
 	public void setTiles(java.util.List<tile> tiles)
 	{
 		this.tiles = tiles;
+		clearTerrainCache();
 	}
 
 	public java.util.List<tile> getTiles()
@@ -286,4 +287,29 @@ public class tileset
 	public String getSource()
 	{
 		return source;
-	}}
+	}
+
+	private Map<String, List<Integer>> terrainTileMap = null;
+
+	public List<Integer> getTilesByTerrain(String terrainStr) {
+		if (terrainTileMap == null) {
+			terrainTileMap = new HashMap<String, List<Integer>>();
+			for (int i = 0; i < tiles.size(); i++) {
+				tile t = tiles.get(i);
+				String key = t.getTerrainString();
+				List<Integer> list = terrainTileMap.get(key);
+				if (list == null) {
+					list = new ArrayList<Integer>();
+					terrainTileMap.put(key, list);
+				}
+				list.add(i);
+			}
+		}
+		List<Integer> result = terrainTileMap.get(terrainStr);
+		return result != null ? result : new ArrayList<Integer>(0);
+	}
+
+	public void clearTerrainCache() {
+		terrainTileMap = null;
+	}
+}
