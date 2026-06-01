@@ -318,6 +318,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     int selgroup = 0, selLayer = 0, oedit = 0, ogroup = 0, seltset = 0;
     int curtset = 0;
+    int pixelPaletteMode = 0;
+    int pixelEditSlot = -1;
+    int pixelPaletteUsedCount = 8;
+    private static final int PIXEL_PAL_NONE = 0;
+    private static final int PIXEL_PAL_ADD = 1;
+    private static final int PIXEL_PAL_REPLACE = 2;
     String encoding = "";
     String compression = "";
     String texFile = "", curdir = "/sdcard/Assets/", curfile = "";
@@ -1335,6 +1341,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         lang.duration = "???";
         lang.frame = "???";
         lang.replace = "???";
+        lang.swap = "???";
         lang.edit = "???";
         lang.default_ = "???";
 
@@ -2727,18 +2734,28 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             uisrect(gui.pickertool1, mouse, null);
             uisrect(gui.pickertool2, mouse, null);
             uisrect(gui.pickertool3, mouse, null);
-            uisrect(gui.pickertool5, mouse, null);
+            if (!isProtectedPixelArtTileset(seltset))
+                uisrect(gui.pickertool5, mouse, null);
             uisrect(gui.pickerback, mouse, null);// tool switch
 
-            if (issettingtile || kartu == "editor") {
+            if (isPixelArtPaletteView() && issettingtile) {
+                uisrect(gui.tilewrite, mouse, null);
+                uisrect(gui.tilesettings, mouse, new Color(1f, 1f, 0f, .4f));
+                uisrect(gui.tileproperties, mouse, null);
+                uisrect(gui.tileremove, mouse, null);
+                uisrect(gui.tileadd, mouse, null);
+            } else if (issettingtile || kartu == "editor") {
                 uisrect(gui.tilewrite, mouse, null);
                 uisrect(gui.tilesettings, mouse, new Color(1f, 1f, 0f, .4f));
                 if (somethingisselected() || kartu == "editor") {
-                    uisrect(gui.tileproperties, mouse, null);
+                    uisrect(gui.tileproperties, mouse, null);// tool switch
                     uisrect(gui.tileremove, mouse, null);
                     uisrect(gui.tileadd, mouse, null);// tool switch
                     uisrect(gui.tileoverlay, mouse, null);
                 }
+            } else if (isPixelArtPaletteView()) {
+                uisrect(gui.tilewrite, mouse, new Color(1f, 1f, 0f, .4f));
+                uisrect(gui.tilesettings, mouse, null);
             } else {
                 uisrect(gui.tilewrite, mouse, new Color(1f, 1f, 0f, .4f));
                 uisrect(gui.tilesettings, mouse, null);
@@ -2806,11 +2823,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 uidrawbutton(txadd, z.tileset, gui.pickertool1, 2);
                 uidrawbutton(txinfo, z.properties, gui.pickertool2, 2);
                 uidrawbutton(txtiles, z.tiles, gui.pickertool3, 2);
-                uidrawbutton(txdelete, z.remove, gui.pickertool5, 2);
+                if (!isProtectedPixelArtTileset(seltset))
+                    uidrawbutton(txdelete, z.remove, gui.pickertool5, 2);
 
                 uidrawbutton(txpencil, z.tilepicker, gui.tilewrite, 2);
                 uidrawbutton(txtiles, z.edit, gui.tilesettings, 2);
-                if (issettingtile || kartu == "editor") {
+                if (isPixelArtPaletteView() && issettingtile) {
+                    uidrawbutton(txinfo, z.swap, gui.tileproperties, 2);
+                    uidrawbutton(txeraser, z.remove, gui.tileremove, 2);
+                    uidrawbutton(txadd, z.addnew, gui.tileadd, 2);
+                } else if (issettingtile || kartu == "editor") {
                     if (somethingisselected() || kartu == "editor") {
                         uidrawbutton(txinfo, z.info, gui.tileproperties, 2);
                         uidrawbutton(txeraser, z.remove, gui.tileremove, 2);
@@ -6820,6 +6842,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void finishNewTemplateLoad() {
         CacheAllTset();
+        initPixelArtTilesets();
         resetCaches();
         backToMap();
         cue("applytemplate");
@@ -11686,6 +11709,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             z.confirmdelete = "Are you sure you want to delete this?";
         if (z.cut == null)
             z.cut = "Cut";
+        if (z.swap == null)
+            z.swap = "Swap";
         if (z.focused == null)
             z.focused = "Focused";
         shapeName = z.rectangle;
@@ -14039,6 +14064,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 int saiz = tilesets.size();
                 if (saiz > 0) {
                     int dex = ltsetlist.getSelectedIndex();
+                    if (isProtectedPixelArtTileset(dex)) {
+                        msgbox("Swatch and Palette cannot be removed from a Pixel Editor map.");
+                        return;
+                    }
                     tilesets.remove(dex);
                     java.util.List<Integer> nyot = new ArrayList<Integer>();
                     CacheAllTset();
@@ -16171,6 +16200,77 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
+    private tileset addPixelArtTilesetFromFile(FileHandle f, boolean embed) {
+        try {
+            SimpleImageInfo s = new SimpleImageInfo(f.file());
+            tileset t = new tileset();
+            String nn = f.name();
+            if (f.name().indexOf(".") > 0)
+                nn = f.name().substring(0, f.name().lastIndexOf("."));
+            t.setName(nn);
+            t.setSource(convertToRelativePath(curdir, f.path()));
+            t.setOriginalwidth(s.getWidth());
+            t.setOriginalheight(s.getHeight());
+            t.setTilewidth(1);
+            t.setTileheight(1);
+            t.setColumns(s.getWidth());
+            t.setWidth(s.getWidth());
+            t.setHeight(s.getHeight());
+            t.setTilecount(s.getWidth() * s.getHeight());
+            if (t.getTilecount() == 0)
+                t.setTilecount(1);
+            t.setTrans("");
+            t.setTexture(new Texture(f));
+            t.setPixmap(pixmapfromtexture(t.getTexture(), t.getTrans()));
+            t.setFirstgid(requestGid());
+            if (embed) {
+                byte[] fileContent = f.readBytes();
+                String asu = android.util.Base64.encodeToString(fileContent, 0);
+                t.getProperties().add(new property("embedded_png", asu));
+            }
+            tilesets.add(t);
+            return t;
+        } catch (Exception e) {
+            errors += "\nError: " + f.name();
+            ErrorBung(e, "eRRROBUNG.txt");
+            return null;
+        }
+    }
+
+    private tileset addPixelArtTilesetFromPixmap(Pixmap pm, String name, boolean embed) {
+        tileset t = new tileset();
+        t.setName(name);
+        t.setSource(name.toLowerCase() + ".png");
+        t.setTilewidth(1);
+        t.setTileheight(1);
+        t.setColumns(pm.getWidth());
+        t.setWidth(pm.getWidth());
+        t.setHeight(pm.getHeight());
+        t.setTilecount(pm.getWidth() * pm.getHeight());
+        t.setOriginalwidth(pm.getWidth());
+        t.setOriginalheight(pm.getHeight());
+        t.setTrans("");
+        Pixmap copy = new Pixmap(pm.getWidth(), pm.getHeight(), pm.getFormat());
+        copy.drawPixmap(pm, 0, 0);
+        t.setPixmap(copy);
+        t.setTexture(new Texture(copy));
+        t.setFirstgid(requestGid());
+        if (embed) {
+            FileHandle tmp = Gdx.files.local(".pixel_palette_import.png");
+            try {
+                PixmapIO.writePNG(tmp, copy);
+                byte[] fileContent = tmp.readBytes();
+                String asu = android.util.Base64.encodeToString(fileContent, 0);
+                t.getProperties().add(new property("embedded_png", asu));
+            } finally {
+                if (tmp.exists())
+                    tmp.delete();
+            }
+        }
+        tilesets.add(t);
+        return t;
+    }
+
     public void addImageTset(FileHandle f, boolean internal) {
         try {
             if (!internal) {
@@ -16303,6 +16403,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             setjsonmap();
             savejsonmap(actualFile);
             return;
+        }
+
+        if (isPixelArtMap()) {
+            int pal = getPixelArtPaletteIndex();
+            if (pal >= 0)
+                PixelArtPalette.syncEmbeddedPng(tilesets.get(pal));
         }
 
         // Check and create the temp folder, basepath include traling backspace fyi.
@@ -18219,6 +18325,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             l.setTset(lts);
             l.setTile(ltl);
             layers.add(l);
+            properties.add(new property("type", "Pixel Editor"));
             // if (1==1) return;
 
             kartu = "world";
@@ -18241,68 +18348,42 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     Color c = new Color(px.getPixel(x, y));
                     if (!colors.contains(c))
                         colors.add(c);
-                    l.getStr().set(y * Tw + x, (long) colors.indexOf(c) + 1);
-                    l.getTset().set(y * Tw + x, 0);
                 }
             }
 
-            colors.add(new Color(1, 1, 1, 1));
-            colors.add(new Color(0.5f, 0.5f, 0.5f, 1));
-            colors.add(new Color(0, 0, 0, 1));
-            colors.add(new Color(0, 0, 0, 0.9f));
-            colors.add(new Color(0, 0, 0, 0.8f));
-            colors.add(new Color(0, 0, 0, 0.7f));
-            colors.add(new Color(0, 0, 0, 0.6f));
-            colors.add(new Color(0, 0, 0, 0.5f));
-            colors.add(new Color(0, 0, 0, 0.4f));
-            colors.add(new Color(0, 0, 0, 0.3f));
-            colors.add(new Color(0, 0, 0, 0.2f));
-            colors.add(new Color(0, 0, 0, 0.1f));
             log("colors size " + colors.size());
 
-            double wide = Math.ceil(Math.sqrt(colors.size()));
-            double tall = Math.ceil(colors.size() / wide);
-            int tl = (int) tall;
-            int wd = (int) wide;
+            FileHandle swatchFile = PixelArtPalette.swatchTemplateFile(basepath);
+            if (swatchFile.exists())
+                addPixelArtTilesetFromFile(swatchFile, false);
 
-            log("wd=" + wd + "/tl=" + tl);
-            Gdx.gl.glEnable(GL20.GL_BLEND);
-            Pixmap pm2 = new Pixmap(wd, tl, Pixmap.Format.RGBA8888);
-            log("tagbl");
-            int cnt = 0;
-            int xx = 0, yy = 0;
-            for (Color c : colors) {
-                pm2.drawPixel(xx, yy, Color.rgba8888(c));
-                xx += 1;
-                if (xx == wd) {
-                    xx = 0;
-                    yy += 1;
+            Pixmap pm2 = PixelArtPalette.buildPalettePixmap(colors);
+            addPixelArtTilesetFromPixmap(pm2, "Palette", true);
+            pm2.dispose();
+
+            int paletteIdx = getPixelArtPaletteIndex();
+            int paletteGid = tilesets.get(paletteIdx).getFirstgid();
+
+            for (int y = 0; y < Th; y++) {
+                for (int x = 0; x < Tw; x++) {
+                    Color c = new Color(px.getPixel(x, y));
+                    int idx = colors.indexOf(c);
+                    l.getStr().set(y * Tw + x, (long) (paletteGid + idx));
+                    l.getTset().set(y * Tw + x, paletteIdx);
                 }
             }
-            cnt++;
-            log("tagal");
-            log("drawing to pixel ok");
 
-            // save it to PNG
-            FileHandle fh = Gdx.files.absolute(basepath + "NotTiled/Temp/" + swatches + ".png");
-            PixmapIO.writePNG(fh, pm2);
-            log("written to file");
-
-            // import it
-            fImportWidth.setText(1 + "");
-            fImportHeight.setText(1 + "");
-            cImportEmbed.setChecked(true);
-            fh = Gdx.files.absolute(basepath + "NotTiled/Temp/" + swatches + ".png");
-            log("adding image tset");
-
-            addImageTset(fh);
             CacheAllTset();
             log("cached tset");
-            seltset = tilesets.size() - 1;
-            curtset = tilesets.size() - 1;
+            int pal = getPixelArtPaletteIndex();
+            seltset = pal;
+            curtset = pal;
+            pixelPaletteUsedCount = colors.size();
+            savePaletteUsedCount();
             backToMap();
             cue("importok");
-            fh.delete();
+            px.dispose();
+            txt.dispose();
 
             //////
             resetCaches();
@@ -18406,6 +18487,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             FileHandle check2 = Gdx.files.absolute(curdir + "/auto.json");
                             to = Gdx.files.absolute(curdir);
                             check.copyTo(to);
+                        }
+
+                        String[] templateAssets = { "swatch.png", "basic_swatch.png" };
+                        for (String asset : templateAssets) {
+                            FileHandle src = Gdx.files.absolute(filepath + "/" + asset);
+                            if (src.exists())
+                                src.copyTo(Gdx.files.absolute(curdir + "/" + asset));
                         }
 
                         loadmap(curdir + "/" + curfile);
@@ -19195,6 +19283,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
         CacheAllTset();
         resetSwatches();
+        initPixelArtTilesets();
         updateObjectCollision();
         resetCaches();
         log("Size : " + xtree.toString());
@@ -19729,6 +19818,268 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 return true;
         }
         return false;
+    }
+
+    /** Pixel Editor maps have map property type=Pixel Editor; tileset 0=swatch, 1=palette. */
+    private int getPixelArtSwatchIndex() {
+        if (!isPixelArtMap() || tilesets.size() <= PixelArtPalette.SWATCH_TSET_INDEX)
+            return -1;
+        return PixelArtPalette.SWATCH_TSET_INDEX;
+    }
+
+    private int getPixelArtPaletteIndex() {
+        if (!isPixelArtMap() || tilesets.size() <= PixelArtPalette.PALETTE_TSET_INDEX)
+            return -1;
+        return PixelArtPalette.PALETTE_TSET_INDEX;
+    }
+
+    /** Swatch (0) and palette (1) must stay on Pixel Editor maps. */
+    private boolean isProtectedPixelArtTileset(int index) {
+        if (!isPixelArtMap() || index < 0)
+            return false;
+        return index == PixelArtPalette.SWATCH_TSET_INDEX || index == PixelArtPalette.PALETTE_TSET_INDEX;
+    }
+
+    private void initPixelArtTilesets() {
+        if (!isPixelArtMap())
+            return;
+        pixelPaletteMode = PIXEL_PAL_NONE;
+        pixelEditSlot = -1;
+        loadPaletteUsedCount();
+        int pal = getPixelArtPaletteIndex();
+        if (pal >= 0) {
+            seltset = pal;
+            curtset = pal;
+            recenterpick();
+        }
+    }
+
+    private void loadPaletteUsedCount() {
+        if (!isPixelArtMap())
+            return;
+        pixelPaletteUsedCount = -1;
+        for (property p : properties) {
+            if (p.getName().equalsIgnoreCase(PixelArtPalette.PROP_PALETTE_COUNT)) {
+                try {
+                    pixelPaletteUsedCount = Integer.parseInt(p.getValue());
+                } catch (NumberFormatException ignored) {
+                }
+                break;
+            }
+        }
+        if (pixelPaletteUsedCount < 1) {
+            int pal = getPixelArtPaletteIndex();
+            pixelPaletteUsedCount = pal >= 0 ? tilesets.get(pal).getTilecount() : 8;
+        }
+    }
+
+    private void savePaletteUsedCount() {
+        if (!isPixelArtMap())
+            return;
+        boolean found = false;
+        for (property p : properties) {
+            if (p.getName().equalsIgnoreCase(PixelArtPalette.PROP_PALETTE_COUNT)) {
+                p.setValue(Integer.toString(pixelPaletteUsedCount));
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+            properties.add(new property(PixelArtPalette.PROP_PALETTE_COUNT,
+                    Integer.toString(pixelPaletteUsedCount)));
+    }
+
+    private void goToSwatchTileset() {
+        int sw = getPixelArtSwatchIndex();
+        if (sw >= 0) {
+            seltset = sw;
+            curtset = sw;
+            recenterpick();
+        }
+    }
+
+    private int getSelectedPaletteSlot() {
+        if (!isPixelArtMap())
+            return -1;
+        if (pixelEditSlot >= 0)
+            return pixelEditSlot;
+        for (int i = 0; i < massprops.size(); i++) {
+            if (massprops.get(i))
+                return i;
+        }
+        int palIdx = getPixelArtPaletteIndex();
+        if (palIdx >= 0) {
+            tileset palette = tilesets.get(palIdx);
+            if (curspr >= palette.getFirstgid()
+                    && curspr < palette.getFirstgid() + palette.getTilecount())
+                return curspr - palette.getFirstgid();
+        }
+        return -1;
+    }
+
+    private void ensureTilesetPixmap(tileset ts) {
+        if (ts.getPixmap() == null && ts.getTexture() != null)
+            ts.setPixmap(pixmapfromtexture(ts.getTexture(), ts.getTrans() != null ? ts.getTrans() : ""));
+    }
+
+    private void pickPaletteSlotAndMap(int slot) {
+        int palIdx = getPixelArtPaletteIndex();
+        if (palIdx < 0 || slot < 0)
+            return;
+        tileset palette = tilesets.get(palIdx);
+        curtset = palIdx;
+        curspr = palette.getFirstgid() + slot;
+        curpickAuto = false;
+        adjustLayer(palette);
+        addRecentTile(curspr);
+        pixelPaletteMode = PIXEL_PAL_NONE;
+        pixelEditSlot = -1;
+        issettingtile = false;
+        kartu = "world";
+        if (activetool == 1)
+            activetool = 0;
+        cue("tilepickclick");
+    }
+
+    /** Tile index under touch for 1×1 pixel-art tilesets, or -1. */
+    private int pixelArtTileAt(tileset ts, float wx, float wy) {
+        int tw = Math.max(ts.getTilewidth(), 1);
+        int th = Math.max(ts.getTileheight(), 1);
+        int cols = ts.getWidth();
+        int rows = ts.getHeight();
+        if (wx < 0 || wx >= cols * tw)
+            return -1;
+        int col = (int) (wx / tw);
+        if (col >= cols)
+            col = cols - 1;
+
+        int row;
+        if (rows == 1) {
+            row = 0;
+        } else if (wy >= th) {
+            return -1;
+        } else if (wy >= 0) {
+            row = 0;
+        } else if (wy <= -rows * th) {
+            return -1;
+        } else {
+            // Tiles draw at y = -row*th; row r spans (-r*th, -(r-1)*th] for r >= 1
+            row = (int) Math.ceil(-wy / th - 1e-9);
+        }
+        if (col < 0 || row < 0 || col >= cols || row >= rows)
+            return -1;
+        return row * cols + col;
+    }
+
+    private int findOrAddPaletteColor(Color src) {
+        int palIdx = getPixelArtPaletteIndex();
+        if (palIdx < 0 || src == null)
+            return -1;
+        tileset palette = tilesets.get(palIdx);
+        ensureTilesetPixmap(palette);
+        for (int i = 0; i < pixelPaletteUsedCount; i++) {
+            Color c = PixelArtPalette.getTileColor(palette, i);
+            if (c.r == src.r && c.g == src.g && c.b == src.b && c.a == src.a)
+                return i;
+        }
+        int slot = pixelPaletteUsedCount;
+        pixelPaletteUsedCount++;
+        savePaletteUsedCount();
+        PixelArtPalette.setTileColor(palette, slot, src);
+        PixelArtPalette.refreshTexture(palette);
+        PixelArtPalette.syncEmbeddedPng(palette);
+        resetCaches();
+        return slot;
+    }
+
+    private void pickSwatchToPaletteAndMap(Color src) {
+        int slot = findOrAddPaletteColor(src);
+        if (slot >= 0)
+            pickPaletteSlotAndMap(slot);
+    }
+
+    private void finishPixelArtPalettePick(int slotIndex) {
+        pickPaletteSlotAndMap(slotIndex);
+    }
+
+    private void applySwatchToPalette(Color src, boolean replace) {
+        if (!isPixelArtMap())
+            return;
+        int palIdx = getPixelArtPaletteIndex();
+        if (palIdx < 0 || src == null)
+            return;
+        if (!replace) {
+            appendSwatchToPaletteAndMap(src);
+            return;
+        }
+        int slot = getSelectedPaletteSlot();
+        if (slot < 0)
+            return;
+        tileset palette = tilesets.get(palIdx);
+        ensureTilesetPixmap(palette);
+        PixelArtPalette.setTileColor(palette, slot, src);
+        PixelArtPalette.refreshTexture(palette);
+        PixelArtPalette.syncEmbeddedPng(palette);
+        resetCaches();
+        pickPaletteSlotAndMap(slot);
+    }
+
+    /** Append a new palette slot even if the color already exists (Add New). */
+    private void appendSwatchToPaletteAndMap(Color src) {
+        int palIdx = getPixelArtPaletteIndex();
+        if (palIdx < 0 || src == null)
+            return;
+        tileset palette = tilesets.get(palIdx);
+        ensureTilesetPixmap(palette);
+        int slot = pixelPaletteUsedCount;
+        pixelPaletteUsedCount++;
+        savePaletteUsedCount();
+        PixelArtPalette.setTileColor(palette, slot, src);
+        PixelArtPalette.refreshTexture(palette);
+        PixelArtPalette.syncEmbeddedPng(palette);
+        resetCaches();
+        pickPaletteSlotAndMap(slot);
+    }
+
+    private void clearSelectedPaletteSlotsTransparent() {
+        if (!isPixelArtMap())
+            return;
+        int palIdx = getPixelArtPaletteIndex();
+        if (palIdx < 0)
+            return;
+        tileset palette = tilesets.get(palIdx);
+        ensureTilesetPixmap(palette);
+        boolean changed = false;
+        for (int i = 0; i < massprops.size() && i < pixelPaletteUsedCount; i++) {
+            if (massprops.get(i)) {
+                PixelArtPalette.setTileTransparent(palette, i);
+                changed = true;
+            }
+        }
+        if (!changed) {
+            int slot = getSelectedPaletteSlot();
+            if (slot >= 0 && slot < pixelPaletteUsedCount) {
+                PixelArtPalette.setTileTransparent(palette, slot);
+                changed = true;
+            }
+        }
+        if (changed) {
+            PixelArtPalette.refreshTexture(palette);
+            PixelArtPalette.syncEmbeddedPng(palette);
+            resetCaches();
+        }
+    }
+
+    private boolean isPixelArtPaletteView() {
+        return isPixelArtMap() && seltset == getPixelArtPaletteIndex();
+    }
+
+    private boolean isPixelArtSwatchView() {
+        return isPixelArtMap() && seltset == getPixelArtSwatchIndex();
+    }
+
+    private boolean isPixelArtSwatchActive() {
+        return isPixelArtMap() && curtset == getPixelArtSwatchIndex();
     }
 
     /** Zoom so a small 1×1-tile canvas fills the screen (lower value = more magnification). */
@@ -20398,6 +20749,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             panTileTo((int) ttsw * ttkw / 2, (int) -(ttsh * ttkh / 2) + (ttsh), 0f);
+            if (isPixelArtMap()) {
+                tilecam.zoom = pixelArtTilePickerZoom(tilesets.get(seltset));
+                tilecam.update();
+            }
         } catch (Exception e) {
         }
     }
@@ -20551,6 +20906,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     return true;
                 }
                 if (tapped(touch2, gui.tileadd)) {
+                    if (isPixelArtPaletteView() && issettingtile) {
+                        resetMassprops();
+                        pixelPaletteMode = PIXEL_PAL_ADD;
+                        pixelEditSlot = -1;
+                        goToSwatchTileset();
+                        return true;
+                    }
                     if (somethingisselected()) {
                         sender = "tileadd";
                         senderID = -1;
@@ -20568,6 +20930,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                 }
                 if (tapped(touch2, gui.tileremove)) {
+                    if (isPixelArtPaletteView() && issettingtile) {
+                        clearSelectedPaletteSlotsTransparent();
+                        resetMassprops();
+                        pixelPaletteMode = PIXEL_PAL_NONE;
+                        pixelEditSlot = -1;
+                        return true;
+                    }
                     if (somethingisselected()) {
                         for (int i = 0; i < massprops.size(); i++) {
                             if (massprops.get(i)) {
@@ -20581,6 +20950,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                 }
                 if (tapped(touch2, gui.tileproperties)) {
+                    if (isPixelArtPaletteView() && issettingtile) {
+                        int slot = getSelectedPaletteSlot();
+                        if (slot < 0)
+                            return true;
+                        resetMassprops();
+                        pixelPaletteMode = PIXEL_PAL_REPLACE;
+                        pixelEditSlot = slot;
+                        goToSwatchTileset();
+                        return true;
+                    }
                     if (somethingisselected()) {
 
                         tile newanim = new tile();
@@ -20701,8 +21080,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     gotoStage(tTileMgmt);
                     return true;
                 }
-                // delete button
-                if (tapped(touch2, gui.pickertool5)) {
+                // delete button (skip hit area when hidden for protected Pixel Editor tilesets)
+                if (tapped(touch2, gui.pickertool5) && !isProtectedPixelArtTileset(seltset)) {
                     resetMassprops();
                     tilesets.remove(seltset);
                     pickAuto = false;
@@ -20735,7 +21114,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (seltset >= tilesets.size()) {
                         seltset = 0;
                     }
-                    // curspr = tilesets.get(seltset).getFirstgid();
+                    if (isPixelArtMap()) {
+                        pixelPaletteMode = PIXEL_PAL_NONE;
+                        pixelEditSlot = -1;
+                    }
 
                     adjustPickAuto();
                     recenterpick();
@@ -20748,7 +21130,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (seltset <= -1) {
                         seltset = tilesets.size() - 1;
                     }
-                    // curspr = tilesets.get(seltset).getFirstgid();
+                    if (isPixelArtMap()) {
+                        pixelPaletteMode = PIXEL_PAL_NONE;
+                        pixelEditSlot = -1;
+                    }
 
                     adjustPickAuto();
                     recenterpick();
@@ -20851,6 +21236,35 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         // this line is to sovlve problem of the first line not clicked on 1 x 1 tile.
         if (touch.y > 0)
             ab = 1;
+
+        // Pixel Editor: swatch tap → copy to palette + map; palette tap → map with palette GID
+        if (kartu == "tile" && isPixelArtMap() && (isPixelArtSwatchView() || isPixelArtPaletteView())) {
+            int tileIdx = pixelArtTileAt(ts, touch.x, touch.y);
+            if (tileIdx >= 0) {
+                if (isPixelArtSwatchView()) {
+                    ensureTilesetPixmap(ts);
+                    Color src = PixelArtPalette.getTileColor(ts, tileIdx);
+                    if (pixelPaletteMode == PIXEL_PAL_REPLACE && pixelEditSlot >= 0)
+                        applySwatchToPalette(src, true);
+                    else if (pixelPaletteMode == PIXEL_PAL_ADD)
+                        appendSwatchToPaletteAndMap(src);
+                    else
+                        pickSwatchToPaletteAndMap(src);
+                } else if (issettingtile) {
+                    int palIdx = getPixelArtPaletteIndex();
+                    if (tileIdx < pixelPaletteUsedCount) {
+                        curspr = tilesets.get(palIdx).getFirstgid() + tileIdx;
+                        curtset = palIdx;
+                        resetMassprops();
+                        if (tileIdx < massprops.size())
+                            massprops.set(tileIdx, true);
+                    }
+                } else if (tileIdx < pixelPaletteUsedCount) {
+                    pickPaletteSlotAndMap(tileIdx);
+                }
+            }
+            return true;
+        }
 
         if (kartu == "tile") {
             if (!issettingtile && pickAuto) {
@@ -22163,6 +22577,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                     // not using terrain mode
                     if (!curpickAuto) {
+                        if (isPixelArtSwatchActive())
+                            return;
                         updateTileData(selLayer, num, oi, curtset);
                         return;
                     }
@@ -24943,6 +25359,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 adjustPickAuto();
 
                 stamp = false;
+                if (isPixelArtMap()) {
+                    pixelPaletteMode = PIXEL_PAL_NONE;
+                    pixelEditSlot = -1;
+                }
                 kartu = "tile";
                 tilePicker = "";
                 return true;
@@ -26945,6 +27365,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (pickAuto) {
                 return true;
             }
+
             stamp = true;
             int ae = (int) touch3.x;
             int ab = (int) touch3.y;

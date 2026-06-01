@@ -105,6 +105,7 @@ public class language
 	String duration;
 	String frame;
 	String replace;
+	String swap;
 	String edit;
 	String default_;
 	String source;
