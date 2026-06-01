@@ -7,21 +7,23 @@ This guide outlines the commands and configuration required to build the NotTile
 ## 1. Prerequisites
 
 ### Java Development Kit (JDK)
-Ensure you are using **JDK 17** to compile the project. You can define the `JAVA_HOME` environment variable:
+Ensure you are using **JDK 17**. Build scripts auto-detect common Linux JDK 17 paths, or you can set it yourself:
 ```bash
-export JAVA_HOME=/usr/lib/jvm/java-1.17.0-openjdk-amd64
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ```
 
 ### Android SDK Path
-Gradle needs to know where the Android SDK is located. You can define this in two ways:
-1. Define the `ANDROID_HOME` environment variable:
+Gradle needs the Android SDK. Build scripts read `sdk.dir` from `private/local.properties` (recommended), or you can set:
+1. **`ANDROID_HOME`** directly:
    ```bash
-   export ANDROID_HOME=/home/reza/Android/sdk
+   export ANDROID_HOME=/path/to/Android/sdk
    ```
-2. Or, create `private/local.properties` (see `private.example/`) and run `./setup_private.sh`:
+2. Or create `private/local.properties` (see `private.example/`) and run `./setup_private.sh`:
    ```properties
    sdk.dir=/path/to/Android/sdk
    ```
+
+All build scripts (`build_debug.sh`, `build_release.sh`, `build_aab.sh`, etc.) source `build_env.sh`, which applies these settings automatically.
 
 ---
 

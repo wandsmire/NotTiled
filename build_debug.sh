@@ -1,16 +1,12 @@
 #!/bin/bash
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+source "$SCRIPT_DIR/build_env.sh"
+
 echo "Building Debug APKs (Play Store & Standalone)..."
 chmod +x ./gradlew
-
-# Use Java 17 if available on the system to avoid compilation issues with newer Java versions
-if [ -d "/usr/lib/jvm/java-17-openjdk-amd64" ]; then
-    export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
-else
-    export JAVA_HOME=/usr/lib/jvm/java-1.17.0-openjdk-amd64
-fi
-export ANDROID_HOME=/home/reza/Android/sdk
 
 # Run python script to stamp icons
 if [ -f "./stamp_icons.py" ]; then

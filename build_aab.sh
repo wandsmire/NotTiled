@@ -1,6 +1,9 @@
 #!/bin/bash
-export JAVA_HOME=/usr/lib/jvm/java-1.17.0-openjdk-amd64
-export ANDROID_HOME=/home/reza/Android/sdk
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+source "$SCRIPT_DIR/build_env.sh"
 
 # Pack samples/ -> android/assets/sample.zip (edit files under samples/sample/, not the zip)
 if [ ! -d "samples/sample" ]; then
@@ -34,4 +37,5 @@ if [ $? -eq 0 ]; then
     echo "----------------------------------------"
 else
     echo "ERROR: Build failed."
+    exit 1
 fi

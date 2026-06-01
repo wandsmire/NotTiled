@@ -1,16 +1,12 @@
 #!/bin/bash
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+source "$SCRIPT_DIR/build_env.sh"
+
 echo "Building Release APKs (Play Store & Standalone)..."
 chmod +x ./gradlew
-
-# Use Java 17 if available on the system to avoid compilation issues with newer Java versions
-if [ -d "/usr/lib/jvm/java-17-openjdk-amd64" ]; then
-    export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
-else
-    export JAVA_HOME=/usr/lib/jvm/java-1.17.0-openjdk-amd64
-fi
-export ANDROID_HOME=/home/reza/Android/sdk
 
 # Run python script to stamp icons
 if [ -f "./stamp_icons.py" ]; then
@@ -33,7 +29,6 @@ fi
 cp newfile-kinds/newfile-kinds.json android/assets/newfile-kinds.json
 
 # Build playStoreApkRelease and standaloneApkRelease
-# Note: playStore release might fail in some configurations, but we attempt to assemble both.
 if ./gradlew clean :android:assembleApkRelease; then
     mkdir -p out_release
     VERSION=$(grep "versionName" android/build.gradle | head -n1 | cut -d'"' -f2)
