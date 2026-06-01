@@ -1,5 +1,8 @@
 def signingProperties = new Properties()
-def signingPropertiesFile = rootProject.file('local.properties')
+def signingPropertiesFile = rootProject.file('private/local.properties')
+if (!signingPropertiesFile.exists()) {
+    signingPropertiesFile = rootProject.file('local.properties')
+}
 if (signingPropertiesFile.exists()) {
     signingPropertiesFile.withInputStream { signingProperties.load(it) }
 }

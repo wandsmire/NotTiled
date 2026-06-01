@@ -138,13 +138,9 @@ android/release/android-release.apk
 android/assets/sample.zip
 android/assets/newfile-kinds.json
 
-# Signing keys and local secrets — never commit
-keystore/
-*.jks
+# Everything local-only lives here — back up this whole folder
+/private/
+
+# Symlinks created by setup_private.sh (still gitignored)
+/local.properties
 android/assets/export.keystore
-
-# Local experiments and logs (may contain paths or test credentials)
-/scratch/
-
-# Built artifacts — build locally with ./start_collab_server.sh or gradlew :desktop:distCollabServer
-NotTiled-CollabServer.jar

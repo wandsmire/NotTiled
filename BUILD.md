@@ -18,9 +18,9 @@ Gradle needs to know where the Android SDK is located. You can define this in tw
    ```bash
    export ANDROID_HOME=/home/reza/Android/sdk
    ```
-2. Or, create a file named `local.properties` in the root of the project:
+2. Or, create `private/local.properties` (see `private.example/`) and run `./setup_private.sh`:
    ```properties
-   sdk.dir=/home/reza/Android/sdk
+   sdk.dir=/path/to/Android/sdk
    ```
 
 ---
@@ -84,17 +84,17 @@ To sign your release packages for deployment or Play Store upload directly from 
    ```bash
    keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias my-key-alias
    ```
-2. Copy `local.properties.example` to `local.properties` (gitignored) and set your credentials:
+2. Copy `private.example/local.properties.example` to `private/local.properties`, fill in your values, then run `./setup_private.sh`:
    ```properties
    sdk.dir=/path/to/Android/sdk
-   RELEASE_STORE_FILE=keystore/keystore
+   RELEASE_STORE_FILE=private/keystore/keystore
    RELEASE_STORE_PASSWORD=your_store_password
    RELEASE_KEY_ALIAS=your_key_alias
    RELEASE_KEY_PASSWORD=your_key_password
    ```
-   Paths in `RELEASE_STORE_FILE` are relative to the project root. `android/build.gradle` reads these automatically.
+   Paths in `RELEASE_STORE_FILE` are relative to the project root. `android/build.gradle` reads `private/local.properties` automatically.
 
-3. Keep `keystore/` and `android/assets/export.keystore` out of git — they are listed in `.gitignore`.
+3. **Back up the entire `private/` folder** (keystores, passwords, export key, optional Firebase config). It is never uploaded to GitHub.
 
 ---
 

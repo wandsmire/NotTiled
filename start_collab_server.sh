@@ -20,7 +20,7 @@ if [ -z "$JAR" ] || [ ! -f "$JAR" ]; then
     exit 1
 fi
 
-cp "$JAR" ./NotTiled-CollabServer.jar
-echo "Built: NotTiled-CollabServer.jar (from $JAR)"
+cp "$JAR" ./private/NotTiled-CollabServer.jar
+echo "Built: private/NotTiled-CollabServer.jar (from $JAR)"
 echo "Starting standalone collaboration server on port $PORT..."
-exec java -jar NotTiled-CollabServer.jar "$PORT"
+exec java -jar private/NotTiled-CollabServer.jar "$PORT"
