@@ -5,6 +5,8 @@
 *.ear
 *.apk
 hs_err_pid*
+out/
+out_release/
 
 ## Robovm
 /ios/robovm-build/
