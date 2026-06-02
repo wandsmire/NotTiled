@@ -53,6 +53,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Button;
+import com.badlogic.gdx.scenes.scene2d.ui.Cell;
 import com.badlogic.gdx.scenes.scene2d.ui.CheckBox;
 import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
@@ -382,6 +383,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     TextButton bNSelDir, bNNewplus, bNCancel, bNBack, bNAdvanced;
     TextButton bNFPickContinue, bNFPickCancel, bNFPickMore;
     Table tNewFilePick, tNewFileAdvanced;
+    Cell newFileAdvancedRowCell;
     Table tNewFileKindList;
     Table[] newFileKindRows;
     Drawable newFileKindSelDrawable;
@@ -14176,16 +14178,37 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             fNFilename.setText("Map01.tmx");
     }
 
+    private void setNewFileAdvancedVisible(boolean visible) {
+        newFileAdvancedVisible = visible;
+        if (tNewFileAdvanced != null) {
+            tNewFileAdvanced.setVisible(visible);
+            for (Actor a : tNewFileAdvanced.getChildren()) {
+                a.setVisible(visible);
+                a.setHeight(visible ? btny : 0);
+            }
+        }
+        if (newFileAdvancedRowCell != null) {
+            if (visible)
+                newFileAdvancedRowCell.height(btny * 3 + 10).padBottom(1);
+            else
+                newFileAdvancedRowCell.height(0).pad(0);
+        }
+        if (bNAdvanced != null) {
+            String advHide = z.hideadvanced != null ? z.hideadvanced : "Hide advanced";
+            String advShow = z.advancedoptions != null ? z.advancedoptions : "Advanced options";
+            bNAdvanced.setText(visible ? advHide : advShow);
+        }
+        if (tNewFile != null)
+            tNewFile.invalidateHierarchy();
+    }
+
     private void prepareNewFileForm() {
         lastpath = prefs.getString("lastpath", basepath + "NotTiled");
         fNCurdir.setText(lastpath);
         sbNMapFormat.setSelected("base64-gzip");
         sbNMapRenderOrder.setSelected("right-down");
         sbNMapOrientation.setSelected("orthogonal");
-        tNewFileAdvanced.setVisible(newFileAdvancedVisible);
-        String advHide = z.hideadvanced != null ? z.hideadvanced : "Hide advanced";
-        String advShow = z.advancedoptions != null ? z.advancedoptions : "Advanced options";
-        bNAdvanced.setText(newFileAdvancedVisible ? advHide : advShow);
+        setNewFileAdvancedVisible(false);
     }
 
     private void selectTemplateFolder(String folder) {
@@ -14488,11 +14511,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bNAdvanced.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                newFileAdvancedVisible = !newFileAdvancedVisible;
-                tNewFileAdvanced.setVisible(newFileAdvancedVisible);
-                String advHide = z.hideadvanced != null ? z.hideadvanced : "Hide advanced";
-        String advShow = z.advancedoptions != null ? z.advancedoptions : "Advanced options";
-        bNAdvanced.setText(newFileAdvancedVisible ? advHide : advShow);
+                setNewFileAdvancedVisible(!newFileAdvancedVisible);
             }
         });
 
@@ -14522,11 +14541,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tNewFileAdvanced.add(sbNMapRenderOrder).padBottom(1).width(btnx / 2).row();
         tNewFileAdvanced.add(new Label(z.orientation, skin)).width(btnx / 2 - 2);
         tNewFileAdvanced.add(sbNMapOrientation).padBottom(2).width(btnx / 2).row();
-        tNewFileAdvanced.setVisible(false);
 
         tNewFile = new Table();
-        tNewFile.defaults().width(btnx).height(btny);
         tNewFile.setFillParent(true);
+        tNewFile.defaults().width(btnx).height(btny);
         tNewFile.add(new Label(z.filename, skin)).width(btnx / 2 - 2);
         tNewFile.add(fNFilename).padBottom(1).width(btnx / 2).row();
         tNewFile.add(new Label(z.directory, skin)).colspan(2).row();
@@ -14541,10 +14559,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tNewFile.add(new Label(z.mapheight, skin)).width(btnx / 2 - 2);
         tNewFile.add(fNTh).padBottom(1).width(btnx / 2).row();
         tNewFile.add(bNAdvanced).padBottom(1).colspan(2).row();
-        tNewFile.add(tNewFileAdvanced).colspan(2).row();
+        newFileAdvancedRowCell = tNewFile.add(tNewFileAdvanced).colspan(2);
+        newFileAdvancedRowCell.height(0).pad(0);
+        newFileAdvancedRowCell.row();
         tNewFile.add(bNNewplus).padBottom(1).colspan(2).row();
         tNewFile.add(bNBack).padBottom(1).colspan(2).row();
         tNewFile.add(bNCancel).padBottom(1).colspan(2).row();
+        setNewFileAdvancedVisible(false);
     }
 
     public void loadMapProperties() {
@@ -19971,6 +19992,26 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return row * cols + col;
     }
 
+    /** Tile index under world-space touch for orthogonal tile grids, or -1. */
+    private int orthogonalTileGridAt(float wx, float wy, int cols, int rows, int tileW, int tileH) {
+        if (tileW < 1 || tileH < 1)
+            return -1;
+        if (wy >= tileH || wy <= -tileH * rows + tileH || wx <= 0 || wx >= tileW * cols)
+            return -1;
+        int col = (int) (wx / tileW);
+        if (col >= cols)
+            col = cols - 1;
+        int row;
+        if (wy > 0) {
+            row = 0;
+        } else {
+            row = (int) Math.ceil(-wy / tileH - 1e-9);
+        }
+        if (col < 0 || row < 0 || col >= cols || row >= rows)
+            return -1;
+        return row * cols + col;
+    }
+
     private int findOrAddPaletteColor(Color src) {
         int palIdx = getPixelArtPaletteIndex();
         if (palIdx < 0 || src == null)
@@ -20617,10 +20658,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     int ae = (int) touch.x;
                     int ab = (int) touch.y;
 
-                    // this line is to sovlve problem of the first line not clicked on 1 x 1 tile.
-                    // but cause error in other places.
-                    // if (touch.y > 0) ab = 1;
-
                     boolean touched = false;
 
                     if (orientation.equalsIgnoreCase("orthogonal")) {
@@ -20637,7 +20674,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         if (orientation.equalsIgnoreCase("orthogonal")) {
 
-                            num = (Tw * ((-ab + Tsh) / Tsh) + (ae / Tsw));
+                            num = orthogonalTileGridAt(touch.x, touch.y, Tw, Th, Tsw, Tsh);
                         } else if (orientation.equalsIgnoreCase("isometric")) {
 
                             // cool way to convert isometric to orthogonal, new iso tap detection
@@ -20676,7 +20713,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
                     }
 
-                    if (mode == "tile" && touched) {
+                    if (mode == "tile" && touched && num >= 0) {
 
                         tapTile(num, false, true, false, curspr);
                         log(num + "");
@@ -27084,8 +27121,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 int ae = (int) touch.x;
                 int ab = (int) touch.y;
-                if (touch.y > 0)
-                    ab = 1;
                 if (tapped(touch2, gui.tool5)) {
                     // kucrut
                     getNewTextInput(pBrushSize, z.tilesize + " [" + brushsize + "]", "", "1-10");
@@ -27194,9 +27229,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 // isometric tile selection is so complicated, how did I make this? lol
                 if (orientation.equalsIgnoreCase("orthogonal")) {
-                    if (touch.y < Tsh && touch.y > -Tsh * Th + Tsh && touch.x > 0 && touch.x < Tsw * Tw) {
-                        mapstartSelect = (Tw * ((-ab + Tsh) / Tsh) + (ae / Tsw));
-                    }
+                    mapstartSelect = orthogonalTileGridAt(touch.x, touch.y, Tw, Th, Tsw, Tsh);
                 } else if (orientation.equalsIgnoreCase("isometric")) {
 
                     // cool way to convert isometric to orthogonal, new iso tap detection
@@ -28544,8 +28577,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             cam.unproject(touch.set(p1, p2, 0));
             int ae = (int) touch.x;
             int ab = (int) touch.y;
-            if (touch.y > 0)
-                ab = 1;
             int posx = 0;
             int posy = 0;
             int initx = 0;
@@ -28554,9 +28585,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             // so basically, find the tile id.
             if (orientation.equalsIgnoreCase("orthogonal")) {
-                if (touch.y < Tsh && touch.y > -Tsh * Th + Tsh && touch.x > 0 && touch.x < Tsw * Tw) {
-                    num = (Tw * ((-ab + Tsh) / Tsh) + (ae / Tsw));
-                }
+                num = orthogonalTileGridAt(touch.x, touch.y, Tw, Th, Tsw, Tsh);
             } else if (orientation.equalsIgnoreCase("isometric")) {
 
                 // cool way to convert isometric to orthogonal, new iso tap detection
