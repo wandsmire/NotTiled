@@ -104,8 +104,10 @@ public class jsonmap {
         int width;
         int height;
         int id;
+        int gid;
         int rotation;
         boolean visible;
+        boolean ellipse;
         poly[] polygon;
         poly[] polyline;
         property[] properties;

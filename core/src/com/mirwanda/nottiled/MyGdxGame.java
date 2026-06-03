@@ -9011,6 +9011,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         sb.wl("nextobjectid = " + curid + ",");
         sb.wprop(properties);
 
+        sortAllTilesetTileMetadata();
         sb.wlo("tilesets = {");
         for (int n = 0; n < tilesets.size(); n++) {
             tileset t = tilesets.get(n);
@@ -9225,6 +9226,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         sb.wpropj(properties);
         sb.wl(",");
 
+        sortAllTilesetTileMetadata();
         sb.wlo("\"tilesets\":[");
         for (int n = 0; n < tilesets.size(); n++) {
             tileset t = tilesets.get(n);
@@ -10061,7 +10063,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     tile tt = new tile();
                                     tt.setTileID(ypos * widih + xpos);
                                     tt.setProperties(tiles.get(poss).getProperties());
-                                    t.getTiles().add(tt);
+                                    t.addTileMetadata(tt);
                                 }
 
                             }
@@ -11031,7 +11033,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     tile tile = new tile();
                                     tile.setTileID(o);
                                     tile.getProperties().add(new property(temproname, temprotype, temprovalue));
-                                    tilesets.get(seltset).getTiles().add(tile);
+                                    ka = tilesets.get(seltset).addTileMetadata(tile);
                                 } else {
                                     tile tile = tilesets.get(seltset).getTiles().get(ka);
                                     tile.getProperties().add(new property(temproname, temprotype, temprovalue));
@@ -14947,14 +14949,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     java.util.List<tile> tiles = tilesets.get(selTsetID).getTiles();
 
                     java.util.Collections.swap(tiles, dex, dex - 1);
+                    tilesets.get(selTsetID).sortTilesById();
+                    tiles = tilesets.get(selTsetID).getTiles();
                     String[] srr = new String[tiles.size()];
                     for (int i = 0; i < tiles.size(); i++) {
                         srr[i] = Integer.toString(tiles.get(i).getTileID());
                     }
 
                     ltilelist.setItems(srr);
-
-                    ltilelist.setSelectedIndex(dex - 1);
+                    int newDex = dex - 1;
+                    if (newDex >= tiles.size())
+                        newDex = tiles.size() - 1;
+                    ltilelist.setSelectedIndex(newDex);
                 }
             }
         });
@@ -16395,6 +16401,207 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
+    private void sortAllTilesetTileMetadata() {
+        for (int i = 0; i < tilesets.size(); i++)
+            tilesets.get(i).sortTilesById();
+    }
+
+    private void writeTmxProperty(XmlSerializer srz, property p) throws Exception {
+        srz.startTag(null, "property");
+        if (p.getName() != null)
+            srz.attribute("", "name", p.getName());
+        String ptype = p.getType();
+        if (ptype != null && !ptype.equals("") && !ptype.equalsIgnoreCase("string"))
+            srz.attribute("", "type", ptype.toLowerCase());
+        String txx = p.getValue();
+        if (txx != null) {
+            if (txx.contains("\n"))
+                srz.text("\n" + txx + "\n");
+            else
+                srz.attribute("", "value", txx);
+        }
+        srz.endTag(null, "property");
+    }
+
+    private void writeTmxCollisionObject(XmlSerializer srz, obj ojx) throws Exception {
+        srz.startTag(null, "object");
+        if (ojx.getName() != null && !ojx.getName().equalsIgnoreCase(""))
+            srz.attribute("", "name", ojx.getName());
+        if (ojx.getType() != null && !ojx.getType().equalsIgnoreCase(""))
+            srz.attribute("", "type", ojx.getType());
+        srz.attribute("", "id", Integer.toString(ojx.getId()));
+        String xx = "", yy = "", ww = "", hh = "", rorot = "";
+        Float tmpf = ojx.getX();
+        if (tmpf % 1 == 0)
+            xx = Integer.toString(tmpf.intValue());
+        else
+            xx = Float.toString(tmpf);
+        tmpf = ojx.getY();
+        if (tmpf % 1 == 0)
+            yy = Integer.toString(tmpf.intValue());
+        else
+            yy = Float.toString(tmpf);
+        tmpf = ojx.getW();
+        if (tmpf != 0) {
+            if (tmpf % 1 == 0)
+                ww = Integer.toString(tmpf.intValue());
+            else
+                ww = Float.toString(tmpf);
+        }
+        tmpf = ojx.getH();
+        if (tmpf != 0) {
+            if (tmpf % 1 == 0)
+                hh = Integer.toString(tmpf.intValue());
+            else
+                hh = Float.toString(tmpf);
+        }
+        tmpf = ojx.getRotation();
+        if (tmpf != 0) {
+            if (tmpf % 1 == 0)
+                rorot = Integer.toString(tmpf.intValue());
+            else
+                rorot = Float.toString(tmpf);
+            srz.attribute("", "rotation", rorot);
+        }
+        srz.attribute("", "x", xx);
+        if (ojx.getGid() != 0)
+            srz.attribute("", "gid", Integer.toString(ojx.getGid()));
+        if (ojx.getShape() != null) {
+            switch (ojx.getShape()) {
+                case "ellipse":
+                    srz.attribute("", "y", yy);
+                    srz.attribute("", "width", ww);
+                    srz.attribute("", "height", hh);
+                    srz.startTag(null, "ellipse");
+                    srz.endTag(null, "ellipse");
+                    break;
+                case "point":
+                    srz.attribute("", "y", yy);
+                    srz.startTag(null, "point");
+                    srz.endTag(null, "point");
+                    break;
+                case "polygon":
+                    srz.attribute("", "y", yy);
+                    srz.startTag(null, "polygon");
+                    srz.attribute("", "points", ojx.getPointsString());
+                    srz.endTag(null, "polygon");
+                    break;
+                case "polyline":
+                    srz.attribute("", "y", yy);
+                    srz.startTag(null, "polyline");
+                    srz.attribute("", "points", ojx.getPointsString());
+                    srz.endTag(null, "polyline");
+                    break;
+                case "text":
+                    srz.attribute("", "y", yy);
+                    srz.attribute("", "width", ww);
+                    srz.attribute("", "height", hh);
+                    srz.startTag(null, "text");
+                    srz.attribute("", "wrap", Boolean.toString(ojx.isWrap()));
+                    srz.text(ojx.getText());
+                    srz.endTag(null, "text");
+                    break;
+                case "image":
+                default:
+                    srz.attribute("", "y", yy);
+                    srz.attribute("", "width", ww);
+                    srz.attribute("", "height", hh);
+                    break;
+            }
+        } else {
+            srz.attribute("", "y", yy);
+            srz.attribute("", "width", ww);
+            srz.attribute("", "height", hh);
+        }
+        if (ojx.getProperties().size() > 0) {
+            srz.startTag(null, "properties");
+            for (int m = 0; m < ojx.getProperties().size(); m++)
+                writeTmxProperty(srz, ojx.getProperties().get(m));
+            srz.endTag(null, "properties");
+        }
+        srz.endTag(null, "object");
+    }
+
+    private void writeTmxTileInnerContent(XmlSerializer srz, tile oj) throws Exception {
+        if (oj.getAnimation().size() > 0) {
+            srz.startTag(null, "animation");
+            for (int m = 0; m < oj.getAnimation().size(); m++) {
+                srz.startTag(null, "frame");
+                srz.attribute("", "tileid", Integer.toString(oj.getAnimation().get(m).getTileID()));
+                srz.attribute("", "duration", Integer.toString(oj.getAnimation().get(m).getDuration()));
+                srz.endTag(null, "frame");
+            }
+            srz.endTag(null, "animation");
+        }
+        if (oj.getProperties().size() > 0) {
+            srz.startTag(null, "properties");
+            for (int m = 0; m < oj.getProperties().size(); m++)
+                writeTmxProperty(srz, oj.getProperties().get(m));
+            srz.endTag(null, "properties");
+        }
+        if (oj.getObjects().size() > 0) {
+            srz.startTag(null, "objectgroup");
+            srz.attribute("", "draworder", "index");
+            for (int l = 0; l < oj.getObjects().size(); l++)
+                writeTmxCollisionObject(srz, oj.getObjects().get(l));
+            srz.endTag(null, "objectgroup");
+        }
+    }
+
+    private void applyJsonObjectFields(obj o, jsonmap.object jo) {
+        if (jo.class_x != null && !jo.class_x.equals(""))
+            o.setType(jo.class_x);
+        if (jo.gid != 0) {
+            o.setGid(jo.gid);
+            o.setShape("image");
+        }
+        if (jo.ellipse)
+            o.setShape("ellipse");
+        if (jo.polygon != null && jo.polygon.length > 0) {
+            o.setShape("polygon");
+            o.getPoints().clear();
+            for (int i = 0; i < jo.polygon.length; i++)
+                o.getPoints().add(new com.badlogic.gdx.math.Vector2(jo.polygon[i].x, jo.polygon[i].y));
+        } else if (jo.polyline != null && jo.polyline.length > 0) {
+            o.setShape("polyline");
+            o.getPoints().clear();
+            for (int i = 0; i < jo.polyline.length; i++)
+                o.getPoints().add(new com.badlogic.gdx.math.Vector2(jo.polyline[i].x, jo.polyline[i].y));
+        } else if (o.getW() == 0 && o.getH() == 0)
+            o.setShape("point");
+    }
+
+    private void fillJsonObjectFields(jsonmap.object jo, obj o) {
+        jo.name = o.getName();
+        if (o.getType() != null && !o.getType().equals(""))
+            jo.class_x = o.getType();
+        jo.x = o.getX();
+        jo.y = o.getY();
+        jo.width = (int) o.getW();
+        jo.height = (int) o.getH();
+        jo.rotation = (int) o.getRotation();
+        jo.id = o.getId();
+        jo.visible = true;
+        jo.gid = o.getGid();
+        jo.ellipse = "ellipse".equalsIgnoreCase(o.getShape());
+        if ("polygon".equalsIgnoreCase(o.getShape()) && o.getPoints().size() > 0) {
+            jo.polygon = new jsonmap.poly[o.getPoints().size()];
+            for (int i = 0; i < o.getPoints().size(); i++) {
+                jo.polygon[i] = new jsonmap.poly();
+                jo.polygon[i].x = o.getPoints().get(i).x;
+                jo.polygon[i].y = o.getPoints().get(i).y;
+            }
+        }
+        if ("polyline".equalsIgnoreCase(o.getShape()) && o.getPoints().size() > 0) {
+            jo.polyline = new jsonmap.poly[o.getPoints().size()];
+            for (int i = 0; i < o.getPoints().size(); i++) {
+                jo.polyline[i] = new jsonmap.poly();
+                jo.polyline[i].x = o.getPoints().get(i).x;
+                jo.polyline[i].y = o.getPoints().get(i).y;
+            }
+        }
+    }
+
     //////////////////////////////////////////////////////
     // XML PROCESSOR
     //////////////////////////////////////////////////////
@@ -16482,6 +16689,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             srz.startTag(null, "map");
             srz.attribute("", "version", "1.2")
+                    .attribute("", "tiledversion", tiledversion)
                     .attribute("", "orientation", orientation)
                     .attribute("", "renderorder", renderorder)
                     .attribute("", "width", Integer.toString(Tw))
@@ -16492,27 +16700,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             if (properties.size() > 0) {
                 srz.startTag(null, "properties");
-                for (int m = 0; m < properties.size(); m++) {
-                    srz.startTag(null, "property");
-                    if (properties.get(m).getName() != null)
-                        srz.attribute("", "name", properties.get(m).getName());
-                    String txx = properties.get(m).getValue();
-                    if (txx != null) {
-                        if (txx.contains("\n")) {
-                            srz.text("\n" + txx + "\n");
-                        } else {
-                            if (properties.get(m).getType() == "boolean") {
-                                srz.attribute("", "value", txx);
-                            } else {
-                                srz.attribute("", "value", txx);
-                            }
-                        }
-                    }
-                    srz.endTag(null, "property");
-                }
+                for (int m = 0; m < properties.size(); m++)
+                    writeTmxProperty(srz, properties.get(m));
                 srz.endTag(null, "properties");
             }
 
+            sortAllTilesetTileMetadata();
             if (tilesets.size() > 0) {
                 for (int i = 0; i < tilesets.size(); i++) {
 
@@ -16599,182 +16792,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                             }
 
-                            if (oj.getAnimation().size() > 0) {
-                                srz.startTag(null, "animation");
-                                for (int m = 0; m < oj.getAnimation().size(); m++) {
-                                    srz.startTag(null, "frame");
-                                    srz.attribute("", "tileid", Integer.toString(oj.getAnimation().get(m).getTileID()));
-                                    srz.attribute("", "duration",
-                                            Integer.toString(oj.getAnimation().get(m).getDuration()));
-                                    srz.endTag(null, "frame");
-                                }
-                                srz.endTag(null, "animation");
-                            }
-                            if (oj.getProperties().size() > 0) {
-                                srz.startTag(null, "properties");
-                                for (int m = 0; m < oj.getProperties().size(); m++) {
-                                    srz.startTag(null, "property");
-                                    if (oj.getProperties().get(m).getName() != null)
-                                        srz.attribute("", "name", oj.getProperties().get(m).getName());
-                                    if (oj.getProperties().get(m).getType() != null
-                                            & oj.getProperties().get(m).getType() != "") {
-                                        if (!oj.getProperties().get(m).getType().equalsIgnoreCase("string")) {
-                                            srz.attribute("", "type",
-                                                    oj.getProperties().get(m).getType().toLowerCase());
-
-                                        }
-                                    }
-
-                                    String txx = oj.getProperties().get(m).getValue();
-                                    if (txx != null) {
-                                        if (txx.contains("\n")) {
-                                            srz.text("\n" + txx + "\n");
-                                        } else {
-                                            srz.attribute("", "value", txx);
-                                        }
-                                    }
-                                    srz.endTag(null, "property");
-                                }
-                                srz.endTag(null, "properties");
-                            }
-
-                            if (oj.getObjects().size() > 0) {
-                                ////////////////////////////// tile collision
-                                srz.startTag(null, "objectgroup");
-                                srz.attribute("", "draworder", "index");
-
-                                for (int l = 0; l < oj.getObjects().size(); l++) {
-                                    obj ojx = oj.getObjects().get(l);
-                                    srz.startTag(null, "object");
-                                    if (ojx.getName() != null && !ojx.getName().equalsIgnoreCase(""))
-                                        srz.attribute("", "name", ojx.getName());
-                                    if (ojx.getType() != null && !ojx.getType().equalsIgnoreCase(""))
-                                        srz.attribute("", "type", ojx.getType());
-                                    srz.attribute("", "id", Integer.toString(ojx.getId()));
-                                    String xx = "", yy = "", ww = "", hh = "", rorot = "";
-                                    Float tmpf;
-                                    tmpf = ojx.getX();
-                                    if (tmpf % 1 == 0) {
-                                        xx = Integer.toString(tmpf.intValue());
-                                    } else {
-                                        xx = Float.toString(tmpf);
-                                    }
-
-                                    tmpf = ojx.getY();
-                                    if (tmpf % 1 == 0) {
-                                        yy = Integer.toString(tmpf.intValue());
-                                    } else {
-                                        yy = Float.toString(tmpf);
-                                    }
-
-                                    tmpf = ojx.getW();
-                                    if (tmpf != 0) {
-                                        if (tmpf % 1 == 0) {
-                                            ww = Integer.toString(tmpf.intValue());
-                                        } else {
-                                            ww = Float.toString(tmpf);
-                                        }
-                                    }
-
-                                    tmpf = ojx.getH();
-                                    if (tmpf != 0) {
-                                        if (tmpf % 1 == 0) {
-                                            hh = Integer.toString(tmpf.intValue());
-                                        } else {
-                                            hh = Float.toString(tmpf);
-                                        }
-                                    }
-
-                                    tmpf = ojx.getRotation();
-                                    if (tmpf != 0) {
-                                        if (tmpf % 1 == 0) {
-                                            rorot = Integer.toString(tmpf.intValue());
-                                        } else {
-                                            rorot = Float.toString(tmpf);
-                                        }
-                                        srz.attribute("", "rotation", rorot);
-                                    }
-
-                                    srz.attribute("", "x", xx);
-
-                                    if (ojx.getGid() != 0)
-                                        srz.attribute("", "gid", Integer.toString(ojx.getGid()));
-                                    if (ojx.getShape() != null) {
-                                        switch (ojx.getShape()) {
-                                            case "ellipse":
-                                                srz.attribute("", "y", yy);
-                                                srz.attribute("", "width", ww);
-                                                srz.attribute("", "height", hh);
-
-                                                srz.startTag(null, "ellipse");
-                                                srz.endTag(null, "ellipse");
-                                                break;
-                                            case "point":
-                                                srz.attribute("", "y", yy);
-                                                srz.startTag(null, "point");
-                                                srz.endTag(null, "point");
-                                                break;
-                                            case "polygon":
-                                                srz.attribute("", "y", yy);
-                                                srz.startTag(null, "polygon");
-                                                srz.attribute("", "points", ojx.getPointsString());
-                                                srz.endTag(null, "polygon");
-                                                break;
-                                            case "polyline":
-                                                srz.attribute("", "y", yy);
-                                                srz.startTag(null, "polyline");
-                                                srz.attribute("", "points", ojx.getPointsString());
-                                                srz.endTag(null, "polyline");
-                                                break;
-                                            case "text":
-                                                srz.attribute("", "y", yy);
-                                                srz.attribute("", "width", ww);
-                                                srz.attribute("", "height", hh);
-
-                                                srz.startTag(null, "text");
-                                                srz.attribute("", "wrap", Boolean.toString(ojx.isWrap()));
-                                                srz.text(ojx.getText());
-                                                srz.endTag(null, "text");
-                                                break;
-                                            case "image":
-                                            default:
-                                                srz.attribute("", "y", yy);
-                                                srz.attribute("", "width", ww);
-                                                srz.attribute("", "height", hh);
-
-                                                break;
-                                        }
-                                    } else {
-                                        srz.attribute("", "width", ww);
-                                        srz.attribute("", "height", hh);
-
-                                    }
-                                    if (ojx.getProperties().size() > 0) {
-                                        srz.startTag(null, "properties");
-                                        for (int m = 0; m < ojx.getProperties().size(); m++) {
-                                            srz.startTag(null, "property");
-                                            if (ojx.getProperties().get(m).getName() != null)
-                                                srz.attribute("", "name", ojx.getProperties().get(m).getName());
-                                            // if (oj.getProperties().get(m).getType()!=null) srz.attribute("", "type",
-                                            // oj.getProperties().get(m).getType().toLowerCase());
-
-                                            String txx = ojx.getProperties().get(m).getValue();
-                                            if (txx != null) {
-                                                if (txx.contains("\n")) {
-                                                    srz.text("\n" + txx + "\n");
-                                                } else {
-                                                    srz.attribute("", "value", txx);
-                                                }
-                                            }
-                                            srz.endTag(null, "property");
-                                        }
-                                        srz.endTag(null, "properties");
-                                    }
-                                    srz.endTag(null, "object");
-                                }
-                                srz.endTag(null, "objectgroup");
-                            }
-                            //////////////////////////////
+                            writeTmxTileInnerContent(srz, oj);
 
                             srz.endTag(null, "tile");
                         }
@@ -16835,7 +16853,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             if (lay.getProperties().get(m).getName() != null)
                                 srz.attribute("", "name", lay.getProperties().get(m).getName());
                             if (lay.getProperties().get(m).getType() != null
-                                    & lay.getProperties().get(m).getType() != "") {
+                                    && !lay.getProperties().get(m).getType().equals("")) {
                                 if (!lay.getProperties().get(m).getType().equalsIgnoreCase("string")) {
                                     srz.attribute("", "type", lay.getProperties().get(m).getType().toLowerCase());
 
@@ -17061,8 +17079,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             srz.setFeature("http://xmlpull.org/v1/doc/features.html#indent-output", true);
 
             tileset t = tilesets.get(index);
+            t.sortTilesById();
             srz.startTag(null, "tileset");
-            srz.attribute("", "firstgid", Integer.toString(t.getFirstgid()));
             if (!t.getName().equalsIgnoreCase(""))
                 srz.attribute("", "name", t.getName());
             if (t.getMargin() != 0)
@@ -17076,16 +17094,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             if (t.getProperties().size() > 0) {
                 srz.startTag(null, "properties");
-                for (int m = 0; m < t.getProperties().size(); m++) {
-                    srz.startTag(null, "property");
-                    if (t.getProperties().get(m).getName() != null)
-                        srz.attribute("", "name", t.getProperties().get(m).getName());
-                    // if (!t.getProperties().get(m).getType().equalsIgnoreCase("") &&
-                    // !t.getProperties().get(m).getType().equalsIgnoreCase("string"))
-                    // if (!t.getProperties().get(m).getValue().isEmpty())
-                    srz.attribute("", "value", t.getProperties().get(m).getValue());
-                    srz.endTag(null, "property");
-                }
+                for (int m = 0; m < t.getProperties().size(); m++)
+                    writeTmxProperty(srz, t.getProperties().get(m));
                 srz.endTag(null, "properties");
             }
 
@@ -17116,31 +17126,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (!t.getTiles().get(u).getTerrainString().equalsIgnoreCase("-1,-1,-1,-1"))
                         srz.attribute("", "terrain", t.getTiles().get(u).getTerrainString());
 
-                    if (oj.getAnimation().size() > 0) {
-                        srz.startTag(null, "animation");
-                        for (int m = 0; m < oj.getAnimation().size(); m++) {
-                            srz.startTag(null, "frame");
-                            srz.attribute("", "tileid", Integer.toString(oj.getAnimation().get(m).getTileID()));
-                            srz.attribute("", "duration", Integer.toString(oj.getAnimation().get(m).getDuration()));
-                            srz.endTag(null, "frame");
-                        }
-                        srz.endTag(null, "animation");
-                    }
-                    if (oj.getProperties().size() > 0) {
-                        srz.startTag(null, "properties");
-                        for (int m = 0; m < oj.getProperties().size(); m++) {
-                            srz.startTag(null, "property");
-                            if (oj.getProperties().get(m).getName() != null)
-                                srz.attribute("", "name", oj.getProperties().get(m).getName());
-                            if (!oj.getProperties().get(m).getType().equalsIgnoreCase("")
-                                    && !oj.getProperties().get(m).getType().equalsIgnoreCase("string"))
-                                srz.attribute("", "type", oj.getProperties().get(m).getType());
-                            if (oj.getProperties().get(m).getValue() != null)
-                                srz.attribute("", "value", oj.getProperties().get(m).getValue());
-                            srz.endTag(null, "property");
-                        }
-                        srz.endTag(null, "properties");
-                    }
+                    writeTmxTileInnerContent(srz, oj);
 
                     srz.endTag(null, "tile");
                 }
@@ -17389,9 +17375,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 }
                             }
 
-                            t.tiles.add(tt);
+                            t.addTileMetadata(tt);
                         }
                     }
+                    t.sortTilesById();
                     tilesets.add(t);
                 }
             }
@@ -17470,8 +17457,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 o.setW(jo.width);
                                 o.setH(jo.height);
                                 o.setRotation(jo.rotation);
-                                if (o.getW() == 0 && o.getH() == 0)
-                                    o.setType("point");
+                                o.setId(jo.id);
+                                applyJsonObjectFields(o, jo);
 
                                 if (jo.properties != null) {
                                     for (int y = 0; y < jo.properties.length; y++) {
@@ -17526,6 +17513,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void setjsonmap() {
         ///////////////////////////
         try {
+            sortAllTilesetTileMetadata();
             jsn = new jsonmap();
             jsn.orientation = orientation;
             jsn.renderorder = "right-down";
@@ -17621,6 +17609,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     frame f = tt.animation.get(y);
                                     p.tileid = f.getTileID();
                                     p.duration = f.getDuration();
+                                    tmp.add(p);
                                 }
                                 jt.animation = tmp.toArray(new jsonmap.animate[tmp.size()]);
                             }
@@ -17673,12 +17662,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 for (int f = 0; f < l.getObjects().size(); f++) {
                                     jsonmap.object jo = new jsonmap.object();
                                     obj o = l.getObjects().get(f);
-                                    jo.name = o.getName();
-                                    jo.x = o.getX();
-                                    jo.y = o.getY();
-                                    jo.width = (int) o.getW();
-                                    jo.height = (int) o.getH();
-                                    jo.rotation = (int) o.getRotation();
+                                    fillJsonObjectFields(jo, o);
 
                                     if (o.getProperties().size() > 0) {
                                         List<jsonmap.property> tmprops = new ArrayList<>();
@@ -18941,7 +18925,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             if (myParser.getAttributeValue(null, "locked") != null) {
                                 tempLayer.setLocked(Boolean.parseBoolean(myParser.getAttributeValue(null, "locked")));
                             } else {
-                                tempLayer.setLocked(true);
+                                tempLayer.setLocked(false);
                             }
 
                             if (myParser.getAttributeValue(null, "opacity") != null) {
@@ -19124,7 +19108,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
                         if (name.equals("tile")) {
                             if (xtree.get(xtree.size() - 2).equalsIgnoreCase("tileset")) {
-                                tempTset.getTiles().add(tempTile);
+                                tempTset.addTileMetadata(tempTile);
                                 xtree.remove(xtree.size() - 1);
                             } else {
                                 xtree.remove(xtree.size() - 1);
@@ -19132,6 +19116,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         }
                         if (name.equals("tileset")) {
+                            if (tempTset != null)
+                                tempTset.sortTilesById();
                             tempTset = null;
                             xtree.remove(xtree.size() - 1);
 
@@ -19661,14 +19647,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case XmlPullParser.END_TAG:
                         if (name.equals("tile")) {
                             if (oldowner.equalsIgnoreCase("tileset")) {
-                                tempTset.getTiles().add(tempTile);
+                                tempTset.addTileMetadata(tempTile);
 
                             }
                             owner = oldowner;
                             oldowner = "";
                         }
                         if (name.equals("tileset")) {
-
+                            if (tempTset != null)
+                                tempTset.sortTilesById();
                             tempTset = null;
                         }
                         if (name.equals("text")) {
@@ -20530,7 +20517,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         break;
                     case XmlPullParser.END_TAG:
                         if (name.equals("tile")) {
-                            tempTset.getTiles().add(tempTile);
+                            tempTset.addTileMetadata(tempTile);
                             owner = "tileset";
                         }
                         if (name.equals("tileset")) {
@@ -20538,6 +20525,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 log("NO TEXTURE!");
                                 return;
                             }
+                            tempTset.sortTilesById();
                             tilesets.add(tempTset);
                             tempTset = null;
                         }
@@ -20893,7 +20881,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 tile tile = new tile();
                                 tile.setTileID(o);
                                 tile.getProperties().add(new property(temproname, temprotype, temprovalue));
-                                tilesets.get(selTsetID).getTiles().add(tile);
+                                ka = tilesets.get(selTsetID).addTileMetadata(tile);
                             } else {
                                 tile tile = tilesets.get(selTsetID).getTiles().get(ka);
                                 tile.getProperties().add(new property(temproname, temprotype, temprovalue));
@@ -21017,8 +21005,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             }
                         }
                         if (!ada) {
-                            tiles.add(newanim);
-                            selTileID = tiles.size() - 1;
+                            selTileID = tilesets.get(seltset).addTileMetadata(newanim);
                         }
 
                         ////
@@ -21465,8 +21452,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             }
                         }
                         if (!ada) {
-                            tiles.add(newanim);
-                            selTileID = tiles.size() - 1;
+                            selTileID = tilesets.get(selTsetID).addTileMetadata(newanim);
+                            tiles = tilesets.get(selTsetID).getTiles();
                         }
 
                         lFrameID.setText(z.animation + " " + z.id + ": " + tiles.get(selTileID).getTileID());
@@ -21505,8 +21492,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             }
                         }
                         if (!ada) {
-                            tiles.add(newanim);
-                            selTileID = tiles.size() - 1;
+                            selTileID = tilesets.get(selTsetID).addTileMetadata(newanim);
                         }
 
                         ////
@@ -21526,13 +21512,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         tiles = tilesets.get(selTsetID).getTiles();
 
-                        tiles.get(dex).setTileID(num - ts.getFirstgid());
+                        int newLocalId = num - ts.getFirstgid();
+                        tiles.get(dex).setTileID(newLocalId);
+                        tilesets.get(selTsetID).sortTilesById();
+                        tiles = tilesets.get(selTsetID).getTiles();
                         String[] srr = new String[tiles.size()];
+                        selTileID = 0;
                         for (int i = 0; i < tiles.size(); i++) {
                             srr[i] = Integer.toString(tiles.get(i).getTileID());
+                            if (tiles.get(i).getTileID() == newLocalId)
+                                selTileID = i;
                         }
                         ltilelist.setItems(srr);
-                        ltilelist.setSelectedIndex(dex);
+                        ltilelist.setSelectedIndex(selTileID);
                         break;
                     case "addframe":
                         gotoStage(tFrameMgmt);
@@ -21612,8 +21604,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (t == null) {
                             tile tt = new tile();
                             tt.setTileID(dst);
-                            tiles.add(tt);
-                            t = tiles.get(tiles.size() - 1);
+                            int idx = tilesets.get(selTsetID).addTileMetadata(tt);
+                            tiles = tilesets.get(selTsetID).getTiles();
+                            t = tiles.get(idx);
                         }
                         int[] cn = t.getTerrain();
                         // log(t.getTerrainString());
@@ -27468,8 +27461,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (t == null) {
                         tile tt = new tile();
                         tt.setTileID(num);
-                        tiles.add(tt);
-                        t = tiles.get(tiles.size() - 1);
+                        int idx = ts.addTileMetadata(tt);
+                        tiles = ts.getTiles();
+                        t = tiles.get(idx);
                     }
                     int[] cn = t.getTerrain();
                     int a = cn[0], b = cn[1], c = cn[2], d = cn[3];
@@ -27548,8 +27542,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             if (t == null) {
                                 tile tt = new tile();
                                 tt.setTileID(gogo);
-                                tiles.add(tt);
-                                t = tiles.get(tiles.size() - 1);
+                                int idx = ts.addTileMetadata(tt);
+                                tiles = ts.getTiles();
+                                t = tiles.get(idx);
                             }
                             cn = t.getTerrain();
                             a = cn[0];
@@ -27630,8 +27625,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             if (t == null) {
                                 tile tt = new tile();
                                 tt.setTileID(gogo);
-                                tiles.add(tt);
-                                t = tiles.get(tiles.size() - 1);
+                                int idx = ts.addTileMetadata(tt);
+                                tiles = ts.getTiles();
+                                t = tiles.get(idx);
                             }
                             cn = t.getTerrain();
                             a = cn[0];
@@ -27697,8 +27693,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             if (t == null) {
                                 tile tt = new tile();
                                 tt.setTileID(gogo);
-                                tiles.add(tt);
-                                t = tiles.get(tiles.size() - 1);
+                                int idx = ts.addTileMetadata(tt);
+                                tiles = ts.getTiles();
+                                t = tiles.get(idx);
                             }
                             cn = t.getTerrain();
                             a = cn[0];
