@@ -1,5 +1,5 @@
 <h1>NotTiled </h1>
-Latest version: 2.0.0
+Latest version: 2.1.1
 
 NotTiled is a simple 2D-map editor for gamers. It is based on Tiled Map Editor (https://www.mapeditor.org/) by Thorbjørn Lindeijer.
 Unlike Tiled, NotTiled is focused on creating custom maps for games. For example, NotTiled includes random map generator and tileset generator.

@@ -41,6 +41,8 @@ Progressive milestones toward full interoperability with the [Tiled TMX/JSON map
 
 **Goal:** Small spec gaps; same flat layer list; no new screens.
 
+**Status:** Done.
+
 | Task | Why |
 |------|-----|
 | `nextlayerid` on TMX **save + load** | Tiled uses stable layer ids; today mainly Lua/JSON set it |
@@ -61,6 +63,8 @@ Progressive milestones toward full interoperability with the [Tiled TMX/JSON map
 ## M2 — Layer attributes (light UI) — M
 
 **Goal:** Modern layer metadata without hierarchy.
+
+**Status:** Done.
 
 | Task | Why |
 |------|-----|
@@ -95,6 +99,8 @@ Progressive milestones toward full interoperability with the [Tiled TMX/JSON map
 ## M4 — Format parity (TMX ↔ JSON ↔ Lua) — M
 
 **Goal:** One internal model, three exporters behave the same.
+
+**Status:** Done (ZSTD skipped per discussion).
 
 | Task | Why |
 |------|-----|

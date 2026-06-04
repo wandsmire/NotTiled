@@ -145,7 +145,7 @@ public class guis
 		tilesetsmid.setp(15,85,0,10);
 		tilesetsright.setp(85,100,0,10);
 
-		center.setp(85,100,81,90);
+		center.setp(70,85,81,90);
 		save.setp(0,15,19,28);
 		play.setp(0,15,28,37);
 		addmacro.setp(0,15,37,46);
@@ -169,13 +169,13 @@ public class guis
 		gamestatus.setp(0,100,0,40);
 		lock.setp(85,100,10,19);
 
-		//swatches.setp(25,75,10,28);
-		sw1.setp(25,42,10,19);
-		sw2.setp(42,58,10,19);
-		sw3.setp(58,75,10,19);
-		sw4.setp(25,42,19,28);
-		sw5.setp(42,58,19,28);
-		sw6.setp(58,75,19,28);
+		//swatches.setp(15f,85f,10f,16f);
+		sw1.setp(15f,26.66f,10f,16f);
+		sw2.setp(26.66f,38.33f,10f,16f);
+		sw3.setp(38.33f,50f,10f,16f);
+		sw4.setp(50f,61.66f,10f,16f);
+		sw5.setp(61.66f,73.33f,10f,16f);
+		sw6.setp(73.33f,85f,10f,16f);
 
 		editormode.setp(20,40,50,60);
 		editorsave.setp(20,40,40,50);
@@ -193,7 +193,7 @@ public class guis
 		addmacro.setl(0,10,45,55);
 
 		layerpick.setl(90,100,0,15);
-		center.setl(10,20,0,10);
+		center.setl(80,90,80,90);
 		picker.setl(45,55,0,15);
 		pickerbg.setl(45,55,0,15);
 		rotation.setl(80,90,0,10);
@@ -269,13 +269,13 @@ public class guis
 		respawn.setl(80,98,2,10);
 		gamestatus.setl(0,100,0,30);
 
-		//swatches.setl(10,35,0,28);
-		sw1.setl(10,18,0,14);
-		sw2.setl(18,26,0,14);
-		sw3.setl(26,34,0,14);
-		sw4.setl(10,18,14,28);
-		sw5.setl(18,26,14,28);
-		sw6.setl(26,34,14,28);
+		//swatches.setl(10f,44f,0f,10f);
+		sw1.setl(10f,15.66f,0f,10f);
+		sw2.setl(15.66f,21.33f,0f,10f);
+		sw3.setl(21.33f,27f,0f,10f);
+		sw4.setl(27f,32.66f,0f,10f);
+		sw5.setl(32.66f,38.33f,0f,10f);
+		sw6.setl(38.33f,44f,0f,10f);
 
 		editormode.setl(35,45,50,60);
 		editorsave.setl(35,45,40,50);

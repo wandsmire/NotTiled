@@ -17,18 +17,26 @@ public class StringBuilderPlus extends com.badlogic.gdx.utils.StringBuilder
 		append(pre+s);
 	}
 	
+	public static String luaString(String s) {
+		if (s == null)
+			return "";
+		return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
+	}
+
 	public void wprop(java.util.List<property> pr){
 		if (pr.size()>0){
 			wlo("properties = {");
 			for(int i=0;i<pr.size();i++)
 			{
 				property p=pr.get(i);
-				if (p.getType()=="boolean"){
-					w("[\""+p.getName()+"\"] = "+p.getValue().replace("\n","\\n")+"");
-
-			}else{
-					w("[\""+p.getName()+"\"] = \""+p.getValue().replace("\n","\\n")+"\"");
-			}
+				String ptype = p.getType() != null ? p.getType().toLowerCase() : "";
+				String pvalue = p.getValue() != null ? p.getValue() : "";
+				w("[\"" + luaString(p.getName()) + "\"] = ");
+				if (ptype.equals("boolean") || ptype.equals("int") || ptype.equals("float")) {
+					w(pvalue.replace("\n", "\\n"));
+				} else {
+					w("\"" + luaString(pvalue) + "\"");
+				}
 				if (i!=pr.size()-1)
 				{
 					append(",\n");

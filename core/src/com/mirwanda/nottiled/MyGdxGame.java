@@ -102,7 +102,10 @@ import com.github.czyzby.noise4j.map.Grid;
 import com.github.czyzby.noise4j.map.generator.cellular.CellularAutomataGenerator;
 import com.github.czyzby.noise4j.map.generator.room.dungeon.DungeonGenerator;
 import com.mirwanda.nottiled.ai.ATGraph;
+import com.mirwanda.nottiled.ai.AiPixelDrawingService;
 import com.mirwanda.nottiled.ai.AutoTile;
+import com.mirwanda.nottiled.ai.LeanPixelCodec;
+import com.mirwanda.nottiled.ai.PixelPaletteInfo;
 import com.mirwanda.nottiled.platformer.game;
 import com.poisson.DiskGenerator;
 import com.poisson.Point;
@@ -147,6 +150,9 @@ import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.Thread.sleep;
 
@@ -298,6 +304,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     int tempframeid;
     int templastID;
     int Tsw = 32, Tsh = 32, Tw = 5, Th = 5;
+    public int nextlayerid = 1;
+    public boolean infinite = false;
+    public int compressionlevel = -1;
     int rotate = 0;
     int ssx = 480;
     int ssy = 800;
@@ -313,6 +322,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     String mapFormat = "csv", tsxFile = "";
     String kartu = "", mode, lastpath, openedfile, tilePicker = "", saveasdir, rwpath;
     int autosaveInterval = 1;
+    boolean sMapBackups = true;
+    int backupMaxCount = 20;
+    int backupMinIntervalMin = 3;
+    private final Object saveLock = new Object();
+    private ExecutorService mapSaveExecutor;
+    private volatile boolean mapSaveNotifyManual;
+    private volatile boolean mapSaveNotifyMsgbox;
     int gridOpacity = 5;
     boolean isSampleReloaded;
     int curspr, curid;
@@ -402,7 +418,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     TextButton bUseTsx, bApplyMP, bCancelMP, bPropertiesMap;
     ChangeListener listBack;
     Table tMenu, tMenu1, tMenu2, tOpen, tNewFile, tSaveAs, tLicense, tTutorial;
-    TextButton bNew, bOpen, bSave, bSaveAs, bExit, bBack, bLicense, bReload, bTutorial, bCopyto, bFileManager;
+    TextButton bNew, bOpen, bSave, bSaveAs, bRestoreBackup, bExit, bBack, bLicense, bReload, bTutorial, bCopyto, bFileManager;
+    private Table tRestoreBackup;
+    private com.badlogic.gdx.scenes.scene2d.ui.List<String> lbackupList;
     private FileHandle fileManagerDir;
     private FileHandle fileManagerClipboardFile;
     private boolean fileManagerIsCopy;
@@ -620,6 +638,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private TextButton bMassAddProp, bTileCollision;
     private int zoomTreshold;
     private TextField fzoomtresh, frwpath;
+    private TextField tfAiApiKey, tfAiApiUrl, tfAiModel, fAiPrompt;
+    private String aiApiKey = "", aiApiUrl = "https://openrouter.ai/api/v1/chat/completions",
+            aiModel = "deepseek/deepseek-v4-flash";
+    private final java.util.List<String> aiRefineSteps = new ArrayList<>();
+    private boolean aiGenerating = false;
+    private TextButton btnAiSprite;
     private CheckBox cball;
     private Table bigman;
     private boolean zooming;
@@ -627,7 +651,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private float redraw = 0f;
     private float rotator = 0f;
     private float undohistory = 0f;
-    private Table trandomgen, treplacetiles, tgenerateterrain;
+    private Table trandomgen, treplacetiles, tgenerateterrain, taiGenerate;
     private TextField ffirstgen;
     private TextField fgencount;
     private TextField fbirthlim;
@@ -648,7 +672,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private float velredx;
     private float velredy;
     private int fontsize;
-    private TextField fFontsize, fAutoSaveInterval;
+    private TextField fFontsize, fAutoSaveInterval, fBackupMax, fBackupInterval;
+    private CheckBox cbMapBackups;
     private float nofling;
     private Stage stage;
     private Texture txpencil;
@@ -665,6 +690,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private int newTerrainID;
     private boolean n;
     private boolean lockUI;
+    private int successfulFrames = 0;
 
     // private AdView ads;
     public MyGdxGame(String intend, Interface face)// , AdView ads)
@@ -742,6 +768,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         nullTable = new Table();
         vers = face.getVersione();
         prefs = Gdx.app.getPreferences("My Preferences");
+        int shutdowns = prefs.getInteger("abnormal_shutdowns", 0);
+        prefs.putInteger("abnormal_shutdowns", shutdowns + 1).flush();
         language = prefs.getString("language", "English");
         fontsize = prefs.getInteger("fontsize", 0);
         sCustomFont = prefs.getString("customfont", "");
@@ -929,6 +957,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         loadListener();
         loadMenuMap();
         loadPreferences();
+        mapSaveExecutor = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "NotTiled-save");
+            t.setDaemon(true);
+            return t;
+        });
         initErrorHandling();
         loadOpen();
         loadLicense();
@@ -1453,6 +1486,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     @Override
     public void render() {
+        if (!loadingfile && successfulFrames >= 0 && successfulFrames < 120) {
+            successfulFrames++;
+            if (successfulFrames == 120) {
+                prefs.putInteger("abnormal_shutdowns", 0).flush();
+            }
+        }
         if (kartu.equalsIgnoreCase("game")) {
             if (!mygame.render())
                 backToMap();
@@ -2271,6 +2310,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         /**/
                     } else if (lastStage == trandomgen) {
+                        gotoStage(ttools);
+                    } else if (lastStage == taiGenerate) {
                         gotoStage(ttools);
                     } else if (lastStage == tpt) {
                         gotoStage(tPropsMgmt);
@@ -4944,6 +4985,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     @Override
     public void dispose() {
+        if (mapSaveExecutor != null)
+            mapSaveExecutor.shutdown();
         if (mygame != null)
             mygame.dispose();
     }
@@ -5215,9 +5258,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void uidraw(Texture tx, gui gui, int margin) {
         float x = 0, y = 0, w = 0, h = 0;
         if (landscape) {
-            x = gui.getXl() + margin + 1;
+            x = gui.getXl() + margin * 0.5f;
             y = gui.getYl() + margin;
-            w = gui.getWl() - margin - 1;
+            w = gui.getWl() - margin * 0.5f;
             h = gui.getHl() - margin;
         } else {
             x = gui.getX() + margin + 1;
@@ -5312,9 +5355,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void uidraw(Texture tx, gui gui, int margin, int srcx, int srcy, int srcw, int srch) {
         float x = 0, y = 0, w = 0, h = 0;
         if (landscape) {
-            x = gui.getXl() + margin + 1.5f;
+            x = gui.getXl() + margin * 0.5f + 0.5f;
             y = gui.getYl() + margin + 1;
-            w = gui.getWl() - margin - 1.5f;
+            w = gui.getWl() - margin * 0.5f - 0.5f;
             h = gui.getHl() - margin - 1;
         } else {
             x = gui.getX() + margin + 1;
@@ -6506,6 +6549,56 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             String lf = prefs.getString("lof", basepath + "NotTiled/sample/island.tmx");
             log(lf);
+
+            int shutdowns = prefs.getInteger("abnormal_shutdowns", 0);
+            if (shutdowns >= 3) {
+                log("Safe Mode activated due to " + shutdowns + " abnormal shutdowns.");
+                final String lfFinal = lf;
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        Dialog dlg = new Dialog(z.safemodetitle != null ? z.safemodetitle : "Safe Mode", skin) {
+                            @Override
+                            protected void result(Object object) {
+                                if (Boolean.TRUE.equals(object)) {
+                                    FileHandle tst = Gdx.files.absolute(lfFinal);
+                                    if (tst.exists()) {
+                                        if (lfFinal.toLowerCase().endsWith(".ntp")) {
+                                            backToMap();
+                                            String curdir = tst.parent().path();
+                                            FileHandle tmpfolder = Gdx.files.absolute(basepath + "NotTiled/Temp");
+                                            unzip(tst, tmpfolder);
+                                            recents.addrecent(tst.path(), tst.name(), "legacy");
+                                            saveRecents();
+                                            playgame(basepath + "NotTiled/Temp", "index.tmx");
+                                        } else if (lfFinal.toLowerCase().endsWith(".tmx")) {
+                                            loadtmx(lfFinal);
+                                            backToMap();
+                                        } else if (lfFinal.toLowerCase().endsWith(".png")) {
+                                            loadpng(tst);
+                                        } else if (lfFinal.toLowerCase().endsWith(".json")) {
+                                            loadjsonmap(tst);
+                                        }
+                                    } else {
+                                        newtmxfile(false);
+                                    }
+                                } else {
+                                    prefs.putInteger("abnormal_shutdowns", 0);
+                                    prefs.putString("lof", basepath + "NotTiled/sample/island.tmx").flush();
+                                    newtmxfile(false);
+                                }
+                            }
+                        };
+                        dlg.text(z.safemodeprompt != null ? z.safemodeprompt : "NotTiled did not shut down correctly multiple times.\nWould you like to load the last opened map anyway?");
+                        dlg.button(z.yes != null ? z.yes : "Yes", true);
+                        dlg.button(z.no != null ? z.no : "No", false);
+                        Gdx.input.setInputProcessor(stage);
+                        dlg.show(stage);
+                    }
+                });
+                return;
+            }
+
             FileHandle tst = Gdx.files.absolute(lf);
 
             if (tst.exists()) {
@@ -6610,6 +6703,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         int curgroupid = -1;
         int curobjid = -1;
         curid = 1;
+        nextlayerid = 1;
         layer l = new layer();
         l.setType(layer.Type.TILE);
         l.setVisible(true);
@@ -7082,7 +7176,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void exportastmx(String fn) {
-        saveMap(curdir + "/" + curfile);
+        saveMapBlocking(curdir + "/" + curfile);
         FileHandle map = Gdx.files.absolute(curdir + "/" + curfile);
         byte[] b = map.readBytes();
         face.saveasFile(b, fn + ".tmx");
@@ -7102,11 +7196,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (Gdx.app.getType() == Android) {
             sbExport.setItems((Object[]) new String[] { "Export to storage", z.exportastemplate, z.exporttopng,
                     z.selectionastileset, z.exportastileset, "Export as Remixed Dungeon map", z.exporttolua,
-                    z.exporttojson, z.exporttomidi, "Export Standalone APK" });
+                    z.exporttojson, z.exporttomidi, "Export Standalone APK", "Export layer(s) as CSV" });
         } else {
             sbExport.setItems((Object[]) new String[] { "Export as...", z.exportastemplate, z.exporttopng,
                     z.selectionastileset, z.exportastileset, "Export as Remixed Dungeon map", z.exporttolua,
-                    z.exporttojson, z.exporttomidi, "Export Standalone APK" });
+                    z.exporttojson, z.exporttomidi, "Export Standalone APK", "Export layer(s) as CSV" });
         }
 
         tExport.add(new Label(z.filename, skin)).row();
@@ -7157,6 +7251,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         break;
                     case 9:
                         exportStandaloneApk(fExportFilename.getText());
+                        break;
+                    case 10:
+                        exportascsv(fExportFilename.getText());
                         break;
                 }
             }
@@ -7659,11 +7756,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bSave.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                saveMap(curdir + "/" + curfile);
-                cue("save");
-                msgbox(z.yourmaphasbeensaved);
+                saveMapFromMenu(curdir + "/" + curfile);
                 if (!bypassads)
                     face.showinterstitial();
+            }
+        });
+
+        bRestoreBackup = new TextButton(z.restorebackup, skin);
+        bRestoreBackup.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                openRestoreBackupScreen(curdir + "/" + curfile);
             }
         });
 
@@ -7780,6 +7883,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bTools.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                refreshAiSpriteButton();
                 gotoStage(ttools);
             }
         });
@@ -7825,7 +7929,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
                 curdir = saveasdir;
                 curfile = text;
-                saveMap(saveasdir + "/" + text);
+                saveMapForBackup(saveasdir + "/" + text);
             }
         };
 
@@ -7846,7 +7950,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
          */
         cue("copytorw");
 
-        saveMap(curdir + "/" + curfile);
+        saveMapBlocking(curdir + "/" + curfile);
         FileHandle map = Gdx.files.absolute(curdir + "/" + curfile);
         // from.copyTo( Gdx.files.absolute( rwpath + "/maps" ) );
 
@@ -7991,6 +8095,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tMenu1.add(bRecent).row();
             tMenu1.add(bSave).row();
             tMenu1.add(bSaveAs).row();
+            tMenu1.add(bRestoreBackup).row();
             if (Gdx.app.getType() == Android)
                 tMenu2.add(bImporter).row();
             tMenu2.add(bFileManager).row();
@@ -8015,6 +8120,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tMenu.add(bRecent).row();
             tMenu.add(bSave).row();
             tMenu.add(bSaveAs).row();
+            tMenu.add(bRestoreBackup).row();
             if (Gdx.app.getType() == Android)
                 tMenu.add(bImporter).row();
             tMenu.add(bFileManager).row();
@@ -8182,6 +8288,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void generateMap() {
+        generateMapWithParams();
+    }
+
+    private void generateMapWithParams() {
         activetool = 4;
         eraser = false;
 
@@ -8228,7 +8338,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         curpickAuto = true;
 
         layers.get(selLayer).clearLayer();
-        // Natural Map
+
         if (genType == 0) {
             // use perlin noise to draw cool map
             PerlinNoiseGenerator pn = new PerlinNoiseGenerator();
@@ -8542,11 +8652,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             // randomise
             Collections.shuffle(ln);
             int count = 0;
+            int maxPlayers = 10;
             int space = 50;
             int wide = 6;
             int pool = 10;
             for (Point p : ln) {
-                if (count > 9)
+                if (count >= maxPlayers)
                     break;
                 int num = p.getX() + p.getY() * Tw;
 
@@ -8651,6 +8762,145 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     }
 
+    private void startAiPixelGeneration() {
+        if (aiGenerating)
+            return;
+        if (!isPixelArtMap()) {
+            msgbox(z.aipixelonly != null ? z.aipixelonly : "AI sprite generation is for Pixel Editor maps only.");
+            return;
+        }
+        if (selLayer < 0 || selLayer >= layers.size()
+                || layers.get(selLayer).getType() != layer.Type.TILE) {
+            msgbox(z.aipixellayer != null ? z.aipixellayer : "Select a tile layer to draw on.");
+            return;
+        }
+        if (aiApiKey == null || aiApiKey.trim().isEmpty()) {
+            msgbox(z.ainokey != null ? z.ainokey : "Set your AI API key in Preferences first.");
+            return;
+        }
+        if (Tw * Th > 32 * 32) {
+            msgbox(z.aicanvaslarge != null ? z.aicanvaslarge
+                    : "Large canvas — AI works best at 16x16 or 32x32. Results may vary.");
+        }
+        int palIdx = getPixelArtPaletteIndex();
+        ensureTilesetPixmap(tilesets.get(palIdx));
+        final PixelPaletteInfo palette = PixelPaletteInfo.build(tilesets, palIdx, pixelPaletteUsedCount, Tw, Th);
+        if (!palette.isReady()) {
+            msgbox(z.aipaletteempty != null ? z.aipaletteempty : "Pixel palette is not ready.");
+            return;
+        }
+        final String prompt = fAiPrompt.getText();
+        final int targetLayer = selLayer;
+        layer active = layers.get(targetLayer);
+        String snapshot = null;
+        aiRefineSteps.clear();
+
+        aiGenerating = true;
+        status(z.aigenerating != null ? z.aigenerating : "Generating...", 0);
+        AiPixelDrawingService.requestPixel(aiApiKey, aiApiUrl, aiModel, prompt, palette, snapshot, aiRefineSteps,
+                new AiPixelDrawingService.Listener() {
+                    @Override
+                    public void onSuccess(int[][] grid, boolean fullReplace) {
+                        aiGenerating = false;
+                        applyAiPixelDraw(grid, fullReplace, palette, targetLayer, prompt);
+                    }
+
+                    @Override
+                    public void onPartial(int[][] grid, boolean fullReplace) {
+                        layer l = layers.get(targetLayer);
+                        if (fullReplace) l.clearLayer();
+                        for (int y = 0; y < Th; y++) {
+                            for (int x = 0; x < Tw; x++) {
+                                int idx = y * Tw + x;
+                                int slot = grid[y][x];
+                                long gid = palette.slotToGid(slot);
+                                int tset = gid == 0 ? -1 : palette.paletteTsetIndex;
+                                l.getStr().set(idx, gid);
+                                l.getTset().set(idx, tset);
+                                l.getTile().set(idx, -1);
+                            }
+                        }
+                        resetCaches();
+                    }
+
+                    @Override
+                    public void onFailure(String message) {
+                        aiGenerating = false;
+                        String err = z.aierror != null ? z.aierror : "AI generation failed";
+                        if (message != null && message.length() > 300) {
+                            message = message.substring(0, 300) + "... (truncated)";
+                        }
+                        msgbox(err + "\n" + message);
+                        status("", 0);
+                    }
+                });
+    }
+
+    private boolean activeLayerHasPixels(layer l) {
+        if (l == null || l.getStr() == null)
+            return false;
+        for (Long g : l.getStr()) {
+            if (g != null && g != 0)
+                return true;
+        }
+        return false;
+    }
+
+    private void applyAiPixelDraw(final int[][] grid, final boolean fullReplace, PixelPaletteInfo palette,
+            int targetLayer, String userPrompt) {
+        Gdx.app.postRunnable(new Runnable() {
+            @Override
+            public void run() {
+                boolean any = false;
+                for (int y = 0; y < Th && !any; y++)
+                    for (int x = 0; x < Tw && !any; x++)
+                        if (grid[y][x] != 0)
+                            any = true;
+                if (!any) {
+                    msgbox(z.aierror != null ? z.aierror : "AI returned no pixels");
+                    status("", 0);
+                    return;
+                }
+
+                layer l = layers.get(targetLayer);
+
+                if (fullReplace)
+                    l.clearLayer();
+
+                // Bulk-write pixels directly to layer arrays (no per-pixel undo/cache)
+                for (int y = 0; y < Th; y++) {
+                    for (int x = 0; x < Tw; x++) {
+                        int idx = y * Tw + x;
+                        int slot = grid[y][x];
+                        long gid = palette.slotToGid(slot);
+                        int tset = gid == 0 ? -1 : palette.paletteTsetIndex;
+                        l.getStr().set(idx, gid);
+                        l.getTset().set(idx, tset);
+                        l.getTile().set(idx, -1);
+                    }
+                }
+
+                // Single undo clear + cache rebuild instead of per-pixel
+                undolayer.clear();
+                redolayer.clear();
+                resetCaches();
+
+                if (userPrompt != null && !userPrompt.trim().isEmpty())
+                    aiRefineSteps.add(userPrompt.trim());
+                if (fAiPrompt != null)
+                    fAiPrompt.setText("");
+                status(z.aigenerated != null ? z.aigenerated : "AI sprite generated", 3);
+                backToMap();
+            }
+        });
+    }
+
+    private void refreshAiSpriteButton() {
+        if (btnAiSprite == null)
+            return;
+        btnAiSprite.setVisible(isPixelArtMap());
+    }
+
     private void refreshGenerator() {
         /////////////
         List<String> srr = new ArrayList<>();
@@ -8675,6 +8925,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         TextButton hvmirror = new TextButton(z.mirrorboth, skin);
         TextButton hvmirrorrev = new TextButton(z.mirrorreverse, skin);
         TextButton randomize = new TextButton(z.randommap, skin);
+        btnAiSprite = new TextButton(z.aigenerate != null ? z.aigenerate : "AI Generate Sprite", skin);
         TextButton replacetiles = new TextButton(z.replacetiles, skin);
         TextButton generateterrain = new TextButton(z.generateterrain, skin);
         TextButton tracebackground = new TextButton(z.tracebackground, skin);
@@ -8689,6 +8940,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         ttools.add(hvmirror).row();
         ttools.add(hvmirrorrev).row();
         ttools.add(randomize).row();
+        ttools.add(btnAiSprite).row();
         ttools.add(replacetiles).row();
         ttools.add(generateterrain).row();
         ttools.add(tracebackground).row();
@@ -8738,6 +8990,46 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 gotoStage(trandomgen);
             }
         });
+
+        taiGenerate = new Table();
+        taiGenerate.setFillParent(true);
+        taiGenerate.defaults().width(btnx).padBottom(2);
+        fAiPrompt = new TextField("", skin);
+        TextButton runAiGenerate = new TextButton(z.aigeneratebtn != null ? z.aigeneratebtn : "Generate", skin);
+        TextButton aiBack = new TextButton(z.back, skin);
+        taiGenerate.add(new Label(z.aiprompt != null ? z.aiprompt : "Describe your sprite", skin)).row();
+        taiGenerate.add(new Label(z.airefinehint != null ? z.airefinehint
+                : "Uses active layer only. Run again to refine.", skin)).row();
+        taiGenerate.add(fAiPrompt).height(btny * 2).row();
+        taiGenerate.add(runAiGenerate).row();
+        taiGenerate.add(aiBack).row();
+        runAiGenerate.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                startAiPixelGeneration();
+            }
+        });
+        aiBack.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                gotoStage(ttools);
+            }
+        });
+
+        btnAiSprite.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (!isPixelArtMap()) {
+                    msgbox(z.aipixelonly != null ? z.aipixelonly : "AI sprite generation is for Pixel Editor maps only.");
+                    return;
+                }
+                aiRefineSteps.clear();
+                if (fAiPrompt != null)
+                    fAiPrompt.setText("");
+                gotoStage(taiGenerate);
+            }
+        });
+        refreshAiSpriteButton();
 
         replacetiles.addListener(new ChangeListener() {
             @Override
@@ -9016,7 +9308,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         for (int n = 0; n < tilesets.size(); n++) {
             tileset t = tilesets.get(n);
             sb.wlo("{");// tileset inside
-            sb.wl("name = \"" + t.getName() + "\",");
+            sb.wl("name = \"" + StringBuilderPlus.luaString(t.getName()) + "\",");
             sb.wl("firstgid = " + t.getFirstgid() + ",");
             sb.wl("tilewidth = " + t.getTilewidth() + ",");
             sb.wl("tileheight = " + t.getTileheight() + ",");
@@ -9024,7 +9316,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             sb.wl("margin = " + t.getMargin() + ",");
             sb.wl("columns = " + t.getColumns() + ",");
             sb.wl("tilecount = " + t.getTilecount() + ",");
-            sb.wl("image = \"" + t.getSource() + "\",");
+            sb.wl("image = \"" + StringBuilderPlus.luaString(t.getSource()) + "\",");
             sb.wl("imagewidth = " + t.getOriginalwidth() + ",");
             sb.wl("imageheight = " + t.getOriginalheight() + ",");
             sb.wl("tileoffset = {\n        x = 0,\n        y = 0\n      },");
@@ -9078,19 +9370,27 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         sb.wlo("layers = {");// layers
 
-        // tilelayers
+        int exportedLayers = 0;
+        for (int n = 0; n < layers.size(); n++) {
+            layer.Type layerType = layers.get(n).getType();
+            if (layerType != layer.Type.TILE && layerType != layer.Type.OBJECT)
+                continue;
+            exportedLayers++;
+        }
+
+        int exportedLayerIndex = 0;
         for (int n = 0; n < layers.size(); n++) {
             if (layers.get(n).getType() == layer.Type.TILE) {
                 layer l = layers.get(n);
                 sb.wlo("{");// tile layer
                 sb.wl("type = \"tilelayer\",");
                 sb.wl("id = " + (n + 1) + ",");
-                sb.wl("name = \"" + l.getName() + "\",");
+                sb.wl("name = \"" + StringBuilderPlus.luaString(l.getName()) + "\",");
                 sb.wl("x = 0,");
                 sb.wl("y = 0,");
                 sb.wl("width = " + Tw + ",");
                 sb.wl("height = " + Th + ",");
-                sb.wl("visible = true,");
+                sb.wl("visible = " + l.isVisible() + ",");
 
                 if (l.getOpacity() == 0) {
                     sb.wl("opacity = 1,");
@@ -9117,17 +9417,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             } else if (layers.get(n).getType() == layer.Type.OBJECT) {
                 layer l = layers.get(n);
-                sb.wlo("{");// tile layer
+                sb.wlo("{");// object layer
                 sb.wl("type = \"objectgroup\",");
-                int nid = n + layers.size() + 1;
-                sb.wl("id = " + nid + ",");
-                sb.wl("name = \"" + l.getName() + "\",");
-                sb.wl("visible = true,");
-                sb.wl("opacity = 1,");
+                sb.wl("id = " + (n + 1) + ",");
+                sb.wl("name = \"" + StringBuilderPlus.luaString(l.getName()) + "\",");
+                sb.wl("visible = " + l.isVisible() + ",");
+                if (l.getOpacity() == 0) {
+                    sb.wl("opacity = 1,");
+                } else {
+                    sb.wl("opacity = " + l.getOpacity() + ",");
+                }
                 sb.wl("offsetx = 0,");
                 sb.wl("offsety = 0,");
                 sb.wl("draworder = \"topdown\",");
-                sb.wl("properties ={},");
+                sb.wprop(l.getProperties());
 
                 if (l.getObjects().size() > 0) {
                     sb.wlo("objects = {");
@@ -9135,13 +9438,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         obj oo = l.getObjects().get(ao);
                         sb.wlo("{");
                         sb.wl("id = " + oo.getId() + ",");
-                        sb.wl("name = \"" + oo.getName() + "\",");
-                        sb.wl("type = \"" + oo.getType() + "\",");
-                        if (oo.getShape() == "") {
+                        sb.wl("name = \"" + StringBuilderPlus.luaString(oo.getName()) + "\",");
+                        sb.wl("type = \"" + StringBuilderPlus.luaString(oo.getType()) + "\",");
+                        if (oo.getGid() != 0) {
+                            sb.wl("gid = " + oo.getGid() + ",");
+                        }
+                        if (oo.getShape().equals("")) {
                             sb.wl("shape = \"rectangle\",");
 
                         } else {
-                            sb.wl("shape = \"" + oo.getShape() + "\",");
+                            sb.wl("shape = \"" + StringBuilderPlus.luaString(oo.getShape()) + "\",");
                         }
                         sb.wl("x = " + oo.getX() + ",");
                         sb.wl("y = " + oo.getY() + ",");
@@ -9157,6 +9463,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
                         sb.wl("rotation = " + oo.getRotation() + ",");
                         sb.wl("visible = true,");
+                        if (oo.getShape().equalsIgnoreCase("ellipse")) {
+                            sb.wl("ellipse = true,");
+                        }
                         if (oo.getShape().equalsIgnoreCase("polygon") || oo.getShape().equalsIgnoreCase("polyline")) {
                             sb.wlo(oo.getShape() + " = {");
                             for (int ok = 0; ok < oo.getPoints().size(); ok++) {
@@ -9173,7 +9482,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         sb.wprop(oo.getProperties());
 
-                        if (ao != l.getObjects().size()) {
+                        if (ao != l.getObjects().size() - 1) {
                             sb.wlc("},");
                         } else {
                             sb.wlc("}");
@@ -9185,9 +9494,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     sb.wl("objects = {}");
                 }
 
+            } else {
+                continue;
             }
 
-            if (n != layers.size() - 1) {
+            exportedLayerIndex++;
+            if (exportedLayerIndex != exportedLayers) {
                 sb.wlc("},");
             } else {
                 sb.wlc("}");
@@ -9209,219 +9521,55 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void exporttojson(String filenamenya) {
-        StringBuilderPlus sb = new StringBuilderPlus();
-        sb.wlo("{");
-        sb.wl("\"version\":1.2,");
-        sb.wl("\"type\":\"map\",");
-        sb.wl("\"infinite\":false,");
-        sb.wl("\"tiledversion\":\"1.2.3\",");
-        sb.wl("\"orientation\":\"" + orientation + "\",");
-        sb.wl("\"renderorder\":\"" + renderorder + "\",");
-        sb.wl("\"width\":" + Tw + ",");
-        sb.wl("\"height\":" + Th + ",");
-        sb.wl("\"tilewidth\":" + Tsw + ",");
-        sb.wl("\"tileheight\":" + Tsh + ",");
-        sb.wl("\"nextlayerid\":" + (1 + layers.size()) + ",");
-        sb.wl("\"nextobjectid\":" + curid + ",");
-        sb.wpropj(properties);
-        sb.wl(",");
-
-        sortAllTilesetTileMetadata();
-        sb.wlo("\"tilesets\":[");
-        for (int n = 0; n < tilesets.size(); n++) {
-            tileset t = tilesets.get(n);
-            sb.wlo("{");// tileset inside
-            sb.wl("\"name\":\"" + t.getName() + "\",");
-            sb.wl("\"firstgid\":" + t.getFirstgid() + ",");
-            sb.wl("\"tilewidth\":" + t.getTilewidth() + ",");
-            sb.wl("\"tileheight\":" + t.getTileheight() + ",");
-            sb.wl("\"spacing\":" + t.getSpacing() + ",");
-            sb.wl("\"margin\":" + t.getMargin() + ",");
-            sb.wl("\"columns\":" + t.getColumns() + ",");
-            sb.wl("\"tilecount\":" + t.getTilecount() + ",");
-            if (t.getSource() != null) {
-                sb.wl("\"image\":\"" + t.getSource().replace("/", "\\/") + "\",");
-            }
-            sb.wl("\"imagewidth\":" + t.getOriginalwidth() + ",");
-            sb.wl("\"imageheight\":" + t.getOriginalheight() + ",");
-
-            if (tilesets.get(n).getTiles().size() != 0) {
-                sb.wlo("\"tiles\":[");// tiles
-                for (int m = 0; m < tilesets.get(n).getTiles().size(); m++) {
-                    tile tt = tilesets.get(n).getTiles().get(m);
-                    sb.wlo("{");// tile
-                    sb.wl("\"id\":" + tt.getTileID() + ",");
-
-                    if (tt.getAnimation().size() > 0) {
-                        sb.wlo("\"animation\":[");
-                        for (int am = 0; am < tt.getAnimation().size(); am++) {
-                            sb.wlo("{");
-                            sb.wl("\"tileid\":" + tt.getAnimation().get(am).getTileID() + ",");
-                            sb.wl("\"duration\":" + tt.getAnimation().get(am).getDuration());
-
-                            if (am != tt.getAnimation().size() - 1) {
-                                sb.wlc("},");
-                            } else {
-                                sb.wlc("}");
-                            }
-                        }
-                        sb.wlc("],");// animation
-                    }
-
-                    sb.wpropj(tt.getProperties());
-
-                    if (m != tilesets.get(n).getTiles().size() - 1) {
-                        sb.wlc("},");
-                    } else {
-                        sb.wlc("}");
-                    }
-                }
-                sb.wlc("],");// tiles
-            } else {
-                sb.wl("\"tiles\":[],");
-            }
-            sb.wpropj(tilesets.get(n).getProperties());
-            if (n != tilesets.size() - 1) {
-                sb.wlc("},");// tileset inside
-            } else {
-                sb.wlc("}");// tileset inside
-            }
-        }
-        sb.wlc("],"); // tileset;
-
-        sb.wlo("\"layers\":[");// layers
-
-        // tilelayers
-        for (int n = 0; n < layers.size(); n++) {
-            if (layers.get(n).getType() == layer.Type.TILE) {
-                layer l = layers.get(n);
-                sb.wlo("{");// tile layer
-                sb.wl("\"type\":\"tilelayer\",");
-                sb.wl("\"id\":" + (n + 1) + ",");
-                sb.wl("\"name\":\"" + l.getName() + "\",");
-                sb.wl("\"x\":0,");
-                sb.wl("\"y\":0,");
-                sb.wl("\"width\":" + Tw + ",");
-                sb.wl("\"height\":" + Th + ",");
-                sb.wl("\"visible\":true,");
-
-                if (l.getOpacity() == 0) {
-                    sb.wl("\"opacity\":1,");
-                } else {
-                    sb.wl("\"opacity\":" + l.getOpacity() + ",");
-                }
-
-                sb.wl("\"offsetx\":0,");
-                sb.wl("\"offsety\":0,");
-
-                sb.w("\"data\":[");
-
-                for (int k = 0; k < Th; k++) {
-                    for (int j = 0; j < Tw; j++) {
-                        sb.append(l.getStr().get(k * Tw + j));
-                        if (!(k == Th - 1 && j == Tw - 1))
-                            sb.append(", ");
-                    }
-                }
-                sb.appendLine("],");// data
-                sb.wpropj(layers.get(n).getProperties());
-
-            }
-            if (layers.get(n).getType() == layer.Type.OBJECT) {
-                layer l = layers.get(n);
-                sb.wlo("{");// tile layer
-                sb.wl("\"type\":\"objectgroup\",");
-                int nid = n + layers.size() + 1;
-                sb.wl("\"id\":" + nid + ",");
-                sb.wl("\"name\":\"" + l.getName() + "\",");
-                sb.wl("\"visible\":true,");
-                sb.wl("\"opacity\":1,");
-                sb.wl("\"offsetx\":0,");
-                sb.wl("\"offsety\":0,");
-                sb.wl("\"draworder\":\"topdown\",");
-
-                if (l.getObjects().size() > 0) {
-                    sb.wlo("\"objects\":[");
-                    for (int ao = 0; ao < l.getObjects().size(); ao++) {
-                        obj oo = l.getObjects().get(ao);
-                        sb.wlo("{");
-                        sb.wl("\"id\":" + oo.getId() + ",");
-                        sb.wl("\"name\":\"" + oo.getName() + "\",");
-                        sb.wl("\"type\":\"" + oo.getType() + "\",");
-                        sb.wl("\"x\":" + oo.getX() + ",");
-                        sb.wl("\"y\":" + oo.getY() + ",");
-
-                        if (oo.getShape().equalsIgnoreCase("point")) {
-                            sb.wl("\"point\":true,");
-                            sb.wl("\"width\":0,");
-                            sb.wl("\"height\":0,");
-
-                        } else {
-                            sb.wl("\"width\":" + oo.getW() + ",");
-                            sb.wl("\"height\":" + oo.getH() + ",");
-
-                        }
-                        sb.wl("\"rotation\":" + oo.getRotation() + ",");
-
-                        if (oo.getShape().equalsIgnoreCase("polygon") || oo.getShape().equalsIgnoreCase("polyline")) {
-                            sb.wlo(oo.getShape() + "\":[");
-                            for (int ok = 0; ok < oo.getPoints().size(); ok++) {
-                                float xar = oo.getPoints().get(ok).x;
-                                float yar = oo.getPoints().get(ok).y;
-                                if (ok != oo.getPoints().size() - 1) {
-                                    sb.wl("\"{ \"x\":" + xar + ", y\":" + yar + " },");
-                                } else {
-                                    sb.wl("\"{ \"x\":" + xar + ", y\":" + yar + " }");
-                                }
-                            }
-                            sb.wlc("},");
-                        }
-                        sb.wl("\"visible\":true,");
-                        /*
-                         * if(oo.getProperties().size()>0)
-                         * {
-                         * sb.wl("\"visible\":true,");
-                         * }else
-                         * {
-                         * sb.wl("\"visible\":true");
-                         * }
-                         */
-
-                        sb.wpropj(oo.getProperties());
-
-                        if (ao != l.getObjects().size() - 1) {
-                            sb.wlc("},");
-                        } else {
-                            sb.wlc("}");
-                        }
-
-                    }
-                    sb.wlc("]");// objects
-                } else {
-                    sb.wl("\"objects\":[]");
-                }
-
-            }
-
-            if (n != layers.size() - 1) {
-                sb.wlc("},");// tilelayer
-            } else {
-                sb.wlc("}");// tilelayer
-            }
-        }
-
-        sb.wlc("]");// layers
-        sb.wlc("}");// map
-
+        setjsonmap();
         FileHandle fh = Gdx.files.absolute(curdir + "/" + filenamenya + ".json");
-        fh.writeString(sb.toString(), false);
-
+        savejsonmap(fh);
         backToMap();
-
         String b = fh.readString();
         face.saveasFile(b, "export.json");
         status(z.exportfinished, 5);
+    }
 
+    public String saveRawCsv(int seltile) {
+        java.lang.StringBuilder sb = new java.lang.StringBuilder();
+        for (int i = 0; i <= layers.get(seltile).getStr().size() - 1; i++) {
+            int cek = (i + 1) % Tw;
+            long gid = layers.get(seltile).getStr().get(i);
+            long strippedGid = gid & 0x0FFFFFFF; // remove flip flags
+            long finalId = strippedGid == 0 ? -1 : strippedGid - 1; // 0-indexed or -1 for empty
+            sb.append(finalId);
+            if (i != layers.get(seltile).getStr().size() - 1) {
+                sb.append(",");
+                if (cek == 0) {
+                    sb.append("\n");
+                }
+            }
+        }
+        return sb.toString();
+    }
+
+    private void exportascsv(String filenamenya) {
+        int tileLayerCount = 0;
+        for (int i = 0; i < layers.size(); i++) {
+            if (layers.get(i).getType() == layer.Type.TILE) {
+                tileLayerCount++;
+            }
+        }
+
+        for (int i = 0; i < layers.size(); i++) {
+            if (layers.get(i).getType() == layer.Type.TILE) {
+                String outName = filenamenya;
+                if (tileLayerCount > 1) {
+                    outName += "_" + layers.get(i).getName();
+                }
+                FileHandle fh = Gdx.files.absolute(curdir + "/" + outName + ".csv");
+                fh.writeString(saveRawCsv(i), false);
+                face.saveasFile(fh.readBytes(), outName + ".csv");
+            }
+        }
+        
+        backToMap();
+        status(z.exportfinished, 5);
     }
 
     private Pixmap createRWthumbnail(String filenamenya) {
@@ -10485,10 +10633,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (layers.get(selLayer).getType() != layer.Type.TILE)
             return;
         redolayer.clear();
+
+        // O(1) Lookup optimization for terrain tiles
+        Map<Long, tile> gidToTile = new HashMap<>();
+        for (tileset ts : tilesets) {
+            for (tile t : ts.getTiles()) {
+                if (t.isTerrainForEditor()) {
+                    gidToTile.put((long) t.getTileID() + ts.getFirstgid(), t);
+                }
+            }
+        }
+
+        this.follower = false; // Start a new undo group
+
         for (int i = 0; i < Tw * Th; i++) {
-            boolean follower = true;
-            if (i == 0)
-                follower = false;
             int x = i % Tw;
             int y = i / Tw;
 
@@ -10499,20 +10657,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 int layer = selLayer;
 
                 if (newtset != -1) {
-                    for (tile t : tilesets.get(newtset).getTiles()) {
-                        if (t.getTileID() + tilesets.get(newtset).getFirstgid() == to && t.isTerrainForEditor()) {
-                            int[] tdata = t.getTerrain();
-                            int[] ndat = new int[] { tdata[1], tdata[0], tdata[3], tdata[2] };
+                    tile t = gidToTile.get(to);
+                    if (t != null) {
+                        int[] tdata = t.getTerrain();
+                        int[] ndat = new int[] { tdata[1], tdata[0], tdata[3], tdata[2] };
 
-                            java.util.List<Integer> lint = new ArrayList<Integer>(tilesets.get(newtset)
-                                    .getTilesByTerrain(ndat[0] + "," + ndat[1] + "," + ndat[2] + "," + ndat[3]));
-                            // if it is found.
-                            if (lint.size() > 0) {
-                                tile yo = tilesets.get(newtset).getTiles()
-                                        .get(lint.get((int) (Math.random() * lint.size())));
-                                to = yo.getTileID() + tilesets.get(newtset).getFirstgid();
-                            }
-                            break;
+                        java.util.List<Integer> lint = new ArrayList<Integer>(tilesets.get(newtset)
+                                .getTilesByTerrain(ndat[0] + "," + ndat[1] + "," + ndat[2] + "," + ndat[3]));
+                        // if it is found.
+                        if (lint.size() > 0) {
+                            tile yo = tilesets.get(newtset).getTiles()
+                                    .get(lint.get((int) (Math.random() * lint.size())));
+                            to = yo.getTileID() + tilesets.get(newtset).getFirstgid();
                         }
                     }
                 }
@@ -10533,10 +10689,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             return;
 
         redolayer.clear();
+
+        // O(1) Lookup optimization for terrain tiles
+        Map<Long, tile> gidToTile = new HashMap<>();
+        for (tileset ts : tilesets) {
+            for (tile t : ts.getTiles()) {
+                if (t.isTerrainForEditor()) {
+                    gidToTile.put((long) t.getTileID() + ts.getFirstgid(), t);
+                }
+            }
+        }
+
+        this.follower = false; // Start a new undo group
+
         for (int i = 0; i < Tw * Th; i++) {
-            boolean follower = true;
-            if (i == 0)
-                follower = false;
             int x = i % Tw;
             int y = i / Tw;
 
@@ -10550,20 +10716,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 int layer = selLayer;
 
                 if (newtset != -1) {
-                    for (tile t : tilesets.get(newtset).getTiles()) {
-                        if (t.getTileID() + tilesets.get(newtset).getFirstgid() == to && t.isTerrainForEditor()) {
-                            int[] tdata = t.getTerrain();
-                            int[] ndat = new int[] { tdata[2], tdata[3], tdata[0], tdata[1] };
+                    tile t = gidToTile.get(to);
+                    if (t != null) {
+                        int[] tdata = t.getTerrain();
+                        int[] ndat = new int[] { tdata[2], tdata[3], tdata[0], tdata[1] };
 
-                            java.util.List<Integer> lint = new ArrayList<Integer>(tilesets.get(newtset)
-                                    .getTilesByTerrain(ndat[0] + "," + ndat[1] + "," + ndat[2] + "," + ndat[3]));
-                            // if it is found.
-                            if (lint.size() > 0) {
-                                tile yo = tilesets.get(newtset).getTiles()
-                                        .get(lint.get((int) (Math.random() * lint.size())));
-                                to = yo.getTileID() + tilesets.get(newtset).getFirstgid();
-                            }
-                            break;
+                        java.util.List<Integer> lint = new ArrayList<Integer>(tilesets.get(newtset)
+                                .getTilesByTerrain(ndat[0] + "," + ndat[1] + "," + ndat[2] + "," + ndat[3]));
+                        // if it is found.
+                        if (lint.size() > 0) {
+                            tile yo = tilesets.get(newtset).getTiles()
+                                    .get(lint.get((int) (Math.random() * lint.size())));
+                            to = yo.getTileID() + tilesets.get(newtset).getFirstgid();
                         }
                     }
                 }
@@ -10595,10 +10759,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             return;
 
         redolayer.clear();
+
+        // O(1) Lookup optimization for terrain tiles
+        Map<Long, tile> gidToTile = new HashMap<>();
+        for (tileset ts : tilesets) {
+            for (tile t : ts.getTiles()) {
+                if (t.isTerrainForEditor()) {
+                    gidToTile.put((long) t.getTileID() + ts.getFirstgid(), t);
+                }
+            }
+        }
+
+        this.follower = false; // Start a new undo group
+
         for (int i = 0; i < Tw * Th; i++) {
-            boolean follower = true;
-            if (i == 0)
-                follower = false;
             int x = i % Tw;
             int y = i / Tw;
 
@@ -10612,20 +10786,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 int layer = selLayer;
 
                 if (newtset != -1) {
-                    for (tile t : tilesets.get(newtset).getTiles()) {
-                        if (t.getTileID() + tilesets.get(newtset).getFirstgid() == to && t.isTerrainForEditor()) {
-                            int[] tdata = t.getTerrain();
-                            int[] ndat = new int[] { tdata[3], tdata[2], tdata[1], tdata[0] };
+                    tile t = gidToTile.get(to);
+                    if (t != null) {
+                        int[] tdata = t.getTerrain();
+                        int[] ndat = new int[] { tdata[3], tdata[2], tdata[1], tdata[0] };
 
-                            java.util.List<Integer> lint = new ArrayList<Integer>(tilesets.get(newtset)
-                                    .getTilesByTerrain(ndat[0] + "," + ndat[1] + "," + ndat[2] + "," + ndat[3]));
-                            // if it is found.
-                            if (lint.size() > 0) {
-                                tile yo = tilesets.get(newtset).getTiles()
-                                        .get(lint.get((int) (Math.random() * lint.size())));
-                                to = yo.getTileID() + tilesets.get(newtset).getFirstgid();
-                            }
-                            break;
+                        java.util.List<Integer> lint = new ArrayList<Integer>(tilesets.get(newtset)
+                                .getTilesByTerrain(ndat[0] + "," + ndat[1] + "," + ndat[2] + "," + ndat[3]));
+                        // if it is found.
+                        if (lint.size() > 0) {
+                            tile yo = tilesets.get(newtset).getTiles()
+                                    .get(lint.get((int) (Math.random() * lint.size())));
+                            to = yo.getTileID() + tilesets.get(newtset).getFirstgid();
                         }
                     }
                 }
@@ -11298,6 +11470,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (rwpath.equalsIgnoreCase("/RustedWarfare"))
             rwpath = basepath + "RustedWarfare";
         autosaveInterval = prefs.getInteger("interval", 1);
+        sMapBackups = prefs.getBoolean("mapbackups", true);
+        backupMaxCount = prefs.getInteger("backupmax", 20);
+        backupMinIntervalMin = prefs.getInteger("backupinterval", 3);
+        if (backupMaxCount < 1)
+            backupMaxCount = 1;
+        if (backupMaxCount > 50)
+            backupMaxCount = 50;
+        if (backupMinIntervalMin < 1)
+            backupMinIntervalMin = 1;
         gridOpacity = prefs.getInteger("gridopacity", 5);
         lastpath = prefs.getString("lastpath", basepath + "NotTiled");
         isSampleReloaded = prefs.getBoolean("reloaded", false);
@@ -11347,6 +11528,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         zoomTreshold = prefs.getInteger("zoom", 2);
         defaultObjW = prefs.getInteger("defaultobjw", -1);
         defaultObjH = prefs.getInteger("defaultobjh", -1);
+        aiApiKey = prefs.getString("aiapikey", "");
+        aiApiUrl = prefs.getString("aiapiurl", "https://openrouter.ai/api/v1/chat/completions");
+        aiModel = prefs.getString("aimodel", "deepseek/deepseek-v4-flash");
         loadViewMode();
 
         sbLanguage = new SelectBox(skin);
@@ -11398,6 +11582,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 sdScrollSpeed.setValue(scrollspeed);
                 sdGridOpacity.setValue(gridOpacity);
                 fAutoSaveInterval.setText(Integer.toString(autosaveInterval));
+                cbMapBackups.setChecked(sMapBackups);
+                fBackupMax.setText(Integer.toString(backupMaxCount));
+                fBackupInterval.setText(Integer.toString(backupMinIntervalMin));
                 cbShowGid.setChecked(sShowGID);
                 cbShowCoords.setChecked(sShowCoords);
                 fBgcolor.setText(sBgcolor);
@@ -11418,6 +11605,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 fzoomtresh.setText(Integer.toString(zoomTreshold));
                 fDefaultObjW.setText(defaultObjW > 0 ? Integer.toString(defaultObjW) : "");
                 fDefaultObjH.setText(defaultObjH > 0 ? Integer.toString(defaultObjH) : "");
+                tfAiApiKey.setText(aiApiKey);
+                tfAiApiUrl.setText(aiApiUrl);
+                tfAiModel.setText(aiModel);
 
             }
         });
@@ -11448,9 +11638,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         fFontsize.setTextFieldFilter(tffint);
 
         frwpath = new TextField(rwpath, skin);
+        tfAiApiKey = new TextField(aiApiKey, skin);
+        tfAiApiUrl = new TextField(aiApiUrl, skin);
+        tfAiModel = new TextField(aiModel, skin);
+        tfAiApiKey.setPasswordMode(true);
+        tfAiApiKey.setPasswordCharacter('*');
 
         fAutoSaveInterval = new TextField(Integer.toString(autosaveInterval), skin);
         fAutoSaveInterval.setTextFieldFilter(tffint);
+
+        cbMapBackups = new CheckBox(z.mapbackups, skin);
+        fBackupMax = new TextField(Integer.toString(backupMaxCount), skin);
+        fBackupMax.setTextFieldFilter(tffint);
+        fBackupInterval = new TextField(Integer.toString(backupMinIntervalMin), skin);
+        fBackupInterval.setTextFieldFilter(tffint);
 
         fGridX = new TextField(Integer.toString(sGridX), skin);
         fGridX.setTextFieldFilter(tffint);
@@ -11512,8 +11713,36 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
                 prefs.putInteger("interval", autosaveInterval).flush();
 
+                sMapBackups = cbMapBackups.isChecked();
+                prefs.putBoolean("mapbackups", sMapBackups).flush();
+                try {
+                    backupMaxCount = Integer.parseInt(fBackupMax.getText());
+                } catch (NumberFormatException e) {
+                    backupMaxCount = 20;
+                }
+                if (backupMaxCount < 1)
+                    backupMaxCount = 1;
+                if (backupMaxCount > 50)
+                    backupMaxCount = 50;
+                prefs.putInteger("backupmax", backupMaxCount).flush();
+                try {
+                    backupMinIntervalMin = Integer.parseInt(fBackupInterval.getText());
+                } catch (NumberFormatException e) {
+                    backupMinIntervalMin = 3;
+                }
+                if (backupMinIntervalMin < 1)
+                    backupMinIntervalMin = 1;
+                prefs.putInteger("backupinterval", backupMinIntervalMin).flush();
+
                 rwpath = frwpath.getText();
                 prefs.putString("rwpath", rwpath).flush();
+
+                aiApiKey = tfAiApiKey.getText();
+                prefs.putString("aiapikey", aiApiKey).flush();
+                aiApiUrl = tfAiApiUrl.getText();
+                prefs.putString("aiapiurl", aiApiUrl).flush();
+                aiModel = tfAiModel.getText();
+                prefs.putString("aimodel", aiModel).flush();
 
                 sResizeTiles = cbResize.isChecked();
                 prefs.putBoolean("resize", sResizeTiles).flush();
@@ -11645,6 +11874,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tPreference2.add(cbAutoSave).colspan(2).left().row();
         tPreference2.add(new Label(z.interval, skin)).width(btnx / 2);
         tPreference2.add(fAutoSaveInterval).width(btnx / 2).row();
+        tPreference2.add(cbMapBackups).colspan(2).left().row();
+        tPreference2.add(new Label(z.backupmax, skin)).width(btnx / 2);
+        tPreference2.add(fBackupMax).width(btnx / 2).row();
+        tPreference2.add(new Label(z.backupinterval, skin)).width(btnx / 2);
+        tPreference2.add(fBackupInterval).width(btnx / 2).row();
         tPreference2.add(cbMinimap).colspan(2).left().row();
         tPreference2.add(cbCustomUI).colspan(2).left().row();
         tPreference2.add(cbEnableBlending).colspan(2).left().row();
@@ -11673,6 +11907,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tPreference2.add(fDefaultObjW).width(btnx / 2).padBottom(5).row();
         tPreference2.add(new Label(z.defaultobjectheight, skin)).padBottom(10).width(btnx / 2);
         tPreference2.add(fDefaultObjH).width(btnx / 2).padBottom(10).row();
+        tPreference2.add(new Label(z.aiapikey != null ? z.aiapikey : "AI API Key", skin)).width(btnx / 2);
+        tPreference2.add(tfAiApiKey).width(btnx / 2).padBottom(2).row();
+        tPreference2.add(new Label(z.aiapiurl != null ? z.aiapiurl : "AI API URL", skin)).width(btnx / 2);
+        tPreference2.add(tfAiApiUrl).width(btnx / 2).padBottom(2).row();
+        tPreference2.add(new Label(z.aimodel != null ? z.aimodel : "AI Model", skin)).width(btnx / 2);
+        tPreference2.add(tfAiModel).width(btnx / 2).padBottom(10).row();
 
         tPreference2.add(bSavePref).width(btnx).padBottom(5).height(btny).colspan(2).row();
         tPreference2.add(bBack3).width(btnx).padBottom(5).height(btny).colspan(2);
@@ -11701,6 +11941,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             z.obj_edit = "Edit";
         if (z.obj_info == null)
             z.obj_info = "Info";
+        if (z.saving == null)
+            z.saving = "Saving...";
+        if (z.mapbackups == null)
+            z.mapbackups = "Keep map backups (TMX)";
+        if (z.backupmax == null)
+            z.backupmax = "Max backups";
+        if (z.backupinterval == null)
+            z.backupinterval = "Min minutes between backups";
+        if (z.restorebackup == null)
+            z.restorebackup = "Restore backup";
+        if (z.restorebackupprompt == null)
+            z.restorebackupprompt = "Could not open this map. Restore a recent backup?";
+        if (z.backuprestored == null)
+            z.backuprestored = "Backup restored";
         if (z.multiselect == null)
             z.multiselect = "Multi";
         if (z.removescrollboundary == null)
@@ -11717,6 +11971,40 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             z.swap = "Swap";
         if (z.focused == null)
             z.focused = "Focused";
+        if (z.aigenerate == null)
+            z.aigenerate = "AI Generate Sprite";
+        if (z.aiprompt == null)
+            z.aiprompt = "Describe your sprite";
+        if (z.aiapikey == null)
+            z.aiapikey = "AI API Key";
+        if (z.aiapiurl == null)
+            z.aiapiurl = "AI API URL";
+        if (z.aimodel == null)
+            z.aimodel = "AI Model";
+        if (z.aigenerating == null)
+            z.aigenerating = "Generating with AI...";
+        if (z.ainokey == null)
+            z.ainokey = "Set your AI API key in Preferences first.";
+        if (z.aipaletteempty == null)
+            z.aipaletteempty = "Pixel palette is not ready.";
+        if (z.aipixelonly == null)
+            z.aipixelonly = "AI sprite generation is for Pixel Editor maps only.";
+        if (z.aipixellayer == null)
+            z.aipixellayer = "Select a tile layer to draw on.";
+        if (z.aierror == null)
+            z.aierror = "AI generation failed";
+        if (z.aigeneratebtn == null)
+            z.aigeneratebtn = "Generate";
+        if (z.aigenerated == null)
+            z.aigenerated = "AI sprite generated";
+        if (z.airefinehint == null)
+            z.airefinehint = "Uses active layer only. Run again to refine.";
+        if (z.aicanvaslarge == null)
+            z.aicanvaslarge = "Large canvas — AI works best at 16x16 or 32x32. Results may vary.";
+        if (z.safemodetitle == null)
+            z.safemodetitle = "Safe Mode";
+        if (z.safemodeprompt == null)
+            z.safemodeprompt = "NotTiled did not shut down correctly multiple times.\nWould you like to load the last opened map anyway?";
         shapeName = z.rectangle;
         toolName = z.tile;
         viewModeName = z.stack;
@@ -16549,8 +16837,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void applyJsonObjectFields(obj o, jsonmap.object jo) {
-        if (jo.class_x != null && !jo.class_x.equals(""))
+        if (jo.class_x != null && !jo.class_x.equals("")) {
             o.setType(jo.class_x);
+        } else if (jo.type != null && !jo.type.equals("")) {
+            o.setType(jo.type);
+        }
         if (jo.gid != 0) {
             o.setGid(jo.gid);
             o.setShape("image");
@@ -16573,8 +16864,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void fillJsonObjectFields(jsonmap.object jo, obj o) {
         jo.name = o.getName();
-        if (o.getType() != null && !o.getType().equals(""))
+        if (o.getType() != null && !o.getType().equals("")) {
             jo.class_x = o.getType();
+            jo.type = o.getType();
+        }
         jo.x = o.getX();
         jo.y = o.getY();
         jo.width = (int) o.getW();
@@ -16605,31 +16898,98 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     //////////////////////////////////////////////////////
     // XML PROCESSOR
     //////////////////////////////////////////////////////
+
     public void saveMap(String actualPath) {
+        saveMap(actualPath, false, false);
+    }
 
-        // Craete handle for the actual file
-        FileHandle actualFile = Gdx.files.absolute(actualPath);
+    public void saveMapForBackup(String actualPath) {
+        mapSaveNotifyManual = true;
+        mapSaveNotifyMsgbox = false;
+        saveMap(actualPath, false, true);
+    }
 
-        recents.addrecent(actualPath, actualFile.name(), "legacy");
-        saveRecents();
-        prefs.putString("lof", actualFile.path());
-        prefs.flush();
+    /** Menu Save: rolling backup + confirmation dialog when finished. */
+    public void saveMapFromMenu(String actualPath) {
+        mapSaveNotifyManual = false;
+        mapSaveNotifyMsgbox = true;
+        saveMap(actualPath, false, true);
+    }
+
+    public void saveMapBlocking(String actualPath) {
+        saveMap(actualPath, true, false);
+    }
+
+    private void saveMap(final String actualPath, final boolean blocking, final boolean createBackup) {
+        if (mapSaveExecutor == null) {
+            mapSaveExecutor = Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "NotTiled-save");
+                t.setDaemon(true);
+                return t;
+            });
+        }
+        if (!blocking) {
+            Gdx.app.postRunnable(new Runnable() {
+                @Override
+                public void run() {
+                    status(z.saving, 1);
+                }
+            });
+        }
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                synchronized (saveLock) {
+                    performSave(actualPath, createBackup);
+                }
+            }
+        };
+        if (blocking) {
+            try {
+                mapSaveExecutor.submit(task).get(120, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else {
+            mapSaveExecutor.execute(task);
+        }
+    }
+
+    private void performSave(String actualPath, boolean createBackup) {
+        final FileHandle actualFile = Gdx.files.absolute(actualPath);
+        boolean ok = false;
 
         if (actualFile.extension().equalsIgnoreCase("png")) {
-            exporttopng(actualFile.nameWithoutExtension(), false);
+            Gdx.app.postRunnable(new Runnable() {
+                @Override
+                public void run() {
+                    exporttopng(actualFile.nameWithoutExtension(), false);
+                    onSaveCommitted(actualFile);
+                    notifySaveFinished(true);
+                }
+            });
             return;
         }
 
         if (actualFile.extension().equalsIgnoreCase("json")) {
-            for (property p : properties) {
-                if (p.getName().equalsIgnoreCase("tag") && p.getValue().equalsIgnoreCase("remixed_dungeon")) {
-                    exporttorpd(actualFile.nameWithoutExtension(), false);
-                    return;
+            Gdx.app.postRunnable(new Runnable() {
+                @Override
+                public void run() {
+                    boolean okJson = true;
+                    for (property p : properties) {
+                        if (p.getName().equalsIgnoreCase("tag") && p.getValue().equalsIgnoreCase("remixed_dungeon")) {
+                            exporttorpd(actualFile.nameWithoutExtension(), false);
+                            onSaveCommitted(actualFile);
+                            notifySaveFinished(true);
+                            return;
+                        }
+                    }
+                    setjsonmap();
+                    savejsonmap(actualFile);
+                    onSaveCommitted(actualFile);
+                    notifySaveFinished(okJson);
                 }
-            }
-            // standard json map
-            setjsonmap();
-            savejsonmap(actualFile);
+            });
             return;
         }
 
@@ -16639,27 +16999,179 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 PixelArtPalette.syncEmbeddedPng(tilesets.get(pal));
         }
 
-        // Check and create the temp folder, basepath include traling backspace fyi.
-        FileHandle fh2 = Gdx.files.absolute(basepath + "NotTiled/");
-        if (!fh2.exists())
-            fh2.mkdirs();
-        FileHandle fh3 = Gdx.files.absolute(basepath + "NotTiled/Temp");
-        if (fh3.exists() && !fh3.isDirectory())
-            fh3.delete();
-        if (!fh3.exists())
-            fh3.mkdirs();
+        FileHandle parent = actualFile.parent();
+        if (parent != null && !parent.exists())
+            parent.mkdirs();
+        String tmpPath = actualFile.parent().path() + "/" + actualFile.nameWithoutExtension() + ".nottiled.tmp";
+        FileHandle tmpFile = Gdx.files.absolute(tmpPath);
+        if (tmpFile.exists())
+            tmpFile.delete();
 
-        // Saving the file to the temp folder first
-        String tempPath = basepath + "NotTiled/Temp/" + Integer.toString((int) (Math.random() * 100000)) + ".tmx";
-        if (buildTMX(tempPath)) {
-            FileHandle tempFile = Gdx.files.absolute(tempPath);
-
-            // copy the temp file to the actual file
-            tempFile.copyTo(actualFile);
-
-            // delete the temp file.
-            tempFile.delete();
+        if (buildTMX(tmpPath)) {
+            ensureXmlFactory();
+            if (MapBackupStore.looksLikeTmx(tmpFile, xmlFactoryObject)
+                    && MapBackupStore.commitAtomic(tmpFile, actualFile)) {
+                ok = true;
+            } else {
+                tmpFile.delete();
+            }
+        } else if (tmpFile.exists()) {
+            tmpFile.delete();
         }
+
+        if (ok) {
+            if (createBackup && sMapBackups) {
+                MapBackupStore.maybeBackup(basepath, actualFile.path(), actualFile, backupMaxCount,
+                        backupMinIntervalMin, true, prefs);
+                prefs.flush();
+            }
+            Gdx.app.postRunnable(new Runnable() {
+                @Override
+                public void run() {
+                    onSaveCommitted(actualFile);
+                    notifySaveFinished(true);
+                }
+            });
+        } else {
+            Gdx.app.postRunnable(new Runnable() {
+                @Override
+                public void run() {
+                    notifySaveFinished(false);
+                }
+            });
+        }
+    }
+
+    private void notifySaveFinished(boolean success) {
+        final boolean msgboxAfter = mapSaveNotifyMsgbox;
+        final boolean statusAfter = mapSaveNotifyManual;
+        mapSaveNotifyMsgbox = false;
+        mapSaveNotifyManual = false;
+        if (!success) {
+            status(z.error, 3);
+            return;
+        }
+        if (msgboxAfter) {
+            msgbox(z.yourmaphasbeensaved);
+            cue("save");
+        } else if (statusAfter) {
+            status(z.yourmaphasbeensaved, 3);
+            cue("quicksave");
+        }
+    }
+
+    private void onSaveCommitted(FileHandle actualFile) {
+        recents.addrecent(actualFile.path(), actualFile.name(), "legacy");
+        saveRecents();
+        prefs.putString("lof", actualFile.path());
+        prefs.flush();
+    }
+
+    private java.util.List<FileHandle> backupListHandles = new ArrayList<FileHandle>();
+
+    private boolean offerBackupRecovery(final String filepath) {
+        final java.util.List<FileHandle> backups = MapBackupStore.listBackups(basepath, filepath);
+        if (backups.isEmpty())
+            return false;
+        backupListHandles = backups;
+        Gdx.app.postRunnable(new Runnable() {
+            @Override
+            public void run() {
+                Dialog dlg = new Dialog(z.restorebackupprompt, skin) {
+                    @Override
+                    protected void result(Object object) {
+                        if (Boolean.TRUE.equals(object)) {
+                            openRestoreBackupScreen(filepath);
+                        } else {
+                            newtmxfile(false);
+                        }
+                    }
+                };
+                dlg.getButtonTable().clear();
+                dlg.button(z.yes, true);
+                dlg.button(z.no, false);
+                dlg.show(stage);
+            }
+        });
+        return true;
+    }
+
+    public void openRestoreBackupScreen(final String mapPath) {
+        backupListHandles = MapBackupStore.listBackups(basepath, mapPath);
+        if (backupListHandles.isEmpty()) {
+            msgbox(z.error);
+            return;
+        }
+        String[] labels = new String[backupListHandles.size()];
+        for (int i = 0; i < backupListHandles.size(); i++) {
+            FileHandle fh = backupListHandles.get(i);
+            labels[i] = fh.name() + "  (" + (fh.length() / 1024) + " KB)";
+        }
+        tRestoreBackup = new Table();
+        tRestoreBackup.setFillParent(true);
+        tRestoreBackup.defaults().width(btnx).padBottom(2);
+        lbackupList = new com.badlogic.gdx.scenes.scene2d.ui.List<String>(skin);
+        lbackupList.setItems(labels);
+        ScrollPane sp = new ScrollPane(lbackupList);
+        TextButton bRestore = new TextButton(z.restorebackup, skin);
+        TextButton bBackRestore = new TextButton(z.back, skin);
+        bRestore.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                int idx = lbackupList.getSelectedIndex();
+                if (idx < 0 || idx >= backupListHandles.size())
+                    return;
+                FileHandle dest = Gdx.files.absolute(mapPath);
+                if (MapBackupStore.restoreTo(backupListHandles.get(idx), dest)) {
+                    status(z.backuprestored, 4);
+                    loadtmx(mapPath);
+                    backToMap();
+                } else {
+                    status(z.error, 3);
+                }
+            }
+        });
+        bBackRestore.addListener(listBack);
+        tRestoreBackup.add(sp).height(0.7f * ssy).row();
+        tRestoreBackup.add(bRestore).row();
+        tRestoreBackup.add(bBackRestore);
+        gotoStage(tRestoreBackup);
+    }
+
+    private void ensureXmlFactory() {
+        try {
+            if (xmlFactoryObject == null)
+                xmlFactoryObject = XmlPullParserFactory.newInstance();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void writeTmxLayerAttributes(XmlSerializer srz, layer lay) throws Exception {
+        srz.attribute("", "id", Integer.toString(lay.getId()));
+        srz.attribute("", "name", lay.getName());
+        if (!lay.isVisible())
+            srz.attribute("", "visible", "0");
+        if (lay.isLocked())
+            srz.attribute("", "locked", "1");
+        if (lay.getOpacity() != 0 && lay.getOpacity() != 1.0f)
+            srz.attribute("", "opacity", Float.toString(lay.getOpacity()));
+        if (lay.getOffsetX() != 0)
+            srz.attribute("", "offsetx", Float.toString(lay.getOffsetX()));
+        if (lay.getOffsetY() != 0)
+            srz.attribute("", "offsety", Float.toString(lay.getOffsetY()));
+        if (lay.getParallaxX() != 1.0f)
+            srz.attribute("", "parallaxx", Float.toString(lay.getParallaxX()));
+        if (lay.getParallaxY() != 1.0f)
+            srz.attribute("", "parallaxy", Float.toString(lay.getParallaxY()));
+        if (lay.getTintcolor() != null && !lay.getTintcolor().isEmpty())
+            srz.attribute("", "tintcolor", lay.getTintcolor());
+        if (lay.getStartX() != 0)
+            srz.attribute("", "startx", Integer.toString(lay.getStartX()));
+        if (lay.getStartY() != 0)
+            srz.attribute("", "starty", Integer.toString(lay.getStartY()));
+        if (lay.getType() == layer.Type.OBJECT && lay.getDraworder() != null && !lay.getDraworder().equals("topdown"))
+            srz.attribute("", "draworder", lay.getDraworder());
     }
 
     public boolean buildTMX(String tempPath) {
@@ -16679,23 +17191,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             FileOutputStream fos = new FileOutputStream(tempfile.file());
 
-            XmlPullParserFactory factory = XmlPullParserFactory.newInstance(
-                    System.getProperty(XmlPullParserFactory.PROPERTY_NAME), null);
-            XmlSerializer srz = factory.newSerializer();
+            ensureXmlFactory();
+            XmlSerializer srz = xmlFactoryObject.newSerializer();
             srz.setOutput(fos, "UTF-8");
 
             srz.startDocument(null, Boolean.valueOf(true));
-            srz.setFeature("http://xmlpull.org/v1/doc/features.html#indent-output", true);
 
             srz.startTag(null, "map");
-            srz.attribute("", "version", "1.2")
-                    .attribute("", "tiledversion", tiledversion)
+            srz.attribute("", "version", "1.10")
+                    .attribute("", "tiledversion", tiledversion != null ? tiledversion : "1.10.1")
                     .attribute("", "orientation", orientation)
                     .attribute("", "renderorder", renderorder)
                     .attribute("", "width", Integer.toString(Tw))
                     .attribute("", "height", Integer.toString(Th))
                     .attribute("", "tilewidth", Integer.toString(Tsw))
                     .attribute("", "tileheight", Integer.toString(Tsh))
+                    .attribute("", "nextlayerid", Integer.toString(nextlayerid))
                     .attribute("", "nextobjectid", Integer.toString(curid));
 
             if (properties.size() > 0) {
@@ -16808,11 +17319,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (lay.getType() == layer.Type.TILE) {
 
                     srz.startTag(null, "layer");
-                    srz.attribute("", "name", lay.getName());
-                    if (!lay.isVisible())
-                        srz.attribute("", "visible", "0");
-                    if (lay.getOpacity() != 0)
-                        srz.attribute("", "opacity", Float.toString(lay.getOpacity()));
+                    writeTmxLayerAttributes(srz, lay);
                     srz.attribute("", "width", Integer.toString(Tw));
                     srz.attribute("", "height", Integer.toString(Th));
 
@@ -16846,29 +17353,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                     srz.endTag(null, "data");
                     ///
+                    ///
                     if (lay.getProperties().size() > 0) {
                         srz.startTag(null, "properties");
                         for (int m = 0; m < lay.getProperties().size(); m++) {
-                            srz.startTag(null, "property");
-                            if (lay.getProperties().get(m).getName() != null)
-                                srz.attribute("", "name", lay.getProperties().get(m).getName());
-                            if (lay.getProperties().get(m).getType() != null
-                                    && !lay.getProperties().get(m).getType().equals("")) {
-                                if (!lay.getProperties().get(m).getType().equalsIgnoreCase("string")) {
-                                    srz.attribute("", "type", lay.getProperties().get(m).getType().toLowerCase());
-
-                                }
-                            }
-
-                            String txx = lay.getProperties().get(m).getValue();
-                            if (txx != null) {
-                                if (txx.contains("\n")) {
-                                    srz.text("\n" + txx + "\n");
-                                } else {
-                                    srz.attribute("", "value", txx);
-                                }
-                            }
-                            srz.endTag(null, "property");
+                            writeTmxProperty(srz, lay.getProperties().get(m));
                         }
                         srz.endTag(null, "properties");
                     }
@@ -16878,17 +17367,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 } else if (lay.getType() == layer.Type.IMAGE) {
 
                     srz.startTag(null, "imagelayer");
-                    srz.attribute("", "id", Integer.toString(j));
-                    srz.attribute("", "name", lay.getName());
-                    srz.attribute("", "offsetx", Float.toString(lay.getOffsetX()));
-                    srz.attribute("", "offsety", Float.toString(lay.getOffsetY()));
-                    int lckd = lay.isLocked() ? 1 : 0;
-                    if (lckd == 1)
-                        srz.attribute("", "locked", Integer.toString(lckd));
-                    if (!lay.isVisible())
-                        srz.attribute("", "visible", "0");
-                    if (lay.getOpacity() != 0)
-                        srz.attribute("", "opacity", Float.toString(lay.getOpacity()));
+                    writeTmxLayerAttributes(srz, lay);
 
                     srz.startTag(null, "image");
                     if (lay.getImage() != null)
@@ -16904,9 +17383,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 } else if (lay.getType() == layer.Type.OBJECT) {
 
                     srz.startTag(null, "objectgroup");
-                    srz.attribute("", "name", lay.getName());
-                    if (!lay.isVisible())
-                        srz.attribute("", "visible", "false");
+                    writeTmxLayerAttributes(srz, lay);
 
                     if (lay.getObjects().size() > 0) {
                         for (int l = 0; l < lay.getObjects().size(); l++) {
@@ -16914,8 +17391,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             srz.startTag(null, "object");
                             if (oj.getName() != null && !oj.getName().equalsIgnoreCase(""))
                                 srz.attribute("", "name", oj.getName());
-                            if (oj.getType() != null && !oj.getType().equalsIgnoreCase(""))
+                            if (oj.getType() != null && !oj.getType().equalsIgnoreCase("")) {
                                 srz.attribute("", "type", oj.getType());
+                                srz.attribute("", "class", oj.getType());
+                            }
                             srz.attribute("", "id", Integer.toString(oj.getId()));
                             String xx = "", yy = "", ww = "", hh = "", rorot = "";
                             Float tmpf;
@@ -17067,16 +17546,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void saveTsx(int index) {
         FileHandle file = Gdx.files.absolute(curdir + "/" + tilesets.get(index).getTsxfile());
+        FileHandle tmp = Gdx.files.absolute(file.parent().path() + "/" + file.nameWithoutExtension() + ".nottiled.tmp");
+        if (tmp.exists())
+            tmp.delete();
 
         try {
-            FileOutputStream fos = new FileOutputStream(file.file());
+            FileOutputStream fos = new FileOutputStream(tmp.file());
 
-            XmlPullParserFactory factory = XmlPullParserFactory.newInstance(
-                    System.getProperty(XmlPullParserFactory.PROPERTY_NAME), null);
-            XmlSerializer srz = factory.newSerializer();
+            ensureXmlFactory();
+            XmlSerializer srz = xmlFactoryObject.newSerializer();
             srz.setOutput(fos, "UTF-8");
             srz.startDocument(null, Boolean.valueOf(true));
-            srz.setFeature("http://xmlpull.org/v1/doc/features.html#indent-output", true);
 
             tileset t = tilesets.get(index);
             t.sortTilesById();
@@ -17136,8 +17616,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             srz.endDocument();
             srz.flush();
             fos.close();
+            MapBackupStore.commitAtomic(tmp, file);
 
         } catch (Exception e) {
+            if (tmp.exists())
+                tmp.delete();
             FileHandle fil = Gdx.files.absolute(basepath + "errorlog.txt");
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
@@ -17306,6 +17789,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tiledversion = jsn.tiledversion;
             if (tiledversion == null)
                 tiledversion = "1.2.3";
+            infinite = jsn.infinite;
+            compressionlevel = jsn.compressionlevel;
+            nextlayerid = jsn.nextlayerid != 0 ? jsn.nextlayerid : 1;
+            curid = jsn.nextobjectid != 0 ? jsn.nextobjectid : 1;
             if (jsn.properties != null) {
                 for (int i = 0; i < jsn.properties.length; i++) {
                     jsonmap.property p = jsn.properties[i];
@@ -17360,7 +17847,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             tt.setTileID(jt.id);
                             tt.setTerrain(jt.terrain);
 
-                            // need to complete for terrain, wangset, objects, animations
                             if (jt.properties != null) {
                                 for (int y = 0; y < jt.properties.length; y++) {
                                     jsonmap.property p = jt.properties[y];
@@ -17372,6 +17858,27 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     jsonmap.animate p = jt.animation[y];
                                     frame f = new frame(p.tileid, p.duration);
                                     tt.animation.add(f);
+                                }
+                            }
+                            if (jt.objectgroup != null && jt.objectgroup.objects != null) {
+                                for (int y = 0; y < jt.objectgroup.objects.length; y++) {
+                                    jsonmap.object jo = jt.objectgroup.objects[y];
+                                    obj o = new obj();
+                                    o.setX(jo.x);
+                                    o.setY(jo.y);
+                                    o.setW(jo.width);
+                                    o.setH(jo.height);
+                                    o.setName(jo.name);
+                                    o.setId(jo.id);
+                                    o.setRotation(jo.rotation);
+                                    applyJsonObjectFields(o, jo);
+                                    if (jo.properties != null) {
+                                        for (int z = 0; z < jo.properties.length; z++) {
+                                            jsonmap.property p = jo.properties[z];
+                                            o.getProperties().add(new property(p.name, p.type, p.value));
+                                        }
+                                    }
+                                    tt.getObjects().add(o);
                                 }
                             }
 
@@ -17387,9 +17894,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             for (int i = 0; i < jsn.layers.length; i++) {
                 jsonmap.layer lj = jsn.layers[i];
                 layer l = new layer();
+                l.setId(lj.id != 0 ? lj.id : nextlayerid++);
                 l.setName(lj.name);
                 l.setOpacity(lj.opacity);
                 l.setVisible(lj.visible);
+                if (lj.locked != null) l.setLocked(lj.locked);
+                if (lj.offsetx != null) l.setOffsetX(lj.offsetx);
+                else if (lj.x != 0) l.setOffsetX(lj.x);
+                if (lj.offsety != null) l.setOffsetY(lj.offsety);
+                else if (lj.y != 0) l.setOffsetY(lj.y);
+                if (lj.parallaxx != null) l.setParallaxX(lj.parallaxx);
+                if (lj.parallaxy != null) l.setParallaxY(lj.parallaxy);
+                if (lj.tintcolor != null) l.setTintcolor(lj.tintcolor);
+                if (lj.startx != null) l.setStartX(lj.startx);
+                if (lj.starty != null) l.setStartY(lj.starty);
+                if (lj.draworder != null) l.setDraworder(lj.draworder);
                 switch (lj.type) {
                     case "tilelayer":
                         ////
@@ -17516,13 +18035,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             sortAllTilesetTileMetadata();
             jsn = new jsonmap();
             jsn.orientation = orientation;
-            jsn.renderorder = "right-down";
+            jsn.renderorder = renderorder != null ? renderorder : "right-down";
             jsn.width = Tw;
             jsn.height = Th;
             jsn.tilewidth = Tsw;
             jsn.tileheight = Tsh;
             jsn.type = "map";
-            jsn.tiledversion = "1.9.1";
+            jsn.version = "1.10";
+            jsn.infinite = infinite;
+            jsn.compressionlevel = compressionlevel;
+            jsn.nextlayerid = nextlayerid;
+            jsn.nextobjectid = curid;
+            jsn.tiledversion = tiledversion != null ? tiledversion : "1.10.1";
             if (properties.size() > 0) {
                 List<jsonmap.property> props = new ArrayList<>();
                 for (int i = 0; i < properties.size(); i++) {
@@ -17588,7 +18112,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             if (!tt.getTerrainString().equalsIgnoreCase("-1,-1,-1,-1"))
                                 jt.terrain = tt.getTerrainString();
 
-                            // need to complete for terrain, wangset, objects, animations
                             if (tt.properties.size() > 0) {
                                 List<jsonmap.property> tmprops = new ArrayList<>();
                                 for (int z = 0; z < tt.properties.size(); z++) {
@@ -17613,6 +18136,32 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 }
                                 jt.animation = tmp.toArray(new jsonmap.animate[tmp.size()]);
                             }
+
+                            if (tt.getObjects().size() > 0) {
+                                jt.objectgroup = new jsonmap.objectgrp();
+                                jt.objectgroup.type = "objectgroup";
+                                jt.objectgroup.draworder = "index";
+                                List<jsonmap.object> tmp = new ArrayList<>();
+                                for (int y = 0; y < tt.getObjects().size(); y++) {
+                                    jsonmap.object jo = new jsonmap.object();
+                                    obj o = tt.getObjects().get(y);
+                                    fillJsonObjectFields(jo, o);
+                                    if (o.getProperties().size() > 0) {
+                                        List<jsonmap.property> op = new ArrayList<>();
+                                        for (int z = 0; z < o.getProperties().size(); z++) {
+                                            property p = o.getProperties().get(z);
+                                            jsonmap.property pj = new jsonmap.property();
+                                            pj.name = p.getName();
+                                            pj.type = p.getType();
+                                            pj.value = p.getValue();
+                                            op.add(pj);
+                                        }
+                                        jo.properties = op.toArray(new jsonmap.property[op.size()]);
+                                    }
+                                    tmp.add(jo);
+                                }
+                                jt.objectgroup.objects = tmp.toArray(new jsonmap.object[tmp.size()]);
+                            }
                             tls.add(jt);
                         }
                         j.tiles = tls.toArray(new jsonmap.tile[tls.size()]);
@@ -17628,10 +18177,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 for (int i = 0; i < layers.size(); i++) {
                     jsonmap.layer lj = new jsonmap.layer();
                     layer l = layers.get(i);
+                    lj.id = l.getId();
                     lj.name = l.getName();
                     lj.opacity = l.getOpacity();
                     lj.visible = l.isVisible();
-
+                    lj.locked = l.isLocked();
+                    if (l.getOffsetX() != 0) lj.offsetx = l.getOffsetX();
+                    if (l.getOffsetY() != 0) lj.offsety = l.getOffsetY();
+                    if (l.getParallaxX() != 1.0f) lj.parallaxx = l.getParallaxX();
+                    if (l.getParallaxY() != 1.0f) lj.parallaxy = l.getParallaxY();
+                    if (l.getTintcolor() != null && !l.getTintcolor().isEmpty()) lj.tintcolor = l.getTintcolor();
+                    if (l.getStartX() != 0) lj.startx = l.getStartX();
+                    if (l.getStartY() != 0) lj.starty = l.getStartY();
+                    if (l.getType() == layer.Type.OBJECT && l.getDraworder() != null && !l.getDraworder().equals("topdown")) lj.draworder = l.getDraworder();
                     switch (l.getType()) {
                         case TILE:
                             ////
@@ -17650,7 +18208,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             } else if (encoding.equalsIgnoreCase("base64")) {
                                 lj.data = decoder.savebase64(i, layers);
                             } else if (encoding.equalsIgnoreCase("xml")) {
-                                // not supported
+                                lj.encoding = "csv";
+                                lj.data = savecsv(i);
                             }
 
                             break;
@@ -18312,6 +18871,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             int curgroupid = -1;
             int curobjid = -1;
             curid = 1;
+            nextlayerid = 1;
             layer l = new layer();
             l.setType(layer.Type.TILE);
             l.setVisible(true);
@@ -18402,6 +18962,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         } catch (Exception e) {
             errors += "\nError: " + f.name();
             ErrorBung(e, "eRRROBUNG.txt");
+            newtmxfile(false);
         }
     }
 
@@ -18547,7 +19108,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         resetcam(false);
 
                         loadingfile = false;
-                        saveMap(curdir + "/" + curfile);
+                        saveMapForBackup(curdir + "/" + curfile);
 
                         uicam.zoom = 0.5f;
                         uicam.update();
@@ -18558,6 +19119,56 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 });
             }
         }).start();
+    }
+
+    private void parseTmxLayerAttributes(layer tempLayer, XmlPullParser myParser) {
+        if (myParser.getAttributeValue(null, "id") != null) {
+            tempLayer.setId(Integer.parseInt(myParser.getAttributeValue(null, "id")));
+            nextlayerid = Math.max(nextlayerid, tempLayer.getId() + 1);
+        } else {
+            tempLayer.setId(nextlayerid++);
+        }
+        if (myParser.getAttributeValue(null, "name") != null) {
+            tempLayer.setName(myParser.getAttributeValue(null, "name"));
+        }
+        if (myParser.getAttributeValue(null, "visible") != null) {
+            String vis = myParser.getAttributeValue(null, "visible");
+            tempLayer.setVisible(!vis.equals("0") && !vis.equals("false"));
+        } else {
+            tempLayer.setVisible(true);
+        }
+        if (myParser.getAttributeValue(null, "opacity") != null) {
+            tempLayer.setOpacity(Float.parseFloat(myParser.getAttributeValue(null, "opacity")));
+        }
+        if (myParser.getAttributeValue(null, "locked") != null) {
+            tempLayer.setLocked(Boolean.parseBoolean(myParser.getAttributeValue(null, "locked")));
+        } else {
+            tempLayer.setLocked(false);
+        }
+        if (myParser.getAttributeValue(null, "offsetx") != null) {
+            tempLayer.setOffsetX(Float.parseFloat(myParser.getAttributeValue(null, "offsetx")));
+        }
+        if (myParser.getAttributeValue(null, "offsety") != null) {
+            tempLayer.setOffsetY(Float.parseFloat(myParser.getAttributeValue(null, "offsety")));
+        }
+        if (myParser.getAttributeValue(null, "parallaxx") != null) {
+            tempLayer.setParallaxX(Float.parseFloat(myParser.getAttributeValue(null, "parallaxx")));
+        }
+        if (myParser.getAttributeValue(null, "parallaxy") != null) {
+            tempLayer.setParallaxY(Float.parseFloat(myParser.getAttributeValue(null, "parallaxy")));
+        }
+        if (myParser.getAttributeValue(null, "tintcolor") != null) {
+            tempLayer.setTintcolor(myParser.getAttributeValue(null, "tintcolor"));
+        }
+        if (myParser.getAttributeValue(null, "startx") != null) {
+            tempLayer.setStartX(Integer.parseInt(myParser.getAttributeValue(null, "startx")));
+        }
+        if (myParser.getAttributeValue(null, "starty") != null) {
+            tempLayer.setStartY(Integer.parseInt(myParser.getAttributeValue(null, "starty")));
+        }
+        if (myParser.getAttributeValue(null, "draworder") != null) {
+            tempLayer.setDraworder(myParser.getAttributeValue(null, "draworder"));
+        }
     }
 
     public void loadmap(String filepath) {
@@ -18619,6 +19230,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             } else {
                                 curid = 1;
                             }
+                            if (myParser.getAttributeValue(null, "nextlayerid") != null) {
+                                nextlayerid = Integer.parseInt(myParser.getAttributeValue(null, "nextlayerid"));
+                            } else {
+                                nextlayerid = 1;
+                            }
                             Tw = Integer.parseInt(myParser.getAttributeValue(null, "width"));
                             Th = Integer.parseInt(myParser.getAttributeValue(null, "height"));
                             Tsw = Integer.parseInt(myParser.getAttributeValue(null, "tilewidth"));
@@ -18629,22 +19245,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 renderorder = "right-down";
                             }
                             orientation = myParser.getAttributeValue(null, "orientation");
-
+                            if (myParser.getAttributeValue(null, "infinite") != null) {
+                                infinite = myParser.getAttributeValue(null, "infinite").equals("1");
+                            } else {
+                                infinite = false;
+                            }
+                            if (myParser.getAttributeValue(null, "compressionlevel") != null) {
+                                compressionlevel = Integer.parseInt(myParser.getAttributeValue(null, "compressionlevel"));
+                            } else {
+                                compressionlevel = -1;
+                            }
                         }
                         if (name.equals("layer")) {
                             xtree.add("layer");
                             tempLayer = new layer();
                             tempLayer.setType(layer.Type.TILE);
-
-                            if (myParser.getAttributeValue(null, "visible") != null) {
-                                tempLayer.setVisible(Boolean.parseBoolean(myParser.getAttributeValue(null, "visible")));
-                            } else {
-                                tempLayer.setVisible(true);
-                            }
-                            if (myParser.getAttributeValue(null, "opacity") != null) {
-                                tempLayer.setOpacity(Float.parseFloat(myParser.getAttributeValue(null, "opacity")));
-                            }
-                            tempLayer.setName(myParser.getAttributeValue(null, "name"));
+                            parseTmxLayerAttributes(tempLayer, myParser);
 
                         }
                         if (name.equals("terrain")) {
@@ -18916,29 +19532,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             tempLayer = new layer();
                             tempLayer.setType(layer.Type.IMAGE);
 
-                            if (myParser.getAttributeValue(null, "visible") != null) {
-                                tempLayer.setVisible(Boolean.parseBoolean(myParser.getAttributeValue(null, "visible")));
-                            } else {
-                                tempLayer.setVisible(true);
-                            }
-
-                            if (myParser.getAttributeValue(null, "locked") != null) {
-                                tempLayer.setLocked(Boolean.parseBoolean(myParser.getAttributeValue(null, "locked")));
-                            } else {
-                                tempLayer.setLocked(false);
-                            }
-
-                            if (myParser.getAttributeValue(null, "opacity") != null) {
-                                tempLayer.setOpacity(Float.parseFloat(myParser.getAttributeValue(null, "opacity")));
-                            }
-                            if (myParser.getAttributeValue(null, "offsetx") != null) {
-                                tempLayer.setOffsetX(Float.parseFloat(myParser.getAttributeValue(null, "offsetx")));
-                            }
-                            if (myParser.getAttributeValue(null, "offsety") != null) {
-                                tempLayer.setOffsetY(Float.parseFloat(myParser.getAttributeValue(null, "offsety")));
-                            }
-
-                            tempLayer.setName(myParser.getAttributeValue(null, "name"));
+                            parseTmxLayerAttributes(tempLayer, myParser);
                             layers.add(tempLayer);
 
                         }
@@ -18953,16 +19547,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 tempLayer = new layer();
                                 tempLayer.setType(layer.Type.OBJECT);
 
-                                if (myParser.getAttributeValue(null, "visible") != null) {
-                                    tempLayer.setVisible(
-                                            Boolean.parseBoolean(myParser.getAttributeValue(null, "visible")));
-                                } else {
-                                    tempLayer.setVisible(true);
-                                }
-                                if (myParser.getAttributeValue(null, "opacity") != null) {
-                                    tempLayer.setOpacity(Float.parseFloat(myParser.getAttributeValue(null, "opacity")));
-                                }
-                                tempLayer.setName(myParser.getAttributeValue(null, "name"));
+                                parseTmxLayerAttributes(tempLayer, myParser);
                                 layers.add(tempLayer);
                             }
 
@@ -19026,7 +19611,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     String pName = "";
                                     String pType = "";
                                     pName = myParser.getAttributeValue(null, "name");
-                                    pType = myParser.getAttributeValue(null, "type");
+                                    pType = myParser.getAttributeValue(null, "class");
+                                    if (pType == null) {
+                                        pType = myParser.getAttributeValue(null, "type");
+                                    }
                                     tempobj.setName(pName);
                                     tempobj.setType(pType);
                                     tempobj.setX(Float.parseFloat(myParser.getAttributeValue(null, "x")));
@@ -19284,9 +19872,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         } catch (Exception e) {
             restoreViewAfterLoad = false;
-            newtmxfile(false);
-            status("Error opening file.", 3);
             ErrorBung(e, "/maknyus.txt");
+            if (!offerBackupRecovery(filepath))
+                newtmxfile(false);
+            status("Error opening file.", 3);
+            return;
         }
         CacheAllTset();
         resetSwatches();
@@ -19860,6 +20450,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             curtset = pal;
             recenterpick();
         }
+        refreshAiSpriteButton();
     }
 
     private void loadPaletteUsedCount() {
@@ -22447,7 +23038,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void updateTileData(int lay, int num, long str, int tsetID) {
         int newtile = -1;
 
-        if (str != 0) {
+        if (str != 0 && tsetID >= 0 && tsetID < tilesets.size()) {
             tileset ts = tilesets.get(tsetID);
             if (ts.getTiles().size() > 0) {
                 for (int j = 0; j < ts.getTiles().size(); j++) {
@@ -23553,7 +24144,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void pushUpdate() {
         if (isCreateRoom || isJoinRoom) {
-            saveMap(curdir + "/" + curfile);
+            saveMapBlocking(curdir + "/" + curfile);
             FileHandle ff = Gdx.files.absolute(curdir + "/" + curfile);
             String dat = ff.readString();
 
@@ -23947,7 +24538,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             if (cmd.room.equalsIgnoreCase(activeRoom) && !cmd.data.equalsIgnoreCase(myID)) {
                                 logNet("[CI] " + cmd.data + " entered the room.");                                 if (isCreateRoom) {
                                     // send the map
-                                    saveMap(curdir + "/" + curfile);
+                                    saveMapBlocking(curdir + "/" + curfile);
                                     // read map as text
                                     FileHandle ff = Gdx.files.absolute(curdir + "/" + curfile);
                                     
@@ -24759,7 +25350,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (!l.isVisible() && l.getType() == layer.Type.OBJECT)
                             l.setVisible(true);
                     }
-                    saveMap(curdir + "/" + curfile);
+                    saveMapBlocking(curdir + "/" + curfile);
                     playgame(curdir, curfile);
                     return true;
                 } else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled rpg")) {
@@ -24768,11 +25359,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             l.setVisible(true);
                     }
 
-                    saveMap(curdir + "/" + curfile);
+                    saveMapBlocking(curdir + "/" + curfile);
                     playgame(curdir, curfile);
                     return true;
                 } else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
-                    saveMap(curdir + "/" + curfile);
+                    saveMapBlocking(curdir + "/" + curfile);
                     playmusic(playback.PLAY, "");
                     return true;
                 } else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("Pixel Editor")) {
@@ -25551,9 +26142,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 try {
 
-                    Gdx.app.postRunnable(() -> {
-                        saveMap(curdir + "/" + curfile);
-                    });
+                    saveMapForBackup(curdir + "/" + curfile);
                     /*
                      * autosavePool.execute( new Runnable( ){
                      * 
