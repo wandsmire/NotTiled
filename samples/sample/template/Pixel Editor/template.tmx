@@ -2,9 +2,13 @@
 <map version="1.2" orientation="orthogonal" renderorder="right-down" width="16" height="16" tilewidth="1" tileheight="1" nextobjectid="1">
   <properties>
     <property name="type" value="Pixel Editor" />
+    <property name="palette_count" value="8" />
   </properties>
-  <tileset firstgid="1" name="Palette" columns="8" tilecount="32" tileheight="1" tilewidth="1">
-    <image source="palette.png" width="8" height="4" />
+  <tileset firstgid="1" name="Swatch" columns="17" tilecount="289" tileheight="1" tilewidth="1">
+    <image source="swatch.png" width="17" height="17" />
+  </tileset>
+  <tileset firstgid="290" name="Palette" columns="8" tilecount="8" tileheight="1" tilewidth="1">
+    <image source="basic_swatch.png" width="8" height="1" />
   </tileset>
   <layer name="Pixel art" width="16" height="16">
     <data encoding="csv">

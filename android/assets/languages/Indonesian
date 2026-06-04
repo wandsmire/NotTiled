@@ -402,4 +402,6 @@ cut: "Potong"
 removescrollboundary: "Hapus batas geser"
 defaultobjectwidth: "Lebar Objek Default"
 defaultobjectheight: "Tinggi Objek Default"
+safemodetitle: "Mode Aman"
+safemodeprompt: "NotTiled mati secara tidak wajar beberapa kali.\nApakah Anda ingin tetap membuka map terakhir?"
 }

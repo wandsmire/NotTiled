@@ -1,0 +1,30 @@
+{
+  "id": "generic",
+  "name": "Generic Tile Map",
+  "mapTag": "",
+  "brief": "Generic orthogonal tile map.\n\nUse terrain.generator to pick layout style.\nUse primaryTile and secondaryTile refs from the palette for the two terrain GIDs.\nSet players to 0 unless the map has a units layer with tagged base tiles.\nLeave placements empty unless the user specifies coordinates.",
+  "layers": [],
+  "tileRoles": [
+    {
+      "ref": "primary",
+      "layer": "ground",
+      "property": "terrain",
+      "value": "primary",
+      "description": "Primary terrain tile"
+    },
+    {
+      "ref": "secondary",
+      "layer": "ground",
+      "property": "terrain",
+      "value": "secondary",
+      "description": "Secondary terrain tile"
+    }
+  ],
+  "placementRules": {
+    "maxPlayers": 0,
+    "baseSpacing": 20,
+    "baseClearRadius": 3,
+    "resourcePoolSearchRadius": 5
+  },
+  "terrainGenerators": ["islands", "dungeon", "maze", "cavern", "flat"]
+}

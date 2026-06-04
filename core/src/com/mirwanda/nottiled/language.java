@@ -105,6 +105,7 @@ public class language
 	String duration;
 	String frame;
 	String replace;
+	String swap;
 	String edit;
 	String default_;
 	String source;
@@ -215,6 +216,13 @@ public class language
 	String failedtoconnect;
 	String disconnect;
 	String interval;
+	String saving;
+	String mapbackups;
+	String backupmax;
+	String backupinterval;
+	String restorebackup;
+	String restorebackupprompt;
+	String backuprestored;
 	String gridopacity;
 	String additionalchars;
 	String rwpath;
@@ -416,4 +424,21 @@ public class language
 	String advancedoptions;
 	String hideadvanced;
 	String createfile;
+	String aigenerate;
+	String aiprompt;
+	String aiapikey;
+	String aiapiurl;
+	String aimodel;
+	String aigenerating;
+	String ainokey;
+	String aipaletteempty;
+	String aierror;
+	String aigeneratebtn;
+	String aigenerated;
+	String airefinehint;
+	String aipixelonly;
+	String aipixellayer;
+	String aicanvaslarge;
+	String safemodetitle;
+	String safemodeprompt;
 }

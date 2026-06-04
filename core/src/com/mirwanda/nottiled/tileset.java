@@ -138,6 +138,39 @@ public class tileset
 		return tiles;
 	}
 
+	/** Keep tile metadata in ascending local tile ID order (Tiled 1.7+ palette order). */
+	public void sortTilesById()
+	{
+		if (tiles.size() < 2)
+			return;
+		Collections.sort(tiles, new Comparator<tile>() {
+			@Override
+			public int compare(tile a, tile b) {
+				return Integer.compare(a.getTileID(), b.getTileID());
+			}
+		});
+		clearTerrainCache();
+	}
+
+	/** Insert or return index of tile metadata entry sorted by tile ID. */
+	public int addTileMetadata(tile t)
+	{
+		int id = t.getTileID();
+		for (int i = 0; i < tiles.size(); i++) {
+			int existing = tiles.get(i).getTileID();
+			if (existing == id)
+				return i;
+			if (existing > id) {
+				tiles.add(i, t);
+				clearTerrainCache();
+				return i;
+			}
+		}
+		tiles.add(t);
+		clearTerrainCache();
+		return tiles.size() - 1;
+	}
+
 	public void setOriginalheight(int originalheight)
 	{
 		this.originalheight = originalheight;

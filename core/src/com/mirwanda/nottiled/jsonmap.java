@@ -9,7 +9,7 @@ public class jsonmap {
     String tiledversion;
     String orientation;
     String renderorder;
-    float version;
+    String version;
     boolean infinite;
     int width;
     int height;
@@ -29,6 +29,14 @@ public class jsonmap {
         float opacity;
         float x;
         float y;
+        Float offsetx;
+        Float offsety;
+        Float parallaxx;
+        Float parallaxy;
+        String tintcolor;
+        Integer startx;
+        Integer starty;
+        Boolean locked;
         boolean visible;
         property[] properties;
         String data;
@@ -98,14 +106,17 @@ public class jsonmap {
 
     public static class object{
         String name;
+        String type;
         String class_x;
         float x;
         float y;
         int width;
         int height;
         int id;
+        int gid;
         int rotation;
         boolean visible;
+        boolean ellipse;
         poly[] polygon;
         poly[] polyline;
         property[] properties;

@@ -22,6 +22,16 @@ public class layer
 	public List<Color> color = new ArrayList<Color>();
 	public List<property> properties = new ArrayList<property>();
 	private String name="";
+	private int id = 0;
+
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
 	private boolean visible;
 	private float opacity;
 	private boolean locked = false;
@@ -30,6 +40,13 @@ public class layer
 	private String image;
 	private int imagewidth;
 	private int imageheight;
+
+	private float parallaxX = 1.0f;
+	private float parallaxY = 1.0f;
+	private String tintcolor = null;
+	private String draworder = "topdown";
+	private int startX = 0;
+	private int startY = 0;
 
 	public void clearLayer(){
 		for (int i=0;i<gid.size();i++){
@@ -119,8 +136,54 @@ public class layer
 		this.imageheight = imageheight;
 	}
 
+	public float getParallaxX() {
+		return parallaxX;
+	}
 
+	public void setParallaxX(float parallaxX) {
+		this.parallaxX = parallaxX;
+	}
 
+	public float getParallaxY() {
+		return parallaxY;
+	}
+
+	public void setParallaxY(float parallaxY) {
+		this.parallaxY = parallaxY;
+	}
+
+	public String getTintcolor() {
+		return tintcolor;
+	}
+
+	public void setTintcolor(String tintcolor) {
+		this.tintcolor = tintcolor;
+	}
+
+	public String getDraworder() {
+		return draworder;
+	}
+
+	public void setDraworder(String draworder) {
+		this.draworder = draworder;
+	}
+
+	public int getStartX() {
+		return startX;
+	}
+
+	public void setStartX(int startX) {
+		this.startX = startX;
+	}
+
+	public int getStartY() {
+		return startY;
+	}
+
+	public void setStartY(int startY) {
+		this.startY = startY;
+	}
+	
 	public Type getType() {
 		return type;
 	}

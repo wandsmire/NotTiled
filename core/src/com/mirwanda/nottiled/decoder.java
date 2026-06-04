@@ -1,124 +1,72 @@
 package com.mirwanda.nottiled;
 
-import java.io.*;
-import java.nio.*;
-import java.util.*;
-import java.util.zip.*;
-
 import android.util.Base64;
 
-public class decoder
-{
-	
-	public static void copyFile(File source, File dest) throws IOException {
-		InputStream is = null;
-		OutputStream os = null;
-		try {
-			is = new FileInputStream(source);
-			os = new FileOutputStream(dest);
-			byte[] buffer = new byte[1024];
-			int length;
-			while ((length = is.read(buffer)) > 0) {
-				os.write(buffer, 0, length);
-			}
-		} finally {
-			is.close();
-			os.close();
-		}
-	}
-	public String encode(String text)
-	{
-		try
-		{
-			byte[] data = text.getBytes("UTF-8");
-			String base64 = Base64.encodeToString(data, Base64.NO_WRAP);
-			return base64;
-		}
-		catch (Exception e)
-		{
-			return null;
-		}
+import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.zip.Deflater;
+import java.util.zip.GZIPOutputStream;
+import java.util.zip.Inflater;
 
+public class decoder {
+
+	public static void writeLayerGidsLittleEndian(List<Long> gids, byte[] out, int offset) {
+		ByteBuffer buf = ByteBuffer.wrap(out, offset, gids.size() * 4);
+		buf.order(ByteOrder.LITTLE_ENDIAN);
+		for (int i = 0; i < gids.size(); i++)
+			buf.putInt((int) (gids.get(i) & 0xffffffffL));
 	}
-// Receiving side
-	public java.util.List<Long> decodeZlib(String base64,int size)
-	{
-		try
-		{
+
+	public java.util.List<Long> decodeZlib(String base64, int size) {
+		try {
 			byte[] data = Base64.decode(base64, Base64.NO_WRAP);
 
 			Inflater decompresser = new Inflater();
 			decompresser.setInput(data);
 			byte[] result = new byte[size];
-			int resultLength = decompresser.inflate(result);
+			decompresser.inflate(result);
 			decompresser.end();
 			java.util.List<Long> lint = new ArrayList<Long>();
 
-			for (int i = 0; i + 3 < result.length; i += 4)
-			{ 
-				//Integer inet = Byte.toUnsignedInt();
-				byte[] wrap= {result[i],result[i + 1],result[i + 2],result[i + 3]};
-				ByteBuffer wrapped = ByteBuffer.wrap(wrap); 
+			for (int i = 0; i + 3 < result.length; i += 4) {
+				byte[] wrap = { result[i], result[i + 1], result[i + 2], result[i + 3] };
+				ByteBuffer wrapped = ByteBuffer.wrap(wrap);
 				wrapped.order(ByteOrder.LITTLE_ENDIAN);
-				// big-endian by default
 				long num = getUnsignedInt(wrapped.getInt());
 				lint.add(num);
-			} 
+			}
 			return lint;
-		}
-		catch (Exception e)
-		{
+		} catch (Exception e) {
 			return null;
 		}
 	}
-	public String savebase64zlib(int index,java.util.List<layer> layers)
-	{
-		try
-		{
+
+	public String savebase64zlib(int index, java.util.List<layer> layers) {
+		try {
 			layer l = layers.get(index);
-			byte[] b = new byte[l.getStr().size()*4];
-			//byte[] b = new byte[l.getStr().size()];
-			for (int i = 0; i < l.getStr().size(); i++)
-			{ 
-			 	String s = "00000000"+Long.toHexString(l.getStr().get(i));
-				s=s.substring(s.length()-8);
+			int n = l.getStr().size();
+			byte[] b = new byte[n * 4];
+			writeLayerGidsLittleEndian(l.getStr(), b, 0);
+			byte[] output = new byte[n * 4];
 
-				int ig[]= new int[4];
-				ig[0]=(Integer.decode("0x"+s.substring(0,2)));
-				ig[1]=(Integer.decode("0x"+s.substring(2,4)));
-				ig[2]=(Integer.decode("0x"+s.substring(4,6)));
-				ig[3]=(Integer.decode("0x"+s.substring(6,8)));
-
-				b[i*4+0]=(byte) ig[3];
-				b[i*4+1]=(byte) ig[2];
-				b[i*4+2]=(byte) ig[1];
-				b[i*4+3]=(byte) ig[0];
-			} 
-			//byte[] output= new byte[l.getStr().size()];
-			byte[] output= new byte[l.getStr().size()*4];
-			
 			Deflater compresser = new Deflater();
 			compresser.setInput(b);
 			compresser.finish();
 			int compressedDataLength = compresser.deflate(output);
 			compresser.end();
 			byte[] outputcut = new byte[compressedDataLength];
-			for (int x=0;x<compressedDataLength;x++)
-			{
-				outputcut[x]=output[x];
-			}
-			String nyoy = Base64.encodeToString(outputcut,Base64.NO_WRAP);
-			return nyoy;
-		}
-		catch (Exception e)
-		{
+			System.arraycopy(output, 0, outputcut, 0, compressedDataLength);
+			return Base64.encodeToString(outputcut, Base64.NO_WRAP);
+		} catch (Exception e) {
 			return "";
 		}
 	}
-	public java.util.List<Long> decodeGzip(String base64)
-	{
-		try
-		{
+
+	public java.util.List<Long> decodeGzip(String base64) {
+		try {
 			byte[] data = Base64.decode(base64, Base64.NO_WRAP);
 
 			java.io.ByteArrayInputStream bytein = new java.io.ByteArrayInputStream(data);
@@ -137,123 +85,71 @@ public class decoder
 
 			java.util.List<Long> lint = new ArrayList<Long>();
 
-			for (int i = 0; i + 3 < result.length; i += 4)
-			{ 
-				//Integer inet = Byte.toUnsignedInt();
-				byte[] wrap= {result[i],result[i + 1],result[i + 2],result[i + 3]};
-				ByteBuffer wrapped = ByteBuffer.wrap(wrap); 
+			for (int i = 0; i + 3 < result.length; i += 4) {
+				byte[] wrap = { result[i], result[i + 1], result[i + 2], result[i + 3] };
+				ByteBuffer wrapped = ByteBuffer.wrap(wrap);
 				wrapped.order(ByteOrder.LITTLE_ENDIAN);
-				// big-endian by default
 				long num = getUnsignedInt(wrapped.getInt());
-				
+
 				lint.add(num);
-			} 
+			}
 			return lint;
-		}
-		catch (Exception e)
-		{
+		} catch (Exception e) {
 			return null;
 		}
 	}
-	public String savebase64gzip(int index,java.util.List<layer> layers)
-	{
-		try
-		{
+
+	public String savebase64gzip(int index, java.util.List<layer> layers) {
+		try {
 			layer l = layers.get(index);
-			byte[] b = new byte[l.getStr().size()*4];
-			for (int i = 0; i < l.getStr().size(); i++)
-			{ 
-			 	String s = "00000000"+Long.toHexString(l.getStr().get(i));
-				s=s.substring(s.length()-8);
+			int n = l.getStr().size();
+			byte[] b = new byte[n * 4];
+			writeLayerGidsLittleEndian(l.getStr(), b, 0);
 
-				int ig[]= new int[4];
-				ig[0]=(Integer.decode("0x"+s.substring(0,2)));
-				ig[1]=(Integer.decode("0x"+s.substring(2,4)));
-				ig[2]=(Integer.decode("0x"+s.substring(4,6)));
-				ig[3]=(Integer.decode("0x"+s.substring(6,8)));
-
-				b[i*4+0]=(byte) ig[3];
-				b[i*4+1]=(byte) ig[2];
-				b[i*4+2]=(byte) ig[1];
-				b[i*4+3]=(byte) ig[0];
-			} 
-
-			ByteArrayOutputStream bos = new ByteArrayOutputStream(l.getStr().size()*4);
+			ByteArrayOutputStream bos = new ByteArrayOutputStream(n * 4);
 			GZIPOutputStream gzip = new GZIPOutputStream(bos);
 			gzip.write(b);
 			gzip.close();
 			byte[] compressed = bos.toByteArray();
 			bos.close();
 
-			String nyoy = Base64.encodeToString(compressed,Base64.NO_WRAP);
-			return nyoy;
-		}
-		catch (Exception e)
-		{
+			return Base64.encodeToString(compressed, Base64.NO_WRAP);
+		} catch (Exception e) {
 			return "";
 		}
 	}
 
-
-
-
-	public java.util.List<Long> decode(String base64)
-	{
-		try
-		{
+	public java.util.List<Long> decode(String base64) {
+		try {
 			byte[] data = Base64.decode(base64, Base64.NO_WRAP);
 
 			java.util.List<Long> lint = new ArrayList<Long>();
 
-			for (int i = 0; i + 3 < data.length; i += 4)
-			{ 
-				//Integer inet = Byte.toUnsignedInt();
-				byte[] wrap= {data[i],data[i + 1],data[i + 2],data[i + 3]};
-				ByteBuffer wrapped = ByteBuffer.wrap(wrap); 
+			for (int i = 0; i + 3 < data.length; i += 4) {
+				byte[] wrap = { data[i], data[i + 1], data[i + 2], data[i + 3] };
+				ByteBuffer wrapped = ByteBuffer.wrap(wrap);
 				wrapped.order(ByteOrder.LITTLE_ENDIAN);
-				// big-endian by default
 				long num = getUnsignedInt(wrapped.getInt());
 				lint.add(num);
-			} 
+			}
 			return lint;
-		}
-		catch (Exception e)
-		{
+		} catch (Exception e) {
 			return null;
 		}
 	}
-	
+
 	public static long getUnsignedInt(int x) {
 		return x & 0x00000000ffffffffL;
 	}
 
-	public String savebase64(int index,java.util.List<layer> layers)
-	{
-		try
-		{
+	public String savebase64(int index, java.util.List<layer> layers) {
+		try {
 			layer l = layers.get(index);
-			byte[] b = new byte[l.getStr().size()*4];
-			for (int i = 0; i < l.getStr().size(); i++)
-			{ 
-			 	String s = "00000000"+Long.toHexString(l.getStr().get(i));
-				s=s.substring(s.length()-8);
-
-				int ig[]= new int[4];
-				ig[0]=(Integer.decode("0x"+s.substring(0,2)));
-				ig[1]=(Integer.decode("0x"+s.substring(2,4)));
-				ig[2]=(Integer.decode("0x"+s.substring(4,6)));
-				ig[3]=(Integer.decode("0x"+s.substring(6,8)));
-
-				b[i*4+0]=(byte) ig[3];
-				b[i*4+1]=(byte) ig[2];
-				b[i*4+2]=(byte) ig[1];
-				b[i*4+3]=(byte) ig[0];
-			} 
-			String nyoy = Base64.encodeToString(b,Base64.NO_WRAP);
-			return nyoy;
-		}
-		catch (Exception e)
-		{
+			int n = l.getStr().size();
+			byte[] b = new byte[n * 4];
+			writeLayerGidsLittleEndian(l.getStr(), b, 0);
+			return Base64.encodeToString(b, Base64.NO_WRAP);
+		} catch (Exception e) {
 			return "";
 		}
 	}

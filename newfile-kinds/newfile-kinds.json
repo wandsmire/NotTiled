@@ -9,7 +9,7 @@
     },
     {
       "title": "Pixel art",
-      "description": "16×16 canvas with a 32-color palette; paint and export PNG.",
+      "description": "16×16 canvas with swatch + editable palette; paint and export PNG.",
       "template": "Pixel Editor",
       "icon": "images/pencil.png"
     },
