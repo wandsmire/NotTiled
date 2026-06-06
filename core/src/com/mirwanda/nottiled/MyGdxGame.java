@@ -71,6 +71,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextField;
 import com.badlogic.gdx.scenes.scene2d.ui.Touchpad;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop;
 import com.badlogic.gdx.scenes.scene2d.utils.SpriteDrawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
@@ -231,9 +232,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     String magnetName = "lock";
     int activetool = 0, activeobjtool = 0, activeobjtoolmode = 0;
     float blink = 0;
+    float lowFpsTimer = 0f;
     boolean turun = false;
 
-    boolean sShowGrid = true, sShowFPS, sAutoSave, sSaveTsx = false, sShowGID = false, sMinimap;
+    boolean sShowGrid = true, sShowFPS, sAutoSave, sSaveTsx = false, sShowGID = false, sMinimap, sShowAnimations = false;
     boolean sMultiSelect = false;
     java.util.Map<Integer, String> oldobjdata = new java.util.HashMap<>();
     boolean sShowCoords;
@@ -259,6 +261,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     ViewMode viewMode = ViewMode.CUSTOM;
 
     private boolean layerShownInViewMode(int jo) {
+        if (!areAllParentsVisible(layers.get(jo))) {
+            return false;
+        }
         switch (viewMode) {
             case ALL:
                 return true;
@@ -275,26 +280,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void applyLayerDrawColor(int jo) {
+        float opacity = getCombinedOpacity(layers.get(jo));
         if (viewMode == ViewMode.FOCUSED && jo != selLayer) {
-            float opacity = layers.get(jo).getOpacity();
-            float alpha = opacity != 0f ? opacity * 0.45f : 0.45f;
+            float alpha = opacity * 0.45f;
             batch.setColor(0.72f, 0.72f, 0.72f, alpha);
-        } else if (layers.get(jo).getOpacity() != 0f) {
-            batch.setColor(1f, 1f, 1f, layers.get(jo).getOpacity());
         } else {
-            batch.setColor(1f, 1f, 1f, 1f);
+            batch.setColor(1f, 1f, 1f, opacity);
         }
     }
 
     private void applyLayerDrawColor(SpriteCache cache, int jo) {
+        float opacity = getCombinedOpacity(layers.get(jo));
         if (viewMode == ViewMode.FOCUSED && jo != selLayer) {
-            float opacity = layers.get(jo).getOpacity();
-            float alpha = opacity != 0f ? opacity * 0.45f : 0.45f;
+            float alpha = opacity * 0.45f;
             cache.setColor(0.72f, 0.72f, 0.72f, alpha);
-        } else if (layers.get(jo).getOpacity() != 0f) {
-            cache.setColor(1f, 1f, 1f, layers.get(jo).getOpacity());
         } else {
-            cache.setColor(1f, 1f, 1f, 1f);
+            cache.setColor(1f, 1f, 1f, opacity);
         }
     }
 
@@ -335,6 +336,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     int selgroup = 0, selLayer = 0, oedit = 0, ogroup = 0, seltset = 0;
     int curtset = 0;
+    private java.util.List<com.badlogic.gdx.graphics.g2d.SpriteCache> pickerCaches = new java.util.ArrayList<com.badlogic.gdx.graphics.g2d.SpriteCache>();
+    private java.util.List<Integer> pickerCacheIDs = new java.util.ArrayList<Integer>();
+    private int pickerCachedTsetID = -1;
+    private boolean pickerCacheValid = false;
     int pixelPaletteMode = 0;
     int pixelEditSlot = -1;
     int pixelPaletteUsedCount = 8;
@@ -380,7 +385,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     layer tempLayer;
     tileset tempTset;
     float initialZoom;
-    CheckBox cbShowGrid, cbShowFPS, cbShowGid, cbShowCoords, cbAutoSave, cbShowGidmap, cbResize, cbMinimap;
+    CheckBox cbShowGrid, cbShowFPS, cbShowGid, cbShowCoords, cbAutoSave, cbShowGidmap, cbResize, cbMinimap, cbShowAnimations;
     CheckBox cbCustomUI;
     TextField tfCustomFont;
     TextButton bBack3;
@@ -432,7 +437,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     TextButton btiled, bCollaboration, bPatreon2, bTools, bBackground;
     TextButton bTutorOK, bTutorBack, bPatreon, bExporter, bImporter, credito;
     Table tMap, tLayerMgmt, tTileMgmt, tObjMgmt, tFrameMgmt, tPropsMgmt, tPreference, tProperties, tTsetMgmt, tAutoMgmt,
-            tAutoform;
+            tAutoform, tTileOptions, tTileCollision;
+    com.badlogic.gdx.scenes.scene2d.ui.List<String> lCollisionList;
+    ScrollPane scrollPaneCollision;
+    TextField fColName, fColType, fColX, fColY, fColW, fColH;
+    TextButton bColAddRect, bColAddEllipse, bColRemove, bColCustomProps;
+    obj selectedColObj = null;
+    private boolean updatingFields = false;
+    CollisionCanvas collisionCanvas;
     Table tMap1, tMap2;
     TextButton bTileMgmt, bTileSettingsMgmt, bPreference, bProperties, bTsetMgmt, bBack2, bAutoMgmt, bFeedback;
     TextButton bUIEditor;
@@ -449,12 +461,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     TextButton bOnlineDownload, bOnlineBack, bOnlineRefresh;
     Table tImport, tExport;
     private TextField fExportFilename;
+    SelectBox sbExport;
     TextField fImportWidth;
     TextField fImportHeight;
     CheckBox cImportEmbed;
     TextButton bImportOK;
     Table tLinks;
-    TextButton bRusted, bWardate, bManual;
+    TextButton bRusted, bManual;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> lautolist;
     TextButton bAutoadd, bAutoprops, bAutoload, bAutosave, bAutorename, bAutoremove, bAutomoveup, bAutoback;
     TextPromptListener pAutoadd;
@@ -470,6 +483,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     TextButton bPropValfile, bPropApply, bPropCancel, bPropCopy, bPropPaste, bPropGid, bProppng, bPropCp;
     String clipProp = "", clipobjcpy = "";
     com.badlogic.gdx.scenes.scene2d.ui.List<String> llayerlist;
+    java.util.Set<Integer> collapsedGroupIds = new java.util.HashSet<Integer>();
+    Table tLayerMgrMain;
+    Table layerMgrListTable;
+    ScrollPane layerMgrScrollPane;
+    DragAndDrop layerMgrDnd;
+    java.util.HashMap<Integer, TextureRegionDrawable> rowBgCache = new java.util.HashMap<Integer, TextureRegionDrawable>();
+    TextureRegionDrawable rowBgDragging, rowBgDropIntoGroup, rowBgDropBefore, rowBgDropAfter;
     TextPromptListener pNewLayer;
     TextPromptListener pNewLayerSC;
     TextPromptListener pAddMacro;
@@ -477,7 +497,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     TextPromptListener pEditLayer;
     TextPromptListener pSetOpacity;
-    TextButton bAddLayer, bRemoveLayer, bMoveLayer, bEditLayer, bBackLayer, bSetOpacity;
+    TextButton bAddLayer, bRemoveLayer, bMoveLayer, bEditLayer, bBackLayer, bSetOpacity, bSetParentGroup;
     TextButton bLayerDuplicate, bLayerProperties;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> lproplist;
     TextPromptListener pNewProp;
@@ -968,6 +988,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         loadTsetManagement();
         loadLayerManagement();
         loadTileManagement();
+        loadTileOptions();
         loadFrameManagement();
         loadAutoManagement();
         loadTools();
@@ -1206,6 +1227,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         } catch (Exception e) {
             ErrorBung(e, "errorloginit.txt");
+            loadingfile = false;
         }
     }
 
@@ -1347,6 +1369,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         lang.autotile = "???";
         lang.tileset = "???";
         lang.tilelayer = "???";
+        lang.grouplayer = "???";
         lang.objectgroup = "???";
         lang.property = "???";
         lang.tiles = "???";
@@ -1396,6 +1419,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         lang.height = "???";
         lang.rotation = "???";
         lang.language = "???";
+        lang.options = "???";
+        lang.tilecollision = "???";
 
     }
 
@@ -1536,6 +1561,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (loadingfile) {
                 loadingtime += delta;
                 drawLoadingScreen();
+                if (kartu.equals("stage")) {
+                    stage.act(delta);
+                    stage.draw();
+                }
 
             } else {
                 world.step(1 / 60f, 6, 2);
@@ -1613,6 +1642,52 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     cacheTiles();
                 }
 
+                if ((sShowAnimations || sShowGID || sShowGIDmap || sShowCoords) && kartu.equalsIgnoreCase("world")) {
+                    int currentFps = Gdx.graphics.getFramesPerSecond();
+                    if (currentFps > 0 && currentFps < 10) {
+                        lowFpsTimer += delta;
+                        if (lowFpsTimer >= 3.0f) {
+                            StringBuilder sb = new StringBuilder();
+                            if (sShowAnimations) {
+                                sShowAnimations = false;
+                                prefs.putBoolean("showanimations", false);
+                                resetCaches();
+                                clearPickerCaches();
+                                sb.append("Animations");
+                            }
+                            boolean gidDisabled = false;
+                            if (sShowGID) {
+                                sShowGID = false;
+                                prefs.putBoolean("gid", false);
+                                gidDisabled = true;
+                            }
+                            if (sShowGIDmap) {
+                                sShowGIDmap = false;
+                                prefs.putBoolean("gidmap", false);
+                                gidDisabled = true;
+                            }
+                            if (gidDisabled) {
+                                if (sb.length() > 0) sb.append(", ");
+                                sb.append("GID");
+                            }
+                            if (sShowCoords) {
+                                sShowCoords = false;
+                                prefs.putBoolean("coords", false);
+                                if (sb.length() > 0) sb.append(", ");
+                                sb.append("Coordinates");
+                            }
+                            prefs.flush();
+                            sb.append(" disabled due to low FPS.");
+                            status(sb.toString(), 2f);
+                            lowFpsTimer = 0f;
+                        }
+                    } else {
+                        lowFpsTimer = 0f;
+                    }
+                } else {
+                    lowFpsTimer = 0f;
+                }
+
                 undohistory += delta;
 
                 if (undohistory > 5f) {
@@ -1635,7 +1710,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         int firstvis = -1;
 
                         for (int i = 0; i < layers.size(); i++) {
-                            if (layers.get(i).isVisible()) {
+                            if (layers.get(i).isVisible() && layers.get(i).getType() != layer.Type.GROUP) {
                                 if (firstvis == -1) {
                                     firstvis = i;
                                 }
@@ -1650,7 +1725,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             } else {
 
                                 for (int i = 0; i < layers.size(); i++) {
-                                    if (layers.get(i).isVisible() && i > selLayer) {
+                                    if (layers.get(i).isVisible() && layers.get(i).getType() != layer.Type.GROUP
+                                            && i > selLayer) {
                                         selLayer = i;
                                         resetCaches();
                                         break;
@@ -1681,15 +1757,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         batch.totalRenderCalls = 0;
 
                         if (layers.size() > 0 && mode != "newpoly") {
-                            if (selLayer >= layers.size())
-                                selLayer = 0;
-                            if (layers.get(selLayer).getType() == layer.Type.TILE) {
-                                mode = "tile";
-                            } else if (layers.get(selLayer).getType() == layer.Type.OBJECT) {
-                                mode = "object";
-                            } else if (layers.get(selLayer).getType() == layer.Type.IMAGE) {
-                                mode = "image";
-                            }
+                            clampSelLayerToSelectable();
+                            applyLayerModeForSelLayer();
                         }
 
                         if (midiplaying) {
@@ -1856,23 +1925,27 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     void drawCoordinates() {
+        if (cam.zoom > 0.5f) return;
 
         if (sShowCoords) {
             str1.getData().setScale(0.01f + Tsw / 160f);
             for (int yy = 0; yy < Th; yy++) {
                 for (int xx = 0; xx < Tw; xx++) {
+                    float drawX, drawY;
                     if (orientation.equalsIgnoreCase("isometric")) {
-                        float offsetx = (xx * Tsw / 2) + (yy * Tsw / 2);
-                        float offsety = (xx * Tsh / 2) - (yy * Tsh / 2);
-
-                        str1.draw(batch, xx + "," + yy, (xx * Tsw + Tsw / 8f) - offsetx,
-                                (-yy * Tsh + Tsh / 3f) - offsety);
-
+                        float offsetx = (xx * Tsw / 2f) + (yy * Tsw / 2f);
+                        float offsety = (xx * Tsh / 2f) - (yy * Tsh / 2f);
+                        drawX = (xx * Tsw + Tsw / 8f) - offsetx;
+                        drawY = (-yy * Tsh + Tsh / 3f) - offsety;
                     } else {
-                        str1.draw(batch, xx + "," + yy, xx * Tsw + Tsw / 8f, -yy * Tsh + Tsh / 3f);
+                        drawX = xx * Tsw + Tsw / 8f;
+                        drawY = -yy * Tsh + Tsh / 3f;
+                    }
+
+                    if (cam.frustum.pointInFrustum(drawX, drawY, 0)) {
+                        str1.draw(batch, xx + "," + yy, drawX, drawY);
                     }
                 }
-
             }
             str1.getData().setScale(1f);
         }
@@ -1886,28 +1959,29 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             for (int xx = 0; xx < Tw; xx++) {
                                 int num = yy * Tw + xx;
                                 long spr = layers.get(l).getStr().get(num);
+                                if (spr == 0) continue;
 
+                                float drawX, drawY;
                                 if (orientation.equalsIgnoreCase("isometric")) {
-                                    float offsetx = (xx * Tsw / 2) + (yy * Tsw / 2);
-                                    float offsety = (xx * Tsh / 2) - (yy * Tsh / 2);
-
-                                    if (spr != 0)
-                                        str1.draw(batch, spr + "", (xx * Tsw + Tsw / 8f) - offsetx,
-                                                (-yy * Tsh + Tsh) - offsety);
-
+                                    float offsetx = (xx * Tsw / 2f) + (yy * Tsw / 2f);
+                                    float offsety = (xx * Tsh / 2f) - (yy * Tsh / 2f);
+                                    drawX = (xx * Tsw + Tsw / 8f) - offsetx;
+                                    drawY = (-yy * Tsh + Tsh) - offsety;
                                 } else {
-                                    if (spr != 0)
-                                        str1.draw(batch, spr + "", xx * Tsw + Tsw / 8f, -yy * Tsh + Tsh);
+                                    drawX = xx * Tsw + Tsw / 8f;
+                                    drawY = -yy * Tsh + Tsh;
+                                }
+
+                                if (cam.frustum.pointInFrustum(drawX, drawY, 0)) {
+                                    str1.draw(batch, spr + "", drawX, drawY);
                                 }
                             }
-
                         }
                         str1.getData().setScale(1f);
                     }
                 }
             }
         }
-
     }
 
     void initializePostProcessor() { // I DONT EVEN KNOW WHAT THESE MEANS LOL
@@ -2370,6 +2444,85 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         ui.end();
     }
 
+    private void clearPickerCaches() {
+        if (pickerCaches != null) {
+            for (com.badlogic.gdx.graphics.g2d.SpriteCache cache : pickerCaches) {
+                cache.dispose();
+            }
+            pickerCaches.clear();
+        }
+        if (pickerCacheIDs != null) {
+            pickerCacheIDs.clear();
+        }
+        pickerCacheValid = false;
+        pickerCachedTsetID = -1;
+    }
+
+    private void rebuildPickerCaches(tileset ts) {
+        clearPickerCaches();
+        if (ts == null) {
+            return;
+        }
+
+        int wd = ts.getWidth();
+        int tileCount = ts.getTilecount();
+        if (wd <= 0 || tileCount <= 0) {
+            return;
+        }
+
+        int chunkSize = 1024;
+        int numChunks = (tileCount + chunkSize - 1) / chunkSize;
+
+        for (int chunk = 0; chunk < numChunks; chunk++) {
+            com.badlogic.gdx.graphics.g2d.SpriteCache cache = new com.badlogic.gdx.graphics.g2d.SpriteCache(chunkSize, true);
+            cache.beginCache();
+
+            int startIdx = chunk * chunkSize;
+            int endIdx = Math.min(startIdx + chunkSize, tileCount);
+
+            for (int i = startIdx; i < endIdx; i++) {
+                boolean isAnimated = false;
+                if (sShowAnimations) {
+                    java.util.List<tile> tiles = ts.getTiles();
+                    int tilesize = tiles.size();
+                    if (tilesize > 0) {
+                        for (int n = 0; n < tilesize; n++) {
+                            if (tiles.get(n).getAnimation().size() > 0) {
+                                if (i == tiles.get(n).getTileID()) {
+                                    isAnimated = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (isAnimated) {
+                    continue;
+                }
+
+                long ini = i;
+                long ist = ini;
+                int xpos = i % wd;
+                int ypos = i / wd;
+                int xpos2 = (int) (ist) % wd;
+                int ypos2 = (int) (ist) / wd;
+                int margin = ts.getMargin();
+                int spacing = ts.getSpacing();
+
+                cache.add(ts.getTexture(), xpos * ts.getTilewidth(), -ypos * ts.getTileheight(),
+                        (xpos2 * (ts.getTilewidth() + spacing)) + margin,
+                        (ypos2 * (ts.getTileheight() + spacing)) + margin, ts.getTilewidth(), ts.getTileheight());
+            }
+
+            int cacheID = cache.endCache();
+            pickerCaches.add(cache);
+            pickerCacheIDs.add(cacheID);
+        }
+
+        pickerCacheValid = true;
+        pickerCachedTsetID = seltset;
+    }
+
     private void drawpicker() {
         if (sEnableBlending) {
             Gdx.gl.glEnable(GL20.GL_BLEND);
@@ -2416,13 +2569,56 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             java.util.List<terrain> tr = tilesets.get(seltset).getTerrains();
 
+            int wd = ts.getWidth();
+            int tileCount = ts.getTilecount();
+            int tileWidth = ts.getTilewidth();
+            int tileHeight = ts.getTileheight();
+            int Tswa = ts.getTilewidth();
+            int Tsha = ts.getTileheight();
+
+            // Calculate visible bounds in tilecam coordinates
+            float minX = tilecam.position.x - (tilecam.viewportWidth * tilecam.zoom) / 2f;
+            float maxX = tilecam.position.x + (tilecam.viewportWidth * tilecam.zoom) / 2f;
+            float minY = tilecam.position.y - (tilecam.viewportHeight * tilecam.zoom) / 2f;
+            float maxY = tilecam.position.y + (tilecam.viewportHeight * tilecam.zoom) / 2f;
+
+            int startCol = 0;
+            int endCol = wd - 1;
+            int startRow = 0;
+            int totalRows = wd > 0 ? (tileCount + wd - 1) / wd : 0;
+            int endRow = totalRows - 1;
+
+            if (tileWidth > 0 && tileHeight > 0 && wd > 0) {
+                startCol = (int) Math.floor(minX / tileWidth);
+                endCol = (int) Math.ceil(maxX / tileWidth);
+                startRow = (int) Math.floor(-maxY / tileHeight);
+                endRow = (int) Math.ceil(-minY / tileHeight) + 1;
+
+                if (startCol < 0) startCol = 0;
+                if (endCol >= wd) endCol = wd - 1;
+                if (startRow < 0) startRow = 0;
+                if (endRow >= totalRows) endRow = totalRows - 1;
+            }
+
+            if (pickerCachedTsetID != seltset) {
+                pickerCacheValid = false;
+            }
+
             if (pickAuto) { // auto list
-                for (int n = 0; n < tr.size(); n++) {
+                int startTerrainRow = 0;
+                int endTerrainRow = tr.size() - 1;
+                if (tileHeight > 0) {
+                    startTerrainRow = (int) Math.floor(-maxY / tileHeight);
+                    endTerrainRow = (int) Math.ceil(-minY / tileHeight) + 1;
+                    if (startTerrainRow < 0) startTerrainRow = 0;
+                    if (endTerrainRow >= tr.size()) endTerrainRow = tr.size() - 1;
+                }
+                for (int n = startTerrainRow; n <= endTerrainRow; n++) {
                     // tile t =tilesets.get( seltset ).getTiles().get( tr.get( n ).getTile());
                     long ist = tr.get(n).getTile();// t.getTileID();//-tilesets.get(seltset).getFirstgid();
-                    int wd = ts.getWidth();
-                    int xpos2 = (int) (ist) % wd;
-                    int ypos2 = (int) (ist) / wd;
+                    int wd2 = ts.getWidth();
+                    int xpos2 = (int) (ist) % wd2;
+                    int ypos2 = (int) (ist) / wd2;
                     int margin = ts.getMargin();
                     int spacing = ts.getSpacing();
 
@@ -2436,87 +2632,158 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 }
             } else { // manual
-                for (int i = 0; i < ts.getTilecount(); i++) { // manual drawing
+                if (!pickerCacheValid) {
+                    rebuildPickerCaches(ts);
+                }
 
-                    long ini = i;// +tilesets.get(seltset.getFirstgid();
-                    boolean terrain = false, autotl = false;
+                batch.end();
 
-                    if (tr.size() > 0) {
-                        for (int n = 0; n < tr.size(); n++) {
-                            if (ini == tr.get(n).getTile()) {
-                                terrain = true;
+                if (pickerCacheValid && !pickerCaches.isEmpty()) {
+                    int chunkSize = 1024;
+                    for (int chunk = 0; chunk < pickerCaches.size(); chunk++) {
+                        int startIdx = chunk * chunkSize;
+                        int endIdx = Math.min(startIdx + chunkSize, tileCount);
+                        int startRowOfChunk = startIdx / wd;
+                        int endRowOfChunk = (endIdx - 1) / wd;
+
+                        float chunkMinY = -endRowOfChunk * tileHeight;
+                        float chunkMaxY = -startRowOfChunk * tileHeight + tileHeight;
+
+                        if (chunkMinY < maxY && chunkMaxY > minY) {
+                            com.badlogic.gdx.graphics.g2d.SpriteCache cache = pickerCaches.get(chunk);
+                            cache.setProjectionMatrix(tilecam.combined);
+                            if (sEnableBlending) {
+                                Gdx.gl.glEnable(GL20.GL_BLEND);
+                                Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
                             }
+                            cache.setColor(1f, 1f, 1f, 1f);
+                            cache.begin();
+                            cache.draw(pickerCacheIDs.get(chunk));
+                            cache.end();
                         }
                     }
-                    /*
-                     * cause lags if there are lots of autotiles
-                     * if (autotiles.size() > 0)
-                     * {
-                     * for (int n =0;n < autotiles.size();n++)
-                     * {
-                     * for (int m=0;m<autotiles.get(n).getProperties().size();m++)
-                     * {
-                     * if
-                     * (autotiles.get(n).getProperties().get(m).getName().equalsIgnoreCase("source")
-                     * )
-                     * {
-                     * if (ini+tilesets.get(seltset).getFirstgid() ==
-                     * Integer.parseInt(autotiles.get(n).getProperties().get(m).getValue())){
-                     * autotl=true;
-                     * break;
-                     * }
-                     * }
-                     * }
-                     * 
-                     * }
-                     * }
-                     */
-                    tiles = ts.getTiles();
-                    if (tiles.size() > 0) {
-                        for (int n = 0; n < tiles.size(); n++) {
-                            if (ini == tiles.get(n).getTileID()) {
-
-                                if (tiles.get(n).getAnimation().size() > 0) {
-                                    ini = tiles.get(n).getActiveFrameID();
+                    if (sShowAnimations) {
+                        batch.begin();
+                        java.util.List<tile> tiles = ts.getTiles();
+                        int tilesize = tiles.size();
+                        for (int i = 0; i < tileCount; i++) {
+                            boolean isAnimated = false;
+                            tile animTile = null;
+                            if (tilesize > 0) {
+                                for (int n = 0; n < tilesize; n++) {
+                                    if (tiles.get(n).getAnimation().size() > 0) {
+                                        if (i == tiles.get(n).getTileID()) {
+                                            isAnimated = true;
+                                            animTile = tiles.get(n);
+                                            break;
+                                        }
+                                    }
                                 }
+                            }
+                            if (isAnimated && animTile != null) {
+                                int xpos = i % wd;
+                                int ypos = i / wd;
+                                if (xpos >= startCol && xpos <= endCol && ypos >= startRow && ypos <= endRow) {
+                                    long activeFrameId = animTile.getActiveFrameID();
+                                    int xpos2 = (int) (activeFrameId) % wd;
+                                    int ypos2 = (int) (activeFrameId) / wd;
+                                    int margin = ts.getMargin();
+                                    int spacing = ts.getSpacing();
 
+                                    batch.draw(ts.getTexture(), xpos * ts.getTilewidth(), -ypos * ts.getTileheight(),
+                                            (xpos2 * (ts.getTilewidth() + spacing)) + margin,
+                                            (ypos2 * (ts.getTileheight() + spacing)) + margin, ts.getTilewidth(), ts.getTileheight());
+                                }
+                            }
+                        }
+                        batch.end();
+                    }
+                } else {
+                    batch.begin();
+                    for (int y = startRow; y <= endRow; y++) {
+                        for (int x = startCol; x <= endCol; x++) {
+                            int i = y * wd + x;
+                            if (i >= ts.getTilecount()) continue;
+
+                            long ini = i;
+                            long ist = ini;
+                            if (sShowAnimations) {
+                                java.util.List<tile> tiles = ts.getTiles();
+                                int tilesize = tiles.size();
+                                if (tilesize > 0) {
+                                    for (int n = 0; n < tilesize; n++) {
+                                        if (tiles.get(n).getAnimation().size() > 0) {
+                                            if (i == tiles.get(n).getTileID()) {
+                                                ist = tiles.get(n).getActiveFrameID();
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            int xpos = x;
+                            int ypos = y;
+                            int xpos2 = (int) (ist) % wd;
+                            int ypos2 = (int) (ist) / wd;
+                            int margin = ts.getMargin();
+                            int spacing = ts.getSpacing();
+
+                            batch.draw(ts.getTexture(), xpos * ts.getTilewidth(), -ypos * ts.getTileheight(),
+                                    (xpos2 * (ts.getTilewidth() + spacing)) + margin,
+                                    (ypos2 * (ts.getTileheight() + spacing)) + margin, ts.getTilewidth(), ts.getTileheight());
+                        }
+                    }
+                    batch.end();
+                }
+
+                if (tilecam.zoom <= 0.5f) {
+                    batch.begin();
+                    for (int y = startRow; y <= endRow; y++) {
+                        for (int x = startCol; x <= endCol; x++) {
+                            int i = y * wd + x;
+                            if (i >= ts.getTilecount()) continue;
+
+                            long ini = i;
+                            boolean terrain = false, autotl = false;
+
+                            if (tr.size() > 0) {
+                                    for (int n = 0; n < tr.size(); n++) {
+                                        if (ini == tr.get(n).getTile()) {
+                                            terrain = true;
+                                        }
+                                    }
+                            }
+
+                            if (sShowGID || terrain || autotl) {
+                                int xpos = x;
+                                int ypos = y;
+
+                                if (sShowGID) {
+                                    str1.getData().setScale(0.1f);
+                                    str1.draw(batch, Long.toString(ini + tilesets.get(seltset).getFirstgid()),
+                                            (float) xpos * ts.getTilewidth() + 2,
+                                            (float) -ypos * ts.getTileheight() + ts.getTileheight() - 2, ts.getTilewidth(),
+                                            Align.left, false);
+                                    str1.draw(batch, Long.toString(ini), (float) xpos * ts.getTilewidth() + 2,
+                                            (float) -ypos * ts.getTileheight() + ts.getTileheight() - 10, ts.getTilewidth(),
+                                            Align.left, false);
+
+                                    str1.getData().setScale(1f);
+                                }
+                                str1.getData().setScale(.2f);
+                                if (terrain)
+                                    str1.draw(batch, "Auto", xpos * ts.getTilewidth(), -ypos * ts.getTileheight() + Tsh * 3 / 4,
+                                            Tsw, Align.center, false);
+                                if (autotl)
+                                    str1.draw(batch, "Macro", xpos * ts.getTilewidth(), -ypos * ts.getTileheight() + Tsh * 3 / 4,
+                                            Tsw, Align.center, false);
+                                str1.getData().setScale(1f);
                             }
                         }
                     }
-
-                    long ist = ini;// -tilesets.get(seltset).getFirstgid();
-                    int wd = ts.getWidth();
-                    int xpos = (i) % wd;
-                    int ypos = (i) / wd;
-                    int xpos2 = (int) (ist) % wd;
-                    int ypos2 = (int) (ist) / wd;
-                    int margin = ts.getMargin();
-                    int spacing = ts.getSpacing();
-
-                    batch.draw(ts.getTexture(), xpos * ts.getTilewidth(), -ypos * ts.getTileheight(),
-                            (xpos2 * (ts.getTilewidth() + spacing)) + margin,
-                            (ypos2 * (ts.getTileheight() + spacing)) + margin, ts.getTilewidth(), ts.getTileheight());
-                    if (sShowGID) {
-                        str1.getData().setScale(0.1f);
-                        str1.draw(batch, Long.toString(ini + tilesets.get(seltset).getFirstgid()),
-                                (float) xpos * ts.getTilewidth() + 2,
-                                (float) -ypos * ts.getTileheight() + ts.getTileheight() - 2, ts.getTilewidth(),
-                                Align.left, false);
-                        str1.draw(batch, Long.toString(ini), (float) xpos * ts.getTilewidth() + 2,
-                                (float) -ypos * ts.getTileheight() + ts.getTileheight() - 10, ts.getTilewidth(),
-                                Align.left, false);
-
-                        str1.getData().setScale(1f);
-                    }
-                    str1.getData().setScale(.2f);
-                    if (terrain)
-                        str1.draw(batch, "Auto", xpos * ts.getTilewidth(), -ypos * ts.getTileheight() + Tsh * 3 / 4,
-                                Tsw, Align.center, false);
-                    if (autotl)
-                        str1.draw(batch, "Macro", xpos * ts.getTilewidth(), -ypos * ts.getTileheight() + Tsh * 3 / 4,
-                                Tsw, Align.center, false);
-                    str1.getData().setScale(1f);
-                } // end of manual drawing
+                } else {
+                    batch.begin();
+                }
             } // end of drawing
             batch.end();
 
@@ -2531,17 +2798,26 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             int weight = 1, cool = 1;
             if (Tsw >= 64)
                 weight = 2;
-            int Tswa = tilesets.get(seltset).getTilewidth();
-            int Tsha = tilesets.get(seltset).getTileheight();
 
             if (!pickAuto) {
-                for (int i = 0; i <= tilesets.get(seltset).getWidth(); i++) {
+                int gridStartCol = startCol;
+                int gridEndCol = endCol + 1;
+                if (gridStartCol < 0) gridStartCol = 0;
+                if (gridEndCol > wd) gridEndCol = wd;
+
+                for (int i = gridStartCol; i <= gridEndCol; i++) {
                     // if (i%5==0){cool=2;}else{cool=1;}
 
                     sr.rectLine((Tswa * i), Tsha, (i * Tswa), -Tsha * tilesets.get(seltset).getHeight() + Tsha,
                             Tswa / 16f);
                 }
-                for (int j = -1; j < tilesets.get(seltset).getHeight(); j++) {
+
+                int gridStartRow = startRow - 1;
+                int gridEndRow = endRow + 1;
+                if (gridStartRow < -1) gridStartRow = -1;
+                if (gridEndRow >= totalRows) gridEndRow = totalRows - 1;
+
+                for (int j = gridStartRow; j <= gridEndRow; j++) {
                     // if ((j+1)%5==0){cool=2;}else{cool=1;}
                     sr.rectLine(0, -(Tsha * j), Tswa * tilesets.get(seltset).getWidth(), -(j * Tsha), Tsha / 16f);
                 }
@@ -2549,11 +2825,26 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 for (int i = 0; i <= 6; i++) {
                     // if (i%5==0){cool=2;}else{cool=1;}
 
-                    if (i == 0 || i == 6)
-                        sr.rectLine((Tswa * i), Tsha, (i * Tswa),
-                                -Tsha * tilesets.get(seltset).getTerrains().size() + Tsha, Tswa / 16f);
+                    if (i == 0 || i == 6) {
+                        if ((Tswa * i) < maxX && (i * Tswa) > minX) {
+                            sr.rectLine((Tswa * i), Tsha, (i * Tswa),
+                                    -Tsha * tilesets.get(seltset).getTerrains().size() + Tsha, Tswa / 16f);
+                        }
+                    }
                 }
-                for (int j = -1; j < tilesets.get(seltset).getTerrains().size(); j++) {
+                int gridStartTerrainRow = -1;
+                int gridEndTerrainRow = tilesets.get(seltset).getTerrains().size() - 1;
+                if (Tsha > 0) {
+                    int startTerrainRow = (int) Math.floor(-maxY / Tsha);
+                    int endTerrainRow = (int) Math.ceil(-minY / Tsha) + 1;
+                    gridStartTerrainRow = startTerrainRow - 1;
+                    gridEndTerrainRow = endTerrainRow + 1;
+                    if (gridStartTerrainRow < -1) gridStartTerrainRow = -1;
+                    if (gridEndTerrainRow >= tilesets.get(seltset).getTerrains().size()) {
+                        gridEndTerrainRow = tilesets.get(seltset).getTerrains().size() - 1;
+                    }
+                }
+                for (int j = gridStartTerrainRow; j <= gridEndTerrainRow; j++) {
                     // if ((j+1)%5==0){cool=2;}else{cool=1;}
                     sr.rectLine(0, -(Tsha * j), Tswa * 6, -(j * Tsha), Tsha / 16f);
                 }
@@ -2572,117 +2863,122 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             }
             if (kartu == "tile" && issettingtile) {
-                for (int i = 0; i < ts.getTilecount(); i++) {
-                    int wd = ts.getWidth();
-                    int xpos = (i) % wd;
-                    int ypos = (i) / wd;
-                    if (massprops.get(i)) {
-                        sr.setColor(1, 0, 0, 0.5f);
-                        sr.rect(xpos * ts.getTilewidth(), -ypos * ts.getTileheight(), ts.getTilewidth(),
-                                ts.getTileheight());
-                        sr.setColor(0, 0, 0, 1);
+                for (int y = startRow; y <= endRow; y++) {
+                    for (int x = startCol; x <= endCol; x++) {
+                        int i = y * wd + x;
+                        if (i >= ts.getTilecount()) continue;
+                        if (massprops.get(i)) {
+                            sr.setColor(1, 0, 0, 0.5f);
+                            sr.rect(x * ts.getTilewidth(), -y * ts.getTileheight(), ts.getTilewidth(),
+                                    ts.getTileheight());
+                            sr.setColor(0, 0, 0, 1);
+                        }
                     }
                 }
             }
 
             if (kartu == "pickanim" && tilePicker == "massprops") {
                 sr.setColor(0, 1, 0, .5f);
-                for (int i = 0; i < ts.getTilecount(); i++) {
-                    int wd = ts.getWidth();
-                    int xpos = (i) % wd;
-                    int ypos = (i) / wd;
-                    if (massprops.get(i)) {
-                        sr.rect(xpos * ts.getTilewidth(), -ypos * ts.getTileheight(), ts.getTilewidth(),
-                                ts.getTileheight());
+                for (int y = startRow; y <= endRow; y++) {
+                    for (int x = startCol; x <= endCol; x++) {
+                        int i = y * wd + x;
+                        if (i >= ts.getTilecount()) continue;
+                        if (massprops.get(i)) {
+                            sr.rect(x * ts.getTilewidth(), -y * ts.getTileheight(), ts.getTilewidth(),
+                                    ts.getTileheight());
+                        }
                     }
                 }
             }
             if (kartu == "pickanim" && tilePicker == "terraineditor") {
-                for (int i = 0; i < ts.getTilecount(); i++) {
+                for (int y = startRow; y <= endRow; y++) {
+                    for (int x = startCol; x <= endCol; x++) {
+                        int i = y * wd + x;
+                        if (i >= ts.getTilecount()) continue;
 
-                    long ini = i;// +tilesets.get(seltset.getFirstgid();
-                    boolean terrain = false;
-                    int curTerrain = 0;
-                    int[] curNodes = null;
-                    tiles = ts.getTiles();
-                    if (tiles.size() > 0) {
-                        for (int n = 0; n < tiles.size(); n++) {
-                            if (ini == tiles.get(n).getTileID()) {
+                        long ini = i;// +tilesets.get(seltset.getFirstgid();
+                        boolean terrain = false;
+                        int curTerrain = 0;
+                        int[] curNodes = null;
+                        tiles = ts.getTiles();
+                        if (tiles.size() > 0) {
+                            for (int n = 0; n < tiles.size(); n++) {
+                                if (ini == tiles.get(n).getTileID()) {
 
-                                if (tiles.get(n).isTerrainForEditor()) {
-                                    terrain = true;
-                                    curNodes = tiles.get(n).getTerrain();
+                                    if (tiles.get(n).isTerrainForEditor()) {
+                                        terrain = true;
+                                        curNodes = tiles.get(n).getTerrain();
+                                    }
+
+                                    if (tiles.get(n).getAnimation().size() > 0) {
+                                        ini = tiles.get(n).getActiveFrameID();
+                                    }
+
                                 }
-
-                                if (tiles.get(n).getAnimation().size() > 0) {
-                                    ini = tiles.get(n).getActiveFrameID();
-                                }
-
                             }
                         }
+
+                        long ist = ini;// -tilesets.get(seltset).getFirstgid();
+                        int xpos = x;
+                        int ypos = y;
+                        int xpos2 = (int) (ist) % wd;
+                        int ypos2 = (int) (ist) / wd;
+                        int margin = ts.getMargin();
+                        int spacing = ts.getSpacing();
+                        Color c = new Color(1, 0, 0, .5f);
+                        Color c2 = new Color(0, 0, .5f, .5f);
+                        if (terrain) {
+                            curTerrain = tilesets.get(selTsetID).getSelTerrain();
+                            if (curNodes[0] == curTerrain) {
+                                sr.setColor(c);
+                                sr.rect(xpos * ts.getTilewidth(), -ypos * ts.getTileheight() + ts.getTileheight() / 2,
+                                        ts.getTilewidth() / 2, ts.getTileheight() / 2);
+                            } else if (curNodes[0] == -1) {
+                            } else {
+                                sr.setColor(c2);
+                                sr.rect(xpos * ts.getTilewidth(), -ypos * ts.getTileheight() + ts.getTileheight() / 2,
+                                        ts.getTilewidth() / 2, ts.getTileheight() / 2);
+                            }
+
+                            if (curNodes[1] == curTerrain) {
+                                sr.setColor(c);
+                                sr.rect(xpos * ts.getTilewidth() + ts.getTilewidth() / 2,
+                                        -ypos * ts.getTileheight() + ts.getTileheight() / 2, ts.getTilewidth() / 2,
+                                        ts.getTileheight() / 2);
+                            } else if (curNodes[1] == -1) {
+                            } else {
+                                sr.setColor(c2);
+                                sr.rect(xpos * ts.getTilewidth() + ts.getTilewidth() / 2,
+                                        -ypos * ts.getTileheight() + ts.getTileheight() / 2, ts.getTilewidth() / 2,
+                                        ts.getTileheight() / 2);
+                            }
+
+                            if (curNodes[2] == curTerrain) {
+                                sr.setColor(c);
+                                sr.rect(xpos * ts.getTilewidth(), -ypos * ts.getTileheight(), ts.getTilewidth() / 2,
+                                        ts.getTileheight() / 2);
+                            } else if (curNodes[2] == -1) {
+                            } else {
+                                sr.setColor(c2);
+                                sr.rect(xpos * ts.getTilewidth(), -ypos * ts.getTileheight(), ts.getTilewidth() / 2,
+                                        ts.getTileheight() / 2);
+
+                            }
+                            if (curNodes[3] == curTerrain) {
+                                sr.setColor(c);
+                                sr.rect(xpos * ts.getTilewidth() + ts.getTilewidth() / 2, -ypos * ts.getTileheight(),
+                                        ts.getTilewidth() / 2, ts.getTileheight() / 2);
+                            } else if (curNodes[3] == -1) {
+                            } else {
+                                sr.setColor(c2);
+                                sr.rect(xpos * ts.getTilewidth() + ts.getTilewidth() / 2, -ypos * ts.getTileheight(),
+                                        ts.getTilewidth() / 2, ts.getTileheight() / 2);
+
+                            }
+
+                        }
+
                     }
-
-                    long ist = ini;// -tilesets.get(seltset).getFirstgid();
-                    int wd = ts.getWidth();
-                    int xpos = (i) % wd;
-                    int ypos = (i) / wd;
-                    int xpos2 = (int) (ist) % wd;
-                    int ypos2 = (int) (ist) / wd;
-                    int margin = ts.getMargin();
-                    int spacing = ts.getSpacing();
-                    Color c = new Color(1, 0, 0, .5f);
-                    Color c2 = new Color(0, 0, .5f, .5f);
-                    if (terrain) {
-                        curTerrain = tilesets.get(selTsetID).getSelTerrain();
-                        if (curNodes[0] == curTerrain) {
-                            sr.setColor(c);
-                            sr.rect(xpos * ts.getTilewidth(), -ypos * ts.getTileheight() + ts.getTileheight() / 2,
-                                    ts.getTilewidth() / 2, ts.getTileheight() / 2);
-                        } else if (curNodes[0] == -1) {
-                        } else {
-                            sr.setColor(c2);
-                            sr.rect(xpos * ts.getTilewidth(), -ypos * ts.getTileheight() + ts.getTileheight() / 2,
-                                    ts.getTilewidth() / 2, ts.getTileheight() / 2);
-                        }
-
-                        if (curNodes[1] == curTerrain) {
-                            sr.setColor(c);
-                            sr.rect(xpos * ts.getTilewidth() + ts.getTilewidth() / 2,
-                                    -ypos * ts.getTileheight() + ts.getTileheight() / 2, ts.getTilewidth() / 2,
-                                    ts.getTileheight() / 2);
-                        } else if (curNodes[1] == -1) {
-                        } else {
-                            sr.setColor(c2);
-                            sr.rect(xpos * ts.getTilewidth() + ts.getTilewidth() / 2,
-                                    -ypos * ts.getTileheight() + ts.getTileheight() / 2, ts.getTilewidth() / 2,
-                                    ts.getTileheight() / 2);
-                        }
-
-                        if (curNodes[2] == curTerrain) {
-                            sr.setColor(c);
-                            sr.rect(xpos * ts.getTilewidth(), -ypos * ts.getTileheight(), ts.getTilewidth() / 2,
-                                    ts.getTileheight() / 2);
-                        } else if (curNodes[2] == -1) {
-                        } else {
-                            sr.setColor(c2);
-                            sr.rect(xpos * ts.getTilewidth(), -ypos * ts.getTileheight(), ts.getTilewidth() / 2,
-                                    ts.getTileheight() / 2);
-
-                        }
-                        if (curNodes[3] == curTerrain) {
-                            sr.setColor(c);
-                            sr.rect(xpos * ts.getTilewidth() + ts.getTilewidth() / 2, -ypos * ts.getTileheight(),
-                                    ts.getTilewidth() / 2, ts.getTileheight() / 2);
-                        } else if (curNodes[3] == -1) {
-                        } else {
-                            sr.setColor(c2);
-                            sr.rect(xpos * ts.getTilewidth() + ts.getTilewidth() / 2, -ypos * ts.getTileheight(),
-                                    ts.getTilewidth() / 2, ts.getTileheight() / 2);
-
-                        }
-
-                    }
-
                 }
             }
             sr.end();
@@ -2792,8 +3088,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 uisrect(gui.tilesettings, mouse, new Color(1f, 1f, 0f, .4f));
                 if (somethingisselected() || kartu == "editor") {
                     uisrect(gui.tileproperties, mouse, null);// tool switch
-                    uisrect(gui.tileremove, mouse, null);
-                    uisrect(gui.tileadd, mouse, null);// tool switch
                     uisrect(gui.tileoverlay, mouse, null);
                 }
             } else if (isPixelArtPaletteView()) {
@@ -2865,7 +3159,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 uidrawbutton(txadd, z.tileset, gui.pickertool1, 2);
                 uidrawbutton(txinfo, z.properties, gui.pickertool2, 2);
-                uidrawbutton(txtiles, z.tiles, gui.pickertool3, 2);
+                uidrawbutton(txpencil, z.terraineditor, gui.pickertool3, 2);
                 if (!isProtectedPixelArtTileset(seltset))
                     uidrawbutton(txdelete, z.remove, gui.pickertool5, 2);
 
@@ -2875,27 +3169,27 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     uidrawbutton(txinfo, z.swap, gui.tileproperties, 2);
                     uidrawbutton(txeraser, z.remove, gui.tileremove, 2);
                     uidrawbutton(txadd, z.addnew, gui.tileadd, 2);
-                } else if (issettingtile || kartu == "editor") {
-                    if (somethingisselected() || kartu == "editor") {
-                        uidrawbutton(txinfo, z.info, gui.tileproperties, 2);
-                        uidrawbutton(txeraser, z.remove, gui.tileremove, 2);
-                        uidrawbutton(txadd, z.addnew, gui.tileadd, 2);
-                        String txt = "";
-                        int totalview = 0;
-                        for (tile tt : tilesets.get(seltset).getTiles()) {
-                            if (tt.getTileID() == curspr - tilesets.get(seltset).getFirstgid()) {
-                                if (tt.getProperties() == null)
-                                    continue;
-                                for (property pp : tt.getProperties()) {
-                                    if (totalview < 5) {
-                                        txt += pp.getName() + " : " + pp.getValue() + "\n";
-                                        totalview += 1;
+                } else if (issettingtile) {
+                    if (somethingisselected()) {
+                        uidrawbutton(txinfo, z.options != null ? z.options : "Options", gui.tileproperties, 2);
+                        if (getSelectedTileCount() == 1) {
+                            String txt = "";
+                            int totalview = 0;
+                            int selectedLocalTileID = getSingleSelectedTileID();
+                            for (tile tt : tilesets.get(seltset).getTiles()) {
+                                if (tt.getTileID() == selectedLocalTileID) {
+                                    if (tt.getProperties() == null)
+                                        continue;
+                                    for (property pp : tt.getProperties()) {
+                                        if (totalview < 5) {
+                                            txt += pp.getName() + " : " + pp.getValue() + "\n";
+                                            totalview += 1;
+                                        }
                                     }
+                                    str1draw(ui, txt, gui.tileoverlay, 26);
                                 }
-                                str1draw(ui, txt, gui.tileoverlay, 26);
                             }
                         }
-
                     }
                 }
 
@@ -3528,15 +3822,33 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
 
                     SpriteCache cache = tc.getCache();
-                    int myid = tc.getCacheID();
                     cache.setProjectionMatrix(cam.combined);
                     Gdx.gl.glEnable(GL20.GL_BLEND);
                     Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
                     cache.setColor(1f, 1f, 1f, 1f);
 
-                    cache.begin();
-                    cache.draw(myid); // call our cache with cache ID and draw it
-                    cache.end();
+                    if (sShowAnimations) {
+                        int[] cids = tc.getCacheIDs();
+                        if (cids != null) {
+                            for (int jo = 0; jo < layers.size(); jo++) {
+                                boolean isShown = layerShownInViewMode(jo);
+                                if (layers.get(jo).getType() == layer.Type.TILE && isShown) {
+                                    int myid = cids[jo];
+                                    if (myid != -1) {
+                                        cache.begin();
+                                        cache.draw(myid);
+                                        cache.end();
+                                    }
+                                    drawAnimatedTilesForChunkAndLayer(tc, jo);
+                                }
+                            }
+                        }
+                    } else {
+                        int myid = tc.getCacheID();
+                        cache.begin();
+                        cache.draw(myid); // call our cache with cache ID and draw it
+                        cache.end();
+                    }
 
                     //////////
                     // draw preview of macro tiles
@@ -3871,6 +4183,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     int buffersz;
 
     private void resetCaches() {
+        clearPickerCaches();
         // This thing is slow.
         try {
             // jangan dihapus, karena valuenya bakal di set lagi di bawah.
@@ -3901,8 +4214,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             for (int y = 0; y < maxy; y++) {
                 for (int x = 0; x < maxx; x++) {
                     cache = new SpriteCache(buffersz, true);// 8191max
-                    int cid = cacheTilesOn(cache, x, y);
-                    tcache = new TileCache(cache, cid, x, y);
+                    if (sShowAnimations) {
+                        int[] cids = cacheTilesOnLayered(cache, x, y);
+                        tcache = new TileCache(cache, cids, x, y);
+                    } else {
+                        int cid = cacheTilesOn(cache, x, y);
+                        tcache = new TileCache(cache, cid, x, y);
+                    }
                     tcaches.add(tcache);
 
                 }
@@ -3949,9 +4267,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 TileCache tc = tcaches.get(i);
                 tc.getCache().dispose();
                 cache = new SpriteCache(buffersz, true);// max8191indice
-                int cid = cacheTilesOn(cache, tc.getIntex(), tc.getIntey());
-                tc.setCache(cache);
-                tc.setCacheID(cid);
+                if (sShowAnimations) {
+                    int[] cids = cacheTilesOnLayered(cache, tc.getIntex(), tc.getIntey());
+                    tc.setCache(cache);
+                    tc.setCacheIDs(cids);
+                } else {
+                    int cid = cacheTilesOn(cache, tc.getIntex(), tc.getIntey());
+                    tc.setCache(cache);
+                    tc.setCacheID(cid);
+                }
                 tc.setChanged(false);
             }
         }
@@ -4142,6 +4466,413 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
         int id = cache.endCache();
         return id;
+    }
+
+    private int[] cacheTilesOnLayered(SpriteCache cache, int intex, int intey) {
+        int[] cids = new int[layers.size()];
+        tilesetsize = tilesets.size();
+        int offsetx = 0, offsety = 0;
+        int jon = 0, joni = 0;
+        long ini;
+        int total = Tw * Th;
+
+        int startx = intex * widd, stopx = intex * widd + widd;
+        if (stopx > Tw)
+            stopx = intex * widd + (Tw % widd);
+        int starty = intey * heii, stopy = intey * heii + heii;
+        if (stopy > Th)
+            stopy = intey * heii + (Th % heii);
+        int aa = 0, bb = 0, cc = 0, dd = 0;
+        switch (renderorder) {
+            case "right-down":
+                aa = starty;
+                bb = stopy;
+                cc = startx;
+                dd = stopx;
+                break;
+            case "left-down":
+                aa = starty;
+                bb = stopy;
+                cc = -stopx + 1;
+                dd = -startx + 1;
+                break;
+            case "right-up":
+                aa = -stopy + 1;
+                bb = -starty + 1;
+                cc = startx;
+                dd = stopx;
+                break;
+            case "left-up":
+                aa = -stopy + 1;
+                bb = -starty + 1;
+                cc = -stopx + 1;
+                dd = -startx + 1;
+                break;
+        }
+
+        String flag;
+        Long mm = null;
+        flag = "00";
+
+        for (int jo = 0; jo < layers.size(); jo++) {
+            boolean vis = layerShownInViewMode(jo);
+            if (layers.get(jo).getType() == layer.Type.TILE && vis) {
+                cache.beginCache();
+                if (layers.get(jo).getOpacity() != 0 && sEnableBlending) {
+                    Gdx.gl.glEnable(GL20.GL_BLEND);
+                    Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+                    applyLayerDrawColor(cache, jo);
+                } else if (viewMode == ViewMode.FOCUSED && jo != selLayer && sEnableBlending) {
+                    Gdx.gl.glEnable(GL20.GL_BLEND);
+                    Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+                    applyLayerDrawColor(cache, jo);
+                } else {
+                    applyLayerDrawColor(cache, jo);
+                }
+                
+                java.util.List<drawer> drawers = new ArrayList<drawer>();
+                drawers.clear();
+                for (int a = aa; a < bb; a++) {
+                    for (int b = cc; b < dd; b++) {
+                        int position = (abs(a) * Tw) + abs(b);
+                        ini = layers.get(jo).getStr().get(position);
+                        int initset = -1;
+                        if (tilesets.size() > 0)
+                            initset = layers.get(jo).getTset().get(position);
+                        if (initset == -1)
+                            continue;
+                        if (ini == 0)
+                            continue;
+                        
+                        boolean isAnimated = false;
+                        long mm_check = ini;
+                        if (ini > total) {
+                            hex = Long.toHexString(ini);
+                            trailer = "00000000" + hex;
+                            hex = trailer.substring(trailer.length() - 8);
+                            mm_check = Long.decode("#00" + hex.substring(2, 8));
+                        }
+                        
+                        tiles = tilesets.get(initset).getTiles();
+                        tilesize = tiles.size();
+                        if (tilesize > 0) {
+                            for (int n = 0; n < tilesize; n++) {
+                                if (tiles.get(n).getAnimation().size() > 0) {
+                                    if (mm_check == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
+                                        isAnimated = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if (isAnimated) {
+                            continue;
+                        }
+                        
+                        int xpos = position % Tw;
+                        int ypos = position / Tw;
+                        if (orientation.equalsIgnoreCase("isometric")) {
+                            offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
+                            offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
+                        }
+
+                        mm = ini;
+                        flag = "00";
+                        if (ini > total) {
+                            hex = Long.toHexString(ini);
+                            trailer = "00000000" + hex;
+                            hex = trailer.substring(trailer.length() - 8);
+                            flag = hex.substring(0, 2);
+                            mm = Long.decode("#00" + hex.substring(2, 8));
+                        }
+                        tiles = tilesets.get(initset).getTiles();
+                        tilesize = tiles.size();
+
+                        sprX = (int) (mm - tilesets.get(initset).getFirstgid()) % (tilesets.get(initset).getWidth());
+                        sprY = (int) (mm - tilesets.get(initset).getFirstgid()) / (tilesets.get(initset).getWidth());
+                        margin = tilesets.get(initset).getMargin();
+                        spacing = tilesets.get(initset).getSpacing();
+                        Tswa = tilesets.get(initset).getTilewidth();
+                        Tsha = tilesets.get(initset).getTileheight();
+                        int Tswad = 0;
+                        int Tshad = 0;
+                        if (sResizeTiles) {
+                            Tswad = Tsw;
+                            Tshad = Tsh;
+                        } else {
+                            Tswad = Tswa;
+                            Tshad = Tsha;
+                        }
+                        drawer tempdrawer = new drawer();
+                        switch (flag) {
+                            case "20":
+                                tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin,
+                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                break;
+                            case "40":
+                                tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin,
+                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
+                                break;
+                            case "60":
+                                tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin,
+                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                break;
+                            case "80":
+                                tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin,
+                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                break;
+                            case "a0":
+                                tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin,
+                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                break;
+                            case "c0":
+                                tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin,
+                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                break;
+                            case "e0":
+                                tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin,
+                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                break;
+                            case "00":
+                                tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin,
+                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                break;
+                        }
+                        drawers.add(tempdrawer);
+                    }
+                }
+
+                for (drawer drawer : drawers) {
+                    drawer.add(cache, tilesets);
+                }
+
+                cids[jo] = cache.endCache();
+
+                if (layers.get(jo).getOpacity() != 0 && sEnableBlending) {
+                    Gdx.gl.glDisable(GL20.GL_BLEND);
+                } else if (viewMode == ViewMode.FOCUSED && jo != selLayer && sEnableBlending) {
+                    Gdx.gl.glDisable(GL20.GL_BLEND);
+                }
+            } else {
+                cids[jo] = -1;
+            }
+        }
+        return cids;
+    }
+
+    private void drawAnimatedTilesForChunkAndLayer(TileCache tc, int jo) {
+        int intex = tc.getIntex();
+        int intey = tc.getIntey();
+        int offsetx = 0, offsety = 0;
+        long ini;
+        int total = Tw * Th;
+
+        int startx = intex * widd, stopx = intex * widd + widd;
+        if (stopx > Tw)
+            stopx = intex * widd + (Tw % widd);
+        int starty = intey * heii, stopy = intey * heii + heii;
+        if (stopy > Th)
+            stopy = intey * heii + (Th % heii);
+        int aa = 0, bb = 0, cc = 0, dd = 0;
+        switch (renderorder) {
+            case "right-down":
+                aa = starty;
+                bb = stopy;
+                cc = startx;
+                dd = stopx;
+                break;
+            case "left-down":
+                aa = starty;
+                bb = stopy;
+                cc = -stopx + 1;
+                dd = -startx + 1;
+                break;
+            case "right-up":
+                aa = -stopy + 1;
+                bb = -starty + 1;
+                cc = startx;
+                dd = stopx;
+                break;
+            case "left-up":
+                aa = -stopy + 1;
+                bb = -starty + 1;
+                cc = -stopx + 1;
+                dd = -startx + 1;
+                break;
+        }
+
+        String flag;
+        Long mm = null;
+        flag = "00";
+
+        boolean blendEnabled = false;
+        if (layers.get(jo).getOpacity() != 0 && sEnableBlending) {
+            Gdx.gl.glEnable(GL20.GL_BLEND);
+            Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+            blendEnabled = true;
+        } else if (viewMode == ViewMode.FOCUSED && jo != selLayer && sEnableBlending) {
+            Gdx.gl.glEnable(GL20.GL_BLEND);
+            Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+            blendEnabled = true;
+        }
+        applyLayerDrawColor(jo);
+
+        String hex, trailer;
+        int sprX, sprY, margin, spacing, Tswa, Tsha;
+        java.util.List<tile> tiles;
+        int tilesize;
+        drawer tempdrawer;
+
+        java.util.List<drawer> drawers = new ArrayList<drawer>();
+        drawers.clear();
+        for (int a = aa; a < bb; a++) {
+            for (int b = cc; b < dd; b++) {
+                int position = (abs(a) * Tw) + abs(b);
+                ini = layers.get(jo).getStr().get(position);
+                int initset = -1;
+                if (tilesets.size() > 0)
+                    initset = layers.get(jo).getTset().get(position);
+                if (initset == -1)
+                    continue;
+                if (ini == 0)
+                    continue;
+                
+                boolean isAnimated = false;
+                long mm_check = ini;
+                if (ini > total) {
+                    hex = Long.toHexString(ini);
+                    trailer = "00000000" + hex;
+                    hex = trailer.substring(trailer.length() - 8);
+                    mm_check = Long.decode("#00" + hex.substring(2, 8));
+                }
+                
+                tiles = tilesets.get(initset).getTiles();
+                tilesize = tiles.size();
+                if (tilesize > 0) {
+                    for (int n = 0; n < tilesize; n++) {
+                        if (tiles.get(n).getAnimation().size() > 0) {
+                            if (mm_check == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
+                                isAnimated = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (!isAnimated) {
+                    continue;
+                }
+                
+                int xpos = position % Tw;
+                int ypos = position / Tw;
+                if (orientation.equalsIgnoreCase("isometric")) {
+                    offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
+                    offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
+                }
+
+                mm = ini;
+                flag = "00";
+                if (ini > total) {
+                    hex = Long.toHexString(ini);
+                    trailer = "00000000" + hex;
+                    hex = trailer.substring(trailer.length() - 8);
+                    flag = hex.substring(0, 2);
+                    mm = Long.decode("#00" + hex.substring(2, 8));
+                }
+                
+                if (tilesize > 0) {
+                    for (int n = 0; n < tilesize; n++) {
+                        if (tiles.get(n).getAnimation().size() > 0) {
+                            if (mm == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
+                                mm = (long) tiles.get(n).getActiveFrameID()
+                                        + tilesets.get(initset).getFirstgid();
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                sprX = (int) (mm - tilesets.get(initset).getFirstgid()) % (tilesets.get(initset).getWidth());
+                sprY = (int) (mm - tilesets.get(initset).getFirstgid()) / (tilesets.get(initset).getWidth());
+                margin = tilesets.get(initset).getMargin();
+                spacing = tilesets.get(initset).getSpacing();
+                Tswa = tilesets.get(initset).getTilewidth();
+                Tsha = tilesets.get(initset).getTileheight();
+                int Tswad = 0;
+                int Tshad = 0;
+                if (sResizeTiles) {
+                    Tswad = Tsw;
+                    Tshad = Tsh;
+                } else {
+                    Tswad = Tswa;
+                    Tshad = Tsha;
+                }
+                tempdrawer = new drawer();
+                switch (flag) {
+                    case "20":
+                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                                Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin,
+                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                        break;
+                    case "40":
+                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                                Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin,
+                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
+                        break;
+                    case "60":
+                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                                Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin,
+                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                        break;
+                    case "80":
+                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                                Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin,
+                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                        break;
+                    case "a0":
+                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                                Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin,
+                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                        break;
+                    case "c0":
+                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                                Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin,
+                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                        break;
+                    case "e0":
+                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                                Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin,
+                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                        break;
+                    case "00":
+                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                                Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin,
+                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                        break;
+                }
+                drawers.add(tempdrawer);
+            }
+        }
+
+        if (!drawers.isEmpty()) {
+            batch.setProjectionMatrix(cam.combined);
+            batch.begin();
+            for (drawer drawer : drawers) {
+                drawer.draw(batch, tilesets.get(drawer.initset).getTexture());
+            }
+            batch.end();
+        }
+
+        if (blendEnabled) {
+            Gdx.gl.glDisable(GL20.GL_BLEND);
+        }
     }
 
     private void drawCollisions() {
@@ -4985,6 +5716,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     @Override
     public void dispose() {
+        clearPickerCaches();
         if (mapSaveExecutor != null)
             mapSaveExecutor.shutdown();
         if (mygame != null)
@@ -6437,6 +7169,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (!fh2.exists())
             fh2.mkdirs();
 
+        String lastVersion = prefs.getString("last_version", "");
+        if (vers != null && !vers.equals(lastVersion)) {
+            justReloadSamples();
+            isSampleReloaded = true;
+            prefs.putBoolean("reloaded", isSampleReloaded);
+            prefs.putString("last_version", vers);
+            prefs.flush();
+            return;
+        }
+
         if (!isSampleReloaded) {
             fh2 = Gdx.files.absolute(basepath + "NotTiled/");
             if (!fh2.exists())
@@ -6458,7 +7200,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 prefs.putString("lastpath", lastpath).flush();
             }
             isSampleReloaded = true;
-            prefs.putBoolean("reloaded", isSampleReloaded).flush();
+            prefs.putBoolean("reloaded", isSampleReloaded);
+            prefs.putString("last_version", vers);
+            prefs.flush();
         }
     }
 
@@ -6505,6 +7249,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (ze.isDirectory()) {
                     newFile.mkdirs();
                 } else {
+                    newFile.parent().mkdirs();
                     FileOutputStream fos = new FileOutputStream(newFile.file());
                     int len;
                     while ((len = zis.read(buffer)) > 0) {
@@ -6526,6 +7271,44 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     }
 
+    public void zip(FileHandle src, FileHandle destZipFile) {
+        try {
+            FileOutputStream fos = new FileOutputStream(destZipFile.file());
+            ZipOutputStream zos = new ZipOutputStream(fos);
+            zipFileOrDirectory(src, src.name(), zos);
+            zos.close();
+            fos.close();
+        } catch (IOException e) {
+            ErrorBung(e, "errorlog.txt");
+        }
+    }
+
+    private void zipFileOrDirectory(FileHandle fileHandle, String baseName, ZipOutputStream zos) throws IOException {
+        if (fileHandle.isDirectory()) {
+            FileHandle[] children = fileHandle.list();
+            if (children.length == 0) {
+                ZipEntry entry = new ZipEntry(baseName + "/");
+                zos.putNextEntry(entry);
+                zos.closeEntry();
+            } else {
+                for (FileHandle child : children) {
+                    zipFileOrDirectory(child, baseName + "/" + child.name(), zos);
+                }
+            }
+        } else {
+            ZipEntry entry = new ZipEntry(baseName);
+            zos.putNextEntry(entry);
+            InputStream is = fileHandle.read();
+            byte[] buffer = new byte[1024];
+            int len;
+            while ((len = is.read(buffer)) > 0) {
+                zos.write(buffer, 0, len);
+            }
+            is.close();
+            zos.closeEntry();
+        }
+    }
+
     public void initializeThings() {
         // newtmxfile(false);
         try {
@@ -6534,6 +7317,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 FileHandle payloadFile = Gdx.files.internal("game_payload.zip");
                 FileHandle destFolder = Gdx.files.absolute(basepath + "NotTiled/GamePayload");
                 unzip(payloadFile, destFolder);
+                loadingfile = false;
                 backToMap();
                 playgame(basepath + "NotTiled/GamePayload", "index.tmx");
                 return;
@@ -6553,49 +7337,47 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             int shutdowns = prefs.getInteger("abnormal_shutdowns", 0);
             if (shutdowns >= 3) {
                 log("Safe Mode activated due to " + shutdowns + " abnormal shutdowns.");
+                loadingfile = false;
+                firstload = -1;
+                kartu = "stage";
                 final String lfFinal = lf;
-                Gdx.app.postRunnable(new Runnable() {
+                Gdx.input.setInputProcessor(stage);
+                Dialog dlg = new Dialog(z.safemodetitle != null ? z.safemodetitle : "Safe Mode", skin) {
                     @Override
-                    public void run() {
-                        Dialog dlg = new Dialog(z.safemodetitle != null ? z.safemodetitle : "Safe Mode", skin) {
-                            @Override
-                            protected void result(Object object) {
-                                if (Boolean.TRUE.equals(object)) {
-                                    FileHandle tst = Gdx.files.absolute(lfFinal);
-                                    if (tst.exists()) {
-                                        if (lfFinal.toLowerCase().endsWith(".ntp")) {
-                                            backToMap();
-                                            String curdir = tst.parent().path();
-                                            FileHandle tmpfolder = Gdx.files.absolute(basepath + "NotTiled/Temp");
-                                            unzip(tst, tmpfolder);
-                                            recents.addrecent(tst.path(), tst.name(), "legacy");
-                                            saveRecents();
-                                            playgame(basepath + "NotTiled/Temp", "index.tmx");
-                                        } else if (lfFinal.toLowerCase().endsWith(".tmx")) {
-                                            loadtmx(lfFinal);
-                                            backToMap();
-                                        } else if (lfFinal.toLowerCase().endsWith(".png")) {
-                                            loadpng(tst);
-                                        } else if (lfFinal.toLowerCase().endsWith(".json")) {
-                                            loadjsonmap(tst);
-                                        }
-                                    } else {
-                                        newtmxfile(false);
-                                    }
-                                } else {
-                                    prefs.putInteger("abnormal_shutdowns", 0);
-                                    prefs.putString("lof", basepath + "NotTiled/sample/island.tmx").flush();
-                                    newtmxfile(false);
+                    protected void result(Object object) {
+                        if (Boolean.TRUE.equals(object)) {
+                            FileHandle tst = Gdx.files.absolute(lfFinal);
+                            if (tst.exists()) {
+                                if (lfFinal.toLowerCase().endsWith(".ntp")) {
+                                    backToMap();
+                                    String curdir = tst.parent().path();
+                                    FileHandle tmpfolder = Gdx.files.absolute(basepath + "NotTiled/Temp");
+                                    unzip(tst, tmpfolder);
+                                    recents.addrecent(tst.path(), tst.name(), "legacy");
+                                    saveRecents();
+                                    playgame(basepath + "NotTiled/Temp", "index.tmx");
+                                } else if (lfFinal.toLowerCase().endsWith(".tmx")) {
+                                    loadtmx(lfFinal);
+                                    backToMap();
+                                } else if (lfFinal.toLowerCase().endsWith(".png")) {
+                                    loadpng(tst);
+                                } else if (lfFinal.toLowerCase().endsWith(".json")) {
+                                    loadjsonmap(tst);
                                 }
+                            } else {
+                                newtmxfile(false);
                             }
-                        };
-                        dlg.text(z.safemodeprompt != null ? z.safemodeprompt : "NotTiled did not shut down correctly multiple times.\nWould you like to load the last opened map anyway?");
-                        dlg.button(z.yes != null ? z.yes : "Yes", true);
-                        dlg.button(z.no != null ? z.no : "No", false);
-                        Gdx.input.setInputProcessor(stage);
-                        dlg.show(stage);
+                        } else {
+                            prefs.putInteger("abnormal_shutdowns", 0);
+                            prefs.putString("lof", basepath + "NotTiled/sample/island.tmx").flush();
+                            newtmxfile(false);
+                        }
                     }
-                });
+                };
+                dlg.text(z.safemodeprompt != null ? z.safemodeprompt : "NotTiled did not shut down correctly multiple times.\nWould you like to load the last opened map anyway?");
+                dlg.button(z.yes != null ? z.yes : "Yes", true);
+                dlg.button(z.no != null ? z.no : "No", false);
+                dlg.show(stage);
                 return;
             }
 
@@ -6632,7 +7414,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 log("New tmx ok.");
             }
         } catch (Exception e) {
-            status("Error, check storage permission.", 5);
+            ErrorBung(e, "errorloginit.txt");
+            status("Error loading map.", 5);
+            loadingfile = false;
         }
 
     }
@@ -6721,6 +7505,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         l.setStr(ls);
         l.setTset(lts);
         l.setTile(ltl);
+        l.setId(nextlayerid++);
         layers.add(l);
 
         kartu = "world";
@@ -6740,6 +7525,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         firstload = loadtime;
         resetMinimap();
         resetcam(false);
+        ensureDefaultTileLayer();
+        clampSelLayerToSelectable();
         loadingfile = false;
     }
 
@@ -7179,7 +7966,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         saveMapBlocking(curdir + "/" + curfile);
         FileHandle map = Gdx.files.absolute(curdir + "/" + curfile);
         byte[] b = map.readBytes();
-        face.saveasFile(b, fn + ".tmx");
+        String outputName = fn;
+        if (!outputName.toLowerCase().endsWith(".tmx")) {
+            outputName += ".tmx";
+        }
+        face.saveasFile(b, outputName);
         status(z.filesaved, 5);
 
     }
@@ -7188,10 +7979,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tExport = new Table();
         tExport.setFillParent(true);
         tExport.defaults().width(btnx).padBottom(2);
-        fExportFilename = new TextField("export", skin);
+        String base = "export";
+        if (curfile != null && !curfile.isEmpty()) {
+            int lastDot = curfile.lastIndexOf('.');
+            if (lastDot > 0) {
+                base = curfile.substring(0, lastDot);
+            } else {
+                base = curfile;
+            }
+        }
+        fExportFilename = new TextField(base + ".tmx", skin);
         TextButton toback = new TextButton(z.back, skin);
         TextButton toExport = new TextButton(z.export, skin);
-        SelectBox sbExport = new SelectBox(skin);
+        sbExport = new SelectBox(skin);
 
         if (Gdx.app.getType() == Android) {
             sbExport.setItems((Object[]) new String[] { "Export to storage", z.exportastemplate, z.exporttopng,
@@ -7202,6 +8002,41 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     z.selectionastileset, z.exportastileset, "Export as Remixed Dungeon map", z.exporttolua,
                     z.exporttojson, z.exporttomidi, "Export Standalone APK", "Export layer(s) as CSV" });
         }
+
+        sbExport.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                switch (sbExport.getSelectedIndex()) {
+                    case 0:
+                        updateExportFilenameExtension(".tmx");
+                        break;
+                    case 2:
+                        updateExportFilenameExtension(".png");
+                        break;
+                    case 4:
+                        updateExportFilenameExtension(".png");
+                        break;
+                    case 5:
+                        updateExportFilenameExtension(".json");
+                        break;
+                    case 6:
+                        updateExportFilenameExtension(".lua");
+                        break;
+                    case 7:
+                        updateExportFilenameExtension(".json");
+                        break;
+                    case 8:
+                        updateExportFilenameExtension(".mid");
+                        break;
+                    case 9:
+                        updateExportFilenameExtension(".apk");
+                        break;
+                    case 10:
+                        updateExportFilenameExtension(".csv");
+                        break;
+                }
+            }
+        });
 
         tExport.add(new Label(z.filename, skin)).row();
         tExport.add(fExportFilename).row();
@@ -7504,7 +8339,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bReload = new TextButton(z.reloadsamples, skin);
         bCopyto = new TextButton(z.copytorustedwarfare, skin);
         bRusted = new TextButton("Rusted Warfare", skin);
-        bWardate = new TextButton("Ruster WarDate", skin);
         bManual = new TextButton(z.manualbook, skin);
         bVideos = new TextButton(z.videotutorials, skin);
 
@@ -7691,6 +8525,32 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bExporter.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                String base = "export";
+                if (curfile != null && !curfile.isEmpty()) {
+                    int lastDot = curfile.lastIndexOf('.');
+                    if (lastDot > 0) {
+                        base = curfile.substring(0, lastDot);
+                    } else {
+                        base = curfile;
+                    }
+                }
+                String ext = ".tmx";
+                if (sbExport != null) {
+                    switch (sbExport.getSelectedIndex()) {
+                        case 0: ext = ".tmx"; break;
+                        case 2: ext = ".png"; break;
+                        case 4: ext = ".png"; break;
+                        case 5: ext = ".json"; break;
+                        case 6: ext = ".lua"; break;
+                        case 7: ext = ".json"; break;
+                        case 8: ext = ".mid"; break;
+                        case 9: ext = ".apk"; break;
+                        case 10: ext = ".csv"; break;
+                        default: ext = ""; break;
+                    }
+                }
+                fExportFilename.setText(base + ext);
+
                 gotoStage(tExport);
                 cue("export");
             }
@@ -7791,12 +8651,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         });
 
-        bWardate.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                Gdx.net.openURI("https://play.google.com/store/apps/details?id=com.Black.Label.Apps.Ruster.WarDate");
-            }
-        });
+
 
         bManual.addListener(new ChangeListener() {
             @Override
@@ -8000,6 +8855,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tLinks2.defaults().width(btnx).height(btny * 2).padBottom(2);
             Table tLinks1 = new Table();
             tLinks1.defaults().width(btnx).height(btny * 2).padBottom(2);
+            tLinks1.add(bManualCN).row();
             tLinks1.add(bLicense).row();
             // Links1.add( bManual ).row();
             tLinks1.add(bVideos).row();
@@ -8010,8 +8866,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             tLinks2.add(new Label(z.thirdpartyapps, skin)).padTop(10).row();
             tLinks2.add(bRusted).row();
-            tLinks2.add(bWardate).row();
-            tLinks2.add(bManualCN).row();
             tLinks2.add(bBack3);
             tLinks.add(tLinks1);
             tLinks.add(tLinks2);
@@ -8019,6 +8873,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tLinks = new Table();
             tLinks.setFillParent(true);
             tLinks.defaults().width(btnx).height(btny + 2).padBottom(2);
+            tLinks.add(bManualCN).row();
             tLinks.add(bLicense).row();
             // tLinks.add( bManual ).row();
             tLinks.add(bVideos).row();
@@ -8029,8 +8884,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tLinks.add(bBack3).row();
             tLinks.add(new Label(z.thirdpartyapps, skin)).padTop(10).row();
             tLinks.add(bRusted).row();
-            tLinks.add(bWardate).row();
-            tLinks.add(bManualCN).row();
         }
     }
 
@@ -8100,7 +8953,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 tMenu2.add(bImporter).row();
             tMenu2.add(bFileManager).row();
             tMenu1.add(bExporter).row();
-            tMenu2.add(bTutorial).row();
             tMenu2.add(bPreference).row();
             tMenu2.add(bLinks).row();
             tMenu2.add(credito).row();
@@ -8125,7 +8977,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 tMenu.add(bImporter).row();
             tMenu.add(bFileManager).row();
             tMenu.add(bExporter).row();
-            tMenu.add(bTutorial).row();
             tMenu.add(bPreference).row();
             tMenu.add(bLinks).row();
             tMenu.add(credito).row();
@@ -9511,22 +10362,30 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         sb.wlc("}");// layers
         sb.wlc("}");// map
 
-        FileHandle fh = Gdx.files.absolute(curdir + "/" + filenamenya + ".lua");
+        String cleanName = filenamenya;
+        if (cleanName.toLowerCase().endsWith(".lua")) {
+            cleanName = cleanName.substring(0, cleanName.length() - 4);
+        }
+        FileHandle fh = Gdx.files.absolute(curdir + "/" + cleanName + ".lua");
         fh.writeString(sb.toString(), false);
 
         String b = fh.readString();
-        face.saveasFile(b, "export.lua");
+        face.saveasFile(b, cleanName + ".lua");
         backToMap();
         status(z.exportfinished, 5);
     }
 
     private void exporttojson(String filenamenya) {
         setjsonmap();
-        FileHandle fh = Gdx.files.absolute(curdir + "/" + filenamenya + ".json");
+        String cleanName = filenamenya;
+        if (cleanName.toLowerCase().endsWith(".json")) {
+            cleanName = cleanName.substring(0, cleanName.length() - 5);
+        }
+        FileHandle fh = Gdx.files.absolute(curdir + "/" + cleanName + ".json");
         savejsonmap(fh);
         backToMap();
         String b = fh.readString();
-        face.saveasFile(b, "export.json");
+        face.saveasFile(b, cleanName + ".json");
         status(z.exportfinished, 5);
     }
 
@@ -9556,9 +10415,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         }
 
+        String baseName = filenamenya;
+        if (baseName.toLowerCase().endsWith(".csv")) {
+            baseName = baseName.substring(0, baseName.length() - 4);
+        }
+
         for (int i = 0; i < layers.size(); i++) {
             if (layers.get(i).getType() == layer.Type.TILE) {
-                String outName = filenamenya;
+                String outName = baseName;
                 if (tileLayerCount > 1) {
                     outName += "_" + layers.get(i).getName();
                 }
@@ -10086,13 +10950,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             } // no tileswt
 
             //
-            FileHandle fh = Gdx.files.absolute(curdir + "/" + filenamenya + ".png");
+            String cleanName = filenamenya;
+            if (cleanName.toLowerCase().endsWith(".png")) {
+                cleanName = cleanName.substring(0, cleanName.length() - 4);
+            }
+            FileHandle fh = Gdx.files.absolute(curdir + "/" + cleanName + ".png");
             PixmapIO.writePNG(fh, pm2);
             backToMap();
 
             if (export) {
                 byte[] b = fh.readBytes();
-                face.saveasFile(b, "export.png");
+                face.saveasFile(b, cleanName + ".png");
                 status(z.exportfinished, 3);
             } else {
                 status(z.filesaved, 1);
@@ -10537,11 +11405,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             } // no tileswt
 
             //
-            FileHandle fh = Gdx.files.absolute(curdir + "/" + filenamenya + ".png");
+            String cleanName = filenamenya;
+            if (cleanName.toLowerCase().endsWith(".png")) {
+                cleanName = cleanName.substring(0, cleanName.length() - 4);
+            }
+            FileHandle fh = Gdx.files.absolute(curdir + "/" + cleanName + ".png");
             PixmapIO.writePNG(fh, pm2);
             backToMap();
             byte[] b = fh.readBytes();
-            face.saveasFile(b, "tileset.png");
+            face.saveasFile(b, cleanName + ".png");
 
             status(z.exportfinished, 3);
         } catch (Exception e) {
@@ -11115,6 +11987,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "tilesettings":
                         pp = tilesets.get(seltset).getTiles().get(selTileID).getProperties();
                         break;
+                    case "tilecollisionobject":
+                        pp = selectedColObj.getProperties();
+                        break;
                     case "layer":
                         pp = layers.get(selLayer).getProperties();
                         break;
@@ -11214,7 +12089,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
 
                     }
-                    onToPicker();
+                    showTileOptions();
                     return;
                 }
 
@@ -11319,7 +12194,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         gotoStage(tTileMgmt);
                         break;
                     case "tileadd":
-                        onToPicker();
+                        showTileOptions();
                         break;
                     default:
                         gotoStage(tPropsMgmt);
@@ -11487,6 +12362,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         // language= prefs.getString("language", "english");
         sShowGrid = prefs.getBoolean("grid", true);
+        sShowAnimations = prefs.getBoolean("showanimations", false);
 
         sEnableBlending = prefs.getBoolean("blending", true);
         sBgcolor = prefs.getString("background", "888888");
@@ -11575,6 +12451,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 cbMinimap.setChecked(sMinimap);
                 cbShowGrid.setChecked(sShowGrid);
+                cbShowAnimations.setChecked(sShowAnimations);
                 cbShowFPS.setChecked(sShowFPS);
                 cbCustomUI.setChecked(sCustomUI);
                 cbAutoSave.setChecked(sAutoSave);
@@ -11616,6 +12493,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         cbCustomUI = new CheckBox(z.customui, skin);
         cbShowGrid = new CheckBox(z.showgrid, skin);
+        cbShowAnimations = new CheckBox(z.showanimations, skin);
         cbShowCoords = new CheckBox(z.showcoords, skin);
         cbShowFPS = new CheckBox(z.showfps, skin);
         cbEnableBlending = new CheckBox(z.enableblending, skin);
@@ -11677,6 +12555,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 sShowGrid = cbShowGrid.isChecked();
                 prefs.putBoolean("grid", sShowGrid).flush();
+                sShowAnimations = cbShowAnimations.isChecked();
+                prefs.putBoolean("showanimations", sShowAnimations).flush();
                 sEnableBlending = cbEnableBlending.isChecked();
                 prefs.putBoolean("blending", sEnableBlending).flush();
                 sMinimap = cbMinimap.isChecked();
@@ -11834,6 +12714,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 prefs.putInteger("defaultobjh", defaultObjH).flush();
                 backToMap();
                 resetCaches();
+                clearPickerCaches();
                 if (!language.equalsIgnoreCase(oldlang) || fontsize != oldfontsize || sCustomFont != oldcustomfont) {
                     msgbox(z.restart);
                 }
@@ -11883,6 +12764,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tPreference2.add(cbCustomUI).colspan(2).left().row();
         tPreference2.add(cbEnableBlending).colspan(2).left().row();
         tPreference2.add(cbShowGrid).colspan(2).left().row();
+        tPreference2.add(cbShowAnimations).colspan(2).left().row();
         tPreference2.add(new Label(z.gridopacity, skin)).colspan(2).width(btnx).row();
         tPreference2.add(sdGridOpacity).colspan(2).width(btnx).row();
 
@@ -11965,6 +12847,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             z.defaultobjectheight = "Default Object Height";
         if (z.confirmdelete == null)
             z.confirmdelete = "Are you sure you want to delete this?";
+        if (z.ungroup == null)
+            z.ungroup = "Ungroup";
         if (z.cut == null)
             z.cut = "Cut";
         if (z.swap == null)
@@ -12005,6 +12889,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             z.safemodetitle = "Safe Mode";
         if (z.safemodeprompt == null)
             z.safemodeprompt = "NotTiled did not shut down correctly multiple times.\nWould you like to load the last opened map anyway?";
+        if (z.zip == null)
+            z.zip = "Zip";
+        if (z.unzip == null)
+            z.unzip = "Unzip";
+        if (z.showanimations == null)
+            z.showanimations = "Animations";
+        if (z.options == null)
+            z.options = "Options";
+        if (z.tilecollision == null)
+            z.tilecollision = "Tile Collision";
         shapeName = z.rectangle;
         toolName = z.tile;
         viewModeName = z.stack;
@@ -12275,24 +13169,1045 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         resetCaches();
     }
 
+    private TextureRegionDrawable tintedRowBg(Color color) {
+        int key = Color.rgba8888(color);
+        TextureRegionDrawable cached = rowBgCache.get(key);
+        if (cached != null)
+            return cached;
+        Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pm.setColor(color);
+        pm.fill();
+        TextureRegionDrawable d = new TextureRegionDrawable(new TextureRegion(new Texture(pm)));
+        pm.dispose();
+        rowBgCache.put(key, d);
+        return d;
+    }
+
+    private void ensureLayerMgrDropDrawables() {
+        if (rowBgDragging == null) {
+            rowBgDragging = tintedRowBg(new Color(0.5f, 0.5f, 0.5f, 0.3f));
+            rowBgDropIntoGroup = tintedRowBg(new Color(1f, 0.78f, 0.1f, 0.4f));
+            rowBgDropBefore = tintedRowBg(new Color(0.35f, 0.85f, 1f, 0.35f));
+            rowBgDropAfter = tintedRowBg(new Color(0.2f, 0.8f, 1f, 0.3f));
+        }
+    }
+
+    private enum LayerDropMode {
+        BEFORE, INTO_GROUP, AFTER
+    }
+
+    private LayerDropMode resolveDropMode(layer dstLayer, float y, float rowH) {
+        if (dstLayer.getType() == layer.Type.GROUP) {
+            if (y < rowH * 0.28f)
+                return LayerDropMode.BEFORE;
+            if (y > rowH * 0.72f)
+                return LayerDropMode.AFTER;
+            return LayerDropMode.INTO_GROUP;
+        }
+        if (y < rowH * 0.5f)
+            return LayerDropMode.BEFORE;
+        return LayerDropMode.AFTER;
+    }
+
+    private void applyLayerBlockDrop(int from, int rawInsertAt, int parentGroupId) {
+        if (from < 0 || from >= layers.size())
+            return;
+
+        layer movedRoot = layers.get(from);
+        int blockEnd = getGroupBlockEndIndex(from);
+        int blockSize = blockEnd - from + 1;
+
+        int insertAt = rawInsertAt;
+        if (insertAt < 0)
+            insertAt = 0;
+        if (insertAt > layers.size())
+            insertAt = layers.size();
+
+        if (insertAt > from && insertAt <= blockEnd)
+            return;
+        if (insertAt == from && parentGroupId == movedRoot.getParentGroupId())
+            return;
+        if (insertAt == blockEnd + 1 && parentGroupId == movedRoot.getParentGroupId())
+            return;
+
+        java.util.List<layer> block = new ArrayList<layer>();
+        for (int i = from; i <= blockEnd; i++)
+            block.add(layers.get(i));
+        for (int i = blockEnd; i >= from; i--)
+            layers.remove(i);
+
+        if (insertAt > from)
+            insertAt -= blockSize;
+        if (insertAt < 0)
+            insertAt = 0;
+        if (insertAt > layers.size())
+            insertAt = layers.size();
+
+        block.get(0).setParentGroupId(parentGroupId);
+        for (int i = 0; i < block.size(); i++)
+            layers.add(insertAt + i, block.get(i));
+
+        selLayer = insertAt;
+        clampSelLayerToSelectable();
+        llayerlist.setSelectedIndex(selLayer);
+        resetCaches();
+        updateObjectCollision();
+        pushUpdateIfCollaborating();
+        rebuildLayerManagerList();
+    }
+
+    private void applyLayerBlockDropOnRow(int from, int dstIdx, LayerDropMode mode) {
+        if (from < 0 || from >= layers.size() || dstIdx < 0 || dstIdx >= layers.size())
+            return;
+
+        layer dstLayer = layers.get(dstIdx);
+        int blockEnd = getGroupBlockEndIndex(from);
+        if (dstIdx >= from && dstIdx <= blockEnd)
+            return;
+
+        if (mode == LayerDropMode.INTO_GROUP) {
+            if (dstLayer.getType() != layer.Type.GROUP)
+                return;
+            if (isDescendant(dstLayer.getId(), layers.get(from).getId()))
+                return;
+            applyLayerBlockDrop(from, dstIdx + 1, dstLayer.getId());
+            return;
+        }
+
+        int parentGroupId = dstLayer.getParentGroupId();
+        if (mode == LayerDropMode.BEFORE) {
+            applyLayerBlockDrop(from, dstIdx, parentGroupId);
+        } else {
+            int afterIdx = dstLayer.getType() == layer.Type.GROUP ? getGroupBlockEndIndex(dstIdx) + 1 : dstIdx + 1;
+            applyLayerBlockDrop(from, afterIdx, parentGroupId);
+        }
+    }
+
+    private void addLayerListTopDropTarget(final float rowH) {
+        Table gap = new Table();
+        layerMgrListTable.add(gap).width(btnx).height(Math.max(14, rowH * 0.12f)).padBottom(2).row();
+        layerMgrDnd.addTarget(new DragAndDrop.Target(gap) {
+            @Override
+            public boolean drag(DragAndDrop.Source source, DragAndDrop.Payload payload,
+                                float x, float y, int pointer) {
+                gap.setBackground(rowBgDropBefore);
+                return true;
+            }
+
+            @Override
+            public void reset(DragAndDrop.Source source, DragAndDrop.Payload payload) {
+                gap.setBackground((Drawable) null);
+            }
+
+            @Override
+            public void drop(DragAndDrop.Source source, DragAndDrop.Payload payload,
+                             float x, float y, int pointer) {
+                int from = (Integer) payload.getObject();
+                applyLayerBlockDrop(from, 0, -1);
+            }
+        });
+    }
+
+    private void applyLayerRowBackground(Table row, int layerIdx) {
+        row.setBackground(tintedRowBg(getLayerRowBackgroundForLayer(layers.get(layerIdx))));
+    }
+
+    private String getLayerParentGroupName(layer lay) {
+        if (lay.getParentGroupId() == -1)
+            return null;
+        layer parent = findLayerById(lay.getParentGroupId());
+        if (parent == null)
+            return null;
+        int depth = getLayerDepth(lay);
+        if (depth <= 0)
+            return null;
+        StringBuilder prefix = new StringBuilder();
+        for (int i = 1; i < depth; i++)
+            prefix.append("../");
+        return prefix.toString() + parent.getName();
+    }
+
+    private boolean isSelectableLayerIndex(int idx) {
+        return idx >= 0 && idx < layers.size()
+                && layers.get(idx).getType() != layer.Type.GROUP;
+    }
+
+    private int nextSelectableLayer(int from, int dir) {
+        if (layers.isEmpty())
+            return 0;
+        int n = layers.size();
+        int i = from;
+        for (int step = 0; step < n; step++) {
+            i = (i + dir + n) % n;
+            if (layers.get(i).getType() != layer.Type.GROUP)
+                return i;
+        }
+        return from;
+    }
+
+    private void ensureDefaultTileLayer() {
+        for (int i = 0; i < layers.size(); i++) {
+            if (layers.get(i).getType() != layer.Type.GROUP)
+                return;
+        }
+        layer l = new layer();
+        l.setId(nextlayerid++);
+        l.setType(layer.Type.TILE);
+        l.setVisible(true);
+        l.setName("Layer1");
+        l.setParentGroupId(-1);
+        java.util.List<Long> ls = new ArrayList<Long>();
+        java.util.List<Integer> lts = new ArrayList<Integer>();
+        java.util.List<Integer> ltl = new ArrayList<Integer>();
+        long cells = (long) Math.max(1, Tw) * Math.max(1, Th);
+        for (long i = 0; i < cells; i++) {
+            ls.add((long) 0);
+            lts.add(-1);
+            ltl.add(-1);
+        }
+        l.setStr(ls);
+        l.setTset(lts);
+        l.setTile(ltl);
+        layers.add(l);
+    }
+
+    private void clampSelLayerToSelectable() {
+        ensureDefaultTileLayer();
+        if (isSelectableLayerIndex(selLayer))
+            return;
+        for (int i = 0; i < layers.size(); i++) {
+            if (isSelectableLayerIndex(i)) {
+                selLayer = i;
+                return;
+            }
+        }
+    }
+
+    private void applyLayerModeForSelLayer() {
+        if (!isSelectableLayerIndex(selLayer))
+            return;
+        if (layers.get(selLayer).getType() == layer.Type.TILE) {
+            mode = "tile";
+        } else if (layers.get(selLayer).getType() == layer.Type.OBJECT) {
+            mode = "object";
+        } else if (layers.get(selLayer).getType() == layer.Type.IMAGE) {
+            mode = "image";
+        }
+    }
+
+    private void applyLayerRowLabelStyle(Label nameLabel, int layerIdx) {
+        if (layerIdx == selLayer)
+            nameLabel.setColor(1f, 0.92f, 0.15f, 1f);
+        else
+            nameLabel.setColor(1f, 1f, 1f, 1f);
+    }
+
+    private Label findLayerRowNameLabel(Table row) {
+        if (row.getChildren().size <= 1 || !(row.getChildren().get(1) instanceof Table))
+            return null;
+        Table nameCell = (Table) row.getChildren().get(1);
+        for (Actor a : nameCell.getChildren()) {
+            if (a instanceof Label && "layerName".equals(a.getName()))
+                return (Label) a;
+        }
+        return null;
+    }
+
+    private void applyLayerRowStyle(Table row, int layerIdx) {
+        applyLayerRowBackground(row, layerIdx);
+        Label nameLabel = findLayerRowNameLabel(row);
+        if (nameLabel != null)
+            applyLayerRowLabelStyle(nameLabel, layerIdx);
+    }
+
+    private void updateLayerManagerHighlight() {
+        if (layerMgrListTable == null)
+            return;
+        for (Actor actor : layerMgrListTable.getChildren()) {
+            if (actor instanceof Table) {
+                Object tag = ((Table) actor).getUserObject();
+                if (tag instanceof Integer)
+                    applyLayerRowStyle((Table) actor, (Integer) tag);
+            }
+        }
+    }
+
+    private void ensureLayerManagerShell(float rowH) {
+        if (tLayerMgrMain != null)
+            return;
+
+        tLayerMgrMain = new Table();
+        tLayerMgrMain.setFillParent(true);
+        tLayerMgrMain.add(new Label(z.layer, skin)).padBottom(4).row();
+
+        Label hint = new Label("Tap to select  ·  Tap group again to fold/unfold  ·  Drag handle: top bar = root top, row top/bottom = reorder, group center = into group", skin);
+        hint.setWrap(true);
+        hint.setColor(0.65f, 0.65f, 0.65f, 1f);
+        hint.setFontScale(0.82f);
+        tLayerMgrMain.add(hint).width(btnx).padBottom(6).row();
+
+        TextButton btnAdd = new TextButton("+  " + z.addnew, skin);
+        btnAdd.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                gotoStage(tLayerNew);
+            }
+        });
+        tLayerMgrMain.add(btnAdd).width(btnx).height(rowH * 0.85f).padBottom(6).row();
+
+        layerMgrListTable = new Table();
+        layerMgrScrollPane = new ScrollPane(layerMgrListTable, skin);
+        layerMgrScrollPane.setFadeScrollBars(false);
+        layerMgrScrollPane.setScrollingDisabled(true, false);
+        tLayerMgrMain.add(layerMgrScrollPane).width(btnx).expandY().fillY().padBottom(5).row();
+
+        TextButton btnBack = new TextButton(z.ok, skin);
+        btnBack.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                backToMap();
+                cue("layerselected");
+            }
+        });
+        tLayerMgrMain.add(btnBack).width(btnx).height(rowH * 0.9f).row();
+    }
+
+    private void rebuildLayerManagerList() {
+        if (layerIdsNeedRepair()) {
+            collapsedGroupIds.clear();
+            repairLayerTreeIds();
+        }
+        refreshLayerList();
+        float rowH = btny * 1.85f;
+        float actionSz = Math.max(56, btny * 1.25f);
+        float typeSz = Math.max(48, btny * 1.05f);
+
+        ensureLayerManagerShell(rowH);
+        ensureLayerMgrDropDrawables();
+        layerMgrListTable.clear();
+        if (layerMgrDnd != null)
+            layerMgrDnd.clear();
+        layerMgrDnd = new DragAndDrop();
+        layerMgrDnd.setDragTime(120);
+
+        addLayerListTopDropTarget(rowH);
+
+        for (int i = 0; i < layers.size(); i++) {
+            if (!isLayerVisibleInTree(i))
+                continue;
+
+            final int layerIdx = i;
+            final layer lay = layers.get(i);
+            final Table row = new Table();
+            row.setUserObject(layerIdx);
+
+            boolean isGroup = lay.getType() == layer.Type.GROUP;
+            final boolean hasChildren = isGroup && groupHasChildren(lay);
+            final boolean collapsed = hasChildren && collapsedGroupIds.contains(lay.getId());
+
+            applyLayerRowBackground(row, layerIdx);
+
+            Image typeImg = new Image();
+            if (lay.getType() == layer.Type.TILE) {
+                typeImg.setDrawable(new SpriteDrawable(new Sprite(txTypeTile)));
+            } else if (lay.getType() == layer.Type.OBJECT) {
+                typeImg.setDrawable(new SpriteDrawable(new Sprite(txTypeObject)));
+            } else if (lay.getType() == layer.Type.GROUP) {
+                typeImg.setDrawable(new SpriteDrawable(new Sprite(txTypeGroup)));
+            } else if (lay.getType() == layer.Type.IMAGE) {
+                typeImg.setDrawable(new SpriteDrawable(new Sprite(txTypeImage)));
+            }
+            row.add(typeImg).size(typeSz, typeSz).padLeft(6).padRight(6);
+
+            String displayName = lay.getName();
+            if (collapsed)
+                displayName += " ...";
+            ClickListener rowTapListener = new ClickListener() {
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    if (isGroup) {
+                        if (hasChildren) {
+                            if (collapsed)
+                                collapsedGroupIds.remove(lay.getId());
+                            else
+                                collapsedGroupIds.add(lay.getId());
+                            rebuildLayerManagerList();
+                        }
+                    } else {
+                        selLayer = layerIdx;
+                        llayerlist.setSelectedIndex(layerIdx);
+                        updateObjectCollision();
+                        updateLayerManagerHighlight();
+                    }
+                }
+            };
+            Table nameCell = new Table();
+            nameCell.left();
+            nameCell.defaults().pad(0);
+            String parentName = getLayerParentGroupName(lay);
+            if (parentName != null && !parentName.isEmpty()) {
+                Label parentLabel = new Label(parentName, skin);
+                parentLabel.setName("parentName");
+                parentLabel.setFontScale(0.62f);
+                parentLabel.setColor(0.72f, 0.72f, 0.72f, 1f);
+                parentLabel.setAlignment(Align.left);
+                parentLabel.addListener(rowTapListener);
+                nameCell.add(parentLabel).left().padBottom(0).row();
+            }
+            Label nameLabel = new Label(displayName, skin);
+            nameLabel.setName("layerName");
+            nameLabel.setAlignment(Align.left);
+            nameLabel.setWrap(true);
+            applyLayerRowLabelStyle(nameLabel, layerIdx);
+            nameLabel.addListener(rowTapListener);
+            nameCell.add(nameLabel).left().expandX().fillX().padTop(parentName != null && !parentName.isEmpty() ? -3 : 0);
+            typeImg.addListener(rowTapListener);
+            row.add(nameCell).expandX().fillX().minHeight(rowH).padRight(4);
+
+            Button btnVis = new Button(skin);
+            final Image visImg = new Image();
+            if (lay.isVisible()) {
+                visImg.setDrawable(new SpriteDrawable(new Sprite(txVisible)));
+            } else {
+                visImg.setDrawable(new SpriteDrawable(new Sprite(txInvisible)));
+            }
+            btnVis.add(visImg).size(actionSz * 0.75f, actionSz * 0.75f);
+            btnVis.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    lay.setVisible(!lay.isVisible());
+                    viewMode = ViewMode.CUSTOM;
+                    saveViewMode();
+                    resetCaches();
+                    pushUpdateIfCollaborating();
+                    if (lay.isVisible()) {
+                        visImg.setDrawable(new SpriteDrawable(new Sprite(txVisible)));
+                    } else {
+                        visImg.setDrawable(new SpriteDrawable(new Sprite(txInvisible)));
+                    }
+                }
+            });
+            row.add(btnVis).size(actionSz, rowH).padRight(4);
+
+            Button btnDrag = new Button(skin);
+            btnDrag.setColor(0.85f, 0.85f, 0.85f, 1f);
+            Image dragImg = new Image(new SpriteDrawable(new Sprite(txmove)));
+            btnDrag.add(dragImg).size(actionSz * 0.85f, actionSz * 0.85f);
+            row.add(btnDrag).size(actionSz + 8, rowH).padRight(4);
+
+            TextButton btnOpt = new TextButton("...", skin);
+            btnOpt.getLabel().setFontScale(1.35f);
+            btnOpt.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    showLayerOptionsDialog(layerIdx);
+                }
+            });
+            row.add(btnOpt).size(actionSz + 4, rowH);
+
+            layerMgrListTable.add(row).width(btnx).minHeight(rowH).padBottom(4).row();
+
+            final int srcIdx = layerIdx;
+            layerMgrDnd.addSource(new DragAndDrop.Source(btnDrag) {
+                final DragAndDrop.Payload payload = new DragAndDrop.Payload();
+                @Override
+                public DragAndDrop.Payload dragStart(InputEvent event, float x, float y, int pointer) {
+                    Label ghost = new Label(lay.getName(), skin);
+                    ghost.setColor(1, 1, 0.5f, 0.85f);
+                    payload.setDragActor(ghost);
+                    payload.setObject(srcIdx);
+                    row.setBackground(rowBgDragging);
+                    return payload;
+                }
+                @Override
+                public void dragStop(InputEvent event, float x, float y, int pointer,
+                                     DragAndDrop.Payload payload, DragAndDrop.Target target) {
+                    updateLayerManagerHighlight();
+                }
+            });
+
+            final int dstIdx = layerIdx;
+            final layer dstLayer = lay;
+            layerMgrDnd.addTarget(new DragAndDrop.Target(row) {
+                @Override
+                public boolean drag(DragAndDrop.Source source, DragAndDrop.Payload payload,
+                                    float x, float y, int pointer) {
+                    int from = (Integer) payload.getObject();
+                    if (from == dstIdx)
+                        return false;
+                    int blockEnd = getGroupBlockEndIndex(from);
+                    if (dstIdx >= from && dstIdx <= blockEnd)
+                        return false;
+                    layer dragged = layers.get(from);
+                    if (dstLayer.getType() == layer.Type.GROUP
+                            && isDescendant(dstLayer.getId(), dragged.getId()))
+                        return false;
+                    LayerDropMode mode = resolveDropMode(dstLayer, y, rowH);
+                    if (mode == LayerDropMode.INTO_GROUP)
+                        row.setBackground(rowBgDropIntoGroup);
+                    else if (mode == LayerDropMode.BEFORE)
+                        row.setBackground(rowBgDropBefore);
+                    else
+                        row.setBackground(rowBgDropAfter);
+                    return true;
+                }
+                @Override
+                public void reset(DragAndDrop.Source source, DragAndDrop.Payload payload) {
+                    applyLayerRowBackground(row, layerIdx);
+                }
+                @Override
+                public void drop(DragAndDrop.Source source, DragAndDrop.Payload payload,
+                                 float x, float y, int pointer) {
+                    int from = (Integer) payload.getObject();
+                    if (from == dstIdx)
+                        return;
+                    LayerDropMode mode = resolveDropMode(dstLayer, y, rowH);
+                    applyLayerBlockDropOnRow(from, dstIdx, mode);
+                }
+            });
+        }
+    }
+
+    public void showLayerManager() {
+        ensureDefaultTileLayer();
+        clampSelLayerToSelectable();
+        if (layers.isEmpty())
+            selLayer = 0;
+        else if (selLayer < 0 || selLayer >= layers.size())
+            selLayer = Math.max(0, layers.size() - 1);
+        rebuildLayerManagerList();
+        updateLayerManagerHighlight();
+        gotoStage(tLayerMgrMain);
+        Gdx.app.postRunnable(new Runnable() {
+            @Override
+            public void run() {
+                scrollLayerManagerToSelection();
+            }
+        });
+        cue("layerpick");
+    }
+
+    private void scrollLayerManagerToSelection() {
+        if (layerMgrScrollPane == null || layerMgrListTable == null)
+            return;
+        for (Actor actor : layerMgrListTable.getChildren()) {
+            if (actor instanceof Table) {
+                Object tag = ((Table) actor).getUserObject();
+                if (tag instanceof Integer && (Integer) tag == selLayer) {
+                    layerMgrScrollPane.layout();
+                    layerMgrScrollPane.scrollTo(actor.getX(), actor.getY(), actor.getWidth(), actor.getHeight());
+                    return;
+                }
+            }
+        }
+    }
+
+    private int getNewLayerInsertIndex(int selIdx, layer current, int parentGroupId) {
+        if (current.getType() == layer.Type.GROUP)
+            return getGroupBlockEndIndex(selIdx) + 1;
+        return selIdx + 1;
+    }
+
+    private void ungroupLayer(int layerIdx) {
+        if (layerIdx < 0 || layerIdx >= layers.size())
+            return;
+        layer lay = layers.get(layerIdx);
+        if (lay.getParentGroupId() == -1)
+            return;
+        int blockEnd = getGroupBlockEndIndex(layerIdx);
+        java.util.List<layer> block = new ArrayList<layer>();
+        for (int i = layerIdx; i <= blockEnd; i++)
+            block.add(layers.get(i));
+        for (int i = blockEnd; i >= layerIdx; i--)
+            layers.remove(i);
+        block.get(0).setParentGroupId(-1);
+        int insertAt = layers.size();
+        for (int i = 0; i < block.size(); i++)
+            layers.add(insertAt + i, block.get(i));
+        selLayer = insertAt;
+        clampSelLayerToSelectable();
+        refreshLayerList();
+        resetCaches();
+        updateObjectCollision();
+        pushUpdateIfCollaborating();
+        showLayerManager();
+    }
+
+    private Color opaqueTint(Color c, Color base, float amount) {
+        return new Color(
+                c.r * amount + base.r * (1f - amount),
+                c.g * amount + base.g * (1f - amount),
+                c.b * amount + base.b * (1f - amount),
+                1f);
+    }
+
+    private Color getLayerRowBackgroundForLayer(layer lay) {
+        if (lay.getType() == layer.Type.GROUP) {
+            Color softYellow = new Color(1f, 0.94f, 0.55f, 1f);
+            Color darkBase = new Color(0.11f, 0.11f, 0.13f, 1f);
+            return opaqueTint(softYellow, darkBase, 0.38f);
+        }
+        return new Color(0.15f, 0.15f, 0.17f, 1f);
+    }
+
+    private int getGroupBlockEndIndex(int startIdx) {
+        layer start = layers.get(startIdx);
+        if (start.getType() != layer.Type.GROUP)
+            return startIdx;
+        int groupId = start.getId();
+        int end = startIdx;
+        for (int i = startIdx + 1; i < layers.size(); i++) {
+            if (isDescendant(layers.get(i).getId(), groupId))
+                end = i;
+            else
+                break;
+        }
+        return end;
+    }
+
+    private boolean groupHasChildren(layer g) {
+        for (layer child : layers) {
+            if (child.getParentGroupId() == g.getId())
+                return true;
+        }
+        return false;
+    }
+
     private void refreshLayerList() {
+        if (llayerlist == null)
+            return;
         String[] srr = new String[layers.size()];
         for (int i = 0; i < layers.size(); i++) {
-            srr[i] = "[" + i + "] " + layers.get(i).getName();
-
+            srr[i] = layers.get(i).getName();
         }
         llayerlist.setItems(srr);
-        llayerlist.setSelectedIndex(layers.size() - 1);
+        llayerlist.setSelectedIndex(selLayer >= 0 && selLayer < layers.size() ? selLayer : layers.size() - 1);
+    }
+
+    private boolean layerIdsNeedRepair() {
+        java.util.Set<Integer> seen = new java.util.HashSet<Integer>();
+        for (layer lay : layers) {
+            if (lay.getId() == 0 || !seen.add(lay.getId()))
+                return true;
+        }
+        return false;
+    }
+
+    private void repairLayerTreeIds() {
+        int n = layers.size();
+        if (n == 0)
+            return;
+        int[] oldIds = new int[n];
+        int[] oldParents = new int[n];
+        for (int i = 0; i < n; i++) {
+            oldIds[i] = layers.get(i).getId();
+            oldParents[i] = layers.get(i).getParentGroupId();
+        }
+
+        java.util.Set<Integer> seen = new java.util.HashSet<Integer>();
+        for (int i = 0; i < n; i++) {
+            layer lay = layers.get(i);
+            int id = lay.getId();
+            if (id == 0 || seen.contains(id)) {
+                id = nextlayerid++;
+                lay.setId(id);
+            }
+            seen.add(lay.getId());
+            nextlayerid = Math.max(nextlayerid, lay.getId() + 1);
+        }
+
+        for (int i = 0; i < n; i++) {
+            layer lay = layers.get(i);
+            int oldParent = oldParents[i];
+            if (oldParent == -1) {
+                lay.setParentGroupId(-1);
+                continue;
+            }
+            int parentIdx = -1;
+            for (int j = i - 1; j >= 0; j--) {
+                if (oldIds[j] == oldParent && layers.get(j).getType() == layer.Type.GROUP) {
+                    parentIdx = j;
+                    break;
+                }
+            }
+            lay.setParentGroupId(parentIdx >= 0 ? layers.get(parentIdx).getId() : -1);
+        }
+    }
+
+    private layer findLayerById(int id) {
+        for (layer ly : layers) {
+            if (ly.getId() == id)
+                return ly;
+        }
+        return null;
+    }
+
+    private boolean isLayerVisibleInTree(int flatIdx) {
+        int parentId = layers.get(flatIdx).getParentGroupId();
+        while (parentId != -1) {
+            if (collapsedGroupIds.contains(parentId))
+                return false;
+            layer parent = findLayerById(parentId);
+            if (parent == null)
+                break;
+            parentId = parent.getParentGroupId();
+        }
+        return true;
+    }
+
+    private void showLayerOptionsDialog(final int layerIdx) {
+        if (layerIdx < 0 || layerIdx >= layers.size())
+            return;
+        final layer lay = layers.get(layerIdx);
+        Gdx.input.setInputProcessor(stage);
+        final Dialog optionsDlg = new Dialog("", skin, "dialog");
+        Table optionsTable = optionsDlg.getContentTable();
+        float dialogBtnWidth = Math.min(stage.getWidth() * 0.8f, 400f);
+
+        Label titleLabel = new Label(lay.getName(), skin);
+        titleLabel.setWrap(true);
+        titleLabel.setAlignment(Align.center);
+        optionsTable.add(titleLabel).width(dialogBtnWidth).pad(10).row();
+
+        TextButton btnRen = new TextButton(z.rename, skin);
+        btnRen.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                optionsDlg.hide();
+                getNewTextInput(new TextPromptListener() {
+                    @Override
+                    public void confirm(String input) {
+                        if (input != null && !input.isEmpty()) {
+                            lay.setName(input);
+                            refreshLayerList();
+                            pushUpdateIfCollaborating();
+                            showLayerManager();
+                        }
+                    }
+                    @Override
+                    public void cancel() {
+                    }
+                }, z.rename, lay.getName(), "");
+            }
+        });
+        optionsTable.add(btnRen).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        TextButton btnProp = new TextButton(z.properties, skin);
+        btnProp.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                optionsDlg.hide();
+                if (lay.getType() != layer.Type.GROUP)
+                    selLayer = layerIdx;
+                refreshProperties(lay.getProperties());
+                lPropID.setText(z.customproperties + " (" + z.layer + ")");
+                sender = "layer";
+                gotoStage(tPropsMgmt);
+            }
+        });
+        optionsTable.add(btnProp).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        TextButton btnDup = new TextButton(z.duplicate, skin);
+        btnDup.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                optionsDlg.hide();
+                Json json = new Json();
+                layer copy = json.fromJson(layer.class, json.toJson(lay));
+                copy.setName(lay.getName() + " (copy)");
+                copy.setId(nextlayerid++);
+                layers.add(copy);
+                if (copy.getType() != layer.Type.GROUP)
+                    selLayer = layers.size() - 1;
+                else
+                    clampSelLayerToSelectable();
+                refreshLayerList();
+                resetCaches();
+                updateObjectCollision();
+                pushUpdateIfCollaborating();
+                showLayerManager();
+            }
+        });
+        optionsTable.add(btnDup).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        TextButton btnOpacity = new TextButton(z.setopacity, skin);
+        btnOpacity.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                optionsDlg.hide();
+                getNewTextInput(new TextPromptListener() {
+                    @Override
+                    public void confirm(String input) {
+                        if (input == null || input.isEmpty())
+                            input = "1";
+                        try {
+                            lay.setOpacity(Float.parseFloat(input));
+                            pushUpdateIfCollaborating();
+                            showLayerManager();
+                        } catch (Exception e) {
+                        }
+                    }
+                    @Override
+                    public void cancel() {
+                    }
+                }, z.setopacity, Float.toString(lay.getOpacity()), "");
+            }
+        });
+        optionsTable.add(btnOpacity).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        if (lay.getParentGroupId() != -1) {
+            TextButton btnUngroup = new TextButton(z.ungroup, skin);
+            btnUngroup.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    optionsDlg.hide();
+                    ungroupLayer(layerIdx);
+                }
+            });
+            optionsTable.add(btnUngroup).width(dialogBtnWidth).height(btny).pad(5).row();
+        }
+
+        TextButton btnDel = new TextButton(z.remove, skin);
+        btnDel.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                optionsDlg.hide();
+                if (layers.size() <= 1)
+                    return;
+                Dialog confirmDlg = new Dialog(z.confirmation, skin, "dialog") {
+                    @Override
+                    protected void result(Object object) {
+                        if (object.equals(true)) {
+                            layers.remove(layerIdx);
+                            ensureDefaultTileLayer();
+                            clampSelLayerToSelectable();
+                            refreshLayerList();
+                            updateObjectCollision();
+                            resetCaches();
+                            pushUpdateIfCollaborating();
+                            showLayerManager();
+                        }
+                    }
+                };
+                confirmDlg.text(z.confirmdelete != null ? z.confirmdelete : "Delete this layer?");
+                confirmDlg.button(z.yes, true);
+                confirmDlg.button(z.no, false);
+                confirmDlg.show(stage);
+            }
+        });
+        optionsTable.add(btnDel).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        TextButton btnCancel = new TextButton(z.cancel, skin);
+        btnCancel.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                optionsDlg.hide();
+            }
+        });
+        optionsTable.add(btnCancel).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        optionsDlg.show(stage);
+    }
+
+    private int getLayerDepth(layer l) {
+        int depth = 0;
+        int parentId = l.getParentGroupId();
+        java.util.Set<Integer> seen = new java.util.HashSet<Integer>();
+        while (parentId != -1) {
+            if (!seen.add(parentId))
+                break;
+            depth++;
+            layer parent = null;
+            for (layer pl : layers) {
+                if (pl.getId() == parentId) {
+                    parent = pl;
+                    break;
+                }
+            }
+            if (parent != null) {
+                parentId = parent.getParentGroupId();
+            } else {
+                break;
+            }
+        }
+        return depth;
+    }
+
+    private boolean areAllParentsVisible(layer l) {
+        int parentId = l.getParentGroupId();
+        while (parentId != -1) {
+            layer parent = null;
+            for (layer pl : layers) {
+                if (pl.getId() == parentId) {
+                    parent = pl;
+                    break;
+                }
+            }
+            if (parent != null) {
+                if (!parent.isVisible()) {
+                    return false;
+                }
+                parentId = parent.getParentGroupId();
+            } else {
+                break;
+            }
+        }
+        return true;
+    }
+
+    private float getCombinedOpacity(layer l) {
+        float opacity = l.getOpacity() != 0f ? l.getOpacity() : 1f;
+        int parentId = l.getParentGroupId();
+        while (parentId != -1) {
+            layer parent = null;
+            for (layer pl : layers) {
+                if (pl.getId() == parentId) {
+                    parent = pl;
+                    break;
+                }
+            }
+            if (parent != null) {
+                float parentOpacity = parent.getOpacity() != 0f ? parent.getOpacity() : 1f;
+                opacity *= parentOpacity;
+                parentId = parent.getParentGroupId();
+            } else {
+                break;
+            }
+        }
+        return opacity;
+    }
+
+    private float getCombinedOffsetX(layer l) {
+        float offset = l.getOffsetX();
+        int parentId = l.getParentGroupId();
+        while (parentId != -1) {
+            layer parent = null;
+            for (layer pl : layers) {
+                if (pl.getId() == parentId) {
+                    parent = pl;
+                    break;
+                }
+            }
+            if (parent != null) {
+                offset += parent.getOffsetX();
+                parentId = parent.getParentGroupId();
+            } else {
+                break;
+            }
+        }
+        return offset;
+    }
+
+    private float getCombinedOffsetY(layer l) {
+        float offset = l.getOffsetY();
+        int parentId = l.getParentGroupId();
+        while (parentId != -1) {
+            layer parent = null;
+            for (layer pl : layers) {
+                if (pl.getId() == parentId) {
+                    parent = pl;
+                    break;
+                }
+            }
+            if (parent != null) {
+                offset += parent.getOffsetY();
+                parentId = parent.getParentGroupId();
+            } else {
+                break;
+            }
+        }
+        return offset;
+    }
+
+    private List<Integer> getParentChain(layer l) {
+        List<Integer> chain = new ArrayList<>();
+        int parentId = l.getParentGroupId();
+        while (parentId != -1) {
+            chain.add(0, parentId);
+            layer parent = null;
+            for (layer pl : layers) {
+                if (pl.getId() == parentId) {
+                    parent = pl;
+                    break;
+                }
+            }
+            if (parent != null) {
+                parentId = parent.getParentGroupId();
+            } else {
+                break;
+            }
+        }
+        return chain;
+    }
+
+    private boolean isDescendant(int possibleDescendantId, int ancestorId) {
+        if (possibleDescendantId == -1 || ancestorId == -1) {
+            return false;
+        }
+        layer l = null;
+        for (layer ly : layers) {
+            if (ly.getId() == possibleDescendantId) {
+                l = ly;
+                break;
+            }
+        }
+        if (l == null) {
+            return false;
+        }
+        int parentId = l.getParentGroupId();
+        if (parentId == ancestorId) {
+            return true;
+        }
+        return isDescendant(parentId, ancestorId);
+    }
+
+    private void showSetParentGroupDialog() {
+        if (layers.isEmpty()) return;
+        final int selectedIdx = llayerlist.getSelectedIndex();
+        if (selectedIdx < 0 || selectedIdx >= layers.size()) return;
+        final layer targetLayer = layers.get(selectedIdx);
+
+        final List<layer> groups = new ArrayList<>();
+        for (layer l : layers) {
+            if (l.getType() == layer.Type.GROUP && l.getId() != targetLayer.getId() && !isDescendant(l.getId(), targetLayer.getId())) {
+                groups.add(l);
+            }
+        }
+
+        Dialog dlg = new Dialog("Set Parent Group", skin, "dialog") {
+            @Override
+            protected void result(Object object) {
+                if (object instanceof Integer) {
+                    int parentId = (Integer) object;
+                    targetLayer.setParentGroupId(parentId);
+                    refreshLayerList();
+                    pushUpdateIfCollaborating();
+                    showLayerManager();
+                }
+            }
+        };
+
+        TextButton btnNone = new TextButton("None (Root)", skin);
+        dlg.button(btnNone, -1);
+
+        for (layer g : groups) {
+            TextButton btn = new TextButton(g.getName(), skin);
+            dlg.button(btn, g.getId());
+        }
+
+        dlg.button(z.cancel, null);
+        dlg.show(stage);
     }
 
     public void loadLayerManagement() {
         bAddLayer = new TextButton(z.addnew, skin);
         bRemoveLayer = new TextButton(z.remove, skin);
-        bMoveLayer = new TextButton(z.moveup, skin);
+        bMoveLayer = new TextButton(z.moveup, skin);   // kept for legacy callers; hidden from UI
         bLayerProperties = new TextButton(z.properties, skin);
         bEditLayer = new TextButton(z.rename, skin);
         bLayerDuplicate = new TextButton(z.duplicate, skin);
         bSetOpacity = new TextButton(z.setopacity, skin);
+        bSetParentGroup = new TextButton("Parent Group", skin); // kept for legacy; hidden from UI
 
         llayerlist = new com.badlogic.gdx.scenes.scene2d.ui.List<String>(skin);
 
@@ -12307,8 +14222,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bTileMgmt.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                refreshLayerList();
-                gotoStage(tLayerMgmt);
+                showLayerManager();
             }
         });
 
@@ -12396,6 +14310,24 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
 
                 layer newlayer = new layer();
+                newlayer.setId(nextlayerid++);
+
+                int parentGroupId = -1;
+                int insertAt = layers.size();
+                if (!layers.isEmpty() && selLayer >= 0 && selLayer < layers.size()) {
+                    layer current = layers.get(selLayer);
+                    if (current.getType() == layer.Type.GROUP) {
+                        parentGroupId = current.getId();
+                    } else {
+                        parentGroupId = current.getParentGroupId();
+                    }
+                    insertAt = getNewLayerInsertIndex(selLayer, current, parentGroupId);
+                    if (parentGroupId != -1)
+                        collapsedGroupIds.remove(parentGroupId);
+                    if (current.getType() == layer.Type.GROUP)
+                        collapsedGroupIds.remove(current.getId());
+                }
+                newlayer.setParentGroupId(parentGroupId);
 
                 if (newLayerType == layer.Type.TILE) {
                     java.util.List<Long> newstr = new ArrayList<Long>();
@@ -12419,11 +14351,24 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 } else if (newLayerType == layer.Type.IMAGE) {
                     newlayer.setName(input);
                     newlayer.setType(layer.Type.IMAGE);
+                } else if (newLayerType == layer.Type.GROUP) {
+                    newlayer.setName(input);
+                    newlayer.setType(layer.Type.GROUP);
                 }
                 newlayer.setVisible(true);
-                layers.add(newlayer);
-                selLayer = layers.size() - 1;
+                if (insertAt < 0)
+                    insertAt = 0;
+                if (insertAt > layers.size())
+                    insertAt = layers.size();
+                layers.add(insertAt, newlayer);
+                if (newlayer.getType() != layer.Type.GROUP)
+                    selLayer = insertAt;
+                else
+                    clampSelLayerToSelectable();
+                refreshLayerList();
+                resetCaches();
                 pushUpdateIfCollaborating();
+                showLayerManager();
             }
 
             @Override
@@ -12546,7 +14491,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 if (layers.size() > 0) {
                     getNewTextInput(pSetOpacity, z.setopacity,
-                            Float.toString(layers.get(llayerlist.getSelectedIndex()).getOpacity()), "");
+                             Float.toString(layers.get(llayerlist.getSelectedIndex()).getOpacity()), "");
+                }
+            }
+        });
+        bSetParentGroup.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (layers.size() > 0) {
+                    showSetParentGroupDialog();
                 }
             }
         });
@@ -12579,21 +14532,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             }
         });
-
-        tLayerMgmt = new Table();
-        tLayerMgmt.setFillParent(true);
-        tLayerMgmt.defaults().width(btnx).height(btny);
-        ScrollPane scrollPane = new ScrollPane(llayerlist);
-        tLayerMgmt.add(new Label(z.layer, skin)).padBottom(5).row();
-        tLayerMgmt.add(scrollPane).height(btny * 4).padBottom(5).row();
-        tLayerMgmt.add(bAddLayer).padBottom(5).row();
-        tLayerMgmt.add(bEditLayer).padBottom(5).row();
-        tLayerMgmt.add(bLayerProperties).padBottom(5).row();
-        tLayerMgmt.add(bLayerDuplicate).padBottom(5).row();
-        tLayerMgmt.add(bSetOpacity).padBottom(5).row();
-        tLayerMgmt.add(bMoveLayer).padBottom(5).row();
-        tLayerMgmt.add(bRemoveLayer).padBottom(5).row();
-        tLayerMgmt.add(bBackLayer).padBottom(5);
     }
 
     public void refreshProperties(java.util.List<property> at) {
@@ -12653,8 +14591,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "tilesettings":
                         onToPicker();
                         break;
+                    case "tilecollisionobject":
+                        showTileCollisionEditor();
+                        break;
                     case "layer":
-                        gotoStage(tLayerMgmt);
+                        showLayerManager();
                         break;
                     case "tset":
                         gotoStage(tTsProp);
@@ -12683,6 +14624,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         break;
                     case "tilesettings":
                         pp = tilesets.get(seltset).getTiles().get(selTileID).getProperties();
+                        break;
+                    case "tilecollisionobject":
+                        pp = selectedColObj.getProperties();
                         break;
                     case "tset":
                         pp = tilesets.get(selTsetID).getProperties();
@@ -12722,6 +14666,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         break;
                     case "tilesettings":
                         pp = tilesets.get(seltset).getTiles().get(selTileID).getProperties();
+                        break;
+                    case "tilecollisionobject":
+                        pp = selectedColObj.getProperties();
                         break;
                     case "tset":
                         pp = tilesets.get(selTsetID).getProperties();
@@ -12763,6 +14710,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             break;
                         case "tilesettings":
                             tilesets.get(seltset).getTiles().get(selTileID).setProperties(at.getProperties());
+                            break;
+                        case "tilecollisionobject":
+                            selectedColObj.setProperties(at.getProperties());
                             break;
                         case "tset":
                             tilesets.get(selTsetID).setProperties(at.getProperties());
@@ -12976,6 +14926,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "tilesettings":
                         pp = tilesets.get(seltset).getTiles().get(selTileID).getProperties();
                         break;
+                    case "tilecollisionobject":
+                        pp = selectedColObj.getProperties();
+                        break;
                     case "map":
                         pp = properties;
                         break;
@@ -13047,6 +15000,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "tilesettings":
                         pp = tilesets.get(seltset).getTiles().get(selTileID).getProperties();
                         break;
+                    case "tilecollisionobject":
+                        pp = selectedColObj.getProperties();
+                        break;
                     case "tset":
                         pp = tilesets.get(selTsetID).getProperties();
                         break;
@@ -13085,6 +15041,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         break;
                     case "tilesettings":
                         pp = tilesets.get(seltset).getTiles().get(selTileID).getProperties();
+                        break;
+                    case "tilecollisionobject":
+                        pp = selectedColObj.getProperties();
                         break;
                     case "tset":
                         pp = tilesets.get(selTsetID).getProperties();
@@ -13346,145 +15305,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         switch (wl) {
             case "layer":
-                tt = layers.size();
-                tbl.add(new Label(z.layer, skin)).colspan(4).row();
-                tbl.add(tit).colspan(4).row();
-
-                for (int i = tt - 1; i >= 0; i--) {
-                    ///////
-                    Button moveup = new Button(skin);
-                    final Image imoveup = new Image();
-                    imoveup.setDrawable(new SpriteDrawable(new Sprite(txUp)));
-                    moveup.add(imoveup);
-                    moveup.setName(i + "");
-
-                    tbl.add(moveup).width(btnx * 0.125f);
-
-                    moveup.addListener(new ChangeListener() {
-                        @Override
-                        public void changed(ChangeEvent event, Actor actor) {
-                            // backToMap();
-                            //////
-                            int dex = Integer.parseInt(actor.getName());
-                            if (dex < layers.size() - 1) {
-                                java.util.Collections.swap(layers, dex, dex + 1);
-                                resetCaches();
-                            }
-                            //////
-                            loadList("layer");
-                        }
-                    });
-
-                    ///////
-                    Button movedn = new Button(skin);
-                    final Image imovedn = new Image();
-                    imovedn.setDrawable(new SpriteDrawable(new Sprite(txDown)));
-                    movedn.add(imovedn);
-                    movedn.setName(i + "");
-
-                    tbl.add(movedn).width(btnx * 0.125f);
-
-                    movedn.addListener(new ChangeListener() {
-                        @Override
-                        public void changed(ChangeEvent event, Actor actor) {
-                            // backToMap();
-                            //////
-                            int dex = Integer.parseInt(actor.getName());
-                            if (dex > 0) {
-                                java.util.Collections.swap(layers, dex, dex - 1);
-                                resetCaches();
-                            }
-                            //////
-                            loadList("layer");
-                        }
-                    });
-                    ///////
-                    String name = "", moe = "";
-                    Button layerName = new Button(skin);
-                    Button visible = new Button(skin);
-                    layerName.defaults().left();
-                    int num = i;
-                    Image img = null;
-
-                    name = layers.get(i).getName();
-                    if (layers.get(i).getType() == layer.Type.TILE) {
-                        img = new Image(txTypeTile);
-                    } else if (layers.get(i).getType() == layer.Type.OBJECT) {
-                        img = new Image(txTypeObject);
-                    } else if (layers.get(i).getType() == layer.Type.GROUP) {
-                        img = new Image(txTypeGroup);
-                    } else if (layers.get(i).getType() == layer.Type.IMAGE) {
-                        img = new Image(txTypeImage);
-                    }
-                    layerName.add(img).width(btnx * 0.15f).padLeft(10);
-
-                    Label lbl = new Label(name, skin);
-                    lbl.setColor(1, 1, 1, 1);
-                    lbl.setAlignment(Align.left);
-                    lbl.setWrap(true);
-                    layerName.add(lbl).width(btnx * 0.35f);
-                    layerName.setName(i + "");
-                    tbl.add(layerName).width(btnx * 0.50f).colspan(1);
-                    ////
-                    final Image vis = new Image();
-                    if (layers.get(i).isVisible()) {
-                        vis.setDrawable(new SpriteDrawable(new Sprite(txVisible)));
-                    } else {
-                        vis.setDrawable(new SpriteDrawable(new Sprite(txInvisible)));
-                    }
-                    visible.add(vis);
-                    visible.setName(i + "");
-
-                    tbl.add(visible).width(btnx * 0.25f).colspan(1).row();
-
-                    layerName.addListener(new ChangeListener() {
-                        @Override
-                        public void changed(ChangeEvent event, Actor actor) {
-                            selLayer = Integer.parseInt(actor.getName());
-                            updateObjectCollision();
-                            // adjustTileset();
-                            backToMap();
-                            cue("layerselected");
-                        }
-                    });
-
-                    visible.addListener(new ChangeListener() {
-                        @Override
-                        public void changed(ChangeEvent event, Actor actor) {
-                            layers.get(Integer.parseInt(actor.getName()))
-                                    .setVisible(!layers.get(Integer.parseInt(actor.getName())).isVisible());
-                            viewMode = ViewMode.CUSTOM;
-                            saveViewMode();
-                            resetCaches();
-
-                            if (layers.get(Integer.parseInt(actor.getName())).isVisible()) {
-                                vis.setDrawable(new SpriteDrawable(new Sprite(txVisible)));
-                            } else {
-                                vis.setDrawable(new SpriteDrawable(new Sprite(txInvisible)));
-                            }
-                        }
-                    });
-
-                }
-
-                tit.addListener(new ChangeListener() {
-                    @Override
-                    public void changed(ChangeEvent event, Actor actor) {
-                        gotoStage(tLayerNew);
-                    }
-                });
-
-                tut.addListener(new ChangeListener() {
-                    @Override
-                    public void changed(ChangeEvent event, Actor actor) {
-                        backToMap();
-                    }
-                });
-
-                tbl.add(tut).colspan(4).row();
-                gotoStage(tblmain);
-                cue("layerpick");
-
+                showLayerManager();
                 break;
 
             case "tset":
@@ -13956,7 +15777,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         break;
                     case "tilesettings":
                         tilesets.get(seltset).getTiles().get(selTileID).setProperties(at.getProperties());
-
+                        break;
+                    case "tilecollisionobject":
+                        selectedColObj.setProperties(at.getProperties());
                         break;
                     case "layer":
                         layers.get(selLayer).setProperties(at.getProperties());
@@ -14658,6 +16481,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             final int idx = i;
             newfilekinds.kindentry entry = kinds[i];
             Table row = new Table(skin);
+            row.setTouchable(com.badlogic.gdx.scenes.scene2d.Touchable.enabled);
             row.pad(2, 4, 2, 4);
             Image icon = new Image(newFileKindIcon(entry.icon, i));
             row.add(icon).size(iconSize, iconSize).padRight(6).top();
@@ -14683,11 +16507,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             };
             row.addListener(pick);
-            icon.addListener(pick);
-            titleLbl.addListener(pick);
-            descLbl.addListener(pick);
 
-            tNewFileKindList.add(row).width(btnx).padBottom(5).row();
+            tNewFileKindList.add(row).fillX().expandX().padBottom(5).row();
             newFileKindRows[i] = row;
         }
         setNewFileKindSelection(0);
@@ -15304,6 +17125,515 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     }
 
+    public int getSelectedTileCount() {
+        int count = 0;
+        for (boolean b : massprops) {
+            if (b) count++;
+        }
+        return count;
+    }
+
+    public int getSingleSelectedTileID() {
+        for (int i = 0; i < massprops.size(); i++) {
+            if (massprops.get(i)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public void loadTileOptions() {
+        tTileOptions = new Table();
+        tTileOptions.setFillParent(true);
+
+        tTileCollision = new Table();
+        tTileCollision.setFillParent(true);
+
+        lCollisionList = new com.badlogic.gdx.scenes.scene2d.ui.List<String>(skin);
+        scrollPaneCollision = new ScrollPane(lCollisionList, skin);
+        collisionCanvas = new CollisionCanvas();
+
+        fColName = new TextField("", skin);
+        fColType = new TextField("", skin);
+        fColX = new TextField("", skin);
+        fColX.setTextFieldFilter(tfffloat);
+        fColY = new TextField("", skin);
+        fColY.setTextFieldFilter(tfffloat);
+        fColW = new TextField("", skin);
+        fColW.setTextFieldFilter(tfffloat);
+        fColH = new TextField("", skin);
+        fColH.setTextFieldFilter(tfffloat);
+
+        bColAddRect = new TextButton("Add Rect", skin);
+        bColAddEllipse = new TextButton("Add Ellipse", skin);
+        bColRemove = new TextButton(z.remove != null ? z.remove : "Remove", skin);
+        bColCustomProps = new TextButton(z.customproperties != null ? z.customproperties : "Custom Properties", skin);
+
+        lCollisionList.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (updatingFields) return;
+                int index = lCollisionList.getSelectedIndex();
+                if (index >= 0 && seltset >= 0 && selTileID >= 0 && seltset < tilesets.size()) {
+                    java.util.List<tile> tiles = tilesets.get(seltset).getTiles();
+                    if (selTileID < tiles.size()) {
+                        java.util.List<obj> colObjects = tiles.get(selTileID).getObjects();
+                        if (index < colObjects.size()) {
+                            selectedColObj = colObjects.get(index);
+                            updatingFields = true;
+                            fColName.setText(selectedColObj.getName() != null ? selectedColObj.getName() : "");
+                            fColType.setText(selectedColObj.getType() != null ? selectedColObj.getType() : "");
+                            fColX.setText(Float.toString(selectedColObj.getX()));
+                            fColY.setText(Float.toString(selectedColObj.getY()));
+                            fColW.setText(Float.toString(selectedColObj.getW()));
+                            fColH.setText(Float.toString(selectedColObj.getH()));
+                            updatingFields = false;
+                            return;
+                        }
+                    }
+                }
+                selectedColObj = null;
+                updatingFields = true;
+                fColName.setText("");
+                fColType.setText("");
+                fColX.setText("");
+                fColY.setText("");
+                fColW.setText("");
+                fColH.setText("");
+                updatingFields = false;
+            }
+        });
+
+        fColName.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (updatingFields) return;
+                if (selectedColObj != null) {
+                    selectedColObj.setName(fColName.getText());
+                    refreshCollisionList();
+                }
+            }
+        });
+
+        fColType.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (updatingFields) return;
+                if (selectedColObj != null) {
+                    selectedColObj.setType(fColType.getText());
+                }
+            }
+        });
+
+        fColX.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (updatingFields) return;
+                if (selectedColObj != null && !fColX.getText().isEmpty()) {
+                    try {
+                        selectedColObj.setX(Float.parseFloat(fColX.getText()));
+                        refreshCollisionList();
+                    } catch (NumberFormatException e) {}
+                }
+            }
+        });
+
+        fColY.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (updatingFields) return;
+                if (selectedColObj != null && !fColY.getText().isEmpty()) {
+                    try {
+                        selectedColObj.setY(Float.parseFloat(fColY.getText()));
+                        refreshCollisionList();
+                    } catch (NumberFormatException e) {}
+                }
+            }
+        });
+
+        fColW.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (updatingFields) return;
+                if (selectedColObj != null && !fColW.getText().isEmpty()) {
+                    try {
+                        selectedColObj.setW(Float.parseFloat(fColW.getText()));
+                        refreshCollisionList();
+                    } catch (NumberFormatException e) {}
+                }
+            }
+        });
+
+        fColH.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (updatingFields) return;
+                if (selectedColObj != null && !fColH.getText().isEmpty()) {
+                    try {
+                        selectedColObj.setH(Float.parseFloat(fColH.getText()));
+                        refreshCollisionList();
+                    } catch (NumberFormatException e) {}
+                }
+            }
+        });
+
+        bColAddRect.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (seltset >= 0 && selTileID >= 0 && seltset < tilesets.size()) {
+                    tileset ts = tilesets.get(seltset);
+                    if (selTileID < ts.getTiles().size()) {
+                        obj rect = new obj();
+                        rect.setX(0);
+                        rect.setY(0);
+                        rect.setW(ts.getTilewidth());
+                        rect.setH(ts.getTileheight());
+                        rect.setShape("rectangle");
+                        ts.getTiles().get(selTileID).getObjects().add(rect);
+                        refreshCollisionList();
+                        lCollisionList.setSelectedIndex(ts.getTiles().get(selTileID).getObjects().size() - 1);
+                    }
+                }
+            }
+        });
+
+        bColAddEllipse.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (seltset >= 0 && selTileID >= 0 && seltset < tilesets.size()) {
+                    tileset ts = tilesets.get(seltset);
+                    if (selTileID < ts.getTiles().size()) {
+                        obj ell = new obj();
+                        ell.setX(0);
+                        ell.setY(0);
+                        ell.setW(ts.getTilewidth());
+                        ell.setH(ts.getTileheight());
+                        ell.setShape("ellipse");
+                        ts.getTiles().get(selTileID).getObjects().add(ell);
+                        refreshCollisionList();
+                        lCollisionList.setSelectedIndex(ts.getTiles().get(selTileID).getObjects().size() - 1);
+                    }
+                }
+            }
+        });
+
+        bColRemove.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                int index = lCollisionList.getSelectedIndex();
+                if (index >= 0 && seltset >= 0 && selTileID >= 0 && seltset < tilesets.size()) {
+                    java.util.List<obj> colObjects = tilesets.get(seltset).getTiles().get(selTileID).getObjects();
+                    if (index < colObjects.size()) {
+                        colObjects.remove(index);
+                        refreshCollisionList();
+                        if (index > 0) {
+                            lCollisionList.setSelectedIndex(index - 1);
+                        } else if (colObjects.size() > 0) {
+                            lCollisionList.setSelectedIndex(0);
+                        } else {
+                            lCollisionList.setSelectedIndex(-1);
+                        }
+                    }
+                }
+            }
+        });
+
+        bColCustomProps.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (selectedColObj != null) {
+                    refreshProperties(selectedColObj.getProperties());
+                    lPropID.setText((z.properties != null ? z.properties : "Properties") + ": Collision Object");
+                    sender = "tilecollisionobject";
+                    gotoStage(tPropsMgmt);
+                }
+            }
+        });
+    }
+
+    public void refreshFrames(java.util.List<frame> animation) {
+        String[] srr = new String[animation.size()];
+        for (int i = 0; i < animation.size(); i++) {
+            String aaa = Integer.toString(animation.get(i).getTileID());
+            String bbb = Integer.toString(animation.get(i).getDuration());
+            srr[i] = aaa + " (" + bbb + "ms)";
+        }
+        lframelist.setItems(srr);
+    }
+
+    public void refreshCollisionList() {
+        if (seltset < 0 || selTileID < 0 || seltset >= tilesets.size()) {
+            updatingFields = true;
+            lCollisionList.setItems(new String[0]);
+            updatingFields = false;
+            return;
+        }
+        java.util.List<tile> tiles = tilesets.get(seltset).getTiles();
+        if (selTileID >= tiles.size()) {
+            updatingFields = true;
+            lCollisionList.setItems(new String[0]);
+            updatingFields = false;
+            return;
+        }
+        java.util.List<obj> colObjects = tiles.get(selTileID).getObjects();
+        String[] items = new String[colObjects.size()];
+        for (int i = 0; i < colObjects.size(); i++) {
+            obj o = colObjects.get(i);
+            String shapeType = o.getShape() != null ? o.getShape() : "rectangle";
+            String name = o.getName() != null && !o.getName().isEmpty() ? " (" + o.getName() + ")" : "";
+            items[i] = shapeType + name + " [" + o.getX() + ", " + o.getY() + ", " + o.getW() + ", " + o.getH() + "]";
+        }
+        int selIndex = lCollisionList.getSelectedIndex();
+        
+        updatingFields = true;
+        lCollisionList.setItems(items);
+        if (selIndex >= 0 && selIndex < items.length) {
+            lCollisionList.setSelectedIndex(selIndex);
+        } else if (items.length > 0) {
+            lCollisionList.setSelectedIndex(0);
+        } else {
+            lCollisionList.setSelectedIndex(-1);
+        }
+        updatingFields = false;
+    }
+
+    public void showTileCollisionEditor() {
+        tTileCollision.clear();
+
+        // Title
+        Label title = new Label("Tile Collision Editor: Tile " + tilesets.get(seltset).getTiles().get(selTileID).getTileID(), skin);
+        tTileCollision.add(title).colspan(3).padBottom(10).row();
+
+        // Split into Left and Right Columns
+        Table leftTable = new Table();
+        leftTable.add(new Label("Collision Shapes:", skin)).left().padBottom(5).row();
+        leftTable.add(scrollPaneCollision).width(btnx * 1.5f).height(btny * 5).padBottom(10).row();
+
+        Table buttonsTable = new Table();
+        buttonsTable.defaults().width(btnx / 1.3f).height(btny).padRight(5);
+        buttonsTable.add(bColAddRect);
+        buttonsTable.add(bColAddEllipse);
+        buttonsTable.add(bColRemove).row();
+        leftTable.add(buttonsTable).row();
+
+        Table rightTable = new Table();
+        rightTable.defaults().padBottom(5);
+        rightTable.add(new Label("Properties:", skin)).colspan(2).left().padBottom(10).row();
+
+        rightTable.add(new Label("Name:", skin)).left();
+        rightTable.add(fColName).width(btnx * 1.2f).row();
+
+        rightTable.add(new Label("Type:", skin)).left();
+        rightTable.add(fColType).width(btnx * 1.2f).row();
+
+        rightTable.add(new Label("X:", skin)).left();
+        rightTable.add(fColX).width(btnx * 1.2f).row();
+
+        rightTable.add(new Label("Y:", skin)).left();
+        rightTable.add(fColY).width(btnx * 1.2f).row();
+
+        rightTable.add(new Label("Width:", skin)).left();
+        rightTable.add(fColW).width(btnx * 1.2f).row();
+
+        rightTable.add(new Label("Height:", skin)).left();
+        rightTable.add(fColH).width(btnx * 1.2f).row();
+
+        rightTable.add(bColCustomProps).colspan(2).width(btnx * 1.5f).height(btny).row();
+
+        // Layout left, middle canvas, and right tables side-by-side
+        tTileCollision.add(leftTable).padRight(20).top();
+        tTileCollision.add(collisionCanvas).width(btnx * 2.2f).height(btnx * 2.2f).padRight(20).top();
+        tTileCollision.add(rightTable).top().row();
+
+        // Back Button
+        TextButton bBack = new TextButton(z.back != null ? z.back : "Back", skin);
+        bBack.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                showTileOptions();
+            }
+        });
+        tTileCollision.add(bBack).colspan(3).width(btnx).height(btny).padTop(10);
+
+        refreshCollisionList();
+        if (lCollisionList.getItems().size > 0 && lCollisionList.getSelectedIndex() < 0) {
+            lCollisionList.setSelectedIndex(0);
+        } else if (lCollisionList.getItems().size == 0) {
+            lCollisionList.setSelectedIndex(-1);
+        }
+
+        gotoStage(tTileCollision);
+    }
+
+    public void showTileOptions() {
+        tTileOptions.clear();
+        tTileOptions.defaults().width(btnx).height(btny).padBottom(2);
+
+        int selectedCount = getSelectedTileCount();
+        if (selectedCount == 1) {
+            final int selectedLocalTileID = getSingleSelectedTileID();
+
+            Label title = new Label((z.options != null ? z.options : "Options") + ": Tile " + selectedLocalTileID, skin);
+            tTileOptions.add(title).padBottom(5).row();
+
+            // 1. Properties
+            TextButton bProp = new TextButton(z.properties, skin);
+            bProp.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    tile newanim = new tile();
+                    tileset ts = tilesets.get(seltset);
+                    boolean ada = false;
+                    newanim.setTileID(selectedLocalTileID);
+
+                    java.util.List<tile> tiles = tilesets.get(seltset).getTiles();
+                    for (int o = 0; o < tiles.size(); o++) {
+                        if (tiles.get(o).getTileID() == selectedLocalTileID) {
+                            ada = true;
+                            selTileID = o;
+                        }
+                    }
+                    if (!ada) {
+                        selTileID = tilesets.get(seltset).addTileMetadata(newanim);
+                    }
+
+                    refreshProperties(tilesets.get(seltset).getTiles().get(selTileID).getProperties());
+
+                    lPropID.setText(z.properties + ": " + tilesets.get(seltset).getTiles().get(selTileID).getTileID());
+                    sender = "tilesettings";
+                    gotoStage(tPropsMgmt);
+                }
+            });
+            tTileOptions.add(bProp).row();
+
+            // 2. Animation
+            TextButton bAnim = new TextButton(z.animation, skin);
+            bAnim.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    tile newanim = new tile();
+                    tileset ts = tilesets.get(seltset);
+                    boolean ada = false;
+                    newanim.setTileID(selectedLocalTileID);
+
+                    java.util.List<tile> tiles = tilesets.get(seltset).getTiles();
+                    for (int o = 0; o < tiles.size(); o++) {
+                        if (tiles.get(o).getTileID() == selectedLocalTileID) {
+                            ada = true;
+                            selTileID = o;
+                        }
+                    }
+                    if (!ada) {
+                        selTileID = tilesets.get(seltset).addTileMetadata(newanim);
+                    }
+
+                    curspr = selectedLocalTileID + ts.getFirstgid();
+                    lFrameID.setText(z.animation + ": " + tilesets.get(seltset).getTiles().get(selTileID).getTileID());
+                    refreshFrames(tilesets.get(seltset).getTiles().get(selTileID).getAnimation());
+                    gotoStage(tFrameMgmt);
+                }
+            });
+            tTileOptions.add(bAnim).row();
+
+            TextButton bCollision = new TextButton(z.tilecollision != null ? z.tilecollision : "Tile Collision", skin);
+            bCollision.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    tile newanim = new tile();
+                    tileset ts = tilesets.get(seltset);
+                    boolean ada = false;
+                    newanim.setTileID(selectedLocalTileID);
+
+                    java.util.List<tile> tiles = ts.getTiles();
+                    for (int o = 0; o < tiles.size(); o++) {
+                        if (tiles.get(o).getTileID() == selectedLocalTileID) {
+                            ada = true;
+                            selTileID = o;
+                        }
+                    }
+                    if (!ada) {
+                        selTileID = ts.addTileMetadata(newanim);
+                    }
+
+                    showTileCollisionEditor();
+                }
+            });
+            tTileOptions.add(bCollision).row();
+
+        } else if (selectedCount > 1) {
+            Label title = new Label((z.options != null ? z.options : "Options") + " (" + selectedCount + " tiles)", skin);
+            tTileOptions.add(title).padBottom(5).row();
+
+            // 1. Batch Add Property
+            TextButton bBatchAdd = new TextButton(z.addnew + " " + z.property, skin);
+            bBatchAdd.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    sender = "tileadd";
+                    senderID = -1;
+                    bPropValfile.setText(z.select);
+                    sbPropValbool.setSelected("false");
+                    sbPropType.setSelected("String");
+                    fPropName.setText("");
+                    fPropVal.setText("");
+                    fPropVal.setVisible(true);
+                    bPropValfile.setVisible(false);
+                    sbPropValbool.setVisible(false);
+                    gotoStage(tPropEditor);
+                }
+            });
+            tTileOptions.add(bBatchAdd).row();
+
+            // 2. Batch Remove Property
+            TextButton bBatchRemove = new TextButton(z.remove + " " + z.property, skin);
+            bBatchRemove.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    getNewTextInput(new TextPromptListener() {
+                        @Override
+                        public void cancel() {}
+
+                        @Override
+                        public void confirm(String text) {
+                            if (text == null || text.trim().isEmpty()) return;
+                            String propNameToRemove = text.trim();
+                            for (int i = 0; i < massprops.size(); i++) {
+                                if (massprops.get(i)) {
+                                    for (tile t : tilesets.get(seltset).getTiles()) {
+                                        if (t.getTileID() == i) {
+                                            for (int j = t.getProperties().size() - 1; j >= 0; j--) {
+                                                if (t.getProperties().get(j).getName().equalsIgnoreCase(propNameToRemove)) {
+                                                    t.getProperties().remove(j);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            showTileOptions();
+                        }
+                    }, "Remove Property", "", "Enter property name to remove:");
+                }
+            });
+            tTileOptions.add(bBatchRemove).row();
+        } else {
+            Label title = new Label("No tiles selected", skin);
+            tTileOptions.add(title).padBottom(5).row();
+        }
+
+        // Back
+        TextButton bBack = new TextButton(z.back, skin);
+        bBack.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                onToPicker();
+            }
+        });
+        tTileOptions.add(bBack);
+
+        gotoStage(tTileOptions);
+    }
+
     public void pickTile(String sender) {
         // lastStage.setVisible(false); <---- SI BANGKE YANG BIKIN ERROR!
         stage.clear(); // <---THE HERO WE DESERVED!!!!
@@ -15577,6 +17907,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Button bLayerTile = new Button(skin);
         Button bLayerObject = new Button(skin);
         Button bLayerImage = new Button(skin);
+        Button bLayerGroup = new Button(skin);
         blayerBack = new TextButton(z.back, skin);
 
         Image img1 = new Image(txTypeTile);
@@ -15591,13 +17922,23 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bLayerImage.add(img3).width(btnx * 0.15f).padLeft(20);
         bLayerImage.add(new Label(z.imagelayer, skin)).width(btnx * 0.80f);
 
+        Image imgGroup = new Image(txTypeGroup);
+        bLayerGroup.add(imgGroup).width(btnx * 0.15f).padLeft(20);
+        bLayerGroup.add(new Label(z.grouplayer, skin)).width(btnx * 0.80f);
+
         tLayerNew.add(new Label(z.addnew, skin)).width(btnx).row();
         tLayerNew.add(bLayerTile).width(btnx).height(btny * 2).row();
         tLayerNew.add(bLayerObject).width(btnx).height(btny * 2).row();
         tLayerNew.add(bLayerImage).width(btnx).height(btny * 2).row();
+        tLayerNew.add(bLayerGroup).width(btnx).height(btny * 2).row();
         tLayerNew.add(blayerBack).height(btny).width(btnx);
 
-        blayerBack.addListener(listBack);
+        blayerBack.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                showLayerManager();
+            }
+        });
 
         bLayerTile.addListener(new ChangeListener() {
             @Override
@@ -15621,6 +17962,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 newLayerType = layer.Type.IMAGE;
+                getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
+                backToMap();
+            }
+        });
+
+        bLayerGroup.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                newLayerType = layer.Type.GROUP;
                 getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
                 backToMap();
             }
@@ -15689,17 +18039,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 selTileID = -1;
                 anime = false;
-                /*
-                 * java.util.List <tile> tiles = tilesets.get(selTsetID).getTiles();
-                 * 
-                 * String[] srr = new String[tiles.size()];
-                 * for (int i=0;i < tiles.size();i++)
-                 * {
-                 * srr[i] = Integer.toString(tiles.get(i).getTileID());
-                 * ltilelist.setItems(srr);
-                 * }
-                 */
-                gotoStage(tTileMgmt);
+                onToPicker();
             }
         });
 
@@ -16263,6 +18603,56 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             });
             optionsTable.add(btnExport).width(dialogBtnWidth).height(btny).pad(5).row();
+        }
+
+        if (child.extension().equalsIgnoreCase("zip")) {
+            TextButton btnUnzip = new TextButton(z.unzip, skin);
+            btnUnzip.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    optionsDlg.hide();
+                    try {
+                        String nameWithoutExt = child.nameWithoutExtension();
+                        FileHandle destDir = child.parent().child(nameWithoutExt);
+                        int count = 1;
+                        while (destDir.exists()) {
+                            destDir = child.parent().child(nameWithoutExt + "_" + count);
+                            count++;
+                        }
+                        destDir.mkdirs();
+                        unzip(child, destDir);
+                        status(z.filesaved, 5);
+                        showFileManager(fileManagerDir);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        msgbox(e.getMessage());
+                    }
+                }
+            });
+            optionsTable.add(btnUnzip).width(dialogBtnWidth).height(btny).pad(5).row();
+        } else {
+            TextButton btnZip = new TextButton(z.zip, skin);
+            btnZip.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    optionsDlg.hide();
+                    try {
+                        FileHandle destZip = child.parent().child(child.name() + ".zip");
+                        int count = 1;
+                        while (destZip.exists()) {
+                            destZip = child.parent().child(child.name() + "_" + count + ".zip");
+                            count++;
+                        }
+                        zip(child, destZip);
+                        status(z.filesaved, 5);
+                        showFileManager(fileManagerDir);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        msgbox(e.getMessage());
+                    }
+                }
+            });
+            optionsTable.add(btnZip).width(dialogBtnWidth).height(btny).pad(5).row();
         }
 
         TextButton btnDel = new TextButton(z.remove, skin);
@@ -17074,25 +19464,45 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (backups.isEmpty())
             return false;
         backupListHandles = backups;
-        Gdx.app.postRunnable(new Runnable() {
+        loadingfile = false;
+        firstload = -1;
+        kartu = "stage";
+        Gdx.input.setInputProcessor(stage);
+        final Dialog dlg = new Dialog(z.info != null ? z.info : "", skin, "dialog");
+        float dialogWidth = Math.min(btnx, stage.getWidth() * 0.92f);
+        Label prompt = new Label(z.restorebackupprompt, skin);
+        prompt.setWrap(true);
+        prompt.setAlignment(Align.center);
+        dlg.getContentTable().add(prompt).width(dialogWidth).pad(10).row();
+        TextButton btnYes = new TextButton(z.yes != null ? z.yes : "Yes", skin);
+        TextButton btnNo = new TextButton(z.no != null ? z.no : "No", skin);
+        btnYes.addListener(new ChangeListener() {
             @Override
-            public void run() {
-                Dialog dlg = new Dialog(z.restorebackupprompt, skin) {
+            public void changed(ChangeEvent event, Actor actor) {
+                dlg.hide();
+                Gdx.app.postRunnable(new Runnable() {
                     @Override
-                    protected void result(Object object) {
-                        if (Boolean.TRUE.equals(object)) {
-                            openRestoreBackupScreen(filepath);
-                        } else {
-                            newtmxfile(false);
-                        }
+                    public void run() {
+                        openRestoreBackupScreen(filepath);
                     }
-                };
-                dlg.getButtonTable().clear();
-                dlg.button(z.yes, true);
-                dlg.button(z.no, false);
-                dlg.show(stage);
+                });
             }
         });
+        btnNo.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                dlg.hide();
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        newtmxfile(false);
+                    }
+                });
+            }
+        });
+        dlg.getButtonTable().add(btnYes).width(dialogWidth * 0.45f).height(btny).pad(4);
+        dlg.getButtonTable().add(btnNo).width(dialogWidth * 0.45f).height(btny).pad(4);
+        dlg.show(stage);
         return true;
     }
 
@@ -17313,9 +19723,50 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             }
 
+            java.util.List<Integer> openGroupIds = new ArrayList<>();
             for (int j = 0; j < layers.size(); j++) {
-
                 layer lay = layers.get(j);
+
+                java.util.List<Integer> targetChain = getParentChain(lay);
+                if (lay.getType() == layer.Type.GROUP) {
+                    targetChain.add(lay.getId());
+                }
+
+                int commonPrefix = 0;
+                while (commonPrefix < openGroupIds.size() && commonPrefix < targetChain.size() && openGroupIds.get(commonPrefix).equals(targetChain.get(commonPrefix))) {
+                    commonPrefix++;
+                }
+
+                while (openGroupIds.size() > commonPrefix) {
+                    srz.endTag(null, "group");
+                    openGroupIds.remove(openGroupIds.size() - 1);
+                }
+
+                while (openGroupIds.size() < targetChain.size()) {
+                    int nextGroupId = targetChain.get(openGroupIds.size());
+                    layer groupLayer = null;
+                    for (layer gl : layers) {
+                        if (gl.getId() == nextGroupId) {
+                            groupLayer = gl;
+                            break;
+                        }
+                    }
+                    if (groupLayer != null) {
+                        srz.startTag(null, "group");
+                        writeTmxLayerAttributes(srz, groupLayer);
+                        if (groupLayer.getProperties().size() > 0) {
+                            srz.startTag(null, "properties");
+                            for (int m = 0; m < groupLayer.getProperties().size(); m++) {
+                                writeTmxProperty(srz, groupLayer.getProperties().get(m));
+                            }
+                            srz.endTag(null, "properties");
+                        }
+                        openGroupIds.add(nextGroupId);
+                    } else {
+                        break;
+                    }
+                }
+
                 if (lay.getType() == layer.Type.TILE) {
 
                     srz.startTag(null, "layer");
@@ -17377,6 +19828,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     srz.attribute("", "width", Integer.toString(lay.getImagewidth()));
                     srz.attribute("", "height", Integer.toString(lay.getImageheight()));
                     srz.endTag(null, "image");
+
+                    if (lay.getProperties().size() > 0) {
+                        srz.startTag(null, "properties");
+                        for (int m = 0; m < lay.getProperties().size(); m++) {
+                            writeTmxProperty(srz, lay.getProperties().get(m));
+                        }
+                        srz.endTag(null, "properties");
+                    }
 
                     srz.endTag(null, "imagelayer");
 
@@ -17520,6 +19979,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                     srz.endTag(null, "objectgroup");
                 }
+            }
+
+            while (openGroupIds.size() > 0) {
+                srz.endTag(null, "group");
+                openGroupIds.remove(openGroupIds.size() - 1);
             }
 
             srz.endDocument();
@@ -17765,6 +20229,249 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     jsonmap jsn;
 
+    private void parseJsonLayers(jsonmap.layer[] jsonLayers, int parentGroupId) {
+        if (jsonLayers == null) return;
+        for (int i = 0; i < jsonLayers.length; i++) {
+            jsonmap.layer lj = jsonLayers[i];
+            layer l = new layer();
+            l.setId(lj.id != 0 ? lj.id : nextlayerid++);
+            l.setParentGroupId(parentGroupId);
+            l.setName(lj.name);
+            l.setOpacity(lj.opacity);
+            l.setVisible(lj.visible);
+            if (lj.locked != null) l.setLocked(lj.locked);
+            if (lj.offsetx != null) l.setOffsetX(lj.offsetx);
+            else if (lj.x != 0) l.setOffsetX(lj.x);
+            if (lj.offsety != null) l.setOffsetY(lj.offsety);
+            else if (lj.y != 0) l.setOffsetY(lj.y);
+            if (lj.parallaxx != null) l.setParallaxX(lj.parallaxx);
+            if (lj.parallaxy != null) l.setParallaxY(lj.parallaxy);
+            if (lj.tintcolor != null) l.setTintcolor(lj.tintcolor);
+            if (lj.startx != null) l.setStartX(lj.startx);
+            if (lj.starty != null) l.setStartY(lj.starty);
+            if (lj.draworder != null) l.setDraworder(lj.draworder);
+
+            if (lj.type != null) {
+                switch (lj.type) {
+                    case "group":
+                        l.setType(layer.Type.GROUP);
+                        break;
+                    case "tilelayer":
+                        l.setType(layer.Type.TILE);
+                        encoding = lj.encoding;
+                        compression = lj.compression;
+
+                        java.util.List<Long> spr = new ArrayList<Long>();
+
+                        if (encoding == null)
+                            encoding = "xml";
+                        if (encoding.equalsIgnoreCase("csv")) {
+                            mapFormat = "csv";
+                            String data = lj.data.replace("\n", "");
+                            data = data.replace(" ", "");
+
+                            String[] parts = data.split(",");
+
+                            for (int io = 0; io < Tw * Th; io++) {
+                                spr.add(Long.parseLong(parts[io]));
+                            }
+
+                        } else if (encoding.equalsIgnoreCase("base64") && compression.equalsIgnoreCase("zlib")) {
+                            mapFormat = "base64-zlib";
+                            String data = lj.data.replace("\n", "");
+                            data = data.replace(" ", "");
+                            spr = decoder.decodeZlib(data, Tw * Th * 4);
+
+                        } else if (encoding.equalsIgnoreCase("base64") && compression.equalsIgnoreCase("gzip")) {
+                            mapFormat = "base64-gzip";
+                            String data = lj.data.replace("\n", "");
+                            data = data.replace(" ", "");
+                            spr = decoder.decodeGzip(data);
+
+                        } else if (encoding.equalsIgnoreCase("base64")) {
+                            mapFormat = "base64";
+                            String data = lj.data.replace("\n", "");
+                            data = data.replace(" ", "");
+                            spr = decoder.decode(data);
+
+                        } else if (encoding.equalsIgnoreCase("xml")) {
+                            mapFormat = "xml";
+                        }
+
+                        if (spr == null) {
+                            spr = new ArrayList<Long>();
+                        }
+                        while (spr.size() < Tw * Th) {
+                            spr.add(0L);
+                        }
+                        if (spr.size() > Tw * Th) {
+                            spr = new ArrayList<Long>(spr.subList(0, Tw * Th));
+                        }
+
+                        l.setStr(spr);
+                        for (int o = 0; o < l.getStr().size(); o++) {
+                            l.tset.add(-1);
+                            l.tile.add(-1);
+                        }
+                        break;
+
+                    case "objectgroup":
+                        l.setType(layer.Type.OBJECT);
+
+                        if (lj.objects != null) {
+                            for (int f = 0; f < lj.objects.length; f++) {
+                                jsonmap.object jo = lj.objects[f];
+                                obj o = new obj();
+                                o.setName(jo.name);
+                                o.setX(jo.x);
+                                o.setY(jo.y);
+                                o.setW(jo.width);
+                                o.setH(jo.height);
+                                o.setRotation(jo.rotation);
+                                o.setId(jo.id);
+                                applyJsonObjectFields(o, jo);
+
+                                if (jo.properties != null) {
+                                    for (int y = 0; y < jo.properties.length; y++) {
+                                        jsonmap.property p = jo.properties[y];
+                                        o.getProperties().add(new property(p.name, p.type, p.value));
+                                    }
+                                }
+
+                                l.getObjects().add(o);
+                            }
+                        }
+                        break;
+
+                    case "imagelayer":
+                        l.setType(layer.Type.IMAGE);
+                        if (lj.image != null) {
+                            l.setImage(lj.image);
+                            String ss = convertToAbsolutepath(l.getImage(), curdir);
+                            l.setTexture(new Texture(Gdx.files.absolute(ss)));
+                        }
+                        break;
+                }
+            }
+
+            if (lj.properties != null) {
+                for (int y = 0; y < lj.properties.length; y++) {
+                    jsonmap.property p = lj.properties[y];
+                    l.properties.add(new property(p.name, p.type, p.value));
+                }
+            }
+
+            layers.add(l);
+
+            if (lj.type != null && lj.type.equals("group") && lj.layers != null) {
+                parseJsonLayers(lj.layers, l.getId());
+            }
+        }
+    }
+
+    private jsonmap.layer[] buildJsonLayers(java.util.List<layer> flatLayers, int parentId) {
+        List<jsonmap.layer> list = new ArrayList<>();
+        for (int i = 0; i < flatLayers.size(); i++) {
+            layer l = flatLayers.get(i);
+            if (l.getParentGroupId() == parentId) {
+                jsonmap.layer lj = convertToJsonLayer(l, i);
+                if (l.getType() == layer.Type.GROUP) {
+                    lj.layers = buildJsonLayers(flatLayers, l.getId());
+                }
+                list.add(lj);
+            }
+        }
+        return list.toArray(new jsonmap.layer[list.size()]);
+    }
+
+    private jsonmap.layer convertToJsonLayer(layer l, int i) {
+        jsonmap.layer lj = new jsonmap.layer();
+        lj.id = l.getId();
+        lj.name = l.getName();
+        lj.opacity = l.getOpacity();
+        lj.visible = l.isVisible();
+        lj.locked = l.isLocked();
+        if (l.getOffsetX() != 0) lj.offsetx = l.getOffsetX();
+        if (l.getOffsetY() != 0) lj.offsety = l.getOffsetY();
+        if (l.getParallaxX() != 1.0f) lj.parallaxx = l.getParallaxX();
+        if (l.getParallaxY() != 1.0f) lj.parallaxy = l.getParallaxY();
+        if (l.getTintcolor() != null && !l.getTintcolor().isEmpty()) lj.tintcolor = l.getTintcolor();
+        if (l.getStartX() != 0) lj.startx = l.getStartX();
+        if (l.getStartY() != 0) lj.starty = l.getStartY();
+        if (l.getType() == layer.Type.OBJECT && l.getDraworder() != null && !l.getDraworder().equals("topdown")) lj.draworder = l.getDraworder();
+        switch (l.getType()) {
+            case TILE:
+                lj.type = "tilelayer";
+                lj.encoding = encoding;
+                lj.compression = compression;
+
+                if (encoding == null)
+                    encoding = "csv";
+                if (encoding.equalsIgnoreCase("csv")) {
+                    lj.data = savecsv(i);
+                } else if (encoding.equalsIgnoreCase("base64") && compression.equalsIgnoreCase("zlib")) {
+                    lj.data = decoder.savebase64zlib(i, layers);
+                } else if (encoding.equalsIgnoreCase("base64") && compression.equalsIgnoreCase("gzip")) {
+                    lj.data = decoder.savebase64gzip(i, layers);
+                } else if (encoding.equalsIgnoreCase("base64")) {
+                    lj.data = decoder.savebase64(i, layers);
+                } else if (encoding.equalsIgnoreCase("xml")) {
+                    lj.encoding = "csv";
+                    lj.data = savecsv(i);
+                }
+                break;
+            case OBJECT:
+                lj.type = "objectgroup";
+                if (l.getObjects().size() > 0) {
+                    List<jsonmap.object> ojs = new ArrayList<>();
+                    for (int f = 0; f < l.getObjects().size(); f++) {
+                        jsonmap.object jo = new jsonmap.object();
+                        obj o = l.getObjects().get(f);
+                        fillJsonObjectFields(jo, o);
+
+                        if (o.getProperties().size() > 0) {
+                            List<jsonmap.property> tmprops = new ArrayList<>();
+                            for (int z = 0; z < o.getProperties().size(); z++) {
+                                property p = o.getProperties().get(z);
+                                jsonmap.property pj = new jsonmap.property();
+                                pj.name = p.getName();
+                                pj.type = p.getType();
+                                pj.value = p.getValue();
+                                tmprops.add(pj);
+                            }
+                            jo.properties = tmprops.toArray(new jsonmap.property[tmprops.size()]);
+                        }
+                        ojs.add(jo);
+                    }
+                    lj.objects = ojs.toArray(new jsonmap.object[ojs.size()]);
+                }
+                break;
+            case IMAGE:
+                lj.type = "imagelayer";
+                if (l.getImage() != null) {
+                    lj.image = l.getImage();
+                }
+                break;
+            case GROUP:
+                lj.type = "group";
+                break;
+        }
+
+        if (l.properties.size() > 0) {
+            List<jsonmap.property> tmprops = new ArrayList<>();
+            for (int z = 0; z < l.properties.size(); z++) {
+                property p = l.properties.get(z);
+                jsonmap.property pj = new jsonmap.property();
+                pj.name = p.getName();
+                pj.type = p.getType();
+                pj.value = p.getValue();
+                tmprops.add(pj);
+            }
+            lj.properties = tmprops.toArray(new jsonmap.property[tmprops.size()]);
+        }
+        return lj;
+    }
+
     public void getjsonmap() {
         try {
             // Clean up first
@@ -17891,124 +20598,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             // Get layers
-            for (int i = 0; i < jsn.layers.length; i++) {
-                jsonmap.layer lj = jsn.layers[i];
-                layer l = new layer();
-                l.setId(lj.id != 0 ? lj.id : nextlayerid++);
-                l.setName(lj.name);
-                l.setOpacity(lj.opacity);
-                l.setVisible(lj.visible);
-                if (lj.locked != null) l.setLocked(lj.locked);
-                if (lj.offsetx != null) l.setOffsetX(lj.offsetx);
-                else if (lj.x != 0) l.setOffsetX(lj.x);
-                if (lj.offsety != null) l.setOffsetY(lj.offsety);
-                else if (lj.y != 0) l.setOffsetY(lj.y);
-                if (lj.parallaxx != null) l.setParallaxX(lj.parallaxx);
-                if (lj.parallaxy != null) l.setParallaxY(lj.parallaxy);
-                if (lj.tintcolor != null) l.setTintcolor(lj.tintcolor);
-                if (lj.startx != null) l.setStartX(lj.startx);
-                if (lj.starty != null) l.setStartY(lj.starty);
-                if (lj.draworder != null) l.setDraworder(lj.draworder);
-                switch (lj.type) {
-                    case "tilelayer":
-                        ////
-                        l.setType(layer.Type.TILE);
-                        encoding = lj.encoding;
-                        compression = lj.compression;
-
-                        spr = new ArrayList<Long>();
-
-                        if (encoding == null)
-                            encoding = "xml";
-                        if (encoding.equalsIgnoreCase("csv")) {
-                            mapFormat = "csv";
-                            String data = lj.data.replace("\n", "");
-                            data = data.replace(" ", "");
-
-                            String[] parts = data.split(",");
-
-                            for (int io = 0; io < Tw * Th; io++) {
-                                spr.add(Long.parseLong(parts[io]));
-                            }
-
-                        } else if (encoding.equalsIgnoreCase("base64") && compression.equalsIgnoreCase("zlib")) {
-                            mapFormat = "base64-zlib";
-                            String data = lj.data.replace("\n", "");
-                            data = data.replace(" ", "");
-                            spr = decoder.decodeZlib(data, Tw * Th * 4);
-
-                        } else if (encoding.equalsIgnoreCase("base64") && compression.equalsIgnoreCase("gzip")) {
-                            mapFormat = "base64-gzip";
-                            String data = lj.data.replace("\n", "");
-                            data = data.replace(" ", "");
-                            spr = decoder.decodeGzip(data);
-                            // writeThis(tempLayer.getName()+ "fkyu.txt",spr.toString());
-
-                        } else if (encoding.equalsIgnoreCase("base64")) {
-                            mapFormat = "base64";
-                            String data = lj.data.replace("\n", "");
-                            data = data.replace(" ", "");
-                            spr = decoder.decode(data);
-
-                        } else if (encoding.equalsIgnoreCase("xml")) {
-                            mapFormat = "xml";
-
-                        }
-
-                        l.setStr(spr);
-                        for (int o = 0; o < l.getStr().size(); o++) {
-                            l.tset.add(-1);
-                            l.tile.add(-1);
-                        }
-
-                        ////
-                        break;
-                    case "objectgroup":
-                        l.setType(layer.Type.OBJECT);
-
-                        if (lj.objects != null) {
-                            for (int f = 0; f < lj.objects.length; f++) {
-                                jsonmap.object jo = lj.objects[f];
-                                obj o = new obj();
-                                o.setName(jo.name);
-                                o.setX(jo.x);
-                                o.setY(jo.y);
-                                o.setW(jo.width);
-                                o.setH(jo.height);
-                                o.setRotation(jo.rotation);
-                                o.setId(jo.id);
-                                applyJsonObjectFields(o, jo);
-
-                                if (jo.properties != null) {
-                                    for (int y = 0; y < jo.properties.length; y++) {
-                                        jsonmap.property p = jo.properties[y];
-                                        o.getProperties().add(new property(p.name, p.type, p.value));
-                                    }
-                                }
-
-                                l.getObjects().add(o);
-                            }
-                        }
-
-                        break;
-                    case "imagelayer":
-                        l.setType(layer.Type.IMAGE);
-                        if (lj.image != null) {
-                            l.setImage(lj.image);
-                            String ss = convertToAbsolutepath(l.getImage(), curdir);
-                            l.setTexture(new Texture(Gdx.files.absolute(ss)));
-                        }
-
-                        break;
-                }
-
-                if (lj.properties != null) {
-                    for (int y = 0; y < lj.properties.length; y++) {
-                        jsonmap.property p = lj.properties[y];
-                        l.properties.add(new property(p.name, p.type, p.value));
-                    }
-                }
-                layers.add(l);
+            if (jsn.layers != null) {
+                parseJsonLayers(jsn.layers, -1);
             }
 
             // finishing
@@ -18173,97 +20764,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             // Set layers
             if (layers != null) {
-                List<jsonmap.layer> lays = new ArrayList<>();
-                for (int i = 0; i < layers.size(); i++) {
-                    jsonmap.layer lj = new jsonmap.layer();
-                    layer l = layers.get(i);
-                    lj.id = l.getId();
-                    lj.name = l.getName();
-                    lj.opacity = l.getOpacity();
-                    lj.visible = l.isVisible();
-                    lj.locked = l.isLocked();
-                    if (l.getOffsetX() != 0) lj.offsetx = l.getOffsetX();
-                    if (l.getOffsetY() != 0) lj.offsety = l.getOffsetY();
-                    if (l.getParallaxX() != 1.0f) lj.parallaxx = l.getParallaxX();
-                    if (l.getParallaxY() != 1.0f) lj.parallaxy = l.getParallaxY();
-                    if (l.getTintcolor() != null && !l.getTintcolor().isEmpty()) lj.tintcolor = l.getTintcolor();
-                    if (l.getStartX() != 0) lj.startx = l.getStartX();
-                    if (l.getStartY() != 0) lj.starty = l.getStartY();
-                    if (l.getType() == layer.Type.OBJECT && l.getDraworder() != null && !l.getDraworder().equals("topdown")) lj.draworder = l.getDraworder();
-                    switch (l.getType()) {
-                        case TILE:
-                            ////
-                            lj.type = "tilelayer";
-                            lj.encoding = encoding;
-                            lj.compression = compression;
-
-                            if (encoding == null)
-                                encoding = "csv";
-                            if (encoding.equalsIgnoreCase("csv")) {
-                                lj.data = savecsv(i);
-                            } else if (encoding.equalsIgnoreCase("base64") && compression.equalsIgnoreCase("zlib")) {
-                                lj.data = decoder.savebase64zlib(i, layers);
-                            } else if (encoding.equalsIgnoreCase("base64") && compression.equalsIgnoreCase("gzip")) {
-                                lj.data = decoder.savebase64gzip(i, layers);
-                            } else if (encoding.equalsIgnoreCase("base64")) {
-                                lj.data = decoder.savebase64(i, layers);
-                            } else if (encoding.equalsIgnoreCase("xml")) {
-                                lj.encoding = "csv";
-                                lj.data = savecsv(i);
-                            }
-
-                            break;
-                        case OBJECT:
-                            lj.type = "objectgroup";
-
-                            if (l.getObjects().size() > 0) {
-                                List<jsonmap.object> ojs = new ArrayList<>();
-                                for (int f = 0; f < l.getObjects().size(); f++) {
-                                    jsonmap.object jo = new jsonmap.object();
-                                    obj o = l.getObjects().get(f);
-                                    fillJsonObjectFields(jo, o);
-
-                                    if (o.getProperties().size() > 0) {
-                                        List<jsonmap.property> tmprops = new ArrayList<>();
-                                        for (int z = 0; z < o.getProperties().size(); z++) {
-                                            property p = o.getProperties().get(z);
-                                            jsonmap.property pj = new jsonmap.property();
-                                            pj.name = p.getName();
-                                            pj.type = p.getType();
-                                            pj.value = p.getValue();
-                                            tmprops.add(pj);
-                                        }
-                                        jo.properties = tmprops.toArray(new jsonmap.property[tmprops.size()]);
-                                    }
-                                    ojs.add(jo);
-                                }
-                                lj.objects = ojs.toArray(new jsonmap.object[ojs.size()]);
-                            }
-                            break;
-                        case IMAGE:
-                            lj.type = "imagelayer";
-                            if (l.getImage() != null) {
-                                lj.image = l.getImage();
-                            }
-
-                            break;
-                    }
-
-                    if (l.properties.size() > 0) {
-                        List<jsonmap.property> tmprops = new ArrayList<>();
-                        for (int z = 0; z < l.properties.size(); z++) {
-                            property p = l.properties.get(z);
-                            jsonmap.property pj = new jsonmap.property();
-                            pj.name = p.getName();
-                            pj.type = p.getType();
-                            pj.value = p.getValue();
-                            tmprops.add(pj);
-                        }
-                        lj.properties = tmprops.toArray(new jsonmap.property[tmprops.size()]);
-                    }
-                    lays.add(lj);
-                }
-                jsn.layers = lays.toArray(new jsonmap.layer[lays.size()]);
+                jsn.layers = buildJsonLayers(layers, -1);
             }
 
             ////////////////////////
@@ -18992,18 +21493,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 Gdx.app.postRunnable(new Runnable() {
                     @Override
                     public void run() {
-
-                        loadmap(filepath);
-                        if (savedLayerName != null) {
-                            for (int i = 0; i < layers.size(); i++) {
-                                if (layers.get(i).getName().equalsIgnoreCase(savedLayerName)) {
-                                    selLayer = i;
-                                    break;
+                        try {
+                            loadmap(filepath);
+                            if (savedLayerName != null) {
+                                for (int i = 0; i < layers.size(); i++) {
+                                    if (layers.get(i).getName().equalsIgnoreCase(savedLayerName)) {
+                                        selLayer = i;
+                                        break;
+                                    }
                                 }
                             }
+                            log("tmx loaded.");
+                        } finally {
+                            loadingfile = false;
                         }
-                        log("tmx loaded.");
-
                     }
                 });
             }
@@ -19214,6 +21717,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tilesets.clear();
             properties.clear();
             xtree.clear();
+            java.util.List<Integer> activeGroupIds = new ArrayList<Integer>();
             int curgroupid = -1;
             int curobjid = -1;
             curid = 0;
@@ -19261,7 +21765,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             tempLayer = new layer();
                             tempLayer.setType(layer.Type.TILE);
                             parseTmxLayerAttributes(tempLayer, myParser);
-
+                            int parentGroupId = activeGroupIds.isEmpty() ? -1 : activeGroupIds.get(activeGroupIds.size() - 1);
+                            tempLayer.setParentGroupId(parentGroupId);
                         }
                         if (name.equals("terrain")) {
                             terrain tr = new terrain();
@@ -19527,12 +22032,25 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         }
 
+                        if (name.equals("group")) {
+                            xtree.add("group");
+                            tempLayer = new layer();
+                            tempLayer.setType(layer.Type.GROUP);
+                            parseTmxLayerAttributes(tempLayer, myParser);
+                            int parentGroupId = activeGroupIds.isEmpty() ? -1 : activeGroupIds.get(activeGroupIds.size() - 1);
+                            tempLayer.setParentGroupId(parentGroupId);
+                            layers.add(tempLayer);
+                            activeGroupIds.add(tempLayer.getId());
+                        }
+
                         if (name.equals("imagelayer")) {
                             xtree.add("imagelayer");
                             tempLayer = new layer();
                             tempLayer.setType(layer.Type.IMAGE);
 
                             parseTmxLayerAttributes(tempLayer, myParser);
+                            int parentGroupId = activeGroupIds.isEmpty() ? -1 : activeGroupIds.get(activeGroupIds.size() - 1);
+                            tempLayer.setParentGroupId(parentGroupId);
                             layers.add(tempLayer);
 
                         }
@@ -19548,6 +22066,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 tempLayer.setType(layer.Type.OBJECT);
 
                                 parseTmxLayerAttributes(tempLayer, myParser);
+                                int parentGroupId = activeGroupIds.isEmpty() ? -1 : activeGroupIds.get(activeGroupIds.size() - 1);
+                                tempLayer.setParentGroupId(parentGroupId);
                                 layers.add(tempLayer);
                             }
 
@@ -19710,6 +22230,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             xtree.remove(xtree.size() - 1);
 
                         }
+                        if (name.equals("group")) {
+                            if (!activeGroupIds.isEmpty()) {
+                                activeGroupIds.remove(activeGroupIds.size() - 1);
+                            }
+                            xtree.remove(xtree.size() - 1);
+                        }
+                        if (name.equals("imagelayer")) {
+                            xtree.remove(xtree.size() - 1);
+                        }
                         if (name.equals("objectgroup")) {
                             xtree.remove(xtree.size() - 1);
 
@@ -19851,7 +22380,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 event = myParser.next();
             }
 
-            if (keepView) {
+            if (keepView && cam != null) {
                 cam.position.set(pendingCamX, pendingCamY, 0);
                 cam.zoom = pendingCamZoom;
                 timeToPan = -1;
@@ -19873,11 +22402,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         } catch (Exception e) {
             restoreViewAfterLoad = false;
             ErrorBung(e, "/maknyus.txt");
+            loadingfile = false;
+            firstload = -1;
             if (!offerBackupRecovery(filepath))
                 newtmxfile(false);
             status("Error opening file.", 3);
             return;
         }
+        if (layerIdsNeedRepair()) {
+            collapsedGroupIds.clear();
+            repairLayerTreeIds();
+        }
+        ensureDefaultTileLayer();
+        clampSelLayerToSelectable();
         CacheAllTset();
         resetSwatches();
         initPixelArtTilesets();
@@ -19885,7 +22422,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         resetCaches();
         log("Size : " + xtree.toString());
         if (!keepView)
-            selLayer = 0;
+            clampSelLayerToSelectable();
         // recenterpick();
         // if (layers.size()>0) selLayer = layers.size()-1;
 
@@ -20724,6 +23261,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     public void resetcam(boolean animate) {
+        if (cam == null)
+            return;
         int onset = 0;
         if (orientation.equalsIgnoreCase("isometric")) {
             onset = Tsw * Tw / 2;
@@ -20798,12 +23337,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 layers.get(lay).setTset(cacheTset(layers.get(lay).getStr()));
             } else {
                 layers.get(lay).setTset(copy);
-
             }
 
         }
-        int a = layers.get(0).getTset().size();
-        // log(a+"");
+        if (layers.size() > 0) {
+            int a = layers.get(0).getTset().size();
+            // log(a+"");
+        }
         log("caching tset ok");
         CacheAllTile();
 
@@ -21298,10 +23838,44 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         log(num + "");
                     } else if (mode == "object") {
                         // tapObject(num, ae, ab);
+                        final obj[] foundObj = {null};
+                        Vector3 touchObj = new Vector3();
+                        cam.unproject(touchObj.set(p1, p2, 0));
+                        float objX = touchObj.x;
+                        float objY = touchObj.y;
+                        world.QueryAABB(new com.badlogic.gdx.physics.box2d.QueryCallback() {
+                            @Override
+                            public boolean reportFixture(com.badlogic.gdx.physics.box2d.Fixture fixture) {
+                                Object userData = fixture.getUserData();
+                                if (userData instanceof obj) {
+                                    obj candidate = (obj) userData;
+                                    if (layers.get(selLayer).getObjects().contains(candidate)) {
+                                        foundObj[0] = candidate;
+                                        return false; // Stop querying
+                                    }
+                                }
+                                return true; // Keep querying
+                            }
+                        }, objX - 3, objY - 3, objX + 3, objY + 3);
+
                         if (activeobjtoolmode == 1) {
-                            boolean isMulti = sMultiSelect || Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT);
-                            if (!isMulti) {
+                            if (foundObj[0] == null) {
+                                activeobjtoolmode = 0; // Switch to create mode
                                 selobjs.clear();
+                                longpressObject(p1, p2);
+                            } else {
+                                boolean isMulti = sMultiSelect || Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT);
+                                if (!isMulti) {
+                                    selobjs.clear();
+                                }
+                            }
+                        } else if (activeobjtoolmode == 0) {
+                            if (foundObj[0] != null) {
+                                activeobjtoolmode = 1; // Switch to select mode
+                                selobjs.clear();
+                                checkBox2D(foundObj[0]);
+                            } else {
+                                longpressObject(p1, p2);
                             }
                         }
 
@@ -21529,21 +24103,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         goToSwatchTileset();
                         return true;
                     }
-                    if (somethingisselected()) {
-                        sender = "tileadd";
-                        senderID = -1;
-                        bPropValfile.setText(z.select);
-                        sbPropValbool.setSelected("false");
-                        sbPropType.setSelected("String");
-                        fPropName.setText("");
-                        fPropVal.setText("");
-                        fPropVal.setVisible(true);
-                        bPropValfile.setVisible(false);
-                        sbPropValbool.setVisible(false);
-                        gotoStage(tPropEditor);
-
-                        return true;
-                    }
                 }
                 if (tapped(touch2, gui.tileremove)) {
                     if (isPixelArtPaletteView() && issettingtile) {
@@ -21551,17 +24110,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         resetMassprops();
                         pixelPaletteMode = PIXEL_PAL_NONE;
                         pixelEditSlot = -1;
-                        return true;
-                    }
-                    if (somethingisselected()) {
-                        for (int i = 0; i < massprops.size(); i++) {
-                            if (massprops.get(i)) {
-                                for (tile t : tilesets.get(seltset).getTiles()) {
-                                    if (t.getTileID() == i)
-                                        t.getProperties().clear();
-                                }
-                            }
-                        }
                         return true;
                     }
                 }
@@ -21577,41 +24125,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         return true;
                     }
                     if (somethingisselected()) {
-
-                        tile newanim = new tile();
-                        tileset ts = tilesets.get(seltset);
-                        int num = curspr;
-                        boolean ada;
-                        tile oldanim;
-
-                        newanim.setTileID(num - ts.getFirstgid());
-
-                        tiles = tilesets.get(seltset).getTiles();
-                        ada = false;
-                        for (int o = 0; o < tiles.size(); o++) {
-                            if (tiles.get(o).getTileID() == num - ts.getFirstgid()) {
-                                ada = true;
-                                oldanim = tiles.get(o);
-                                selTileID = o;
-                            }
-                        }
-                        if (!ada) {
-                            selTileID = tilesets.get(seltset).addTileMetadata(newanim);
-                        }
-
-                        ////
-                        // if (tilesets.get(seltset).getTiles().get(selTileID).getProperties()!=null) {
-                        refreshProperties(tilesets.get(seltset).getTiles().get(selTileID).getProperties());
-
-                        lPropID.setText(
-                                z.properties + ": " + tilesets.get(seltset).getTiles().get(selTileID).getTileID());
-                        sender = "tilesettings";
-                        gotoStage(tPropsMgmt);
+                        showTileOptions();
                         return true;
-                        // }
-
                     }
-
                 }
                 // tileset properties
                 if (tapped(touch2, gui.pickertool2)) {
@@ -21678,21 +24194,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             new String[] { ".tmx", ".tsx", ".png", ".jpg", ".jpeg", ".bmp", ".gif" }, nullTable);
                     return true;
                 }
-                // tile management
+                // terrain editor
                 if (tapped(touch2, gui.pickertool3)) {
-                    pickAuto = false;
-                    resetMassprops();
-                    recenterpick();
-
-                    int saiz = tilesets.size();
-
-                    String[] srr = new String[saiz];
-                    for (int i = 0; i < saiz; i++) {
-                        srr[i] = tilesets.get(i).getName();
-                    }
-                    ltsetlist.setItems(srr);
-                    selTsetID = seltset;
-                    gotoStage(tTileMgmt);
+                    pickTile("terraineditor");
                     return true;
                 }
                 // delete button (skip hit area when hidden for protected Pixel Editor tilesets)
@@ -25301,18 +27805,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (tapped(touch2, gui.layer)) {
             if (layers.size() == 0)
                 return true;
-            selLayer += 1;
-            if (layers.size() == selLayer) {
-                selLayer = 0;
-            }
-
-            if (layers.get(selLayer).getType() == layer.Type.TILE) {
-                mode = "tile";
-            } else if (layers.get(selLayer).getType() == layer.Type.OBJECT) {
-                mode = "object";
-            } else if (layers.get(selLayer).getType() == layer.Type.IMAGE) {
-                mode = "image";
-            }
+            clampSelLayerToSelectable();
+            selLayer = nextSelectableLayer(selLayer, 1);
+            applyLayerModeForSelLayer();
 
             switch (viewMode) {
                 case STACK:
@@ -25333,7 +27828,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (mode == "tile" || mode == "object" || mode == "image") {
                 if (!softcue("layerpick") && lockUI)
                     return true;
-                loadList("layer");
+                showLayerManager();
                 return true;
             }
         }
@@ -25346,6 +27841,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (tapped(touch2, gui.play)) {
             for (property p : properties) {
                 if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled platformer")) {
+                    if (!hasPlayerInstance()) {
+                        msgbox("No player instance found! Make sure your map has an object or tile with property 'object' set to 'player'.");
+                        return true;
+                    }
                     for (layer l : layers) {
                         if (!l.isVisible() && l.getType() == layer.Type.OBJECT)
                             l.setVisible(true);
@@ -25354,6 +27853,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     playgame(curdir, curfile);
                     return true;
                 } else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled rpg")) {
+                    if (!hasPlayerInstance()) {
+                        msgbox("No player instance found! Make sure your map has an object or tile with property 'object' set to 'player'.");
+                        return true;
+                    }
                     for (layer l : layers) {
                         if (!l.isVisible() && l.getType() == layer.Type.OBJECT)
                             l.setVisible(true);
@@ -27638,10 +30141,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
 
                 if (tapped(touch2, gui.layer) || tapped(touch2, gui.layerpick)) {
-                    selLayer -= 1;
-                    if (selLayer <= -1) {
-                        selLayer = layers.size() - 1;
-                    }
+                    clampSelLayerToSelectable();
+                    selLayer = nextSelectableLayer(selLayer, -1);
+                    applyLayerModeForSelLayer();
                     updateObjectCollision();
                     resetCaches();
                     // adjustTileset();
@@ -28441,7 +30943,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             playmusic(playback.MIDI, filenya);
             FileHandle fh = Gdx.files.absolute(basepath + "NotTiled/Temp/composer.mid");
             byte[] b = fh.readBytes();
-            face.saveasFile(b, "music.mid");
+            String cleanName = filenya;
+            if (cleanName.toLowerCase().endsWith(".mid")) {
+                cleanName = cleanName.substring(0, cleanName.length() - 4);
+            } else if (cleanName.toLowerCase().endsWith(".midi")) {
+                cleanName = cleanName.substring(0, cleanName.length() - 5);
+            }
+            face.saveasFile(b, cleanName + ".mid");
 
             backToMap();
             status(z.exportfinished, 3);
@@ -28885,6 +31393,51 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private com.mirwanda.nottiled.platformer.game mygame;
+
+    private boolean hasPlayerInstance() {
+        if (layers == null) return false;
+        for (layer l : layers) {
+            if (l == null) continue;
+            if (l.getType() == layer.Type.OBJECT) {
+                if (l.getObjects() != null) {
+                    for (obj o : l.getObjects()) {
+                        if (o == null || o.getProperties() == null) continue;
+                        for (property p : o.getProperties()) {
+                            if (p != null && p.getName() != null && p.getName().equalsIgnoreCase("object")
+                                    && p.getValue() != null && p.getValue().trim().equalsIgnoreCase("player")) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            } else if (l.getType() == layer.Type.TILE) {
+                if (l.getStr() != null && tilesets != null) {
+                    for (long gid : l.getStr()) {
+                        if (gid == 0) continue;
+                        for (tileset ts : tilesets) {
+                            if (ts == null) continue;
+                            if (gid >= ts.getFirstgid() && gid < ts.getFirstgid() + ts.getTilecount()) {
+                                int localId = (int) (gid - ts.getFirstgid());
+                                if (ts.getTiles() != null) {
+                                    for (tile t : ts.getTiles()) {
+                                        if (t != null && t.getTileID() == localId && t.getProperties() != null) {
+                                            for (property p : t.getProperties()) {
+                                                if (p != null && p.getName() != null && p.getName().equalsIgnoreCase("object")
+                                                        && p.getValue() != null && p.getValue().trim().equalsIgnoreCase("player")) {
+                                                    return true;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
 
     private void playgame(final String curdir, final String filex) {
         kartu = "game";
@@ -30465,5 +33018,234 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
+    private void updateExportFilenameExtension(String ext) {
+        String currentText = fExportFilename.getText();
+        if (currentText == null || currentText.isEmpty()) {
+            String base = "export";
+            if (curfile != null && !curfile.isEmpty()) {
+                int lastDot = curfile.lastIndexOf('.');
+                if (lastDot > 0) {
+                    base = curfile.substring(0, lastDot);
+                } else {
+                    base = curfile;
+                }
+            }
+            fExportFilename.setText(base + ext);
+            return;
+        }
+
+        String lower = currentText.toLowerCase();
+        String base = currentText;
+        String[] knownExts = { ".tmx", ".apk", ".lua", ".json", ".png", ".mid", ".midi", ".csv", ".rwmod" };
+        for (String known : knownExts) {
+            if (lower.endsWith(known)) {
+                base = currentText.substring(0, currentText.length() - known.length());
+                break;
+            }
+        }
+        fExportFilename.setText(base + ext);
+    }
+
+    class CollisionCanvas extends com.badlogic.gdx.scenes.scene2d.Actor {
+        private float lastTouchX;
+        private float lastTouchY;
+        private boolean isDragging = false;
+        private String dragMode = ""; // "move" or "resize"
+
+        public CollisionCanvas() {
+            setTouchable(com.badlogic.gdx.scenes.scene2d.Touchable.enabled);
+            addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
+                @Override
+                public boolean touchDown(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y, int pointer, int button) {
+                    if (seltset < 0 || selTileID < 0 || seltset >= tilesets.size()) return false;
+                    tileset ts = tilesets.get(seltset);
+                    if (selTileID >= ts.getTiles().size()) return false;
+                    
+                    float scaleX = getWidth() / (float) ts.getTilewidth();
+                    float scaleY = getHeight() / (float) ts.getTileheight();
+                    float scale = Math.min(scaleX, scaleY);
+                    float drawWidth = ts.getTilewidth() * scale;
+                    float drawHeight = ts.getTileheight() * scale;
+                    float drawX = (getWidth() - drawWidth) / 2f;
+                    float drawY = (getHeight() - drawHeight) / 2f;
+                    
+                    float tileX = (x - drawX) / scale;
+                    float tileY = (drawY + drawHeight - y) / scale;
+                    
+                    java.util.List<obj> colObjects = ts.getTiles().get(selTileID).getObjects();
+                    
+                    int clickedIndex = -1;
+                    for (int i = colObjects.size() - 1; i >= 0; i--) {
+                        obj o = colObjects.get(i);
+                        if (tileX >= o.getX() && tileX <= o.getX() + o.getW() &&
+                            tileY >= o.getY() && tileY <= o.getY() + o.getH()) {
+                            clickedIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    if (clickedIndex != -1) {
+                        lCollisionList.setSelectedIndex(clickedIndex);
+                        selectedColObj = colObjects.get(clickedIndex);
+                        
+                        lastTouchX = x;
+                        lastTouchY = y;
+                        isDragging = true;
+                        
+                        float cornerTileDist = 12f / scale;
+                        float objRight = selectedColObj.getX() + selectedColObj.getW();
+                        float objBottom = selectedColObj.getY() + selectedColObj.getH();
+                        if (Math.abs(tileX - objRight) < cornerTileDist && Math.abs(tileY - objBottom) < cornerTileDist) {
+                            dragMode = "resize";
+                        } else {
+                            dragMode = "move";
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+                
+                @Override
+                public void touchDragged(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y, int pointer) {
+                    if (!isDragging || selectedColObj == null) return;
+                    tileset ts = tilesets.get(seltset);
+                    float scaleX = getWidth() / (float) ts.getTilewidth();
+                    float scaleY = getHeight() / (float) ts.getTileheight();
+                    float scale = Math.min(scaleX, scaleY);
+                    
+                    float deltaX = (x - lastTouchX) / scale;
+                    float deltaY = -(y - lastTouchY) / scale;
+                    
+                    if ("move".equals(dragMode)) {
+                        selectedColObj.setX(Math.round((selectedColObj.getX() + deltaX) * 10f) / 10f);
+                        selectedColObj.setY(Math.round((selectedColObj.getY() + deltaY) * 10f) / 10f);
+                    } else if ("resize".equals(dragMode)) {
+                        selectedColObj.setW(Math.max(0.5f, Math.round((selectedColObj.getW() + deltaX) * 10f) / 10f));
+                        selectedColObj.setH(Math.max(0.5f, Math.round((selectedColObj.getH() + deltaY) * 10f) / 10f));
+                    }
+                    
+                    lastTouchX = x;
+                    lastTouchY = y;
+                    
+                    updatingFields = true;
+                    fColX.setText(Float.toString(selectedColObj.getX()));
+                    fColY.setText(Float.toString(selectedColObj.getY()));
+                    fColW.setText(Float.toString(selectedColObj.getW()));
+                    fColH.setText(Float.toString(selectedColObj.getH()));
+                    updatingFields = false;
+                    
+                    refreshCollisionList();
+                }
+                
+                @Override
+                public void touchUp(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y, int pointer, int button) {
+                    isDragging = false;
+                    dragMode = "";
+                }
+            });
+        }
+        
+        @Override
+        public void draw(com.badlogic.gdx.graphics.g2d.Batch batch, float parentAlpha) {
+            if (seltset < 0 || selTileID < 0 || seltset >= tilesets.size()) return;
+            tileset ts = tilesets.get(seltset);
+            if (selTileID >= ts.getTiles().size()) return;
+
+            float scaleX = getWidth() / (float) ts.getTilewidth();
+            float scaleY = getHeight() / (float) ts.getTileheight();
+            float scale = Math.min(scaleX, scaleY);
+            float drawWidth = ts.getTilewidth() * scale;
+            float drawHeight = ts.getTileheight() * scale;
+            float drawX = getX() + (getWidth() - drawWidth) / 2f;
+            float drawY = getY() + (getHeight() - drawHeight) / 2f;
+
+            // 1. Draw Checkered Background
+            batch.end();
+
+            com.badlogic.gdx.Gdx.gl.glEnable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
+            com.badlogic.gdx.Gdx.gl.glBlendFunc(com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA, com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA);
+
+            sr.setProjectionMatrix(batch.getProjectionMatrix());
+            sr.begin(com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType.Filled);
+            int checkSize = 16;
+            for (float cx = drawX; cx < drawX + drawWidth; cx += checkSize) {
+                for (float cy = drawY; cy < drawY + drawHeight; cy += checkSize) {
+                    float cw = Math.min(checkSize, drawX + drawWidth - cx);
+                    float ch = Math.min(checkSize, drawY + drawHeight - cy);
+                    if (((int)((cx - drawX) / checkSize) + (int)((cy - drawY) / checkSize)) % 2 == 0) {
+                        sr.setColor(0.15f, 0.15f, 0.15f, 1f);
+                    } else {
+                        sr.setColor(0.25f, 0.25f, 0.25f, 1f);
+                    }
+                    sr.rect(cx, cy, cw, ch);
+                }
+            }
+            sr.end();
+
+            batch.begin();
+
+            int localTileID = ts.getTiles().get(selTileID).getTileID();
+            int xpos2 = localTileID % ts.getWidth();
+            int ypos2 = localTileID / ts.getWidth();
+            int margin = ts.getMargin();
+            int spacing = ts.getSpacing();
+            int srcX = xpos2 * (ts.getTilewidth() + spacing) + margin;
+            int srcY = ypos2 * (ts.getTileheight() + spacing) + margin;
+
+            batch.draw(ts.getTexture(), drawX, drawY, drawWidth, drawHeight, srcX, srcY, ts.getTilewidth(), ts.getTileheight(), false, false);
+
+            batch.end();
+
+            java.util.List<obj> colObjects = ts.getTiles().get(selTileID).getObjects();
+
+            // Draw filled semi-transparent shape first
+            sr.begin(com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType.Filled);
+            for (int i = 0; i < colObjects.size(); i++) {
+                obj o = colObjects.get(i);
+                float rx = drawX + o.getX() * scale;
+                float ry = (drawY + drawHeight) - (o.getY() + o.getH()) * scale;
+                float rw = o.getW() * scale;
+                float rh = o.getH() * scale;
+
+                if (o == selectedColObj) {
+                    sr.setColor(1f, 0.4f, 0f, 0.35f);
+                } else {
+                    sr.setColor(0f, 0.7f, 0.9f, 0.2f);
+                }
+
+                if ("ellipse".equalsIgnoreCase(o.getShape())) {
+                    sr.ellipse(rx, ry, rw, rh);
+                } else {
+                    sr.rect(rx, ry, rw, rh);
+                }
+            }
+            sr.end();
+
+            // Draw outlines second
+            sr.begin(com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType.Line);
+            for (int i = 0; i < colObjects.size(); i++) {
+                obj o = colObjects.get(i);
+                float rx = drawX + o.getX() * scale;
+                float ry = (drawY + drawHeight) - (o.getY() + o.getH()) * scale;
+                float rw = o.getW() * scale;
+                float rh = o.getH() * scale;
+
+                if (o == selectedColObj) {
+                    sr.setColor(1f, 0.5f, 0f, 1f);
+                } else {
+                    sr.setColor(0f, 0.8f, 1f, 0.9f);
+                }
+
+                if ("ellipse".equalsIgnoreCase(o.getShape())) {
+                    sr.ellipse(rx, ry, rw, rh);
+                } else {
+                    sr.rect(rx, ry, rw, rh);
+                }
+            }
+            sr.end();
+
+            batch.begin();
+        }
+    }
 }
 

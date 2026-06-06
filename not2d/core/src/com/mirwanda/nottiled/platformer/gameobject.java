@@ -249,7 +249,10 @@ public class gameobject extends Sprite {
     }
 
     public void removeCollision(){
-        if (world.getBodyCount()>0) world.destroyBody( body );
+        if (body != null && world.getBodyCount()>0) {
+            world.destroyBody( body );
+            body = null;
+        }
     }
 
     public void removeFixtures(){
@@ -357,26 +360,27 @@ public class gameobject extends Sprite {
                 shaper = new EdgeShape();
                 fdef.filter.categoryBits = game.DEFAULT_BIT;
                 fdef.filter.maskBits = game.DEFAULT_BIT | game.PLAYER_BIT | game.BRICK_BIT | game.ALLSENSOR_BIT;
-                sz = 8/mygame.scale;
+                float szx = Tswh/mygame.scale;
+                float szy = Tshh/mygame.scale;
                 //top line
-                shaper.set(-sz,sz,sz, sz);
+                shaper.set(-szx,szy,szx, szy);
                 fdef.shape = shaper;
                 body.createFixture(fdef).setUserData(this);
 
                 //left line
-                shaper.set(-sz,0,-sz, sz);
+                shaper.set(-szx,0,-szx, szy);
                 fdef.shape = shaper;
                 fdef.friction=0;
                 body.createFixture(fdef).setUserData(this);
 
                 //right line
-                shaper.set(sz,sz,sz, 0);
+                shaper.set(szx,szy,szx, 0);
                 fdef.shape = shaper;
                 fdef.friction=0;
                 body.createFixture(fdef).setUserData(this);
 
                 //bottom line
-                shaper.set(-sz,0,sz, 0);
+                shaper.set(-szx,0,szx, 0);
                 fdef.shape = shaper;
                 body.createFixture(fdef).setUserData(this);
 
@@ -1794,7 +1798,16 @@ public class gameobject extends Sprite {
     public void bumbum(){
         particle p = new particle(mygame);
 
-        p.setPosition( body.getPosition().x-0.5f*mygame.Tsw/mygame.scale,body.getPosition().y -0.5f*mygame.Tsh/mygame.scale);
+        float px = 0;
+        float py = 0;
+        if (body != null) {
+            px = body.getPosition().x;
+            py = body.getPosition().y;
+        } else {
+            px = getX() + getWidth() / 2f;
+            py = getY() + getHeight() / 2f;
+        }
+        p.setPosition( px-0.5f*mygame.Tsw/mygame.scale,py -0.5f*mygame.Tsh/mygame.scale);
         if (mygame.animids.size()>0){
             for (int i=0; i< mygame.animids.size();i++){
                 if (mygame.animids.get( i )==deadtileID){

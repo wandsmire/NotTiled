@@ -19,6 +19,7 @@ m>CN-MiFan_Department:
 s>RT1_JMJS
 s>[ECM]HamSter
 s>JDSA Ling
+s>[ECM]KEND
 m>Translators
 s>WandsMire (English & Bahasa)
 s>Paon (Japanese)

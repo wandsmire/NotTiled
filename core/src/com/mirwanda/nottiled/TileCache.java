@@ -51,9 +51,27 @@ public class TileCache {
         this.intey = intey;
     }
 
+    private int[] cacheIDs;
+
+    public int[] getCacheIDs() {
+        return cacheIDs;
+    }
+
+    public void setCacheIDs(int[] cacheIDs) {
+        this.cacheIDs = cacheIDs;
+    }
+
     public TileCache(SpriteCache cache, int cacheID, int intex, int intey){
         this.cache = cache;
         this.cacheID = cacheID;
+        this.intex = intex;
+        this.intey = intey;
+        this.changed = false;
+    }
+
+    public TileCache(SpriteCache cache, int[] cacheIDs, int intex, int intey){
+        this.cache = cache;
+        this.cacheIDs = cacheIDs;
         this.intex = intex;
         this.intey = intey;
         this.changed = false;

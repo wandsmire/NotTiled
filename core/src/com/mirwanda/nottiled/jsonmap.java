@@ -26,6 +26,7 @@ public class jsonmap {
         String name;
         String type;
         int id;
+        layer[] layers;
         float opacity;
         float x;
         float y;
