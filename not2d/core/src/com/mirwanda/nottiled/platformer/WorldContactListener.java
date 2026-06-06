@@ -913,6 +913,8 @@ public class WorldContactListener implements ContactListener {
             if (check(PLAYER,ENEMYPROJECTILE,o1,o2)){
             gameobject ep = select( ENEMYPROJECTILE,o1,o2 );
             gameobject pl = select( PLAYER,o1,o2 );
+            // Only apply damage to the local player, not remote ghosts
+            if (pl != mygame.player || pl.state == gameobject.states.DEAD) return;
             ep.bumbum();
             pl.playSfx( pl.sfx );
             pl.HP-=ep.damage;
@@ -924,6 +926,8 @@ public class WorldContactListener implements ContactListener {
         if (check(PLAYER,MONSTER,o1,o2)){
             gameobject en = select( MONSTER,o1,o2 );
             gameobject pl = select( PLAYER,o1,o2 );
+            // Only apply damage to the local player, not remote ghosts
+            if (pl != mygame.player || pl.state == gameobject.states.DEAD) return;
             //pl.bumbum();
             pl.HP-=en.damage;
             eventobject(en);
@@ -933,8 +937,28 @@ public class WorldContactListener implements ContactListener {
         if (check(PLAYER,ITEM,o1,o2)){
             gameobject it = select( ITEM,o1,o2 );
             gameobject pl = select( PLAYER,o1,o2 );
-            pl.HP-=it.damage;
+            // Only process items for the LOCAL player (not remote ghosts)
+            if (pl != mygame.player || pl.state == gameobject.states.DEAD) return;
+            pl.HP -= it.damage;
+            // Capture the object index BEFORE eventobject(), which may mark it DEAD via 'once'
+            int mpIdx = mygame.isMultiplayerActive ? mygame.objects.indexOf(it) : -1;
             eventobject(it);
+            if (mygame.isMultiplayerActive && mpIdx >= 0) {
+                if (mygame.isHost && mygame.netServer != null) {
+                    // Host is authoritative: broadcast destroy to all clients (no dead-check
+                    // needed here because eventobject already handled local cleanup)
+                    game.ItemDestroyPacket dp = new game.ItemDestroyPacket();
+                    dp.objectIndex = mpIdx;
+                    mygame.netServer.sendToAllTCP(dp);
+                } else if (!mygame.isHost && mygame.netClient != null && mygame.netClient.isConnected()) {
+                    // Client: ask host to authorise the pickup
+                    game.ItemPickupRequestPacket req = new game.ItemPickupRequestPacket();
+                    req.objectIndex = mpIdx;
+                    req.playerId = mygame.playerId;
+                    mygame.netClient.sendTCP(req);
+                }
+            }
+            // In single-player the item is handled by the existing 'once' logic inside eventobject
         }
 
         if (check(ITEM, gameobject.objecttype.ITEMSENSOR,o1,o2)){
@@ -947,21 +971,29 @@ public class WorldContactListener implements ContactListener {
         if (check(PLAYER,BLOCK,o1,o2)){
             gameobject bl = select( BLOCK,o1,o2 );
             gameobject pl = select( PLAYER,o1,o2 );
+            // Only process events/damage for the local player, not remote ghosts
+            if (pl != mygame.player || pl.state == gameobject.states.DEAD) return;
             pl.HP-=bl.damage;
             eventobject(bl);
         }
 
         if (check(PLAYER,LADDER,o1,o2)){
+            gameobject pl = select( PLAYER,o1,o2 );
+            if (pl != mygame.player || pl.state == gameobject.states.DEAD) return;
             mygame.touchedladder+=1;
         }
 
         if (check(PLAYER,BRIDGE,o1,o2)){
+            gameobject pl = select( PLAYER,o1,o2 );
+            if (pl != mygame.player || pl.state == gameobject.states.DEAD) return;
             mygame.touchedbridge+=1;
         }
 
         if (check(PLAYER,SPRING,o1,o2)){
             gameobject sp = select( SPRING,o1,o2 );
             gameobject pl = select( PLAYER,o1,o2 );
+            // Only apply spring to local player
+            if (pl != mygame.player || pl.state == gameobject.states.DEAD) return;
             if (pl.body.getLinearVelocity().y < 0) {
                 float launch = sp.impulse > 0 ? sp.impulse : 4f;
                 pl.body.setLinearVelocity( 0, launch );
@@ -1258,10 +1290,12 @@ public class WorldContactListener implements ContactListener {
         if (o1 == null || o2 == null) return;
 
         if (check(PLAYER,LADDER,o1,o2)){
+            if (select(PLAYER,o1,o2) != mygame.player) return;
             mygame.touchedladder-=1;
         }
 
         if (check(PLAYER,BRIDGE,o1,o2)){
+            if (select(PLAYER,o1,o2) != mygame.player) return;
             mygame.touchedbridge-=1;
         }
 
@@ -1314,7 +1348,7 @@ public class WorldContactListener implements ContactListener {
                 bridge = o1;
             }
 
-            if (p != null && bridge != null) {
+            if (p != null && bridge != null && p.body != null && bridge.body != null) {
                 // If dropThroughTimer is active, let the player drop through
                 if (mygame.dropThroughTimer > 0) {
                     contact.setEnabled(false);

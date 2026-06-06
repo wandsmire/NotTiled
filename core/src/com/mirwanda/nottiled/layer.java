@@ -47,6 +47,15 @@ public class layer
 	private String draworder = "topdown";
 	private int startX = 0;
 	private int startY = 0;
+	private int parentGroupId = -1;
+
+	public int getParentGroupId() {
+		return parentGroupId;
+	}
+
+	public void setParentGroupId(int parentGroupId) {
+		this.parentGroupId = parentGroupId;
+	}
 
 	public void clearLayer(){
 		for (int i=0;i<gid.size();i++){

@@ -441,4 +441,11 @@ public class language
 	String aicanvaslarge;
 	String safemodetitle;
 	String safemodeprompt;
+	String zip;
+	String unzip;
+	String showanimations;
+	String grouplayer;
+	String ungroup;
+	String options;
+	String tilecollision;
 }

@@ -256,13 +256,13 @@ public class game implements ControllerListener {
         uicam = new OrthographicCamera();
         gamecam = new OrthographicCamera();
         if (assx >= assy) {
-            uicamVP = new StretchViewport( 1920, 1080, uicam );
-            gamecamVP = new com.badlogic.gdx.utils.viewport.FitViewport( 20, 11, gamecam );
+            uicamVP = new ExtendViewport( 1920, 1080, uicam );
+            gamecamVP = new ExtendViewport( 20, 11, gamecam );
             stage = new Stage( new ExtendViewport( 3840, 2160 ) );
             stage2 = new Stage( new ExtendViewport( 1920, 1080 ) );
         } else {
-            uicamVP = new StretchViewport( 1080, 1920, uicam );
-            gamecamVP = new com.badlogic.gdx.utils.viewport.FitViewport( 11, 20, gamecam );
+            uicamVP = new ExtendViewport( 1080, 1920, uicam );
+            gamecamVP = new ExtendViewport( 11, 20, gamecam );
             stage = new Stage( new ExtendViewport( 2160, 3840 ) );
             stage2 = new Stage( new ExtendViewport( 1080, 1920 ) );
         }
@@ -386,6 +386,7 @@ public class game implements ControllerListener {
 
     public boolean initialise(String path, String filename, boolean playtest){
         try {
+            hasPlayerError = false;
             log("initialisation started!");
             if (netServer != null) {
                 try { netServer.stop(); } catch(Exception ignored) {}
@@ -423,11 +424,7 @@ public class game implements ControllerListener {
 
             selectLocalPlayer();
             if (player == null) {
-                gameobject fallbackPlayer = new gameobject();
-                fallbackPlayer.mygame = this;
-                fallbackPlayer.setupGameObject(world, null, 1f, 2f, 1f, 1f, BodyDef.BodyType.DynamicBody, gameobject.objecttype.PLAYER, null, null, false, 1.0f);
-                objects.add(fallbackPlayer);
-                player = fallbackPlayer;
+                return false;
             }
             action1 = null;
             action2 = null;
@@ -955,33 +952,47 @@ public class game implements ControllerListener {
 
     public enum VAROP{SET,ADD, SUB}
 
-    public void setOrAddVars(String key, int value, VAROP v){
+    /** Apply a var change locally without networking (used by received packet handlers). */
+    public void applyVarLocally(String key, int value, VAROP v) {
         boolean ada = false;
-        KV varnya=null;
-        for (KV vr: save.vars){
-            if (key.equalsIgnoreCase( vr.key )){
-                varnya= vr;
-                ada=true;
+        KV varnya = null;
+        for (KV vr : save.vars) {
+            if (key.equalsIgnoreCase(vr.key)) {
+                varnya = vr;
+                ada = true;
                 break;
             }
         }
-
-        if (ada){
-            switch (v){
-                case SET:
-                    varnya.value=value;
-                    break;
-                case SUB:
-                    varnya.value-=value;
-                    break;
-                case ADD:
-                    varnya.value+=value;
-                    break;
+        if (ada) {
+            switch (v) {
+                case SET: varnya.value = value; break;
+                case SUB: varnya.value -= value; break;
+                case ADD: varnya.value += value; break;
             }
-        }else{
-            save.vars.add( new KV(key,value ));
+        } else {
+            save.vars.add(new KV(key, value));
         }
     }
+
+    public void setOrAddVars(String key, int value, VAROP v){
+        // Apply locally first
+        applyVarLocally(key, value, v);
+        // If multiplayer active, sync via host authority
+        if (isMultiplayerActive) {
+            VarSyncPacket vp = new VarSyncPacket();
+            vp.key = key;
+            vp.value = value;
+            vp.op = v.name();
+            if (isHost && netServer != null) {
+                // Host broadcasts to all clients
+                netServer.sendToAllTCP(vp);
+            } else if (!isHost && netClient != null && netClient.isConnected()) {
+                // Client sends to host for validation then re-broadcast
+                netClient.sendTCP(vp);
+            }
+        }
+    }
+
 
     public void setHUD(String key, boolean keep, boolean hasicon, int iconx, int icony){
         if (key==null) return;
@@ -1153,9 +1164,11 @@ public class game implements ControllerListener {
 
     private void checkGameCondition() {
         if (timetrial) timer+=delta;
-        if (player.HP <= 0) killPlayer();
-        if (player.body.getPosition().y<-2f/scale) killPlayer();
-        if (player.HP > player.maxHP) player.HP = player.maxHP;
+        if (player != null && player.state != gameobject.states.DEAD && player.body != null) {
+            if (player.HP <= 0) killPlayer();
+            else if (player.body.getPosition().y<-2f/scale) killPlayer();
+            if (player.HP > player.maxHP) player.HP = player.maxHP;
+        }
 
         if (autorespawn>0){
             autorespawn-=delta;
@@ -1169,8 +1182,11 @@ public class game implements ControllerListener {
                     go.setCategoryFilter( game.DESTROYED_BIT );
                     if (go.myLight!=null) go.myLight.dispose();
                     go.state = gameobject.states.DEAD;
-                    go.body.setLinearVelocity( 0, 0 );
-                    if (go.body!=null) world.destroyBody( go.body );
+                    if (go.body!=null) {
+                        go.body.setLinearVelocity( 0, 0 );
+                        world.destroyBody( go.body );
+                        go.body = null;
+                    }
                     go.bumbum();
                     go.playSfx( go.sfxdead );
                 }
@@ -1202,7 +1218,7 @@ public class game implements ControllerListener {
                     updateRemotePlayerSprite(go, delta);
                 }
             }
-            if (go.state==DEAD) deads.add( go );
+            if (go.state==DEAD && go.objtype != gameobject.objecttype.PLAYER) deads.add( go );
         }
 
         for (gameobject go:deads)
@@ -1259,12 +1275,12 @@ public class game implements ControllerListener {
         float posex;
         float posey;
 
-        if (camlocky || (player != null && player.state == DEAD)){
+        if (camlocky || player == null || player.state == gameobject.states.DEAD || player.body == null){
             posey = gamecam.position.y;
         }else{
             posey = player.body.getPosition().y;
         }
-        if (camlockx || (player != null && player.state == DEAD)){
+        if (camlockx || player == null || player.state == gameobject.states.DEAD || player.body == null){
             posex = gamecam.position.x;
 
         }else{
@@ -1367,6 +1383,7 @@ public class game implements ControllerListener {
     //but it will correct the bug that make player speed faster
     //so I don't care... heheh
     public void updatePlayerMovement(){
+        if (player == null || player.state == gameobject.states.DEAD || player.body == null) return;
 
         ladder= touchedladder > 0;
         boolean grab = ladder && (player.body.getLinearVelocity().y <= 0.1f || (player.moving && (player.dir == 3 || player.dir == 0)));
@@ -1452,6 +1469,7 @@ public class game implements ControllerListener {
 
     }
     public void updatePlayerSprite(float delta){
+        if (player == null || player.state == gameobject.states.DEAD) return;
 
         //no animation whatsoever
         if (player.anim.size()==0){
@@ -1832,7 +1850,23 @@ public class game implements ControllerListener {
     }
 
     public void respawn(){
-        load();
+        if (isMultiplayerActive) {
+            // In multiplayer: only reset the local player without reloading the whole map.
+            // This prevents forcing all other clients to respawn/reload when one player dies.
+            if (player != null) {
+                player.HP = player.maxHP;
+                player.state = gameobject.states.ALIVE;
+                float rx = checkpoint.x > 0 ? checkpoint.x : (player.body != null ? player.body.getPosition().x : 0);
+                float ry = checkpoint.y > 0 ? checkpoint.y : (player.body != null ? player.body.getPosition().y : 0);
+                if (player.body != null) {
+                    player.body.setTransform(rx, ry, 0);
+                    player.body.setLinearVelocity(0, 0);
+                    player.body.setAwake(true);
+                }
+            }
+        } else {
+            load();
+        }
     }
 
     public boolean disablecontrol = false;
@@ -1861,6 +1895,9 @@ public class game implements ControllerListener {
                 if (groundContacts <= 0 && jumpinterval <= 0) return;
 
                 player.body.applyLinearImpulse( 0f, gravity*go.impulse, player.getX(), player.getY(), true );
+                if (player.body.getLinearVelocity().y * gravity > go.impulse) {
+                    player.body.setLinearVelocity(player.body.getLinearVelocity().x, gravity * go.impulse);
+                }
                 playSfx( go.sfx );
 
                 jumping = true;
@@ -2045,6 +2082,13 @@ public class game implements ControllerListener {
         fadepath=path;
         fademapname=mapname;
         fadeout=fadeoutmax;
+        // If we are the host in a multiplayer session, tell all clients to load the same map
+        if (isMultiplayerActive && isHost && netServer != null) {
+            MapChangePacket mp = new MapChangePacket();
+            mp.path = path;
+            mp.mapname = mapname;
+            netServer.sendToAllTCP(mp);
+        }
         //log(fadeout+"");
     }
 
@@ -2688,6 +2732,14 @@ public class game implements ControllerListener {
 
     public void resize(int width,int height){
         if (width >= height) { // Landscape
+            if (uicamVP instanceof ExtendViewport) {
+                ((ExtendViewport) uicamVP).setMinWorldWidth( 1920 );
+                ((ExtendViewport) uicamVP).setMinWorldHeight( 1080 );
+            }
+            if (gamecamVP instanceof ExtendViewport) {
+                ((ExtendViewport) gamecamVP).setMinWorldWidth( 20 );
+                ((ExtendViewport) gamecamVP).setMinWorldHeight( 11 );
+            }
             uicamVP.setWorldSize( 1920, 1080 );
             gamecamVP.setWorldSize( 20, 11 );
             if (stage.getViewport() instanceof ExtendViewport) {
@@ -2699,6 +2751,14 @@ public class game implements ControllerListener {
                 ((ExtendViewport) stage2.getViewport()).setMinWorldHeight( 1080 );
             }
         } else { // Portrait
+            if (uicamVP instanceof ExtendViewport) {
+                ((ExtendViewport) uicamVP).setMinWorldWidth( 1080 );
+                ((ExtendViewport) uicamVP).setMinWorldHeight( 1920 );
+            }
+            if (gamecamVP instanceof ExtendViewport) {
+                ((ExtendViewport) gamecamVP).setMinWorldWidth( 11 );
+                ((ExtendViewport) gamecamVP).setMinWorldHeight( 20 );
+            }
             uicamVP.setWorldSize( 1080, 1920 );
             gamecamVP.setWorldSize( 11, 20 );
             if (stage.getViewport() instanceof ExtendViewport) {
@@ -2792,7 +2852,11 @@ public class game implements ControllerListener {
             logTimer = 0f;
             Gdx.app.log("GameDebug", "CamPos: " + gamecam.position + ", PlayerPos: " + (player != null ? player.body.getPosition() : "null") + ", Zoom: " + gamecam.zoom + ", Viewport: " + gamecamVP.getWorldWidth() + "x" + gamecamVP.getWorldHeight());
         }
-        if (gamecam.zoom != zoom) gamecam.zoom = zoom;
+        float currentZoom = zoom;
+        if (Gdx.graphics.getWidth() > Gdx.graphics.getHeight()) {
+            currentZoom = zoom * 0.75f;
+        }
+        if (gamecam.zoom != currentZoom) gamecam.zoom = currentZoom;
         if (touchCooldown>0) touchCooldown--;
         if(touchCooldown==0)
         {
@@ -2842,6 +2906,7 @@ public class game implements ControllerListener {
         batch.end();
 
         //draw tilemaps
+        gamecamVP.apply();
         renderer.setView( gamecam );
         renderer.render();
 
@@ -2855,6 +2920,7 @@ public class game implements ControllerListener {
         if (debugmode) b2dr.render( world, gamecam.combined );
 
         //draw HUD
+        uicamVP.apply();
         ui.setProjectionMatrix( uicam.combined );
         ui.begin();
         drawHUD( ui, str1);
@@ -2884,6 +2950,7 @@ public class game implements ControllerListener {
         }
 
         //draw fade effect
+        uicamVP.apply();
         uis.setProjectionMatrix( uicam.combined );
         uis.begin( ShapeRenderer.ShapeType.Filled );
         Gdx.gl.glEnable( GL20.GL_BLEND );
@@ -3755,6 +3822,31 @@ public class game implements ControllerListener {
     public static class StartGamePacket {
     }
 
+    /** Client → Host: "I want to destroy the item at this index" */
+    public static class ItemPickupRequestPacket {
+        public int objectIndex;
+        public String playerId;
+    }
+
+    /** Host → All: "Destroy object at this index" */
+    public static class ItemDestroyPacket {
+        public int objectIndex;
+    }
+
+    /** Any peer → Host / Host → All: variable change */
+    public static class VarSyncPacket {
+        public String key;
+        public int value;
+        public String op; // "SET", "ADD", "SUB"
+    }
+
+    /** Host → All: load a different map */
+    public static class MapChangePacket {
+        public String path;
+        public String mapname;
+    }
+
+
     // Multiplayer Lobby Fields
     public ArrayList<String> lobbyPlayers = new ArrayList<>();
 
@@ -3799,6 +3891,10 @@ public class game implements ControllerListener {
                     kryo.register(NicknamePacket.class);
                     kryo.register(LobbyStatusPacket.class);
                     kryo.register(StartGamePacket.class);
+                    kryo.register(ItemPickupRequestPacket.class);
+                    kryo.register(ItemDestroyPacket.class);
+                    kryo.register(VarSyncPacket.class);
+                    kryo.register(MapChangePacket.class);
                     kryo.register(ArrayList.class);
 
                     netServer.start();
@@ -3861,6 +3957,39 @@ public class game implements ControllerListener {
                                         setupLobbyUI();
                                     }
                                 });
+                            } else if (object instanceof ItemPickupRequestPacket) {
+                                // Host is the authority: validate and broadcast destroy
+                                final ItemPickupRequestPacket req = (ItemPickupRequestPacket) object;
+                                Gdx.app.postRunnable(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        if (req.objectIndex >= 0 && req.objectIndex < objects.size()) {
+                                            gameobject go = objects.get(req.objectIndex);
+                                            if (go.state != gameobject.states.DEAD) {
+                                                go.setCategoryFilter(DESTROYED_BIT);
+                                                go.state = gameobject.states.DEAD;
+                                                go.bumbum();
+                                                go.playSfx(go.sfx);
+                                                ItemDestroyPacket dp = new ItemDestroyPacket();
+                                                dp.objectIndex = req.objectIndex;
+                                                netServer.sendToAllTCP(dp);
+                                            }
+                                        }
+                                    }
+                                });
+                            } else if (object instanceof VarSyncPacket) {
+                                // Client sent a var change; host applies it and re-broadcasts
+                                final VarSyncPacket vp = (VarSyncPacket) object;
+                                Gdx.app.postRunnable(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        VAROP op = VAROP.SET;
+                                        if ("ADD".equals(vp.op)) op = VAROP.ADD;
+                                        else if ("SUB".equals(vp.op)) op = VAROP.SUB;
+                                        applyVarLocally(vp.key, vp.value, op);
+                                        netServer.sendToAllExceptTCP(connection.getID(), vp);
+                                    }
+                                });
                             }
                         }
                     });
@@ -3902,6 +4031,10 @@ public class game implements ControllerListener {
                     kryo.register(NicknamePacket.class);
                     kryo.register(LobbyStatusPacket.class);
                     kryo.register(StartGamePacket.class);
+                    kryo.register(ItemPickupRequestPacket.class);
+                    kryo.register(ItemDestroyPacket.class);
+                    kryo.register(VarSyncPacket.class);
+                    kryo.register(MapChangePacket.class);
                     kryo.register(ArrayList.class);
 
                     netClient.start();
@@ -3932,6 +4065,44 @@ public class game implements ControllerListener {
                                     @Override
                                     public void run() {
                                         handleRemoteDamage(p);
+                                    }
+                                });
+                            } else if (object instanceof ItemDestroyPacket) {
+                                // Host says: destroy this object
+                                final ItemDestroyPacket dp = (ItemDestroyPacket) object;
+                                Gdx.app.postRunnable(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        if (dp.objectIndex >= 0 && dp.objectIndex < objects.size()) {
+                                            gameobject go = objects.get(dp.objectIndex);
+                                            if (go.state != gameobject.states.DEAD) {
+                                                go.setCategoryFilter(DESTROYED_BIT);
+                                                go.state = gameobject.states.DEAD;
+                                                go.bumbum();
+                                                go.playSfx(go.sfx);
+                                            }
+                                        }
+                                    }
+                                });
+                            } else if (object instanceof VarSyncPacket) {
+                                // Host broadcast a var change
+                                final VarSyncPacket vp = (VarSyncPacket) object;
+                                Gdx.app.postRunnable(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        VAROP op = VAROP.SET;
+                                        if ("ADD".equals(vp.op)) op = VAROP.ADD;
+                                        else if ("SUB".equals(vp.op)) op = VAROP.SUB;
+                                        applyVarLocally(vp.key, vp.value, op);
+                                    }
+                                });
+                            } else if (object instanceof MapChangePacket) {
+                                // Host says: change map
+                                final MapChangePacket mp = (MapChangePacket) object;
+                                Gdx.app.postRunnable(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        fadeinitialise(mp.path, mp.mapname);
                                     }
                                 });
                             } else if (object instanceof HandshakePacket) {
