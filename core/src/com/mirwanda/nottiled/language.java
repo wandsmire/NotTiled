@@ -85,6 +85,16 @@ public class language
 	String tilesetting;
 	String animation;
 	String terraineditor;
+	String terrainshape;
+	String teshape1x1;
+	String teshape2x2;
+	String teshape4x4border;
+	String teshape4x4full;
+	String teshape4x4corner;
+	String teshape4x4cornerrev;
+	String teshape6x6;
+	String deleteterrain;
+	String deleteterrainconfirm;
 	String addnew;
 	String rename;
 	String properties;
@@ -145,6 +155,7 @@ public class language
 	String recentfile;
 	String screenshot;
 	String screenshotsaved;
+	String mirror;
 	String mirrorhorizontally;
 	String mirrorvertically;
 	String mirrorboth;

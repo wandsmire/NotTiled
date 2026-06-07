@@ -40,10 +40,15 @@ public class guis
 	public gui objectpickerleft=new gui();
 	public gui objectpickerright=new gui();
 	public gui newterrain=new gui();
+	public gui terrainshape=new gui();
+	public gui terraindelete=new gui();
+	public gui terrainundo=new gui();
 	public gui screenshot=new gui();
 	public gui tilesetsleft=new gui();
 	public gui tilesetsright=new gui();
 	public gui tilesetsmid=new gui();
+	public gui tilesetsbtn=new gui();
+	public gui terraineditorbtn=new gui();
 	public gui center=new gui();
 	public gui save=new gui();
 	public gui play=new gui();
@@ -93,6 +98,7 @@ public class guis
 		menu.setp(0,20,0,10);
 		map.setp(0,15,10,19);
 		undo.setp(0,15,90,100);
+		terrainundo.setp(0,15,90,100);
 		redo.setp(85,100,90,100);
 		layerpick.setp(80,100,0,10);
 		picker.setp(40,60,0,10);
@@ -118,6 +124,7 @@ public class guis
 		pickertool5.setp(85,100,55,64);
 
 		pickerback.setp(0,15,10,19);
+		terraindelete.setp(0,15,19,29);
 		tilewrite.setp(0,15,19,28);
 		tilesettings.setp(0,15,28,37);
 		tileproperties.setp(0,15,37,46);
@@ -138,12 +145,15 @@ public class guis
 		objectpickerleft.setp(30, 40, 0, 10);
 		objectpickerright.setp(70, 80, 0, 10);
 
-		newterrain.setp(80,100,10,20);
+		newterrain.setp(82,100,10,20);
+		terrainshape.setp(82,100,20,30);
 		screenshot.setp(15,85,0,10);
 
 		tilesetsleft.setp(0,15,0,10);
 		tilesetsmid.setp(15,85,0,10);
 		tilesetsright.setp(85,100,0,10);
+		tilesetsbtn.setp(85,100,19,28);
+		terraineditorbtn.setp(85,100,28,37);
 
 		center.setp(70,85,81,90);
 		save.setp(0,15,19,28);
@@ -217,6 +227,7 @@ public class guis
 		pickertool1.setl(90,100,20,30);
 
 		undo.setl(0,10,90,100);
+		terrainundo.setl(0,10,90,100);
 		redo.setl(90,100,90,100);
 		info.setl(0, 100, 70, 80);
 		fps.setl(90,100,80,90);
@@ -231,17 +242,21 @@ public class guis
 		objectpickerright.setl(80, 90, 0, 10);
 
 		newterrain.setl(90,100,10,20);
+		terrainshape.setl(90,100,20,30);
 		screenshot.setl(30,70,0,10);
 
 		tilesetsleft.setl(0,10,0,10);
 		tilesetsmid.setl(10,90,0,10);
 		tilesetsright.setl(90,100,0,10);
+		tilesetsbtn.setl(90,100,20,30);
+		terraineditorbtn.setl(90,100,30,40);
 		tilemode.setl(40,60,10,20);
 
 		minimap.setl(0,17,60,89);
 		lock.setl(90,100,15,25);
 
 		pickerback.setl(0,10,10,20);
+		terraindelete.setl(0,10,20,30);
 		tilewrite.setl(0,10,20,30);
 		tilesettings.setl(0,10,30,40);
 		tileproperties.setl(0,10,40,50);

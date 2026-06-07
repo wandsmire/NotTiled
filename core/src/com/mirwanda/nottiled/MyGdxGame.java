@@ -72,6 +72,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Touchpad;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop;
+import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
 import com.badlogic.gdx.scenes.scene2d.utils.SpriteDrawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
@@ -340,6 +341,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private java.util.List<Integer> pickerCacheIDs = new java.util.ArrayList<Integer>();
     private int pickerCachedTsetID = -1;
     private boolean pickerCacheValid = false;
+    private java.util.List<com.badlogic.gdx.graphics.g2d.SpriteCache> terrainPickerCaches = new java.util.ArrayList<com.badlogic.gdx.graphics.g2d.SpriteCache>();
+    private java.util.List<Integer> terrainPickerCacheIDs = new java.util.ArrayList<Integer>();
+    private int terrainPickerCachedTsetID = -1;
+    private boolean terrainPickerCacheValid = false;
     int pixelPaletteMode = 0;
     int pixelEditSlot = -1;
     int pixelPaletteUsedCount = 8;
@@ -361,6 +366,28 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     InputMultiplexer im;
 
     boolean drag, roll, stamp = false;
+    boolean terrainPainting = false;
+    boolean terrainPaintMoved = false;
+    int lastTerrainPaintCell = -1;
+    private float terrainEditorAnimPhase = 0f;
+    private static final int TE_SHAPE_1X1 = 0;
+    private static final int TE_SHAPE_2X2 = 1;
+    private static final int TE_SHAPE_4X4_BORDER = 2;
+    private static final int TE_SHAPE_4X4_FULL = 3;
+    private static final int TE_SHAPE_4X4_CORNER = 4;
+    private static final int TE_SHAPE_4X4_CORNER_REV = 5;
+    private static final int TE_SHAPE_6X6 = 6;
+    private int terrainBrushShape = TE_SHAPE_1X1;
+    private Table tTerrainShapeMenu;
+    private Texture[] terrainShapeIcons = new Texture[7];
+    private boolean terrainHoldPending = false;
+    private boolean pinchZoomActive = false;
+    private float terrainHoldTimer = 0f;
+    private float terrainHoldTouchX = 0f;
+    private float terrainHoldTouchY = 0f;
+    private static final float TERRAIN_HOLD_PAINT_SEC = 0.4f;
+    private static final float TERRAIN_HOLD_CANCEL_PAN = 12f;
+    private final java.util.ArrayList<java.util.ArrayList<tile>> terrainUndoStack = new java.util.ArrayList<>();
     BitmapFont str1;
     decoder decoder = new decoder();
     Skin skin, skin2;
@@ -444,6 +471,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     TextButton bColAddRect, bColAddEllipse, bColRemove, bColCustomProps;
     obj selectedColObj = null;
     private boolean updatingFields = false;
+    private boolean isLongPressed = false;
     CollisionCanvas collisionCanvas;
     Table tMap1, tMap2;
     TextButton bTileMgmt, bTileSettingsMgmt, bPreference, bProperties, bTsetMgmt, bBack2, bAutoMgmt, bFeedback;
@@ -488,6 +516,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     Table layerMgrListTable;
     ScrollPane layerMgrScrollPane;
     DragAndDrop layerMgrDnd;
+    Table tTsetMgrMain;
+    Table tsetMgrListTable;
+    ScrollPane tsetMgrScrollPane;
+    DragAndDrop tsetMgrDnd;
     java.util.HashMap<Integer, TextureRegionDrawable> rowBgCache = new java.util.HashMap<Integer, TextureRegionDrawable>();
     TextureRegionDrawable rowBgDragging, rowBgDropIntoGroup, rowBgDropBefore, rowBgDropAfter;
     TextPromptListener pNewLayer;
@@ -605,6 +637,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private int position;
     private int kyut;
     private Table ttools;
+    private Table tMirrorMenu;
+    private TextButton bMirrorMenu;
+    private Table prevStage;
     private int tilesetsize;
     private Table nullTable;
     private int tilesize;
@@ -664,6 +699,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private final java.util.List<String> aiRefineSteps = new ArrayList<>();
     private boolean aiGenerating = false;
     private TextButton btnAiSprite;
+    TextButton hmirror, vmirror, hvmirror, hvmirrorrev, randomize, replacetiles, generateterrain, tracebackground, toback;
     private CheckBox cball;
     private Table bigman;
     private boolean zooming;
@@ -759,7 +795,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void pinchStop() {
         prevx = 0;
         prevy = 0;
-        // TODO: Implement this method
+        pinchZoomActive = false;
     }
 
     //////////////////////////////////////////////////////
@@ -1523,6 +1559,29 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             return;
         }
         delta = Gdx.graphics.getDeltaTime();
+        if (isTerrainEditorPicker()) {
+            terrainEditorAnimPhase = (terrainEditorAnimPhase + delta * 0.35f) % 1f;
+            if (pinchZoomActive || Gdx.input.isTouched(1))
+                terrainHoldPending = false;
+            if (terrainHoldPending && Gdx.input.isTouched() && !pinchZoomActive && !Gdx.input.isTouched(1)) {
+                terrainHoldTimer -= delta;
+                if (terrainHoldTimer <= 0f)
+                    beginTerrainPaintAt(Gdx.input.getX(), Gdx.input.getY());
+            } else if (terrainHoldPending) {
+                terrainHoldPending = false;
+            }
+            if (terrainPainting) {
+                if (!Gdx.input.isTouched()) {
+                    terrainPainting = false;
+                    lastTerrainPaintCell = -1;
+                    terrainHoldPending = false;
+                } else if (tilesets.size() > 0) {
+                    Vector3 t = new Vector3();
+                    tilecam.unproject(t.set(Gdx.input.getX(), Gdx.input.getY(), 0));
+                    paintTerrainBrush(tilesets.get(selTsetID), t.x, t.y);
+                }
+            }
+        }
         // undolayer.clear();
 
         if (waittoloadlist > 0)
@@ -2215,7 +2274,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     cam.zoom = cam.zoom * 1.1f;
                     cam.update();
                 }
-            } else if (kartu == "tile") {
+            } else if (kartu == "tile" || kartu == "pickanim") {
                 if (tilecam.zoom < 100) {
                     tilecam.zoom = tilecam.zoom * 1.1f;
                     tilecam.update();
@@ -2238,9 +2297,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     cam.zoom = cam.zoom / 1.1f;
                     cam.update();
                 }
-            } else if (kartu == "tile") {
-                if (tilecam.zoom > 0.01) {
+            } else if (kartu == "tile" || kartu == "pickanim") {
+                float minZoom = tilePickerMinZoom();
+                if (tilecam.zoom > minZoom) {
                     tilecam.zoom = tilecam.zoom / 1.1f;
+                    if (tilecam.zoom < minZoom)
+                        tilecam.zoom = minZoom;
                     tilecam.update();
                 }
             }
@@ -2300,6 +2362,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             assemblymode = false;
                             roll = false;
                             stamp = false;
+                            terrainPainting = false;
+                            terrainPaintMoved = false;
+                            lastTerrainPaintCell = -1;
                             rotating = false;
                             break;
                         case "newpoly":
@@ -2382,11 +2447,35 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         backing = false;
                         return;
 
-                        /**/
+                    } else if (lastStage == ttools) {
+                        backToMap();
+                    } else if (lastStage == tMirrorMenu) {
+                        setToolsMap();
+                        gotoStage(ttools);
                     } else if (lastStage == trandomgen) {
+                        setToolsMap();
                         gotoStage(ttools);
                     } else if (lastStage == taiGenerate) {
+                        setToolsMap();
                         gotoStage(ttools);
+                    } else if (lastStage == treplacetiles) {
+                        setToolsMap();
+                        gotoStage(ttools);
+                    } else if (lastStage == tgenerateterrain) {
+                        setToolsMap();
+                        gotoStage(ttools);
+                    } else if (lastStage == tCollab) {
+                        setToolsMap();
+                        gotoStage(ttools);
+                    } else if (lastStage == tAutoMgmt) {
+                        setToolsMap();
+                        gotoStage(ttools);
+                    } else if (lastStage == tProperties) {
+                        if (prevStage == tMenu) {
+                            gotoStage(tMenu);
+                        } else {
+                            backToMap();
+                        }
                     } else if (lastStage == tpt) {
                         gotoStage(tPropsMgmt);
                     }
@@ -2399,7 +2488,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 case "pickanim":
                     if (tilePicker == "terraineditor") {
                         lastStage = null;
-                        gotoStage(tTileMgmt);
+                        if (frompick) {
+                            onToPicker();
+                            frompick = false;
+                        } else {
+                            gotoStage(tTileMgmt);
+                        }
                     }
                     break;
             }
@@ -2456,6 +2550,72 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
         pickerCacheValid = false;
         pickerCachedTsetID = -1;
+    }
+
+    private void clearTerrainPickerCaches() {
+        if (terrainPickerCaches != null) {
+            for (com.badlogic.gdx.graphics.g2d.SpriteCache cache : terrainPickerCaches) {
+                cache.dispose();
+            }
+            terrainPickerCaches.clear();
+        }
+        if (terrainPickerCacheIDs != null) {
+            terrainPickerCacheIDs.clear();
+        }
+        terrainPickerCacheValid = false;
+        terrainPickerCachedTsetID = -1;
+    }
+
+    private void rebuildTerrainPickerCaches(tileset ts) {
+        clearTerrainPickerCaches();
+        if (ts == null)
+            return;
+        int wd = ts.getWidth();
+        int tileCount = ts.getTilecount();
+        if (wd <= 0 || tileCount <= 0)
+            return;
+        int hcw = terrainEditorHalfCellW(ts);
+        int hch = terrainEditorHalfCellH(ts);
+        int margin = ts.getMargin();
+        int spacing = ts.getSpacing();
+        int chunkSize = 1024;
+        int numChunks = (tileCount + chunkSize - 1) / chunkSize;
+        for (int chunk = 0; chunk < numChunks; chunk++) {
+            com.badlogic.gdx.graphics.g2d.SpriteCache cache = new com.badlogic.gdx.graphics.g2d.SpriteCache(chunkSize, true);
+            cache.beginCache();
+            int startIdx = chunk * chunkSize;
+            int endIdx = Math.min(startIdx + chunkSize, tileCount);
+            for (int i = startIdx; i < endIdx; i++) {
+                boolean isAnimated = false;
+                if (sShowAnimations) {
+                    java.util.List<tile> tiles = ts.getTiles();
+                    int tilesize = tiles.size();
+                    if (tilesize > 0) {
+                        for (int n = 0; n < tilesize; n++) {
+                            if (tiles.get(n).getAnimation().size() > 0 && i == tiles.get(n).getTileID()) {
+                                isAnimated = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (isAnimated)
+                    continue;
+                int xpos = i % wd;
+                int ypos = i / wd;
+                int xpos2 = xpos;
+                int ypos2 = ypos;
+                cache.add(ts.getTexture(), xpos * hcw, -ypos * hch, hcw, hch,
+                        (xpos2 * (ts.getTilewidth() + spacing)) + margin,
+                        (ypos2 * (ts.getTileheight() + spacing)) + margin,
+                        ts.getTilewidth(), ts.getTileheight(), false, false);
+            }
+            int cacheID = cache.endCache();
+            terrainPickerCaches.add(cache);
+            terrainPickerCacheIDs.add(cacheID);
+        }
+        terrainPickerCacheValid = true;
+        terrainPickerCachedTsetID = selTsetID;
     }
 
     private void rebuildPickerCaches(tileset ts) {
@@ -2632,13 +2792,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 }
             } else { // manual
-                if (!pickerCacheValid) {
+                final boolean terrainEditorDraw = isTerrainEditorPicker();
+                if (terrainEditorDraw) {
+                    batch.end();
+                    drawTerrainEditorTiles(batch, ts, minX, maxX, minY, maxY);
+                }
+                if (!terrainEditorDraw && !pickerCacheValid) {
                     rebuildPickerCaches(ts);
                 }
 
-                batch.end();
+                if (!terrainEditorDraw)
+                    batch.end();
 
-                if (pickerCacheValid && !pickerCaches.isEmpty()) {
+                if (!terrainEditorDraw && pickerCacheValid && !pickerCaches.isEmpty()) {
                     int chunkSize = 1024;
                     for (int chunk = 0; chunk < pickerCaches.size(); chunk++) {
                         int startIdx = chunk * chunkSize;
@@ -2698,7 +2864,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
                         batch.end();
                     }
-                } else {
+                } else if (!terrainEditorDraw) {
                     batch.begin();
                     for (int y = startRow; y <= endRow; y++) {
                         for (int x = startCol; x <= endCol; x++) {
@@ -2736,7 +2902,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     batch.end();
                 }
 
-                if (tilecam.zoom <= 0.5f) {
+                if (!terrainEditorDraw && tilecam.zoom <= 0.5f) {
                     batch.begin();
                     for (int y = startRow; y <= endRow; y++) {
                         for (int x = startCol; x <= endCol; x++) {
@@ -2781,11 +2947,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             }
                         }
                     }
-                } else {
+                } else if (!terrainEditorDraw) {
                     batch.begin();
                 }
             } // end of drawing
-            batch.end();
+            if (!isTerrainEditorPicker())
+                batch.end();
 
             // GRID FOR TILES SELECTOR
             sr.setProjectionMatrix(tilecam.combined);
@@ -2799,7 +2966,28 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (Tsw >= 64)
                 weight = 2;
 
-            if (!pickAuto) {
+            if (isTerrainEditorPicker()) {
+                int hch = terrainEditorHalfCellH(ts);
+                int ccw = terrainEditorCornerCellW(ts);
+                int cch = terrainEditorCornerCellH(ts);
+                int gridW = ts.getWidth() * 2;
+                int gridH = ts.getHeight() * 2;
+                float lineW = terrainEditorGridLineWidth(ts);
+                float gridTop = hch;
+                float gridBottom = hch - cch * gridH;
+                int gridStartCol = (int) Math.floor(minX / ccw);
+                int gridEndCol = (int) Math.ceil(maxX / ccw);
+                int gridStartRow = (int) Math.floor((gridTop - maxY) / cch);
+                int gridEndRow = (int) Math.ceil((gridTop - minY) / cch);
+                if (gridStartCol < 0) gridStartCol = 0;
+                if (gridEndCol > gridW) gridEndCol = gridW;
+                if (gridStartRow < 0) gridStartRow = 0;
+                if (gridEndRow > gridH) gridEndRow = gridH;
+                for (int i = gridStartCol; i <= gridEndCol; i++)
+                    sr.rectLine(ccw * i, gridTop, ccw * i, gridBottom, lineW);
+                for (int j = gridStartRow; j <= gridEndRow; j++)
+                    sr.rectLine(0, gridTop - cch * j, ccw * gridW, gridTop - cch * j, lineW);
+            } else if (!pickAuto) {
                 int gridStartCol = startCol;
                 int gridEndCol = endCol + 1;
                 if (gridStartCol < 0) gridStartCol = 0;
@@ -2890,94 +3078,47 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                 }
             }
-            if (kartu == "pickanim" && tilePicker == "terraineditor") {
-                for (int y = startRow; y <= endRow; y++) {
-                    for (int x = startCol; x <= endCol; x++) {
-                        int i = y * wd + x;
-                        if (i >= ts.getTilecount()) continue;
-
-                        long ini = i;// +tilesets.get(seltset.getFirstgid();
-                        boolean terrain = false;
-                        int curTerrain = 0;
-                        int[] curNodes = null;
-                        tiles = ts.getTiles();
-                        if (tiles.size() > 0) {
-                            for (int n = 0; n < tiles.size(); n++) {
-                                if (ini == tiles.get(n).getTileID()) {
-
-                                    if (tiles.get(n).isTerrainForEditor()) {
-                                        terrain = true;
-                                        curNodes = tiles.get(n).getTerrain();
-                                    }
-
-                                    if (tiles.get(n).getAnimation().size() > 0) {
-                                        ini = tiles.get(n).getActiveFrameID();
-                                    }
-
-                                }
-                            }
-                        }
-
-                        long ist = ini;// -tilesets.get(seltset).getFirstgid();
-                        int xpos = x;
-                        int ypos = y;
-                        int xpos2 = (int) (ist) % wd;
-                        int ypos2 = (int) (ist) / wd;
-                        int margin = ts.getMargin();
-                        int spacing = ts.getSpacing();
-                        Color c = new Color(1, 0, 0, .5f);
-                        Color c2 = new Color(0, 0, .5f, .5f);
-                        if (terrain) {
-                            curTerrain = tilesets.get(selTsetID).getSelTerrain();
-                            if (curNodes[0] == curTerrain) {
-                                sr.setColor(c);
-                                sr.rect(xpos * ts.getTilewidth(), -ypos * ts.getTileheight() + ts.getTileheight() / 2,
-                                        ts.getTilewidth() / 2, ts.getTileheight() / 2);
-                            } else if (curNodes[0] == -1) {
-                            } else {
-                                sr.setColor(c2);
-                                sr.rect(xpos * ts.getTilewidth(), -ypos * ts.getTileheight() + ts.getTileheight() / 2,
-                                        ts.getTilewidth() / 2, ts.getTileheight() / 2);
-                            }
-
-                            if (curNodes[1] == curTerrain) {
-                                sr.setColor(c);
-                                sr.rect(xpos * ts.getTilewidth() + ts.getTilewidth() / 2,
-                                        -ypos * ts.getTileheight() + ts.getTileheight() / 2, ts.getTilewidth() / 2,
-                                        ts.getTileheight() / 2);
-                            } else if (curNodes[1] == -1) {
-                            } else {
-                                sr.setColor(c2);
-                                sr.rect(xpos * ts.getTilewidth() + ts.getTilewidth() / 2,
-                                        -ypos * ts.getTileheight() + ts.getTileheight() / 2, ts.getTilewidth() / 2,
-                                        ts.getTileheight() / 2);
-                            }
-
-                            if (curNodes[2] == curTerrain) {
-                                sr.setColor(c);
-                                sr.rect(xpos * ts.getTilewidth(), -ypos * ts.getTileheight(), ts.getTilewidth() / 2,
-                                        ts.getTileheight() / 2);
-                            } else if (curNodes[2] == -1) {
-                            } else {
-                                sr.setColor(c2);
-                                sr.rect(xpos * ts.getTilewidth(), -ypos * ts.getTileheight(), ts.getTilewidth() / 2,
-                                        ts.getTileheight() / 2);
-
-                            }
-                            if (curNodes[3] == curTerrain) {
-                                sr.setColor(c);
-                                sr.rect(xpos * ts.getTilewidth() + ts.getTilewidth() / 2, -ypos * ts.getTileheight(),
-                                        ts.getTilewidth() / 2, ts.getTileheight() / 2);
-                            } else if (curNodes[3] == -1) {
-                            } else {
-                                sr.setColor(c2);
-                                sr.rect(xpos * ts.getTilewidth() + ts.getTilewidth() / 2, -ypos * ts.getTileheight(),
-                                        ts.getTilewidth() / 2, ts.getTileheight() / 2);
-
-                            }
-
-                        }
-
+            if (isTerrainEditorPicker()) {
+                int hcw = terrainEditorHalfCellW(ts);
+                int hch = terrainEditorHalfCellH(ts);
+                int ccw = terrainEditorCornerCellW(ts);
+                int cch = terrainEditorCornerCellH(ts);
+                int curTerrain = tilesets.get(selTsetID).getSelTerrain();
+                int teWd = ts.getWidth();
+                int teTotalRows = teWd > 0 ? (ts.getTilecount() + teWd - 1) / teWd : 0;
+                float teMinX = tilecam.position.x - (tilecam.viewportWidth * tilecam.zoom) / 2f;
+                float teMaxX = tilecam.position.x + (tilecam.viewportWidth * tilecam.zoom) / 2f;
+                float teMinY = tilecam.position.y - (tilecam.viewportHeight * tilecam.zoom) / 2f;
+                float teMaxY = tilecam.position.y + (tilecam.viewportHeight * tilecam.zoom) / 2f;
+                int teStartCol = Math.max(0, (int) Math.floor(teMinX / hcw));
+                int teEndCol = Math.min(teWd - 1, (int) Math.ceil(teMaxX / hcw));
+                int teStartRow = Math.max(0, (int) Math.floor(-teMaxY / hch));
+                int teEndRow = Math.min(teTotalRows - 1, (int) Math.ceil(-teMinY / hch) + 1);
+                int[][] corners = {{0, 0, cch}, {1, ccw, cch}, {2, 0, 0}, {3, ccw, 0}};
+                java.util.List<tile> teTiles = ts.getTiles();
+                int teTileMeta = teTiles.size();
+                for (int n = 0; n < teTileMeta; n++) {
+                    tile teTile = teTiles.get(n);
+                    if (!teTile.isTerrainForEditor())
+                        continue;
+                    int i = teTile.getTileID();
+                    if (i < 0 || i >= ts.getTilecount())
+                        continue;
+                    int x = i % teWd;
+                    int y = i / teWd;
+                    if (x < teStartCol || x > teEndCol || y < teStartRow || y > teEndRow)
+                        continue;
+                    int[] curNodes = teTile.getTerrain();
+                    float tx = x * hcw;
+                    float ty = -y * hch;
+                    for (int k = 0; k < 4; k++) {
+                        if (curNodes[k] == -1)
+                            continue;
+                        if (curNodes[k] == curTerrain)
+                            sr.setColor(terrainEditorRainbowColor());
+                        else
+                            sr.setColor(0, 0, 0.5f, 0.45f);
+                        sr.rect(tx + corners[k][1], ty + corners[k][2], ccw, cch);
                     }
                 }
             }
@@ -3006,7 +3147,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (kartu == "pickanim") {
                 uisrect(gui.pickerback, mouse, null);// tool switch
                 if (tilePicker == "terraineditor") {
+                    uisrect(gui.terraindelete, mouse, null);
+                    uisrect(gui.terrainshape, mouse, null);
                     uisrect(gui.newterrain, mouse, null);// tool switch
+                    uisrect(gui.tilesetsleft, mouse, null);
+                    uisrect(gui.tilesetsright, mouse, null);
+                    uisrect(gui.tilesetsmid, mouse, null);
+                    uisrect(gui.terrainundo, mouse, null);
                 } else if (tilePicker == "massprops") {
                     uisrect(gui.newterrain, mouse, null);
                 }
@@ -3018,6 +3165,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             uisrect(gui.tilemode, mouse, null);
         if (kartu == "tile" || kartu == "editor") {
             uisrect(gui.tilesetsmid, mouse, null);
+            uisrect(gui.tilesetsbtn, mouse, null);
+            uisrect(gui.terraineditorbtn, mouse, null);
             if (tilesets.size() > 0) {
                 uisrect(gui.tilesetsleft, mouse, null);
                 uisrect(gui.tilesetsright, mouse, null);
@@ -3070,34 +3219,30 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         }
         if (tilesets.size() != 0 && (kartu == "tile" || kartu == "editor")) {
-            uisrect(gui.pickertool1, mouse, null);
-            uisrect(gui.pickertool2, mouse, null);
-            uisrect(gui.pickertool3, mouse, null);
-            if (!isProtectedPixelArtTileset(seltset))
-                uisrect(gui.pickertool5, mouse, null);
             uisrect(gui.pickerback, mouse, null);// tool switch
-
-            if (isPixelArtPaletteView() && issettingtile) {
+            if (issettingtile) {
                 uisrect(gui.tilewrite, mouse, null);
                 uisrect(gui.tilesettings, mouse, new Color(1f, 1f, 0f, .4f));
-                uisrect(gui.tileproperties, mouse, null);
-                uisrect(gui.tileremove, mouse, null);
-                uisrect(gui.tileadd, mouse, null);
-            } else if (issettingtile || kartu == "editor") {
-                uisrect(gui.tilewrite, mouse, null);
-                uisrect(gui.tilesettings, mouse, new Color(1f, 1f, 0f, .4f));
-                if (somethingisselected() || kartu == "editor") {
-                    uisrect(gui.tileproperties, mouse, null);// tool switch
-                    uisrect(gui.tileoverlay, mouse, null);
-                }
-            } else if (isPixelArtPaletteView()) {
-                uisrect(gui.tilewrite, mouse, new Color(1f, 1f, 0f, .4f));
-                uisrect(gui.tilesettings, mouse, null);
             } else {
                 uisrect(gui.tilewrite, mouse, new Color(1f, 1f, 0f, .4f));
                 uisrect(gui.tilesettings, mouse, null);
             }
 
+            if (isPixelArtPaletteView()) {
+                uisrect(gui.tileproperties, mouse, null);
+                uisrect(gui.tileremove, mouse, null);
+                uisrect(gui.tileadd, mouse, null);
+            } else if (issettingtile || kartu == "editor") {
+                if (somethingisselected() || kartu == "editor") {
+                    uisrect(gui.tileproperties, mouse, null);
+                    uisrect(gui.tileoverlay, mouse, null);
+                }
+            }
+        }
+        if (tilesets.size() == 0 && (kartu == "tile" || kartu == "editor")) {
+            uisrect(gui.pickerback, mouse, null);
+            uisrect(gui.tilewrite, mouse, null);
+            uisrect(gui.tilesetsbtn, mouse, null);
         }
         uis.end();
         ui.setProjectionMatrix(uicam.combined);
@@ -3118,7 +3263,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (tilesets.size() == 0) {
             // str1draw(ui, "Tileset is empty.",0,100,50);
             str1draw(ui, z.addnew + " " + z.tileset, gui.tilesetsmid);
+            uidrawbutton(txTypeTile, "Tilesets", gui.tilesetsbtn, 2);
             uidrawbutton(txundo, z.back, gui.pickerback, 3);
+            uidrawbutton(txpicker, z.tilepicker, gui.tilewrite, 2);
 
         } else {
 
@@ -3157,20 +3304,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     str1draw(ui, tilesets.get(seltset).getName(), gui.tilesetsmid);
                 uidrawbutton(txRight, "", gui.tilesetsright, 1);
 
-                uidrawbutton(txadd, z.tileset, gui.pickertool1, 2);
-                uidrawbutton(txinfo, z.properties, gui.pickertool2, 2);
-                uidrawbutton(txpencil, z.terraineditor, gui.pickertool3, 2);
-                if (!isProtectedPixelArtTileset(seltset))
-                    uidrawbutton(txdelete, z.remove, gui.pickertool5, 2);
-
-                uidrawbutton(txpencil, z.tilepicker, gui.tilewrite, 2);
+                uidrawbutton(txpicker, z.tilepicker, gui.tilewrite, 2);
                 uidrawbutton(txtiles, z.edit, gui.tilesettings, 2);
-                if (isPixelArtPaletteView() && issettingtile) {
+                uidrawbutton(txTypeTile, "Tilesets", gui.tilesetsbtn, 2);
+                uidrawbutton(txautopick, z.terraineditor, gui.terraineditorbtn, 2);
+                if (isPixelArtPaletteView()) {
                     uidrawbutton(txinfo, z.swap, gui.tileproperties, 2);
                     uidrawbutton(txeraser, z.remove, gui.tileremove, 2);
                     uidrawbutton(txadd, z.addnew, gui.tileadd, 2);
-                } else if (issettingtile) {
-                    if (somethingisselected()) {
+                } else if (issettingtile || kartu == "editor") {
+                    if (somethingisselected() || kartu == "editor") {
                         uidrawbutton(txinfo, z.options != null ? z.options : "Options", gui.tileproperties, 2);
                         if (getSelectedTileCount() == 1) {
                             String txt = "";
@@ -3222,10 +3365,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         break;
                     case "terraineditor":
-                        if (tilesets.get(seltset).getTerrains().size() > 0)
-                            str1draw(ui, "Terrain: " + tilesets.get(seltset).getTerrains()
+                        if (tilesets.get(seltset).getTerrains().size() > 0) {
+                            uidrawbutton(txLeft, "", gui.tilesetsleft, 1);
+                            str1draw(ui, tilesets.get(seltset).getTerrains()
                                     .get(tilesets.get(seltset).getSelTerrain()).getName(), gui.tilesetsmid);
-                        uidrawbutton(txadd, z.addnew, gui.newterrain, 3);
+                            uidrawbutton(txRight, "", gui.tilesetsright, 1);
+                        }
+                        uidrawbutton(txundo, z.undo, gui.terrainundo, 3);
+                        if (tilesets.get(seltset).getTerrains().size() > 0)
+                            uidrawbutton(txdelete, z.deleteterrain != null ? z.deleteterrain : "Delete", gui.terraindelete, 2f);
+                        uidrawbutton(terrainShapeIcon(), terrainShapeLabel(), gui.terrainshape, 2f);
+                        uidrawbutton(txadd, z.addnew, gui.newterrain, 2f);
 
                         break;
                     case "massprops":
@@ -5781,6 +5931,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (lastStage == tMenu || lastStage == tMap) {
                 setMenuMap();
                 gotoStage(tMenu);
+            } else if (lastStage == tLinks) {
+                setLinksMap();
+                gotoStage(tLinks);
+            } else if (lastStage == ttools) {
+                setToolsMap();
+                gotoStage(ttools);
+            } else if (lastStage == tMirrorMenu) {
+                setMirrorMap();
+                gotoStage(tMirrorMenu);
             }
 
             // gotoStage(lastStage);
@@ -6688,7 +6847,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                     uidrawbutton(txlayer, z.layer, gui.layerpick, 1);
                     uidrawbutton(txmenu, z.menu, gui.menu, 2);
-                    uidrawbutton(txmap, z.map, gui.map, 2);
+                    uidrawbutton(txmap, z.tools, gui.map, 2);
                     uidrawbutton(txadd, z.layer, gui.mode, 3.1f);
                     if (layers.size() > 0) {
                         String vm = "";
@@ -6764,7 +6923,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         str1draw(ui, fps, gui.fps);
 
                     str1draw(ui, rotationName, gui.rotation);
-                    uidrawbutton(null, z.tile, gui.picker, 0);
+                    uidrawbutton(curspr == 0 ? txTypeTile : null, z.tile, gui.picker, 0);
 
                     if ((activetool == 3 && !assemblymode && !stamp) || kartu == "editor") {
                         uidrawbutton(txadd, z.macro, gui.addmacro, 2);
@@ -7040,6 +7199,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         txOutline = new Texture(Gdx.files.internal("images/outline.png"));
         txRectangle2 = new Texture(Gdx.files.internal("images/rectangle2.png"));
         txEraser2 = new Texture(Gdx.files.internal("images/eraser2.png"));
+        buildTerrainShapeIcons();
 
     }
 
@@ -8739,6 +8899,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 refreshAiSpriteButton();
+                setToolsMap();
                 gotoStage(ttools);
             }
         });
@@ -8864,6 +9025,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tLinks1.add(bReload).row();
             tLinks1.add(bCopyto).row();
 
+            tLinks2.add(bUIEditor).row();
+            tLinks2.add(credito).row();
             tLinks2.add(new Label(z.thirdpartyapps, skin)).padTop(10).row();
             tLinks2.add(bRusted).row();
             tLinks2.add(bBack3);
@@ -8881,6 +9044,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             // tLinks.add( bWhatsapp ).row();
             tLinks.add(bReload).row();
             tLinks.add(bCopyto).row();
+            tLinks.add(bUIEditor).row();
+            tLinks.add(credito).row();
             tLinks.add(bBack3).row();
             tLinks.add(new Label(z.thirdpartyapps, skin)).padTop(10).row();
             tLinks.add(bRusted).row();
@@ -8888,46 +9053,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void setMapMap() {
-        if (landscape) {
-            tMap = new Table();
-            tMap1 = new Table();
-            tMap2 = new Table();
-            tMap1.defaults().width(btnx).height(btny * 2);
-            tMap2.defaults().width(btnx).height(btny * 2);
-            tMap.setFillParent(true);
-            tMap.defaults().width(btnx).height(btny + 3).padBottom(2);
-            // if (!face.ispro())
-            tMap1.add(bPatreon2).row();
-            // tMap1.add( bFeedback ).row();
-            tMap1.add(bUIEditor).row();
-            tMap1.add(bCollaboration).row();
-            tMap1.add(bProperties).row();
-            tMap1.add(bBackground).row();
-
-            tMap2.add(bTools).row();
-            tMap2.add(bAutoMgmt).row();
-            tMap2.add(bTileMgmt).row();
-            tMap2.add(bTsetMgmt).row();
-            tMap2.add(bBack2).row();
-            tMap.add(tMap1);
-            tMap.add(tMap2);
-        } else {
-            tMap = new Table();
-            tMap.setFillParent(true);
-            tMap.defaults().width(btnx).height(btny + 3).padBottom(2);
-            tMap.add(bPatreon2).row();
-            // tMap.add( bFeedback ).row();
-            tMap.add(bUIEditor).row();
-            tMap.add(bCollaboration).row();
-            tMap.add(bProperties).row();
-            tMap.add(bBackground).row();
-            tMap.add(bTools).row();
-            tMap.add(bAutoMgmt).row();
-            tMap.add(bTileMgmt).row();
-            tMap.add(bTsetMgmt).row();
-            tMap.add(bBack2).row();
-        }
-
+        tMap = new Table();
+        tMap.setFillParent(true);
+        tMap.defaults().width(btnx).height(btny + 3).padBottom(2);
+        tMap.add(bTools).row();
+        tMap.add(bBack2).row();
     }
 
     private void setMenuMap() {
@@ -8954,8 +9084,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tMenu2.add(bFileManager).row();
             tMenu1.add(bExporter).row();
             tMenu2.add(bPreference).row();
+            tMenu2.add(bProperties).row();
             tMenu2.add(bLinks).row();
-            tMenu2.add(credito).row();
             tMenu2.add(bExit).row();
             tMenu2.add(bBack);
             tMenu.add(tMenu1);
@@ -8978,8 +9108,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tMenu.add(bFileManager).row();
             tMenu.add(bExporter).row();
             tMenu.add(bPreference).row();
+            tMenu.add(bProperties).row();
             tMenu.add(bLinks).row();
-            tMenu.add(credito).row();
             tMenu.add(bExit).row();
             tMenu.add(bBack);
 
@@ -9768,36 +9898,90 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
+    private void setMirrorMap() {
+        tMirrorMenu = new Table();
+        tMirrorMenu.setFillParent(true);
+        tMirrorMenu.defaults().width(btnx).padBottom(2);
+        tMirrorMenu.add(hmirror).row();
+        tMirrorMenu.add(vmirror).row();
+        tMirrorMenu.add(hvmirror).row();
+        tMirrorMenu.add(hvmirrorrev).row();
+        
+        TextButton mirrorback = new TextButton(z.back, skin);
+        mirrorback.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                setToolsMap();
+                gotoStage(ttools);
+            }
+        });
+        tMirrorMenu.add(mirrorback).row();
+    }
+
+    private void setToolsMap() {
+        if (landscape) {
+            ttools = new Table();
+            ttools.setFillParent(true);
+            ttools.defaults().width(btnx).height(btny + 2).padBottom(2);
+            Table tTools1 = new Table();
+            tTools1.defaults().width(btnx).height(btny * 2).padBottom(2);
+            Table tTools2 = new Table();
+            tTools2.defaults().width(btnx).height(btny * 2).padBottom(2);
+
+            tTools1.add(bMirrorMenu).row();
+            tTools1.add(replacetiles).row();
+            tTools1.add(bBackground).row();
+            tTools1.add(tracebackground).row();
+            tTools1.add(randomize).row();
+
+            tTools2.add(generateterrain).row();
+            tTools2.add(bCollaboration).row();
+            tTools2.add(bAutoMgmt).row();
+            tTools2.add(toback).row();
+
+            ttools.add(tTools1);
+            ttools.add(tTools2);
+        } else {
+            ttools = new Table();
+            ttools.setFillParent(true);
+            ttools.defaults().width(btnx).height(btny + 2).padBottom(2);
+
+            ttools.add(bMirrorMenu).row();
+            ttools.add(replacetiles).row();
+            ttools.add(bBackground).row();
+            ttools.add(tracebackground).row();
+            ttools.add(randomize).row();
+            ttools.add(generateterrain).row();
+            ttools.add(bCollaboration).row();
+            ttools.add(bAutoMgmt).row();
+            ttools.add(toback).row();
+        }
+    }
+
     private void loadTools() {
+        tMirrorMenu = new Table();
+        tMirrorMenu.setFillParent(true);
         ttools = new Table();
         ttools.setFillParent(true);
-        TextButton hmirror = new TextButton(z.mirrorhorizontally, skin);
-        TextButton vmirror = new TextButton(z.mirrorvertically, skin);
-        TextButton hvmirror = new TextButton(z.mirrorboth, skin);
-        TextButton hvmirrorrev = new TextButton(z.mirrorreverse, skin);
-        TextButton randomize = new TextButton(z.randommap, skin);
+        hmirror = new TextButton(z.mirrorhorizontally, skin);
+        vmirror = new TextButton(z.mirrorvertically, skin);
+        hvmirror = new TextButton(z.mirrorboth, skin);
+        hvmirrorrev = new TextButton(z.mirrorreverse, skin);
+        randomize = new TextButton(z.randommap, skin);
         btnAiSprite = new TextButton(z.aigenerate != null ? z.aigenerate : "AI Generate Sprite", skin);
-        TextButton replacetiles = new TextButton(z.replacetiles, skin);
-        TextButton generateterrain = new TextButton(z.generateterrain, skin);
-        TextButton tracebackground = new TextButton(z.tracebackground, skin);
-        TextButton toback = new TextButton(z.back, skin);
+        replacetiles = new TextButton(z.replacetiles, skin);
+        generateterrain = new TextButton(z.generateterrain, skin);
+        tracebackground = new TextButton(z.tracebackground, skin);
+        toback = new TextButton(z.back, skin);
 
-        // TextButton replacetile=new TextButton("Replace Tiles",skin);
-        // TextButton cleartiles=new TextButton("Clear Tiles",skin);
-
-        ttools.defaults().width(btnx).padBottom(2);
-        ttools.add(hmirror).row();
-        ttools.add(vmirror).row();
-        ttools.add(hvmirror).row();
-        ttools.add(hvmirrorrev).row();
-        ttools.add(randomize).row();
-        ttools.add(btnAiSprite).row();
-        ttools.add(replacetiles).row();
-        ttools.add(generateterrain).row();
-        ttools.add(tracebackground).row();
-        ttools.add(toback).row();
-        // ttools.add(replacetile).row();
-        // ttools.add(cleartiles).row();
+        bMirrorMenu = new TextButton(z.mirror, skin);
+        bMirrorMenu.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                setMirrorMap();
+                gotoStage(tMirrorMenu);
+            }
+        });
 
         hmirror.addListener(new ChangeListener() {
             @Override
@@ -9863,6 +10047,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         aiBack.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                setToolsMap();
                 gotoStage(ttools);
             }
         });
@@ -9938,6 +10123,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         randback.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                setToolsMap();
                 gotoStage(ttools);
             }
         });
@@ -10005,6 +10191,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         genback.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                setToolsMap();
                 gotoStage(ttools);
             }
         });
@@ -10074,6 +10261,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         repback.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                setToolsMap();
                 gotoStage(ttools);
             }
         });
@@ -12899,6 +13087,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             z.options = "Options";
         if (z.tilecollision == null)
             z.tilecollision = "Tile Collision";
+        if (z.mirror == null)
+            z.mirror = "Mirror";
         shapeName = z.rectangle;
         toolName = z.tile;
         viewModeName = z.stack;
@@ -13285,7 +13475,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void addLayerListTopDropTarget(final float rowH) {
         Table gap = new Table();
-        layerMgrListTable.add(gap).width(btnx).height(Math.max(14, rowH * 0.12f)).padBottom(2).row();
+        layerMgrListTable.add(gap).width(btnx - 40f).height(Math.max(14, rowH * 0.12f)).padBottom(2).row();
         layerMgrDnd.addTarget(new DragAndDrop.Target(gap) {
             @Override
             public boolean drag(DragAndDrop.Source source, DragAndDrop.Payload payload,
@@ -13562,9 +13752,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             nameLabel.addListener(rowTapListener);
             nameCell.add(nameLabel).left().expandX().fillX().padTop(parentName != null && !parentName.isEmpty() ? -3 : 0);
             typeImg.addListener(rowTapListener);
-            row.add(nameCell).expandX().fillX().minHeight(rowH).padRight(4);
+            row.add(nameCell).expandX().fillX().fillY().minHeight(rowH).padRight(4);
 
             Button btnVis = new Button(skin);
+            btnVis.pad(0);
             final Image visImg = new Image();
             if (lay.isVisible()) {
                 visImg.setDrawable(new SpriteDrawable(new Sprite(txVisible)));
@@ -13590,6 +13781,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             row.add(btnVis).size(actionSz, rowH).padRight(4);
 
             Button btnDrag = new Button(skin);
+            btnDrag.pad(0);
             btnDrag.setColor(0.85f, 0.85f, 0.85f, 1f);
             Image dragImg = new Image(new SpriteDrawable(new Sprite(txmove)));
             btnDrag.add(dragImg).size(actionSz * 0.85f, actionSz * 0.85f);
@@ -13605,13 +13797,32 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             });
             row.add(btnOpt).size(actionSz + 4, rowH);
 
-            layerMgrListTable.add(row).width(btnx).minHeight(rowH).padBottom(4).row();
+            layerMgrListTable.add(row).width(btnx - 40f).minHeight(rowH).padBottom(4).row();
+
+            btnDrag.addListener(new InputListener() {
+                @Override
+                public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                    isLongPressed = false;
+                    return true;
+                }
+            });
+            btnDrag.addListener(new ActorGestureListener(20, 0.4f, 0.4f, 0.15f) {
+                @Override
+                public boolean longPress(Actor actor, float x, float y) {
+                    isLongPressed = true;
+                    try {
+                        Gdx.input.vibrate(25);
+                    } catch (Exception e) {}
+                    return true;
+                }
+            });
 
             final int srcIdx = layerIdx;
             layerMgrDnd.addSource(new DragAndDrop.Source(btnDrag) {
                 final DragAndDrop.Payload payload = new DragAndDrop.Payload();
                 @Override
                 public DragAndDrop.Payload dragStart(InputEvent event, float x, float y, int pointer) {
+                    if (!isLongPressed) return null;
                     Label ghost = new Label(lay.getName(), skin);
                     ghost.setColor(1, 1, 0.5f, 0.85f);
                     payload.setDragActor(ghost);
@@ -14002,6 +14213,492 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 optionsDlg.hide();
+            }
+        });
+        optionsTable.add(btnCancel).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        optionsDlg.show(stage);
+    }
+
+    private void openTilesetPropertiesForIndex(int dex) {
+        if (dex < 0 || dex >= tilesets.size())
+            return;
+        selTsetID = dex;
+        tileset ct = tilesets.get(dex);
+        fTsPropName.setText("");
+        fTsPropSource.setText("");
+        fTsPropTsxFile.setText("");
+        cbTsPropUseTsx.setChecked(false);
+        fTsPropTsw.setText("0");
+        fTsPropTsh.setText("0");
+        fTsPropMargin.setText("0");
+        fTsPropSpacing.setText("0");
+        fTsPropCols.setText("0");
+        fTsPropTc.setText("0");
+        fTsPropTrans.setText("");
+
+        if (ct.getName() != null)
+            fTsPropName.setText(ct.getName());
+        if (ct.getSource() != null)
+            fTsPropSource.setText(ct.getSource());
+        if (ct.getTsxfile() != null)
+            fTsPropTsxFile.setText(ct.getTsxfile());
+        cbTsPropUseTsx.setChecked(ct.isUsetsx());
+        if (ct.getTilewidth() != 0)
+            fTsPropTsw.setText(Integer.toString(ct.getTilewidth()));
+        if (ct.getTileheight() != 0)
+            fTsPropTsh.setText(Integer.toString(ct.getTileheight()));
+        if (ct.getColumns() != 0)
+            fTsPropCols.setText(Integer.toString(ct.getColumns()));
+        if (ct.getTilecount() != 0)
+            fTsPropTc.setText(Integer.toString(ct.getTilecount()));
+        if (ct.getMargin() != 0)
+            fTsPropMargin.setText(Integer.toString(ct.getMargin()));
+        if (ct.getSpacing() != 0)
+            fTsPropSpacing.setText(Integer.toString(ct.getSpacing()));
+        if (ct.getTrans() != null)
+            fTsPropTrans.setText(ct.getTrans());
+        fTsPropFirstGid.setText(Integer.toString(ct.getFirstgid()));
+
+        frompick = true;
+        gotoStage(tTsProp);
+    }
+
+    private void removeTilesetAt(final int dex) {
+        if (dex < 0 || dex >= tilesets.size())
+            return;
+        if (isProtectedPixelArtTileset(dex)) {
+            msgbox("Swatch and Palette cannot be removed from a Pixel Editor map.");
+            return;
+        }
+        int saiz = tilesets.size();
+        tilesets.remove(dex);
+        CacheAllTset();
+        if (seltset > dex)
+            seltset -= 1;
+        else if (seltset == dex)
+            seltset = Math.max(0, Math.min(seltset, tilesets.size() - 1));
+        saiz -= 1;
+        refreshTsetList();
+        pickAuto = false;
+        resetMassprops();
+        if (tilesets.size() > 0)
+            recenterpick();
+        pushUpdateIfCollaborating();
+    }
+
+    private void moveTilesetTo(int from, int to) {
+        if (from < 0 || from >= tilesets.size() || to < 0 || to > tilesets.size() || from == to)
+            return;
+        tileset item = tilesets.remove(from);
+        if (to > from)
+            to--;
+        if (to < 0)
+            to = 0;
+        if (to > tilesets.size())
+            to = tilesets.size();
+        tilesets.add(to, item);
+        if (seltset == from)
+            seltset = to;
+        else if (from < seltset && to >= seltset)
+            seltset--;
+        else if (from > seltset && to <= seltset)
+            seltset++;
+        CacheAllTset();
+        refreshTsetList();
+        pushUpdateIfCollaborating();
+    }
+
+    private void applyTilesetRowStyle(Table row, int tsetIdx) {
+        Color bg = tsetIdx == seltset
+                ? new Color(0.22f, 0.22f, 0.28f, 1f)
+                : new Color(0.15f, 0.15f, 0.17f, 1f);
+        row.setBackground(tintedRowBg(bg));
+        if (row.getChildren().size > 0 && row.getChildren().get(0) instanceof Table) {
+            Table nameCell = (Table) row.getChildren().get(0);
+            for (Actor a : nameCell.getChildren()) {
+                if (a instanceof Label && "tsetName".equals(a.getName())) {
+                    if (tsetIdx == seltset)
+                        ((Label) a).setColor(1f, 0.92f, 0.15f, 1f);
+                    else
+                        ((Label) a).setColor(1f, 1f, 1f, 1f);
+                }
+            }
+        }
+    }
+
+    private void updateTilesetManagerHighlight() {
+        if (tsetMgrListTable == null)
+            return;
+        for (Actor actor : tsetMgrListTable.getChildren()) {
+            if (actor instanceof Table) {
+                Object tag = ((Table) actor).getUserObject();
+                if (tag instanceof Integer)
+                    applyTilesetRowStyle((Table) actor, (Integer) tag);
+            }
+        }
+    }
+
+    private void scrollTilesetManagerToSelection() {
+        if (tsetMgrScrollPane == null || tsetMgrListTable == null)
+            return;
+        for (Actor actor : tsetMgrListTable.getChildren()) {
+            if (actor instanceof Table) {
+                Object tag = ((Table) actor).getUserObject();
+                if (tag instanceof Integer && (Integer) tag == seltset) {
+                    tsetMgrScrollPane.layout();
+                    tsetMgrScrollPane.scrollTo(actor.getX(), actor.getY(), actor.getWidth(), actor.getHeight());
+                    return;
+                }
+            }
+        }
+    }
+
+    private void ensureTilesetManagerShell(float rowH) {
+        if (tTsetMgrMain != null)
+            return;
+
+        tTsetMgrMain = new Table();
+        tTsetMgrMain.setFillParent(true);
+        tTsetMgrMain.add(new Label(z.selecttilesets != null ? z.selecttilesets : z.tileset, skin)).padBottom(4).row();
+
+        TextButton btnAdd = new TextButton("+  " + z.addnew + " " + z.tileset, skin);
+        btnAdd.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                showAddTilesetDialog();
+            }
+        });
+        tTsetMgrMain.add(btnAdd).width(btnx).height(rowH * 0.85f).padBottom(6).row();
+
+        tsetMgrListTable = new Table();
+        tsetMgrScrollPane = new ScrollPane(tsetMgrListTable, skin);
+        tsetMgrScrollPane.setFadeScrollBars(false);
+        tsetMgrScrollPane.setScrollingDisabled(true, false);
+        tTsetMgrMain.add(tsetMgrScrollPane).width(btnx).expandY().fillY().padBottom(5).row();
+
+        TextButton btnBack = new TextButton(z.ok, skin);
+        btnBack.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                onToPicker();
+            }
+        });
+        tTsetMgrMain.add(btnBack).width(btnx).height(rowH * 0.9f).row();
+    }
+
+    private void rebuildTilesetManagerList() {
+        refreshTsetList();
+        float rowH = btny * 1.85f;
+        float actionSz = Math.max(56, btny * 1.25f);
+
+        ensureTilesetManagerShell(rowH);
+        ensureLayerMgrDropDrawables();
+        tsetMgrListTable.clear();
+        if (tsetMgrDnd != null)
+            tsetMgrDnd.clear();
+        tsetMgrDnd = new DragAndDrop();
+        tsetMgrDnd.setDragTime(120);
+
+        Table topGap = new Table();
+        tsetMgrListTable.add(topGap).width(btnx - 40f).height(Math.max(14, rowH * 0.12f)).padBottom(2).row();
+        tsetMgrDnd.addTarget(new DragAndDrop.Target(topGap) {
+            @Override
+            public boolean drag(DragAndDrop.Source source, DragAndDrop.Payload payload,
+                                float x, float y, int pointer) {
+                topGap.setBackground(rowBgDropBefore);
+                return true;
+            }
+
+            @Override
+            public void reset(DragAndDrop.Source source, DragAndDrop.Payload payload) {
+                topGap.setBackground((Drawable) null);
+            }
+
+            @Override
+            public void drop(DragAndDrop.Source source, DragAndDrop.Payload payload,
+                             float x, float y, int pointer) {
+                moveTilesetTo((Integer) payload.getObject(), 0);
+                rebuildTilesetManagerList();
+            }
+        });
+
+        for (int i = 0; i < tilesets.size(); i++) {
+            final int tsetIdx = i;
+            final tileset ts = tilesets.get(i);
+            final Table row = new Table();
+            row.setUserObject(tsetIdx);
+            applyTilesetRowStyle(row, tsetIdx);
+
+            Table nameCell = new Table();
+            nameCell.left();
+            Image typeImg = new Image(new SpriteDrawable(new Sprite(txTypeImage)));
+            ClickListener rowTapListener = new ClickListener() {
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    seltset = tsetIdx;
+                    ltsetlist.setSelectedIndex(tsetIdx);
+                    adjustPickAuto();
+                    recenterpick();
+                    resetMassprops();
+                    updateTilesetManagerHighlight();
+                }
+            };
+            typeImg.addListener(rowTapListener);
+            nameCell.add(typeImg).size(actionSz * 0.75f, actionSz * 0.75f).padRight(6);
+            Label nameLabel = new Label(ts.getName() != null ? ts.getName() : "", skin);
+            nameLabel.setName("tsetName");
+            nameLabel.setAlignment(Align.left);
+            nameLabel.setWrap(true);
+            if (tsetIdx == seltset)
+                nameLabel.setColor(1f, 0.92f, 0.15f, 1f);
+            nameLabel.addListener(rowTapListener);
+            nameCell.add(nameLabel).left().expandX().fillX();
+            row.add(nameCell).expandX().fillX().fillY().minHeight(rowH).padRight(4);
+
+            Button btnDrag = new Button(skin);
+            btnDrag.pad(0);
+            btnDrag.setColor(0.85f, 0.85f, 0.85f, 1f);
+            Image dragImg = new Image(new SpriteDrawable(new Sprite(txmove)));
+            btnDrag.add(dragImg).size(actionSz * 0.85f, actionSz * 0.85f);
+            row.add(btnDrag).size(actionSz + 8, rowH).padRight(4);
+
+            TextButton btnOpt = new TextButton("...", skin);
+            btnOpt.getLabel().setFontScale(1.35f);
+            btnOpt.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    showTilesetRowOptionsDialog(tsetIdx);
+                }
+            });
+            row.add(btnOpt).size(actionSz + 4, rowH);
+
+            tsetMgrListTable.add(row).width(btnx - 40f).minHeight(rowH).padBottom(4).row();
+
+            btnDrag.addListener(new InputListener() {
+                @Override
+                public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                    isLongPressed = false;
+                    return true;
+                }
+            });
+            btnDrag.addListener(new ActorGestureListener(20, 0.4f, 0.4f, 0.15f) {
+                @Override
+                public boolean longPress(Actor actor, float x, float y) {
+                    isLongPressed = true;
+                    try {
+                        Gdx.input.vibrate(25);
+                    } catch (Exception e) {}
+                    return true;
+                }
+            });
+
+            final int srcIdx = tsetIdx;
+            tsetMgrDnd.addSource(new DragAndDrop.Source(btnDrag) {
+                final DragAndDrop.Payload payload = new DragAndDrop.Payload();
+
+                @Override
+                public DragAndDrop.Payload dragStart(InputEvent event, float x, float y, int pointer) {
+                    if (!isLongPressed) return null;
+                    Label ghost = new Label(ts.getName(), skin);
+                    ghost.setColor(1, 1, 0.5f, 0.85f);
+                    payload.setDragActor(ghost);
+                    payload.setObject(srcIdx);
+                    row.setBackground(rowBgDragging);
+                    return payload;
+                }
+
+                @Override
+                public void dragStop(InputEvent event, float x, float y, int pointer,
+                                     DragAndDrop.Payload payload, DragAndDrop.Target target) {
+                    updateTilesetManagerHighlight();
+                }
+            });
+
+            final int dstIdx = tsetIdx;
+            tsetMgrDnd.addTarget(new DragAndDrop.Target(row) {
+                @Override
+                public boolean drag(DragAndDrop.Source source, DragAndDrop.Payload payload,
+                                    float x, float y, int pointer) {
+                    int from = (Integer) payload.getObject();
+                    if (from == dstIdx)
+                        return false;
+                    if (y < rowH * 0.5f)
+                        row.setBackground(rowBgDropBefore);
+                    else
+                        row.setBackground(rowBgDropAfter);
+                    return true;
+                }
+
+                @Override
+                public void reset(DragAndDrop.Source source, DragAndDrop.Payload payload) {
+                    applyTilesetRowStyle(row, tsetIdx);
+                }
+
+                @Override
+                public void drop(DragAndDrop.Source source, DragAndDrop.Payload payload,
+                                 float x, float y, int pointer) {
+                    int from = (Integer) payload.getObject();
+                    if (from == dstIdx)
+                        return;
+                    int insertAt = y < rowH * 0.5f ? dstIdx : dstIdx + 1;
+                    moveTilesetTo(from, insertAt);
+                    rebuildTilesetManagerList();
+                }
+            });
+        }
+    }
+
+    public void showTilesetManager() {
+        if (seltset < 0 || seltset >= tilesets.size())
+            seltset = Math.max(0, tilesets.size() - 1);
+        rebuildTilesetManagerList();
+        gotoStage(tTsetMgrMain);
+        Gdx.app.postRunnable(new Runnable() {
+            @Override
+            public void run() {
+                scrollTilesetManagerToSelection();
+            }
+        });
+    }
+
+    private void showAddTilesetDialog() {
+        Gdx.input.setInputProcessor(stage);
+        final Dialog addDlg = new Dialog("", skin, "dialog");
+        Table addTable = addDlg.getContentTable();
+        float dialogBtnWidth = Math.min(stage.getWidth() * 0.8f, 400f);
+
+        Label titleLabel = new Label(z.addnew + " " + z.tileset, skin);
+        titleLabel.setAlignment(Align.center);
+        addTable.add(titleLabel).width(dialogBtnWidth).pad(10).row();
+
+        TextButton btnAdd = new TextButton(z.addimagetileset, skin);
+        btnAdd.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                addDlg.hide();
+                frompick = true;
+                pickAuto = false;
+                FileDialog(z.selectfile, "addtset", "file",
+                        new String[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif" }, nullTable);
+            }
+        });
+        addTable.add(btnAdd).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        TextButton btnTsx = new TextButton(z.importtsxfile, skin);
+        btnTsx.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                addDlg.hide();
+                frompick = true;
+                FileDialog(z.selectfile, "seltsx", "file", new String[] { ".tsx" }, nullTable);
+            }
+        });
+        addTable.add(btnTsx).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        TextButton btnFolder = new TextButton(z.importfolder, skin);
+        btnFolder.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                addDlg.hide();
+                frompick = true;
+                FileDialog(z.selectfolder, "selfolder", "dir", new String[] {}, nullTable);
+            }
+        });
+        addTable.add(btnFolder).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        TextButton btnCancel = new TextButton(z.cancel, skin);
+        btnCancel.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                addDlg.hide();
+                showTilesetManager();
+            }
+        });
+        addTable.add(btnCancel).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        addDlg.show(stage);
+    }
+
+    private void showTilesetRowOptionsDialog(final int tsetIdx) {
+        if (tsetIdx < 0 || tsetIdx >= tilesets.size())
+            return;
+        final tileset ts = tilesets.get(tsetIdx);
+        Gdx.input.setInputProcessor(stage);
+        final Dialog optionsDlg = new Dialog("", skin, "dialog");
+        Table optionsTable = optionsDlg.getContentTable();
+        float dialogBtnWidth = Math.min(stage.getWidth() * 0.8f, 400f);
+
+        Label titleLabel = new Label(ts.getName(), skin);
+        titleLabel.setWrap(true);
+        titleLabel.setAlignment(Align.center);
+        optionsTable.add(titleLabel).width(dialogBtnWidth).pad(10).row();
+
+        TextButton btnProp = new TextButton(z.properties, skin);
+        btnProp.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                optionsDlg.hide();
+                openTilesetPropertiesForIndex(tsetIdx);
+            }
+        });
+        optionsTable.add(btnProp).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        TextButton btnSaveTsx = new TextButton(z.saveastsx, skin);
+        btnSaveTsx.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                optionsDlg.hide();
+                tileset t = tilesets.get(tsetIdx);
+                t.setTsxfile(t.getName() + ".tsx");
+                saveTsx(tsetIdx);
+                showTilesetManager();
+                status(z.filesaved, 5);
+            }
+        });
+        optionsTable.add(btnSaveTsx).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        TextButton btnSavePng = new TextButton(z.exporttopng, skin);
+        btnSavePng.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                optionsDlg.hide();
+                saveTsetAsPNG(tsetIdx);
+                showTilesetManager();
+            }
+        });
+        optionsTable.add(btnSavePng).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        if (!isProtectedPixelArtTileset(tsetIdx)) {
+            TextButton btnDel = new TextButton(z.remove, skin);
+            btnDel.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    optionsDlg.hide();
+                    Dialog confirmDlg = new Dialog(z.confirmation, skin, "dialog") {
+                        @Override
+                        protected void result(Object object) {
+                            if (object.equals(true)) {
+                                removeTilesetAt(tsetIdx);
+                                showTilesetManager();
+                            }
+                        }
+                    };
+                    confirmDlg.text(z.confirmdelete != null ? z.confirmdelete : "Delete this tileset?");
+                    confirmDlg.button(z.yes, true);
+                    confirmDlg.button(z.no, false);
+                    confirmDlg.show(stage);
+                }
+            });
+            optionsTable.add(btnDel).width(dialogBtnWidth).height(btny).pad(5).row();
+        }
+
+        TextButton btnCancel = new TextButton(z.cancel, skin);
+        btnCancel.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                optionsDlg.hide();
+                showTilesetManager();
             }
         });
         optionsTable.add(btnCancel).width(dialogBtnWidth).height(btny).pad(5).row();
@@ -15309,62 +16006,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 break;
 
             case "tset":
-                tt = tilesets.size();
-                tbl.add(new Label(z.tileset, skin)).row();
-
-                for (int i = 0; i < tt; i++) {
-                    String name = "", moe = "";
-                    Button tat = new Button(skin);
-                    tat.defaults().left();
-                    int num = i;
-                    Image img = null;
-
-                    name = tilesets.get(i).getName();
-                    img = new Image(txTypeImage);
-                    tat.add(img).width(btnx * 0.15f).padLeft(10);
-
-                    Label lbl = new Label(name, skin);
-                    lbl.setColor(1, 1, 1, 1);
-                    lbl.setAlignment(Align.left);
-                    lbl.setWrap(true);
-                    tat.add(lbl).width(btnx * 0.85f);
-                    tat.setName(i + "");
-                    tbl.add(tat).width(btnx).row();
-
-                    tat.addListener(new ChangeListener() {
-                        @Override
-                        public void changed(ChangeEvent event, Actor actor) {
-
-                            seltset = Integer.parseInt(actor.getName());
-                            adjustPickAuto();
-                            recenterpick();
-                            resetMassprops();
-                            onToPicker();
-
-                        }
-                    });
-
-                }
-                tit.addListener(new ChangeListener() {
-                    @Override
-                    public void changed(ChangeEvent event, Actor actor) {
-                        FileDialog(z.selectfile, "quickaddtset", "file",
-                                new String[] { ".tsx", ".png", ".jpg", ".jpeg", ".bmp", ".gif" }, nullTable);
-
-                    }
-                });
-
-                tut.addListener(new ChangeListener() {
-                    @Override
-                    public void changed(ChangeEvent event, Actor actor) {
-                        onToPicker();
-                    }
-                });
-
-                tbl.add(tit).row();
-                tbl.add(tut).row();
-                gotoStage(tblmain);
-
+                showTilesetManager();
                 break;
             case "macro":
                 // cakwe
@@ -15979,7 +16621,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bAutoback.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                backToMap();
+                setToolsMap();
+                gotoStage(ttools);
             }
         });
     }
@@ -16220,7 +16863,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tTsetMgmt.add(bUseTsx).padBottom(2).row();
         tTsetMgmt.add(bImportFolder).padBottom(2).row();
         tTsetMgmt.add(bPropTset).padBottom(2).row();
-        tTsetMgmt.add(bTileSettingsMgmt).padBottom(2).row();
         tTsetMgmt.add(bTsPropSaveAsTsx).padBottom(2).row();
         tTsetMgmt.add(bTsPropSaveAsPNG).padBottom(2).row();
         tTsetMgmt.add(bMoveTset).padBottom(2).row();
@@ -16697,7 +17339,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bCancelMP.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                backToMap();
+                if (prevStage == tMenu) {
+                    gotoStage(tMenu);
+                } else {
+                    backToMap();
+                }
             }
         });
 
@@ -16848,7 +17494,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     resetCaches();
                     resetMinimap();
 
-                    backToMap();
+                    if (prevStage == tMenu) {
+                        gotoStage(tMenu);
+                    } else {
+                        backToMap();
+                    }
                     // loadingfile=false;
 
                 } catch (Exception e) {
@@ -16861,6 +17511,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bProperties.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                if (curfile == null || curfile.isEmpty()) {
+                    msgbox("No map is currently loaded.");
+                    return;
+                }
                 fFilename.setText(curfile);
                 fCurdir.setText(curdir);
                 if (!tsxFile.equalsIgnoreCase(""))
@@ -17402,48 +18056,71 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         // Title
         Label title = new Label("Tile Collision Editor: Tile " + tilesets.get(seltset).getTiles().get(selTileID).getTileID(), skin);
-        tTileCollision.add(title).colspan(3).padBottom(10).row();
+        tTileCollision.add(title).colspan(landscape ? 3 : 2).padBottom(10).row();
 
-        // Split into Left and Right Columns
+        // Sizing based on orientation
+        float canvasSize = landscape ? (btnx * 0.8f) : (btnx * 0.75f);
+        float leftWidth = landscape ? (btnx * 0.6f) : (btnx * 0.45f);
+        float rightWidth = landscape ? (btnx * 0.7f) : (btnx * 0.5f);
+        float fieldWidth = landscape ? (btnx * 0.5f) : (btnx * 0.32f);
+        float customPropsWidth = landscape ? (btnx * 0.7f) : (btnx * 0.48f);
+        float btnWidth = landscape ? (btnx * 0.2f) : (btnx * 0.14f);
+        float listHeight = landscape ? (btny * 5) : (btny * 4.5f);
+
+        // Left Table
         Table leftTable = new Table();
         leftTable.add(new Label("Collision Shapes:", skin)).left().padBottom(5).row();
-        leftTable.add(scrollPaneCollision).width(btnx * 1.5f).height(btny * 5).padBottom(10).row();
+        leftTable.add(scrollPaneCollision).width(leftWidth).height(listHeight).padBottom(10).row();
 
         Table buttonsTable = new Table();
-        buttonsTable.defaults().width(btnx / 1.3f).height(btny).padRight(5);
-        buttonsTable.add(bColAddRect);
-        buttonsTable.add(bColAddEllipse);
-        buttonsTable.add(bColRemove).row();
+        if (landscape) {
+            buttonsTable.defaults().width(btnWidth).height(btny).padRight(5);
+            buttonsTable.add(bColAddRect);
+            buttonsTable.add(bColAddEllipse);
+            buttonsTable.add(bColRemove).row();
+        } else {
+            buttonsTable.defaults().width(leftWidth).height(btny).padBottom(5);
+            buttonsTable.add(bColAddRect).row();
+            buttonsTable.add(bColAddEllipse).row();
+            buttonsTable.add(bColRemove).row();
+        }
         leftTable.add(buttonsTable).row();
 
+        // Right Table
         Table rightTable = new Table();
         rightTable.defaults().padBottom(5);
         rightTable.add(new Label("Properties:", skin)).colspan(2).left().padBottom(10).row();
 
         rightTable.add(new Label("Name:", skin)).left();
-        rightTable.add(fColName).width(btnx * 1.2f).row();
+        rightTable.add(fColName).width(fieldWidth).row();
 
         rightTable.add(new Label("Type:", skin)).left();
-        rightTable.add(fColType).width(btnx * 1.2f).row();
+        rightTable.add(fColType).width(fieldWidth).row();
 
         rightTable.add(new Label("X:", skin)).left();
-        rightTable.add(fColX).width(btnx * 1.2f).row();
+        rightTable.add(fColX).width(fieldWidth).row();
 
         rightTable.add(new Label("Y:", skin)).left();
-        rightTable.add(fColY).width(btnx * 1.2f).row();
+        rightTable.add(fColY).width(fieldWidth).row();
 
         rightTable.add(new Label("Width:", skin)).left();
-        rightTable.add(fColW).width(btnx * 1.2f).row();
+        rightTable.add(fColW).width(fieldWidth).row();
 
         rightTable.add(new Label("Height:", skin)).left();
-        rightTable.add(fColH).width(btnx * 1.2f).row();
+        rightTable.add(fColH).width(fieldWidth).row();
 
-        rightTable.add(bColCustomProps).colspan(2).width(btnx * 1.5f).height(btny).row();
+        rightTable.add(bColCustomProps).colspan(2).width(customPropsWidth).height(btny).row();
 
-        // Layout left, middle canvas, and right tables side-by-side
-        tTileCollision.add(leftTable).padRight(20).top();
-        tTileCollision.add(collisionCanvas).width(btnx * 2.2f).height(btnx * 2.2f).padRight(20).top();
-        tTileCollision.add(rightTable).top().row();
+        // Add to main table depending on orientation
+        if (landscape) {
+            tTileCollision.add(leftTable).padRight(20).top();
+            tTileCollision.add(collisionCanvas).width(canvasSize).height(canvasSize).padRight(20).top();
+            tTileCollision.add(rightTable).top().row();
+        } else {
+            tTileCollision.add(collisionCanvas).colspan(2).width(canvasSize).height(canvasSize).padBottom(15).row();
+            tTileCollision.add(leftTable).padRight(15).top();
+            tTileCollision.add(rightTable).top().row();
+        }
 
         // Back Button
         TextButton bBack = new TextButton(z.back != null ? z.back : "Back", skin);
@@ -17453,7 +18130,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 showTileOptions();
             }
         });
-        tTileCollision.add(bBack).colspan(3).width(btnx).height(btny).padTop(10);
+        tTileCollision.add(bBack).colspan(landscape ? 3 : 2).width(btnx).height(btny).padTop(10);
 
         refreshCollisionList();
         if (lCollisionList.getItems().size > 0 && lCollisionList.getSelectedIndex() < 0) {
@@ -17640,6 +18317,106 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Gdx.input.setInputProcessor(im);
         kartu = "pickanim";
         tilePicker = sender;
+        terrainPainting = false;
+        terrainPaintMoved = false;
+        lastTerrainPaintCell = -1;
+        terrainHoldPending = false;
+        clearTerrainPickerCaches();
+        if (sender.equals("terraineditor")) {
+            clearTerrainUndoHistory();
+            if (tilesets.size() > 0)
+                recenterpick();
+        }
+    }
+
+    private void resumeTerrainEditor() {
+        stage.clear();
+        Gdx.input.setInputProcessor(im);
+        kartu = "pickanim";
+        tilePicker = "terraineditor";
+    }
+
+    private int remapTerrainIdAfterDelete(int terrainId, int deletedIdx) {
+        if (terrainId < 0)
+            return -1;
+        if (terrainId == deletedIdx)
+            return -1;
+        if (terrainId > deletedIdx)
+            return terrainId - 1;
+        return terrainId;
+    }
+
+    private void deleteSelectedTerrain(int deletedIdx) {
+        if (tilesets.size() == 0)
+            return;
+        tileset ts = tilesets.get(selTsetID);
+        if (deletedIdx < 0 || deletedIdx >= ts.getTerrains().size())
+            return;
+        ts.getTerrains().remove(deletedIdx);
+        java.util.List<tile> tiles = ts.getTiles();
+        for (int n = 0; n < tiles.size(); n++) {
+            tile t = tiles.get(n);
+            int[] tr = t.getTerrain();
+            if (tr == null)
+                continue;
+            int a = remapTerrainIdAfterDelete(tr[0], deletedIdx);
+            int b = remapTerrainIdAfterDelete(tr[1], deletedIdx);
+            int c = remapTerrainIdAfterDelete(tr[2], deletedIdx);
+            int d = remapTerrainIdAfterDelete(tr[3], deletedIdx);
+            t.setTerrain(a, b, c, d);
+            if (a == -1 && b == -1 && c == -1 && d == -1
+                    && t.getProperties().size() == 0 && t.getAnimation().size() == 0)
+                tiles.remove(n--);
+        }
+        int sel = ts.getSelTerrain();
+        if (ts.getTerrains().size() == 0) {
+            if (frompick) {
+                onToPicker();
+                frompick = false;
+            } else {
+                gotoStage(tTileMgmt);
+            }
+            return;
+        }
+        if (sel > deletedIdx)
+            sel--;
+        if (sel >= ts.getTerrains().size())
+            sel = ts.getTerrains().size() - 1;
+        if (sel < 0)
+            sel = 0;
+        ts.setSelTerrain(sel);
+        clearTerrainPickerCaches();
+        resumeTerrainEditor();
+    }
+
+    private void confirmDeleteSelectedTerrain() {
+        if (tilesets.size() == 0)
+            return;
+        tileset ts = tilesets.get(selTsetID);
+        if (ts.getTerrains().size() == 0)
+            return;
+        final int delIdx = ts.getSelTerrain();
+        String name = ts.getTerrains().get(delIdx).getName();
+        if (name == null)
+            name = "";
+        final String msg = z.deleteterrainconfirm != null
+                ? z.deleteterrainconfirm.replace("%s", name)
+                : "Delete terrain \"" + name + "\"?";
+        stage.clear();
+        Dialog dialog = new Dialog(z.confirmation, skin, "dialog") {
+            @Override
+            protected void result(Object obj) {
+                if (obj instanceof Boolean && (Boolean) obj)
+                    deleteSelectedTerrain(delIdx);
+                else
+                    resumeTerrainEditor();
+            }
+        };
+        Gdx.input.setInputProcessor(stage);
+        dialog.text(msg);
+        dialog.button(z.yes, true);
+        dialog.button(z.no, false);
+        dialog.show(stage);
     }
 
     public void loadTilesetProperties() {
@@ -18793,6 +19570,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 ltsetlist.setSelectedIndex(saiz - 1);
                 status(errors, 5);
                 pushUpdateIfCollaborating();
+                if (frompick) {
+                    seltset = Math.max(0, saiz - 1);
+                    showTilesetManager();
+                }
 
                 break;
             case "seltsx":
@@ -18812,6 +19593,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 status(errors, 5);
                 pushUpdateIfCollaborating();
                 loadingfile = false;
+                if (frompick) {
+                    seltset = Math.max(0, saiz - 1);
+                    showTilesetManager();
+                }
                 break;
             case "newseldir":
                 String path = file.path();
@@ -19036,6 +19821,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         resetMassprops();
         issettingtile = false;
         pickAuto = false;
+        terrainPainting = false;
+        terrainPaintMoved = false;
+        lastTerrainPaintCell = -1;
+        terrainHoldPending = false;
         recenterpick();
         // updateMinimap();
         stage.clear(); // is this the bug?
@@ -19063,6 +19852,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
 
     public void gotoStage(Table table) {
+        prevStage = lastStage;
         stage.clear();
         stage.addActor(table);
         stage.setScrollFocus(table);
@@ -23712,10 +24502,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         velx = 0;
         vely = 0;
+        pinchZoomActive = false;
         if (kartu == "world") {
             initialZoom = cam.zoom;
         } else if (kartu == "tile" || kartu == "pickanim") {
             initialZoom = tilecam.zoom;
+            if (isTerrainEditorPicker() && tilesets.size() > 0) {
+                Vector3 touch = new Vector3();
+                tilecam.unproject(touch.set(p1, p2, 0));
+                if (terrainEditorHalfCellAt(tilesets.get(selTsetID), touch.x, touch.y) >= 0) {
+                    terrainHoldPending = true;
+                    terrainHoldTimer = TERRAIN_HOLD_PAINT_SEC;
+                    terrainHoldTouchX = p1;
+                    terrainHoldTouchY = p2;
+                }
+            }
         }
         return false;
     }
@@ -23924,10 +24725,670 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return false;
     }
 
+    private boolean isTerrainEditorPicker() {
+        return kartu.equals("pickanim") && tilePicker.equals("terraineditor");
+    }
+
+    private int terrainEditorHalfCellW(tileset ts) {
+        return Math.max(1, ts.getTilewidth() / 2);
+    }
+
+    private int terrainEditorHalfCellH(tileset ts) {
+        return Math.max(1, ts.getTileheight() / 2);
+    }
+
+    private float terrainEditorMinZoom(tileset ts) {
+        return Math.max(0.003f, terrainEditorHalfCellW(ts) / 640f);
+    }
+
+    private float terrainEditorDefaultZoom(tileset ts) {
+        float viewMin = Math.min(ssx, ssy);
+        if (viewMin <= 0f)
+            viewMin = 800f;
+        float pickW = Math.max(ts.getWidth() * terrainEditorHalfCellW(ts), 1f);
+        float pickH = Math.max(ts.getHeight() * terrainEditorHalfCellH(ts), 1f);
+        float fit = Math.max(pickW / viewMin, pickH / viewMin) * 0.55f;
+        return Math.min(Math.max(fit, terrainEditorMinZoom(ts)), 2f);
+    }
+
+    private float tilePickerMinZoom() {
+        if (isTerrainEditorPicker() && tilesets.size() > 0)
+            return terrainEditorMinZoom(tilesets.get(selTsetID));
+        return Tsw / 320f;
+    }
+
+    private float terrainEditorGridLineWidth(tileset ts) {
+        return Math.max(0.5f, terrainEditorHalfCellW(ts) / 16f);
+    }
+
+    private int terrainEditorCornerCellW(tileset ts) {
+        return Math.max(1, terrainEditorHalfCellW(ts) / 2);
+    }
+
+    private int terrainEditorCornerCellH(tileset ts) {
+        return Math.max(1, terrainEditorHalfCellH(ts) / 2);
+    }
+
+    private int terrainEditorHalfCellAt(tileset ts, float touchX, float touchY) {
+        int hcw = terrainEditorHalfCellW(ts);
+        int hch = terrainEditorHalfCellH(ts);
+        int ccw = terrainEditorCornerCellW(ts);
+        int cch = terrainEditorCornerCellH(ts);
+        int gridW = ts.getWidth() * 2;
+        int w = ts.getWidth();
+        int h = ts.getHeight();
+
+        if (touchX < 0 || touchX >= (long) w * hcw)
+            return -1;
+
+        int ab = (int) touchY;
+        if (touchY > 0)
+            ab = 1;
+        if (touchY >= hch || touchY <= -hch * h + hch)
+            return -1;
+
+        int tileX = (int) touchX / hcw;
+        int tileY = (-ab + hch) / hch;
+        if (tileX < 0 || tileX >= w || tileY < 0 || tileY >= h)
+            return -1;
+
+        int relX = (int) touchX % hcw;
+        float tileBottom = -tileY * hch;
+        float inTileY = touchY - tileBottom;
+        int localY = (int) (inTileY / cch);
+        if (localY < 0)
+            localY = 0;
+        if (localY > 1)
+            localY = 1;
+        int localX = relX / ccw;
+        if (localX > 1)
+            localX = 1;
+
+        int hcx = tileX * 2 + localX;
+        int hcy = tileY * 2 + (1 - localY);
+        return hcy * gridW + hcx;
+    }
+
+    private tile getOrCreateTileMeta(tileset ts, int tileId) {
+        java.util.List<tile> tiles = ts.getTiles();
+        for (int n = 0; n < tiles.size(); n++) {
+            if (tiles.get(n).getTileID() == tileId)
+                return tiles.get(n);
+        }
+        tile tt = new tile();
+        tt.setTileID(tileId);
+        int idx = ts.addTileMetadata(tt);
+        return ts.getTiles().get(idx);
+    }
+
+    private Color terrainEditorRainbowColor() {
+        Color c = new Color();
+        c.fromHsv(terrainEditorAnimPhase * 360f, 0.9f, 1f);
+        c.a = 0.7f;
+        return c;
+    }
+
+    private int getTerrainHalfCellValue(tileset ts, int halfCellIndex) {
+        int gridW = ts.getWidth() * 2;
+        int hcx = halfCellIndex % gridW;
+        int hcy = halfCellIndex / gridW;
+        int tileX = hcx / 2;
+        int tileY = hcy / 2;
+        int corner = (hcx % 2) + (hcy % 2) * 2;
+        int dst = tileY * ts.getWidth() + tileX;
+        if (dst < 0 || dst >= ts.getTilecount())
+            return -1;
+        java.util.List<tile> tiles = ts.getTiles();
+        for (int n = 0; n < tiles.size(); n++) {
+            if (tiles.get(n).getTileID() == dst) {
+                int[] tr = tiles.get(n).getTerrain();
+                if (tr == null)
+                    return -1;
+                return tr[corner];
+            }
+        }
+        return -1;
+    }
+
+    private void setTerrainHalfCell(tileset ts, int halfCellIndex, int terrainId) {
+        int gridW = ts.getWidth() * 2;
+        int hcx = halfCellIndex % gridW;
+        int hcy = halfCellIndex / gridW;
+        int tileX = hcx / 2;
+        int tileY = hcy / 2;
+        int corner = (hcx % 2) + (hcy % 2) * 2;
+        int dst = tileY * ts.getWidth() + tileX;
+        if (dst < 0 || dst >= ts.getTilecount())
+            return;
+        tile t = getOrCreateTileMeta(ts, dst);
+        int[] cn = t.getTerrain();
+        int a = cn[0], b = cn[1], c = cn[2], d = cn[3];
+        switch (corner) {
+            case 0:
+                a = terrainId;
+                break;
+            case 1:
+                b = terrainId;
+                break;
+            case 2:
+                c = terrainId;
+                break;
+            case 3:
+                d = terrainId;
+                break;
+        }
+        t.setTerrain(a, b, c, d);
+    }
+
+    private void toggleTerrainHalfCell(tileset ts, int halfCellIndex, int terrainId) {
+        if (getTerrainHalfCellValue(ts, halfCellIndex) == terrainId)
+            setTerrainHalfCell(ts, halfCellIndex, -1);
+        else
+            setTerrainHalfCell(ts, halfCellIndex, terrainId);
+    }
+
+    private void stampTerrainFilledCornerBox(tileset ts, int anchorHcx, int anchorHcy, int cellSize, int terrainId) {
+        if (cellSize < 1)
+            return;
+        int gridW = ts.getWidth() * 2;
+        int gridH = ts.getHeight() * 2;
+        int endHcx = anchorHcx + cellSize - 1;
+        int endHcy = anchorHcy + cellSize - 1;
+        if (anchorHcx < 0 || anchorHcy < 0 || endHcx >= gridW || endHcy >= gridH)
+            return;
+        boolean erase = true;
+        for (int hcy = anchorHcy; hcy <= endHcy; hcy++)
+            for (int hcx = anchorHcx; hcx <= endHcx; hcx++)
+                if (getTerrainHalfCellValue(ts, hcy * gridW + hcx) != terrainId)
+                    erase = false;
+        int setId = erase ? -1 : terrainId;
+        for (int hcy = anchorHcy; hcy <= endHcy; hcy++)
+            for (int hcx = anchorHcx; hcx <= endHcx; hcx++)
+                setTerrainHalfCell(ts, hcy * gridW + hcx, setId);
+    }
+
+    private void stampTerrainHollowCornerBox(tileset ts, int anchorHcx, int anchorHcy, int cellSize, int terrainId) {
+        if (cellSize < 2)
+            return;
+        int gridW = ts.getWidth() * 2;
+        int gridH = ts.getHeight() * 2;
+        int endHcx = anchorHcx + cellSize - 1;
+        int endHcy = anchorHcy + cellSize - 1;
+        if (anchorHcx < 0 || anchorHcy < 0 || endHcx >= gridW || endHcy >= gridH)
+            return;
+        boolean erase = true;
+        for (int hcy = anchorHcy; hcy <= endHcy; hcy++) {
+            for (int hcx = anchorHcx; hcx <= endHcx; hcx++) {
+                if (hcx == anchorHcx || hcx == endHcx || hcy == anchorHcy || hcy == endHcy) {
+                    if (getTerrainHalfCellValue(ts, hcy * gridW + hcx) != terrainId)
+                        erase = false;
+                }
+            }
+        }
+        int setId = erase ? -1 : terrainId;
+        for (int hcy = anchorHcy; hcy <= endHcy; hcy++) {
+            for (int hcx = anchorHcx; hcx <= endHcx; hcx++) {
+                if (hcx == anchorHcx || hcx == endHcx || hcy == anchorHcy || hcy == endHcy)
+                    setTerrainHalfCell(ts, hcy * gridW + hcx, setId);
+            }
+        }
+    }
+
+    private void stampTerrainCornersOnlyBox(tileset ts, int anchorHcx, int anchorHcy, int cellSize, int terrainId) {
+        if (cellSize < 2)
+            return;
+        int gridW = ts.getWidth() * 2;
+        int gridH = ts.getHeight() * 2;
+        int endHcx = anchorHcx + cellSize - 1;
+        int endHcy = anchorHcy + cellSize - 1;
+        if (anchorHcx < 0 || anchorHcy < 0 || endHcx >= gridW || endHcy >= gridH)
+            return;
+        int[] corners = {
+                anchorHcy * gridW + anchorHcx,
+                anchorHcy * gridW + endHcx,
+                endHcy * gridW + anchorHcx,
+                endHcy * gridW + endHcx
+        };
+        boolean erase = true;
+        for (int idx : corners)
+            if (getTerrainHalfCellValue(ts, idx) != terrainId)
+                erase = false;
+        int setId = erase ? -1 : terrainId;
+        for (int idx : corners)
+            setTerrainHalfCell(ts, idx, setId);
+    }
+
+    private void stampTerrainCornersRevBox(tileset ts, int anchorHcx, int anchorHcy, int cellSize, int terrainId) {
+        if (cellSize < 2)
+            return;
+        int gridW = ts.getWidth() * 2;
+        int gridH = ts.getHeight() * 2;
+        int endHcx = anchorHcx + cellSize - 1;
+        int endHcy = anchorHcy + cellSize - 1;
+        if (anchorHcx < 0 || anchorHcy < 0 || endHcx >= gridW || endHcy >= gridH)
+            return;
+        boolean erase = true;
+        for (int hcy = anchorHcy; hcy <= endHcy; hcy++) {
+            for (int hcx = anchorHcx; hcx <= endHcx; hcx++) {
+                boolean corner = (hcx == anchorHcx || hcx == endHcx) && (hcy == anchorHcy || hcy == endHcy);
+                if (!corner && getTerrainHalfCellValue(ts, hcy * gridW + hcx) != terrainId)
+                    erase = false;
+            }
+        }
+        int setId = erase ? -1 : terrainId;
+        for (int hcy = anchorHcy; hcy <= endHcy; hcy++) {
+            for (int hcx = anchorHcx; hcx <= endHcx; hcx++) {
+                boolean corner = (hcx == anchorHcx || hcx == endHcx) && (hcy == anchorHcy || hcy == endHcy);
+                if (!corner)
+                    setTerrainHalfCell(ts, hcy * gridW + hcx, setId);
+            }
+        }
+    }
+
+    private String terrainShapeLabel() {
+        switch (terrainBrushShape) {
+            case TE_SHAPE_2X2:
+                return z.teshape2x2 != null ? z.teshape2x2 : "2x2";
+            case TE_SHAPE_4X4_BORDER:
+                return z.teshape4x4border != null ? z.teshape4x4border : "4x4 B";
+            case TE_SHAPE_4X4_FULL:
+                return z.teshape4x4full != null ? z.teshape4x4full : "4x4";
+            case TE_SHAPE_4X4_CORNER:
+                return z.teshape4x4corner != null ? z.teshape4x4corner : "4x4 C";
+            case TE_SHAPE_4X4_CORNER_REV:
+                return z.teshape4x4cornerrev != null ? z.teshape4x4cornerrev : "4x4 !C";
+            case TE_SHAPE_6X6:
+                return z.teshape6x6 != null ? z.teshape6x6 : "6x6";
+            default:
+                return z.teshape1x1 != null ? z.teshape1x1 : "1x1";
+        }
+    }
+
+    private void ensureTerrainShapeMenu() {
+        if (tTerrainShapeMenu == null) {
+            tTerrainShapeMenu = new Table();
+            tTerrainShapeMenu.setFillParent(true);
+            tTerrainShapeMenu.defaults().width(btnx).padBottom(2);
+        } else {
+            tTerrainShapeMenu.clear();
+            tTerrainShapeMenu.defaults().width(btnx).padBottom(2);
+        }
+        addTerrainShapeRow(z.teshape1x1 != null ? z.teshape1x1 : "1x1", TE_SHAPE_1X1);
+        addTerrainShapeRow(z.teshape2x2 != null ? z.teshape2x2 : "2x2", TE_SHAPE_2X2);
+        addTerrainShapeRow(z.teshape4x4border != null ? z.teshape4x4border : "4x4 (border)", TE_SHAPE_4X4_BORDER);
+        addTerrainShapeRow(z.teshape4x4full != null ? z.teshape4x4full : "4x4", TE_SHAPE_4X4_FULL);
+        addTerrainShapeRow(z.teshape4x4corner != null ? z.teshape4x4corner : "4x4 (corner)", TE_SHAPE_4X4_CORNER);
+        addTerrainShapeRow(z.teshape4x4cornerrev != null ? z.teshape4x4cornerrev : "4x4 (corner rev)", TE_SHAPE_4X4_CORNER_REV);
+        addTerrainShapeRow(z.teshape6x6 != null ? z.teshape6x6 : "6x6", TE_SHAPE_6X6);
+        TextButton back = new TextButton(z.back, skin);
+        back.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                resumeTerrainEditor();
+            }
+        });
+        tTerrainShapeMenu.add(back).row();
+    }
+
+    private void addTerrainShapeRow(String label, final int shapeId) {
+        Table row = new Table();
+        if (terrainShapeIcons[shapeId] != null)
+            row.add(new Image(terrainShapeIcons[shapeId])).size(36, 36).padRight(6);
+        TextButton b = new TextButton(label, skin);
+        b.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                terrainBrushShape = shapeId;
+                resumeTerrainEditor();
+            }
+        });
+        row.add(b).expandX().fillX();
+        tTerrainShapeMenu.add(row).width(btnx).padBottom(2).row();
+    }
+
+    private Texture terrainShapeIcon() {
+        if (terrainBrushShape >= 0 && terrainBrushShape < terrainShapeIcons.length
+                && terrainShapeIcons[terrainBrushShape] != null)
+            return terrainShapeIcons[terrainBrushShape];
+        return txrectangle;
+    }
+
+    private void terrainIconCell(Pixmap pm, int cellPx, int hcx, int hcy) {
+        int pad = 1;
+        pm.fillRectangle(hcx * cellPx + pad, hcy * cellPx + pad, cellPx - pad * 2, cellPx - pad * 2);
+    }
+
+    private void buildTerrainShapeIcons() {
+        for (int i = 0; i < terrainShapeIcons.length; i++) {
+            if (terrainShapeIcons[i] != null)
+                terrainShapeIcons[i].dispose();
+            Pixmap pm = createTerrainShapeIconPixmap(i);
+            terrainShapeIcons[i] = new Texture(pm);
+            pm.dispose();
+        }
+    }
+
+    private Pixmap createTerrainShapeIconPixmap(int shape) {
+        int cellPx = 5;
+        int cells = 6;
+        int sz = cells * cellPx;
+        Pixmap pm = new Pixmap(sz, sz, Pixmap.Format.RGBA8888);
+        pm.setColor(0.12f, 0.12f, 0.18f, 1f);
+        pm.fill();
+        pm.setColor(0.92f, 0.94f, 1f, 1f);
+        switch (shape) {
+            case TE_SHAPE_2X2:
+                for (int y = 0; y < 2; y++)
+                    for (int x = 0; x < 2; x++)
+                        terrainIconCell(pm, cellPx, x, y);
+                break;
+            case TE_SHAPE_4X4_BORDER:
+                for (int y = 0; y < 4; y++)
+                    for (int x = 0; x < 4; x++)
+                        if (x == 0 || x == 3 || y == 0 || y == 3)
+                            terrainIconCell(pm, cellPx, x, y);
+                break;
+            case TE_SHAPE_4X4_FULL:
+                for (int y = 0; y < 4; y++)
+                    for (int x = 0; x < 4; x++)
+                        terrainIconCell(pm, cellPx, x, y);
+                break;
+            case TE_SHAPE_4X4_CORNER:
+                terrainIconCell(pm, cellPx, 0, 0);
+                terrainIconCell(pm, cellPx, 3, 0);
+                terrainIconCell(pm, cellPx, 0, 3);
+                terrainIconCell(pm, cellPx, 3, 3);
+                break;
+            case TE_SHAPE_4X4_CORNER_REV:
+                for (int y = 0; y < 4; y++)
+                    for (int x = 0; x < 4; x++) {
+                        boolean corner = (x == 0 || x == 3) && (y == 0 || y == 3);
+                        if (!corner)
+                            terrainIconCell(pm, cellPx, x, y);
+                    }
+                break;
+            case TE_SHAPE_6X6:
+                for (int y = 0; y < 6; y++)
+                    for (int x = 0; x < 6; x++)
+                        if (x == 0 || x == 5 || y == 0 || y == 5)
+                            terrainIconCell(pm, cellPx, x, y);
+                break;
+            default:
+                terrainIconCell(pm, cellPx, 0, 0);
+                break;
+        }
+        return pm;
+    }
+
+    private void openTerrainShapeMenu() {
+        ensureTerrainShapeMenu();
+        gotoStage(tTerrainShapeMenu);
+    }
+
+    private boolean onlyTerrainMeta(tile t) {
+        return t.getProperties().size() == 0 && t.getAnimation().size() == 0 && t.getObjects().size() == 0;
+    }
+
+    private java.util.ArrayList<tile> captureTerrainUndoSnapshot(tileset ts) {
+        java.util.ArrayList<tile> snap = new java.util.ArrayList<>();
+        for (tile t : ts.getTiles()) {
+            tile c = new tile();
+            c.setTileID(t.getTileID());
+            int[] tr = t.getTerrain();
+            if (tr != null)
+                c.setTerrain(tr[0], tr[1], tr[2], tr[3]);
+            snap.add(c);
+        }
+        return snap;
+    }
+
+    private void pushTerrainUndo(tileset ts) {
+        terrainUndoStack.add(captureTerrainUndoSnapshot(ts));
+        if (terrainUndoStack.size() > 100)
+            terrainUndoStack.remove(0);
+    }
+
+    private void clearTerrainUndoHistory() {
+        terrainUndoStack.clear();
+    }
+
+    private void undoTerrainEdit(tileset ts) {
+        if (terrainUndoStack.isEmpty())
+            return;
+        java.util.ArrayList<tile> snap = terrainUndoStack.remove(terrainUndoStack.size() - 1);
+        java.util.HashMap<Integer, tile> snapById = new java.util.HashMap<>();
+        for (tile c : snap)
+            snapById.put(c.getTileID(), c);
+        java.util.List<tile> tiles = ts.getTiles();
+        for (int n = tiles.size() - 1; n >= 0; n--) {
+            tile t = tiles.get(n);
+            if (!snapById.containsKey(t.getTileID()) && onlyTerrainMeta(t))
+                tiles.remove(n);
+        }
+        for (tile c : snap) {
+            int id = c.getTileID();
+            int[] tr = c.getTerrain();
+            tile existing = null;
+            for (tile t : tiles) {
+                if (t.getTileID() == id) {
+                    existing = t;
+                    break;
+                }
+            }
+            if (existing != null) {
+                existing.setTerrain(tr[0], tr[1], tr[2], tr[3]);
+                if (tr[0] == -1 && tr[1] == -1 && tr[2] == -1 && tr[3] == -1 && onlyTerrainMeta(existing))
+                    tiles.remove(existing);
+            } else if (tr[0] != -1 || tr[1] != -1 || tr[2] != -1 || tr[3] != -1) {
+                tile nt = new tile();
+                nt.setTileID(id);
+                nt.setTerrain(tr[0], tr[1], tr[2], tr[3]);
+                ts.addTileMetadata(nt);
+            }
+        }
+        clearTerrainPickerCaches();
+    }
+
+    private void cycleSelTerrain(int delta) {
+        if (tilesets.size() == 0)
+            return;
+        tileset tt = tilesets.get(selTsetID);
+        if (tt.getTerrains().size() == 0)
+            return;
+        int sel = tt.getSelTerrain() + delta;
+        if (sel < 0)
+            sel = tt.getTerrains().size() - 1;
+        if (sel >= tt.getTerrains().size())
+            sel = 0;
+        tt.setSelTerrain(sel);
+    }
+
+    private void showTerrainPickerList() {
+        if (tilesets.size() == 0)
+            return;
+        final tileset ts = tilesets.get(selTsetID);
+        if (ts.getTerrains().size() == 0)
+            return;
+        Table tblmain = new Table();
+        Table tbl = new Table();
+        ScrollPane sp = new ScrollPane(tbl, skin);
+        tblmain.add(sp).expand().fill();
+        tblmain.setFillParent(true);
+        tbl.defaults().width(btnx).height(btny * 1.5f).padBottom(2);
+        tbl.add(new Label(z.terraineditor, skin)).row();
+        for (int i = 0; i < ts.getTerrains().size(); i++) {
+            final int idx = i;
+            String name = ts.getTerrains().get(i).getName();
+            if (name == null || name.length() == 0)
+                name = "Terrain " + i;
+            TextButton b = new TextButton(name, skin);
+            b.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    ts.setSelTerrain(idx);
+                    resumeTerrainEditor();
+                }
+            });
+            tbl.add(b).row();
+        }
+        TextButton back = new TextButton(z.back, skin);
+        back.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                resumeTerrainEditor();
+            }
+        });
+        tbl.add(back).row();
+        gotoStage(tblmain);
+    }
+
+    private void applyTerrainEditorTap(tileset ts, float touchX, float touchY) {
+        if (ts.getTerrains().size() == 0)
+            return;
+        pushTerrainUndo(ts);
+        int halfIdx = terrainEditorHalfCellAt(ts, touchX, touchY);
+        if (halfIdx < 0)
+            return;
+        int gridW = ts.getWidth() * 2;
+        int anchorHcx = halfIdx % gridW;
+        int anchorHcy = halfIdx / gridW;
+        int terrainId = ts.getSelTerrain();
+        switch (terrainBrushShape) {
+            case TE_SHAPE_2X2:
+                stampTerrainFilledCornerBox(ts, anchorHcx, anchorHcy, 2, terrainId);
+                break;
+            case TE_SHAPE_4X4_BORDER:
+                stampTerrainHollowCornerBox(ts, anchorHcx, anchorHcy, 4, terrainId);
+                break;
+            case TE_SHAPE_4X4_FULL:
+                stampTerrainFilledCornerBox(ts, anchorHcx, anchorHcy, 4, terrainId);
+                break;
+            case TE_SHAPE_4X4_CORNER:
+                stampTerrainCornersOnlyBox(ts, anchorHcx, anchorHcy, 4, terrainId);
+                break;
+            case TE_SHAPE_4X4_CORNER_REV:
+                stampTerrainCornersRevBox(ts, anchorHcx, anchorHcy, 4, terrainId);
+                break;
+            case TE_SHAPE_6X6:
+                stampTerrainHollowCornerBox(ts, anchorHcx, anchorHcy, 6, terrainId);
+                break;
+            default:
+                toggleTerrainHalfCell(ts, halfIdx, terrainId);
+                break;
+        }
+    }
+
+    private void beginTerrainPaintAt(float screenX, float screenY) {
+        terrainHoldPending = false;
+        terrainPainting = true;
+        terrainPaintMoved = true;
+        lastTerrainPaintCell = -1;
+        if (tilesets.size() > 0) {
+            pushTerrainUndo(tilesets.get(selTsetID));
+            Vector3 t = new Vector3();
+            tilecam.unproject(t.set(screenX, screenY, 0));
+            paintTerrainBrush(tilesets.get(selTsetID), t.x, t.y);
+        }
+    }
+
+    private void paintTerrainBrush(tileset ts, float touchX, float touchY) {
+        if (ts.getTerrains().size() == 0)
+            return;
+        int halfIdx = terrainEditorHalfCellAt(ts, touchX, touchY);
+        if (halfIdx < 0 || halfIdx == lastTerrainPaintCell)
+            return;
+        setTerrainHalfCell(ts, halfIdx, ts.getSelTerrain());
+        lastTerrainPaintCell = halfIdx;
+    }
+
+    private void drawTerrainEditorTiles(SpriteBatch batch, tileset ts, float minX, float maxX, float minY, float maxY) {
+        int wd = ts.getWidth();
+        int hcw = terrainEditorHalfCellW(ts);
+        int hch = terrainEditorHalfCellH(ts);
+        int tileCount = ts.getTilecount();
+        int totalRows = wd > 0 ? (tileCount + wd - 1) / wd : 0;
+        int startCol = 0, endCol = wd - 1, startRow = 0, endRow = totalRows - 1;
+        if (hcw > 0 && hch > 0 && wd > 0) {
+            startCol = (int) Math.floor(minX / hcw);
+            endCol = (int) Math.ceil(maxX / hcw);
+            startRow = (int) Math.floor(-maxY / hch);
+            endRow = (int) Math.ceil(-minY / hch) + 1;
+            if (startCol < 0) startCol = 0;
+            if (endCol >= wd) endCol = wd - 1;
+            if (startRow < 0) startRow = 0;
+            if (endRow >= totalRows) endRow = totalRows - 1;
+        }
+
+        if (terrainPickerCachedTsetID != selTsetID)
+            terrainPickerCacheValid = false;
+        if (!terrainPickerCacheValid)
+            rebuildTerrainPickerCaches(ts);
+
+        if (terrainPickerCacheValid && !terrainPickerCaches.isEmpty()) {
+            int chunkSize = 1024;
+            for (int chunk = 0; chunk < terrainPickerCaches.size(); chunk++) {
+                int startIdx = chunk * chunkSize;
+                int endIdx = Math.min(startIdx + chunkSize, tileCount);
+                int startRowOfChunk = startIdx / wd;
+                int endRowOfChunk = (endIdx - 1) / wd;
+                float chunkMinY = -endRowOfChunk * hch;
+                float chunkMaxY = -startRowOfChunk * hch + hch;
+                if (chunkMinY < maxY && chunkMaxY > minY) {
+                    com.badlogic.gdx.graphics.g2d.SpriteCache cache = terrainPickerCaches.get(chunk);
+                    cache.setProjectionMatrix(tilecam.combined);
+                    if (sEnableBlending) {
+                        Gdx.gl.glEnable(GL20.GL_BLEND);
+                        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+                    }
+                    cache.setColor(1f, 1f, 1f, 1f);
+                    cache.begin();
+                    cache.draw(terrainPickerCacheIDs.get(chunk));
+                    cache.end();
+                }
+            }
+        }
+
+        if (sShowAnimations) {
+            java.util.List<tile> tiles = ts.getTiles();
+            int margin = ts.getMargin();
+            int spacing = ts.getSpacing();
+            batch.begin();
+            for (int n = 0; n < tiles.size(); n++) {
+                tile animTile = tiles.get(n);
+                if (animTile.getAnimation().size() == 0)
+                    continue;
+                int i = animTile.getTileID();
+                if (i < 0 || i >= tileCount)
+                    continue;
+                int xpos = i % wd;
+                int ypos = i / wd;
+                if (xpos < startCol || xpos > endCol || ypos < startRow || ypos > endRow)
+                    continue;
+                long activeFrameId = animTile.getActiveFrameID();
+                int xpos2 = (int) activeFrameId % wd;
+                int ypos2 = (int) activeFrameId / wd;
+                batch.draw(ts.getTexture(), xpos * hcw, -ypos * hch, hcw, hch,
+                        (xpos2 * (ts.getTilewidth() + spacing)) + margin,
+                        (ypos2 * (ts.getTileheight() + spacing)) + margin,
+                        ts.getTilewidth(), ts.getTileheight(), false, false);
+            }
+            batch.end();
+        }
+    }
+
     private void recenterpick() {
         try {
             if (tilesets.size() == 0)
                 return;
+            if (isTerrainEditorPicker()) {
+                tileset ts = tilesets.get(selTsetID);
+                float hcw = terrainEditorHalfCellW(ts);
+                float hch = terrainEditorHalfCellH(ts);
+                tilecam.zoom = terrainEditorDefaultZoom(ts);
+                tilecam.update();
+                panTileTo((int) hcw * ts.getWidth() / 2, (int) -(hch * ts.getHeight() / 2) + hch, 0f);
+                return;
+            }
             float ttsw = tilesets.get(seltset).getTilewidth();
             float ttsh = tilesets.get(seltset).getTileheight();
             float ttkw = tilesets.get(seltset).getWidth();
@@ -23957,8 +25418,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "massprops":
                     case "tileprop":
                     case "addanim":
-                    case "terraineditor":
                         gotoStage(tTileMgmt);
+                        return true;
+                    case "terraineditor":
+                        clearTerrainUndoHistory();
+                        if (frompick) {
+                            onToPicker();
+                            frompick = false;
+                        } else {
+                            gotoStage(tTileMgmt);
+                        }
                         return true;
                     case "props":
                         gotoStage(tPropEditor);
@@ -23989,6 +25458,28 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             } else if (kartu == "tile") {
                 backToMap();
+                return true;
+            }
+        }
+
+        if (tapped(touch2, gui.terrainundo)) {
+            if (tilePicker == "terraineditor" && kartu == "pickanim") {
+                if (tilesets.size() > 0)
+                    undoTerrainEdit(tilesets.get(selTsetID));
+                return true;
+            }
+        }
+
+        if (tapped(touch2, gui.terraindelete)) {
+            if (tilePicker == "terraineditor" && kartu == "pickanim") {
+                confirmDeleteSelectedTerrain();
+                return true;
+            }
+        }
+
+        if (tapped(touch2, gui.terrainshape)) {
+            if (tilePicker == "terraineditor" && kartu == "pickanim") {
+                openTerrainShapeMenu();
                 return true;
             }
         }
@@ -24068,6 +25559,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         }
 
+        if ((kartu.equalsIgnoreCase("tile") || kartu.equalsIgnoreCase("editor"))
+                && tapped(touch2, gui.tilesetsbtn)) {
+            showTilesetManager();
+            return true;
+        }
+
         if (tilesets.size() > 0) {
             frompick = true;
             if (kartu.equalsIgnoreCase("tile")) {
@@ -24095,8 +25592,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     recenterpick();
                     return true;
                 }
+                if (tapped(touch2, gui.terraineditorbtn)) {
+                    selTsetID = seltset;
+                    frompick = true;
+                    pickTile("terraineditor");
+                    return true;
+                }
                 if (tapped(touch2, gui.tileadd)) {
-                    if (isPixelArtPaletteView() && issettingtile) {
+                    if (isPixelArtPaletteView()) {
                         resetMassprops();
                         pixelPaletteMode = PIXEL_PAL_ADD;
                         pixelEditSlot = -1;
@@ -24105,7 +25608,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                 }
                 if (tapped(touch2, gui.tileremove)) {
-                    if (isPixelArtPaletteView() && issettingtile) {
+                    if (isPixelArtPaletteView()) {
                         clearSelectedPaletteSlotsTransparent();
                         resetMassprops();
                         pixelPaletteMode = PIXEL_PAL_NONE;
@@ -24114,7 +25617,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                 }
                 if (tapped(touch2, gui.tileproperties)) {
-                    if (isPixelArtPaletteView() && issettingtile) {
+                    if (isPixelArtPaletteView()) {
                         int slot = getSelectedPaletteSlot();
                         if (slot < 0)
                             return true;
@@ -24129,101 +25632,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         return true;
                     }
                 }
-                // tileset properties
-                if (tapped(touch2, gui.pickertool2)) {
-                    selTsetID = seltset;
-                    int saiz = tilesets.size();
-
-                    /*
-                     * String[] srr = new String[saiz];
-                     * for (int i = 0; i < saiz; i++) {
-                     * srr[i] = tilesets.get(i).getName();
-                     * }
-                     * ltsetlist.setItems(srr);
-                     * 
-                     */
-
-                    if (tilesets.size() > 0) {
-                        tileset ct = tilesets.get(selTsetID);
-                        fTsPropName.setText("");
-                        fTsPropSource.setText("");
-                        fTsPropTsxFile.setText("");
-                        cbTsPropUseTsx.setChecked(false);
-                        fTsPropTsw.setText("0");
-                        fTsPropTsh.setText("0");
-                        fTsPropMargin.setText("0");
-                        fTsPropSpacing.setText("0");
-                        fTsPropCols.setText("0");
-                        fTsPropTc.setText("0");
-                        fTsPropTrans.setText("");
-
-                        if (ct.getName() != null)
-                            fTsPropName.setText(ct.getName());
-                        if (ct.getSource() != null)
-                            fTsPropSource.setText(ct.getSource());
-                        if (ct.getTsxfile() != null)
-                            fTsPropTsxFile.setText(ct.getTsxfile());
-                        cbTsPropUseTsx.setChecked(ct.isUsetsx());
-                        if (ct.getTilewidth() != 0)
-                            fTsPropTsw.setText(Integer.toString(ct.getTilewidth()));
-                        if (ct.getTileheight() != 0)
-                            fTsPropTsh.setText(Integer.toString(ct.getTileheight()));
-                        if (ct.getColumns() != 0)
-                            fTsPropCols.setText(Integer.toString(ct.getColumns()));
-                        if (ct.getTilecount() != 0)
-                            fTsPropTc.setText(Integer.toString(ct.getTilecount()));
-                        if (ct.getMargin() != 0)
-                            fTsPropMargin.setText(Integer.toString(ct.getMargin()));
-                        if (ct.getSpacing() != 0)
-                            fTsPropSpacing.setText(Integer.toString(ct.getSpacing()));
-                        if (ct.getColumns() != 0)
-                            fTsPropCols.setText(Integer.toString(ct.getColumns()));
-                        if (ct.getTrans() != null)
-                            fTsPropTrans.setText(ct.getTrans());
-                        fTsPropFirstGid.setText(Integer.toString(ct.getFirstgid()));
-
-                        gotoStage(tTsProp);
-                    }
-
-                    return true;
-                }
-
-                if (tapped(touch2, gui.pickertool1)) {
-                    pickAuto = false;
-                    FileDialog(z.selectfile, "quickaddtset", "file",
-                            new String[] { ".tmx", ".tsx", ".png", ".jpg", ".jpeg", ".bmp", ".gif" }, nullTable);
-                    return true;
-                }
-                // terrain editor
-                if (tapped(touch2, gui.pickertool3)) {
-                    pickTile("terraineditor");
-                    return true;
-                }
-                // delete button (skip hit area when hidden for protected Pixel Editor tilesets)
-                if (tapped(touch2, gui.pickertool5) && !isProtectedPixelArtTileset(seltset)) {
-                    resetMassprops();
-                    tilesets.remove(seltset);
-                    pickAuto = false;
-                    if (tilesets.size() > 0) {
-                        if (seltset != 0)
-                            seltset -= 1;
-                        recenterpick();
-                    } else {
-                        seltset = 0;
-                    }
-                    CacheAllTset();
-                    return true;
-                }
-
             }
         }
         // pempek
         if (tilesets.size() > 0) {
             if (kartu.equalsIgnoreCase("tile")) {
 
-                // longpressing in a tile picker
                 if (tapped(touch2, gui.tilesetsmid)) {
-                    loadList("tset");
+                    showTilesetManager();
                     return true;
                 }
 
@@ -24295,16 +25711,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
                         break;
                     case "terraineditor":
-                        if (tapped(touch2, gui.tilesetsmid)) {
-                            tileset tt = tilesets.get(selTsetID);
-                            if (tt.getTerrains().size() > 0) {
-                                tt.setSelTerrain(tt.getSelTerrain() + 1);
-                                if (tt.getSelTerrain() >= tt.getTerrains().size()) {
-                                    tt.setSelTerrain(0);
-                                }
-                            }
+                        if (tapped(touch2, gui.tilesetsleft)) {
+                            cycleSelTerrain(-1);
                             return true;
                         }
+                        if (tapped(touch2, gui.tilesetsright)) {
+                            cycleSelTerrain(1);
+                            return true;
+                        }
+                        if (tapped(touch2, gui.tilesetsmid)) {
+                            showTerrainPickerList();
+                            return true;
+                        }
+                        break;
                 }
             }
 
@@ -24407,6 +25826,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
                 return true;
             }
+        }
+
+        if (isTerrainEditorPicker()) {
+            if (!terrainPaintMoved)
+                applyTerrainEditorTap(ts, touch.x, touch.y);
+            terrainPaintMoved = false;
+            return true;
         }
 
         if (touch.y < ts.getTileheight() && touch.y > -ts.getTileheight() * ts.getHeight() + ts.getTileheight()
@@ -24683,191 +26109,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
                         return true;
                     case "terraineditor":
-                        // log(kartu+":"+tilePicker);
-                        if (ts.getTerrains().size() == 0)
-                            return true;
-                        tiles = ts.getTiles();
-                        tile t = null;
-                        int dst = num - ts.getFirstgid();
-                        for (int n = 0; n < tiles.size(); n++) {
-                            if (tiles.get(n).getTileID() == dst) {
-                                t = tiles.get(n);
-                                break;
-                            }
-                        }
-
-                        if (t == null) {
-                            tile tt = new tile();
-                            tt.setTileID(dst);
-                            int idx = tilesets.get(selTsetID).addTileMetadata(tt);
-                            tiles = tilesets.get(selTsetID).getTiles();
-                            t = tiles.get(idx);
-                        }
-                        int[] cn = t.getTerrain();
-                        // log(t.getTerrainString());
-                        int a = cn[0], b = cn[1], c = cn[2], d = cn[3];
-                        int e = tilesets.get(selTsetID).getSelTerrain();
-
-                        // ada tile kosong
-                        if ((a == -1) || (b == -1) || (c == -1) || (d == -1)) {
-                            if (a != e && b != e && c != e && d != e) {
-                                if (a == -1)
-                                    a = e;
-                                if (b == -1)
-                                    b = e;
-                                if (c == -1)
-                                    c = e;
-                                if (d == -1)
-                                    d = e;
-                                t.setTerrain(a, b, c, d);
-                                return true;
-                            }
-                        }
-
-                        // kalau tidak ada yang kosong, takeover semua
-                        if ((a >= 0) && (b >= 0) && (c >= 0) && (d >= 0)) {
-                            if (!(a == e && b == e && c == e && d == e)) {
-                                a = e;
-                                b = e;
-                                c = e;
-                                d = e;
-                                t.setTerrain(a, b, c, d);
-                                return true;
-                            }
-
-                        }
-
-                        // sisanya
-                        if ((a == -1) && (b == -1) && (c == -1) && (d == -1)) {
-                            a = e;
-                            b = e;
-                            c = e;
-                            d = e;
-                            t.setTerrain(a, b, c, d);
-                            return true;
-                        }
-
-                        if ((a == e) && (b == e) && (c == e) && (d == e)) {
-                            a = -1;
-                            b = -1;
-                            c = -1;
-                            d = e;
-                            t.setTerrain(a, b, c, d);
-                            return true;
-                        }
-
-                        if ((a == -1) && (b == -1) && (c == -1) && (d == e)) {
-                            a = -1;
-                            b = -1;
-                            c = e;
-                            d = e;
-                            t.setTerrain(a, b, c, d);
-                            return true;
-                        }
-                        if ((a == -1) && (b == -1) && (c == e) && (d == e)) {
-                            a = -1;
-                            b = -1;
-                            c = e;
-                            d = -1;
-                            t.setTerrain(a, b, c, d);
-                            return true;
-                        }
-                        if ((a == -1) && (b == -1) && (c == e) && (d == -1)) {
-                            a = e;
-                            b = -1;
-                            c = e;
-                            d = -1;
-                            t.setTerrain(a, b, c, d);
-                            return true;
-                        }
-                        if ((a == e) && (b == -1) && (c == e) && (d == -1)) {
-                            a = e;
-                            b = -1;
-                            c = -1;
-                            d = -1;
-                            t.setTerrain(a, b, c, d);
-                            return true;
-                        }
-                        if ((a == e) && (b == -1) && (c == -1) && (d == -1)) {
-                            a = e;
-                            b = e;
-                            c = -1;
-                            d = -1;
-                            t.setTerrain(a, b, c, d);
-                            return true;
-                        }
-                        if ((a == e) && (b == e) && (c == -1) && (d == -1)) {
-                            a = -1;
-                            b = e;
-                            c = -1;
-                            d = -1;
-                            t.setTerrain(a, b, c, d);
-                            return true;
-                        }
-                        if ((a == -1) && (b == e) && (c == -1) && (d == -1)) {
-                            a = -1;
-                            b = e;
-                            c = -1;
-                            d = e;
-                            t.setTerrain(a, b, c, d);
-                            return true;
-                        }
-                        if ((a == -1) && (b == e) && (c == -1) && (d == e)) {
-                            a = e;
-                            b = e;
-                            c = e;
-                            d = -1;
-                            t.setTerrain(a, b, c, d);
-                            return true;
-                        }
-                        if ((a == e) && (b == e) && (c == e) && (d == -1)) {
-                            a = e;
-                            b = e;
-                            c = -1;
-                            d = e;
-                            t.setTerrain(a, b, c, d);
-                            return true;
-                        }
-                        if ((a == e) && (b == e) && (c == -1) && (d == e)) {
-                            a = -1;
-                            b = e;
-                            c = e;
-                            d = e;
-                            t.setTerrain(a, b, c, d);
-                            return true;
-                        }
-                        if ((a == -1) && (b == e) && (c == e) && (d == e)) {
-                            a = e;
-                            b = -1;
-                            c = e;
-                            d = e;
-                            t.setTerrain(a, b, c, d);
-                            return true;
-                        }
-                        if ((a == e) && (b == -1) && (c == e) && (d == e)) {
-                            a = e;
-                            b = -1;
-                            c = -1;
-                            d = e;
-                            t.setTerrain(a, b, c, d);
-                            return true;
-                        }
-                        if ((a == e) && (b == -1) && (c == -1) && (d == e)) {
-                            a = -1;
-                            b = e;
-                            c = e;
-                            d = -1;
-                            t.setTerrain(a, b, c, d);
-                            return true;
-                        }
-                        if ((a == -1) && (b == e) && (c == e) && (d == -1)) {
-                            a = -1;
-                            b = -1;
-                            c = -1;
-                            d = -1;
-                            t.setTerrain(a, b, c, d);
-                            return true;
-                        }
+                        return true;
                 }
             }
         }
@@ -27219,7 +28461,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tbBack.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                backToMap();
+                setToolsMap();
+                gotoStage(ttools);
             }
         });
 
@@ -28669,8 +29912,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         if (tapped(touch2, gui.map)) {
             if (mode == "object" || mode == "tile" || mode == "image") {
-                setMapMap();
-                gotoStage(tMap);
+                setToolsMap();
+                gotoStage(ttools);
                 cue("map");
                 return true;
             }
@@ -28808,6 +30051,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
             if (tapped(touch2, gui.tilesetsright)) {
                 editGUI(gui.tilesetsright);
+                return true;
+            }
+            if (tapped(touch2, gui.tilesetsbtn)) {
+                editGUI(gui.tilesetsbtn);
+                return true;
+            }
+            if (tapped(touch2, gui.terraineditorbtn)) {
+                editGUI(gui.terraineditorbtn);
                 return true;
             }
             if (tapped(touch2, gui.pickerback)) {
@@ -30043,7 +31294,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public boolean longPress(float p1, float p2) {
         if (loadingfile)
             return true;
-        if (layers.size() == 0)
+        if (pinchZoomActive || Gdx.input.isTouched(1))
+            return true;
+        if (layers.size() == 0 && !(kartu.equals("pickanim") && tilePicker.equals("terraineditor")))
             return true;
         if (kartu.equalsIgnoreCase("game")) {
             return true;
@@ -30473,9 +31726,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (tapped(touch2, gui.tilesetsleft)) {
                 return true;
             }
-            // longpressing in a tile picker
             if (tapped(touch2, gui.tilesetsmid)) {
-                loadList("tset");
+                showTilesetManager();
                 return true;
             }
 
@@ -30515,305 +31767,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     break;
 
                 case "terraineditor":
-
-                    if (tapped(touch2, gui.tilesetsmid)) {
+                    if (tapped(touch2, gui.tilesetsleft) || tapped(touch2, gui.tilesetsright)
+                            || tapped(touch2, gui.tilesetsmid) || tapped(touch2, gui.terrainundo)
+                            || tapped(touch2, gui.pickerback) || tapped(touch2, gui.terraindelete)
+                            || tapped(touch2, gui.terrainshape) || tapped(touch2, gui.newterrain))
+                        return true;
+                    stamp = false;
+                    if (tilesets.size() > 0) {
                         tileset tt = tilesets.get(selTsetID);
-                        if (tt.getTerrains().size() > 0) {
-                            tt.setSelTerrain(tt.getSelTerrain() - 1);
-                            if (tt.getSelTerrain() < 0) {
-                                tt.setSelTerrain(tt.getTerrains().size() - 1);
-                            }
-                        }
-                        return true;
+                        if (tt.getTerrains().size() > 0
+                                && terrainEditorHalfCellAt(tt, touch3.x, touch3.y) >= 0)
+                            beginTerrainPaintAt(p1, p2);
                     }
+                    return true;
 
-                    // laksan
-                    tileset ts = tilesets.get(selTsetID);
-                    ae = (int) touch3.x;
-                    ab = (int) touch3.y;
-                    Integer numf = ts.getFirstgid() + (ts.getWidth() * ((-ab + ts.getTileheight()) / ts.getTileheight())
-                            + (ae / ts.getTilewidth()));
-                    int num = numf - ts.getFirstgid();
-
-                    int Tw = ts.getWidth();
-                    int Th = ts.getHeight();
-                    if (ts.getTerrains().size() == 0)
-                        return true;
-
-                    tiles = ts.getTiles();
-                    tile t = null;
-                    for (int n = 0; n < tiles.size(); n++) {
-                        if (tiles.get(n).getTileID() == num) {
-                            t = tiles.get(n);
-                            break;
-                        }
-                    }
-
-                    if (t == null) {
-                        tile tt = new tile();
-                        tt.setTileID(num);
-                        int idx = ts.addTileMetadata(tt);
-                        tiles = ts.getTiles();
-                        t = tiles.get(idx);
-                    }
-                    int[] cn = t.getTerrain();
-                    int a = cn[0], b = cn[1], c = cn[2], d = cn[3];
-                    int e = tilesets.get(selTsetID).getSelTerrain();
-
-                    if (a == -1 && b == -1 && c == -1 && d == e) {
-                    } else if (a == e && b == -1 && c == -1 && d == -1) {
-
-                    } else {
-                        if (!(a == -1 && b == -1 && c == -1 && d == -1)) {
-                            t.setTerrain(-1, -1, -1, -1);
-                            return true;
-                        }
-
-                    }
-
-                    if (a == -1 && b == -1 && c == -1 && d == -1) {
-                        for (int i = 0; i < 9; i++) {
-                            // gogo is for detecting index of surrounding tile
-                            int gogo = num;
-                            switch (i) {
-                                case 0:
-                                    if (num <= Tw || num % Tw == 0)
-                                        continue;
-                                    gogo = num - Tw - 1;
-                                    break;
-                                case 1:
-                                    if (num <= Tw)
-                                        continue;
-                                    gogo = num - Tw;
-                                    break;
-                                case 2:
-                                    if (num <= Tw || num % Tw == Tw - 1)
-                                        continue;
-                                    gogo = num - Tw + 1;
-                                    break;
-                                case 3:
-                                    if (num <= 1 || num % Tw == 0)
-                                        continue;
-                                    gogo = num - 1;
-                                    break;
-                                case 4:
-                                    if (num >= Tw * Th || num % Tw == Tw - 1)
-                                        continue;
-                                    gogo = num + 1;
-                                    break;
-                                case 5:
-                                    if (num >= Tw * Th - Tw || num % Tw == 0)
-                                        continue;
-                                    gogo = num + Tw - 1;
-                                    break;
-                                case 6:
-                                    if (num >= Tw * Th - Tw)
-                                        continue;
-                                    gogo = num + Tw;
-                                    break;
-                                case 7:
-                                    if (num >= Tw * Th - Tw || num % Tw == Tw - 1)
-                                        continue;
-                                    gogo = num + Tw + 1;
-                                    break;
-                                case 8:
-                                    gogo = num;
-                                    break;
-                            }
-
-                            tiles = ts.getTiles();
-                            t = null;
-                            for (int n = 0; n < tiles.size(); n++) {
-                                if (tiles.get(n).getTileID() == gogo) {
-                                    t = tiles.get(n);
-                                    break;
-                                }
-                            }
-
-                            if (t == null) {
-                                tile tt = new tile();
-                                tt.setTileID(gogo);
-                                int idx = ts.addTileMetadata(tt);
-                                tiles = ts.getTiles();
-                                t = tiles.get(idx);
-                            }
-                            cn = t.getTerrain();
-                            a = cn[0];
-                            b = cn[1];
-                            c = cn[2];
-                            d = cn[3];
-                            e = tilesets.get(selTsetID).getSelTerrain();
-
-                            switch (i) {
-                                case 0:
-                                    t.setTerrain(-1, -1, -1, e);
-                                    break;
-                                case 1:
-                                    t.setTerrain(-1, -1, e, e);
-                                    break;
-                                case 2:
-                                    t.setTerrain(-1, -1, e, -1);
-                                    break;
-                                case 3:
-                                    t.setTerrain(-1, e, -1, e);
-                                    break;
-                                case 4:
-                                    t.setTerrain(e, -1, e, -1);
-                                    break;
-                                case 5:
-                                    t.setTerrain(-1, e, -1, -1);
-                                    break;
-                                case 6:
-                                    t.setTerrain(e, e, -1, -1);
-                                    break;
-                                case 7:
-                                    t.setTerrain(e, -1, -1, -1);
-                                    break;
-                                case 8:
-                                    t.setTerrain(e, e, e, e);
-                                    break;
-                            }
-
-                        }
-
-                        return true;
-                    }
-
-                    if (a == -1 && b == -1 && c == -1 && d == e) {
-                        for (int i = 0; i < 4; i++) {
-                            // gogo is for detecting index of surrounding tile
-                            int gogo = num;
-                            switch (i) {
-                                case 1:
-                                    if (num >= Tw * Th || num % Tw == Tw - 1)
-                                        continue;
-                                    gogo = num + 1;
-                                    break;
-                                case 2:
-                                    if (num >= Tw * Th - Tw)
-                                        continue;
-                                    gogo = num + Tw;
-                                    break;
-                                case 3:
-                                    if (num >= Tw * Th - Tw || num % Tw == Tw - 1)
-                                        continue;
-                                    gogo = num + Tw + 1;
-                                    break;
-                                case 0:
-                                    gogo = num;
-                                    break;
-                            }
-
-                            tiles = ts.getTiles();
-                            t = null;
-                            for (int n = 0; n < tiles.size(); n++) {
-                                if (tiles.get(n).getTileID() == gogo) {
-                                    t = tiles.get(n);
-                                    break;
-                                }
-                            }
-
-                            if (t == null) {
-                                tile tt = new tile();
-                                tt.setTileID(gogo);
-                                int idx = ts.addTileMetadata(tt);
-                                tiles = ts.getTiles();
-                                t = tiles.get(idx);
-                            }
-                            cn = t.getTerrain();
-                            a = cn[0];
-                            b = cn[1];
-                            c = cn[2];
-                            d = cn[3];
-                            e = tilesets.get(selTsetID).getSelTerrain();
-
-                            switch (i) {
-                                case 0:
-                                    t.setTerrain(-1, -1, -1, e);
-                                    break;
-                                case 1:
-                                    t.setTerrain(-1, -1, e, -1);
-                                    break;
-                                case 2:
-                                    t.setTerrain(-1, e, -1, -1);
-                                    break;
-                                case 3:
-                                    t.setTerrain(e, -1, -1, -1);
-                                    break;
-                            }
-
-                        }
-
-                        return true;
-                    }
-
-                    if (a == e && b == -1 && c == -1 && d == -1) {
-                        for (int i = 0; i < 4; i++) {
-                            // gogo is for detecting index of surrounding tile
-                            int gogo = num;
-                            switch (i) {
-                                case 1:
-                                    if (num >= Tw * Th || num % Tw == Tw - 1)
-                                        continue;
-                                    gogo = num + 1;
-                                    break;
-                                case 2:
-                                    if (num >= Tw * Th - Tw)
-                                        continue;
-                                    gogo = num + Tw;
-                                    break;
-                                case 3:
-                                    if (num >= Tw * Th - Tw || num % Tw == Tw - 1)
-                                        continue;
-                                    gogo = num + Tw + 1;
-                                    break;
-                                case 0:
-                                    gogo = num;
-                                    break;
-                            }
-
-                            tiles = ts.getTiles();
-                            t = null;
-                            for (int n = 0; n < tiles.size(); n++) {
-                                if (tiles.get(n).getTileID() == gogo) {
-                                    t = tiles.get(n);
-                                    break;
-                                }
-                            }
-
-                            if (t == null) {
-                                tile tt = new tile();
-                                tt.setTileID(gogo);
-                                int idx = ts.addTileMetadata(tt);
-                                tiles = ts.getTiles();
-                                t = tiles.get(idx);
-                            }
-                            cn = t.getTerrain();
-                            a = cn[0];
-                            b = cn[1];
-                            c = cn[2];
-                            d = cn[3];
-                            e = tilesets.get(selTsetID).getSelTerrain();
-
-                            switch (i) {
-                                case 0:
-                                    t.setTerrain(e, -1, -1, -1);
-                                    break;
-                                case 1:
-                                    t.setTerrain(-1, e, -1, -1);
-                                    break;
-                                case 2:
-                                    t.setTerrain(-1, -1, e, -1);
-                                    break;
-                                case 3:
-                                    t.setTerrain(-1, -1, -1, e);
-                                    break;
-                            }
-
-                        }
-
-                        return true;
-                    }
 
             }
 
@@ -31708,6 +32675,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
             return true;
         }
+        if (terrainHoldPending && isTerrainEditorPicker()
+                && (Math.abs(p3) > TERRAIN_HOLD_CANCEL_PAN || Math.abs(p4) > TERRAIN_HOLD_CANCEL_PAN))
+            terrainHoldPending = false;
+        if (terrainPainting && isTerrainEditorPicker()) {
+            terrainPaintMoved = true;
+            return true;
+        }
 
         // this is for map drawing
         if (roll) {
@@ -31915,8 +32889,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     y = p4 * panspeed * tilecam.zoom;
                     tilecam.translate(-x, y);
                     tileset t = tilesets.get(seltset);
+                    int scrollTw = t.getTilewidth();
+                    int scrollTh = t.getTileheight();
                     if (kartu != "tile") {
                         switch (tilePicker) {
+                            case "terraineditor":
+                                t = tilesets.get(selTsetID);
+                                scrollTw = terrainEditorHalfCellW(t);
+                                scrollTh = terrainEditorHalfCellH(t);
+                                break;
                             case "newimgobj":
                             case "props":
                             case "rnda":
@@ -31925,30 +32906,30 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             case "repb":
                             case "gena":
                             case "genb":
-
-                                t = tilesets.get(seltset);
+                                t = tilesets.get(selTsetID);
+                                break;
                         }
                     }
 
                     if (pickAuto) {
                         if (tilecam.position.x < 0)
                             tilecam.position.x = 0;
-                        if (tilecam.position.x > 6 * t.getTilewidth())
-                            tilecam.position.x = 6 * t.getTilewidth();
-                        if (tilecam.position.y > t.getTileheight())
-                            tilecam.position.y = t.getTileheight();
-                        if (tilecam.position.y < -(t.getTerrains().size() * t.getTileheight()) + t.getTileheight())
-                            tilecam.position.y = -(t.getTerrains().size() * t.getTileheight()) + t.getTileheight();
+                        if (tilecam.position.x > 6 * scrollTw)
+                            tilecam.position.x = 6 * scrollTw;
+                        if (tilecam.position.y > scrollTh)
+                            tilecam.position.y = scrollTh;
+                        if (tilecam.position.y < -(t.getTerrains().size() * scrollTh) + scrollTh)
+                            tilecam.position.y = -(t.getTerrains().size() * scrollTh) + scrollTh;
 
                     } else {
                         if (tilecam.position.x < 0)
                             tilecam.position.x = 0;
-                        if (tilecam.position.x > t.getWidth() * t.getTilewidth())
-                            tilecam.position.x = t.getWidth() * t.getTilewidth();
-                        if (tilecam.position.y > t.getTileheight())
-                            tilecam.position.y = t.getTileheight();
-                        if (tilecam.position.y < -(t.getHeight() * t.getTileheight()) + t.getTileheight())
-                            tilecam.position.y = -(t.getHeight() * t.getTileheight()) + t.getTileheight();
+                        if (tilecam.position.x > t.getWidth() * scrollTw)
+                            tilecam.position.x = t.getWidth() * scrollTw;
+                        if (tilecam.position.y > scrollTh)
+                            tilecam.position.y = scrollTh;
+                        if (tilecam.position.y < -(t.getHeight() * scrollTh) + scrollTh)
+                            tilecam.position.y = -(t.getHeight() * scrollTh) + scrollTh;
                     }
 
                     tilecam.update();
@@ -32027,6 +33008,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             }
         }
+
+        if (terrainPainting && isTerrainEditorPicker()) {
+            terrainPainting = false;
+            lastTerrainPaintCell = -1;
+        }
+        terrainHoldPending = false;
 
         // after we roll the paint...
         if (roll) {
@@ -32285,6 +33272,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (kartu.equalsIgnoreCase("game")) {
             return true;
         }
+        pinchZoomActive = true;
+        terrainHoldPending = false;
+        if (isTerrainEditorPicker()) {
+            terrainPainting = false;
+            lastTerrainPaintCell = -1;
+        }
         nofling = .3f;
         velx = 0;
         vely = 0;
@@ -32321,12 +33314,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             cam.update();
         } else if (kartu == "tile" || kartu == "pickanim") {
             tilecam.zoom = initialZoom * pa1 / pa2;
+            float minZoom = tilePickerMinZoom();
 
             if (tilecam.zoom > Tsw * 2) {
                 tilecam.zoom = Tsw * 2;
             }
-            if (tilecam.zoom < Tsw / 320f) {
-                tilecam.zoom = Tsw / 320f;
+            if (tilecam.zoom < minZoom) {
+                tilecam.zoom = minZoom;
             }
             tilecam.update();
         }
@@ -33051,6 +34045,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         private float lastTouchY;
         private boolean isDragging = false;
         private String dragMode = ""; // "move" or "resize"
+        private final float zoomFactor = 0.55f;
 
         public CollisionCanvas() {
             setTouchable(com.badlogic.gdx.scenes.scene2d.Touchable.enabled);
@@ -33063,7 +34058,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     
                     float scaleX = getWidth() / (float) ts.getTilewidth();
                     float scaleY = getHeight() / (float) ts.getTileheight();
-                    float scale = Math.min(scaleX, scaleY);
+                    float scale = Math.min(scaleX, scaleY) * zoomFactor;
                     float drawWidth = ts.getTilewidth() * scale;
                     float drawHeight = ts.getTileheight() * scale;
                     float drawX = (getWidth() - drawWidth) / 2f;
@@ -33111,7 +34106,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     tileset ts = tilesets.get(seltset);
                     float scaleX = getWidth() / (float) ts.getTilewidth();
                     float scaleY = getHeight() / (float) ts.getTileheight();
-                    float scale = Math.min(scaleX, scaleY);
+                    float scale = Math.min(scaleX, scaleY) * zoomFactor;
                     
                     float deltaX = (x - lastTouchX) / scale;
                     float deltaY = -(y - lastTouchY) / scale;
@@ -33153,7 +34148,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             float scaleX = getWidth() / (float) ts.getTilewidth();
             float scaleY = getHeight() / (float) ts.getTileheight();
-            float scale = Math.min(scaleX, scaleY);
+            float scale = Math.min(scaleX, scaleY) * zoomFactor;
             float drawWidth = ts.getTilewidth() * scale;
             float drawHeight = ts.getTileheight() * scale;
             float drawX = getX() + (getWidth() - drawWidth) / 2f;
