@@ -39,6 +39,10 @@ public class tileset
 	private Texture etc1texture;
 	private String tsxfile;
 	private boolean usetsx;
+	private boolean collection;
+	private String collectionBase = "";
+	private Map<Integer, Integer> gridIndexForTileId = new HashMap<Integer, Integer>();
+	private int[] gridIndexToTileId = new int[0];
 	public tileset(){
 		
 	}
@@ -329,6 +333,8 @@ public class tileset
 			terrainTileMap = new HashMap<String, List<Integer>>();
 			for (int i = 0; i < tiles.size(); i++) {
 				tile t = tiles.get(i);
+				if (collection && !hasTileImage(t.getTileID()))
+					continue;
 				String key = t.getTerrainString();
 				List<Integer> list = terrainTileMap.get(key);
 				if (list == null) {
@@ -344,5 +350,113 @@ public class tileset
 
 	public void clearTerrainCache() {
 		terrainTileMap = null;
+	}
+
+	public boolean isCollection() {
+		return collection;
+	}
+
+	public void setCollection(boolean collection) {
+		this.collection = collection;
+	}
+
+	public String getCollectionBase() {
+		return collectionBase;
+	}
+
+	public void setCollectionBase(String collectionBase) {
+		this.collectionBase = collectionBase != null ? collectionBase : "";
+	}
+
+	public void setGridIndexMap(Map<Integer, Integer> gridIndexForTileId) {
+		this.gridIndexForTileId = gridIndexForTileId != null
+				? new HashMap<Integer, Integer>(gridIndexForTileId)
+				: new HashMap<Integer, Integer>();
+		rebuildGridIndexToTileIdArray();
+	}
+
+	public void mapLocalTileToGrid(int localTileId, int gridIndex) {
+		if (!collection || localTileId < 0 || gridIndex < 0)
+			return;
+		gridIndexForTileId.put(localTileId, gridIndex);
+		rebuildGridIndexToTileIdArray();
+	}
+
+	private void rebuildGridIndexToTileIdArray() {
+		int maxGi = -1;
+		for (Integer gi : gridIndexForTileId.values()) {
+			if (gi > maxGi)
+				maxGi = gi;
+		}
+		if (maxGi < 0) {
+			gridIndexToTileId = new int[0];
+			return;
+		}
+		gridIndexToTileId = new int[maxGi + 1];
+		java.util.Arrays.fill(gridIndexToTileId, -1);
+		for (Map.Entry<Integer, Integer> e : gridIndexForTileId.entrySet()) {
+			int gi = e.getValue();
+			if (gi >= 0 && gi < gridIndexToTileId.length)
+				gridIndexToTileId[gi] = e.getKey();
+		}
+	}
+
+	public int getGridIndex(int localTileId) {
+		if (!collection)
+			return localTileId;
+		Integer gi = gridIndexForTileId.get(localTileId);
+		return gi != null ? gi : -1;
+	}
+
+	public int getSprX(int localTileId) {
+		return CollectionTilesetOps.getSprX(this, localTileId);
+	}
+
+	public int getSprY(int localTileId) {
+		return CollectionTilesetOps.getSprY(this, localTileId);
+	}
+
+	public int getSrcX(int localTileId) {
+		return CollectionTilesetOps.getSrcX(this, localTileId);
+	}
+
+	public int getSrcY(int localTileId) {
+		return CollectionTilesetOps.getSrcY(this, localTileId);
+	}
+
+	public boolean hasTileImage(int localTileId) {
+		return CollectionTilesetOps.hasTileImage(this, localTileId);
+	}
+
+	public int nextCollectionTileId() {
+		return CollectionTilesetOps.nextTileId(this);
+	}
+
+	public tile getTileMeta(int localTileId) {
+		for (int i = 0; i < tiles.size(); i++) {
+			if (tiles.get(i).getTileID() == localTileId)
+				return tiles.get(i);
+		}
+		return null;
+	}
+
+	public int findTileListIndex(int localTileId) {
+		for (int i = 0; i < tiles.size(); i++) {
+			if (tiles.get(i).getTileID() == localTileId)
+				return i;
+		}
+		return -1;
+	}
+
+	public int getTileIdAtGridIndex(int gridIndex) {
+		if (!collection)
+			return gridIndex;
+		if (gridIndex < 0 || gridIndex >= gridIndexToTileId.length)
+			return -1;
+		return gridIndexToTileId[gridIndex];
+	}
+
+	public long getGidAtGridIndex(int gridIndex) {
+		return (long) getFirstgid() + getTileIdAtGridIndex(gridIndex);
 	}
 }

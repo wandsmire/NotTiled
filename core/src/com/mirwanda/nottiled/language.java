@@ -108,7 +108,14 @@ public class language
 	String copyall;
 	String setopacity;
 	String addimagetileset;
+	String importcollection;
+	String newcollectiontileset;
+	String addtileimages;
+	String appendcollectionfiles;
+	String selectcollectionfiles;
+	String deselectall;
 	String importtsxfile;
+	String importtsxfolder;
 	String importfolder;
 	String saveastsx;
 	String set;
@@ -229,6 +236,7 @@ public class language
 	String interval;
 	String saving;
 	String mapbackups;
+	String prettyprinttmx;
 	String backupmax;
 	String backupinterval;
 	String restorebackup;

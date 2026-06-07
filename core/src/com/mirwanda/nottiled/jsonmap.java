@@ -146,6 +146,9 @@ public class jsonmap {
     public static class tile{
         int id;
         String terrain;
+        String image;
+        int imagewidth;
+        int imageheight;
         property[] properties;
         animate[] animation;
         objectgrp objectgroup;

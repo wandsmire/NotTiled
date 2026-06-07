@@ -26,6 +26,12 @@ public class tile
 	
 	private int[] terrain = new int[]{-1,-1,-1,-1};
 
+	private String imageSource = "";
+	private int imageWidth;
+	private int imageHeight;
+	private int imageSrcX;
+	private int imageSrcY;
+
 
 
 	public void setTerrain(int[] terrain)
@@ -234,5 +240,49 @@ public int getTileID()
 {
 return tileID;
 }
+
+	public String getImageSource() {
+		return imageSource;
+	}
+
+	public void setImageSource(String imageSource) {
+		this.imageSource = imageSource != null ? imageSource : "";
+	}
+
+	public int getImageWidth() {
+		return imageWidth;
+	}
+
+	public void setImageWidth(int imageWidth) {
+		this.imageWidth = imageWidth;
+	}
+
+	public int getImageHeight() {
+		return imageHeight;
+	}
+
+	public void setImageHeight(int imageHeight) {
+		this.imageHeight = imageHeight;
+	}
+
+	public boolean hasImage() {
+		return imageSource != null && !imageSource.isEmpty();
+	}
+
+	public int getImageSrcX() {
+		return imageSrcX;
+	}
+
+	public void setImageSrcX(int imageSrcX) {
+		this.imageSrcX = imageSrcX;
+	}
+
+	public int getImageSrcY() {
+		return imageSrcY;
+	}
+
+	public void setImageSrcY(int imageSrcY) {
+		this.imageSrcY = imageSrcY;
+	}
 
 }

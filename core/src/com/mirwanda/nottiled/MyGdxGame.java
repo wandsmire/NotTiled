@@ -51,6 +51,7 @@ import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
+import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Button;
 import com.badlogic.gdx.scenes.scene2d.ui.Cell;
@@ -236,7 +237,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     float lowFpsTimer = 0f;
     boolean turun = false;
 
-    boolean sShowGrid = true, sShowFPS, sAutoSave, sSaveTsx = false, sShowGID = false, sMinimap, sShowAnimations = false;
+    boolean sShowGrid = true, sShowFPS, sAutoSave, sSaveTsx = false, sShowGID = false, sMinimap, sShowAnimations = false,
+            sPrettyPrintTmx = false;
     boolean sMultiSelect = false;
     java.util.Map<Integer, String> oldobjdata = new java.util.HashMap<>();
     boolean sShowCoords;
@@ -412,7 +414,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     layer tempLayer;
     tileset tempTset;
     float initialZoom;
-    CheckBox cbShowGrid, cbShowFPS, cbShowGid, cbShowCoords, cbAutoSave, cbShowGidmap, cbResize, cbMinimap, cbShowAnimations;
+    CheckBox cbShowGrid, cbShowFPS, cbShowGid, cbShowCoords, cbAutoSave, cbShowGidmap, cbResize, cbMinimap, cbShowAnimations,
+            cbPrettyPrintTmx;
     CheckBox cbCustomUI;
     TextField tfCustomFont;
     TextButton bBack3;
@@ -493,6 +496,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     TextField fImportWidth;
     TextField fImportHeight;
     CheckBox cImportEmbed;
+    CheckBox cImportCollection;
     TextButton bImportOK;
     Table tLinks;
     TextButton bRusted, bManual;
@@ -522,6 +526,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     DragAndDrop tsetMgrDnd;
     java.util.HashMap<Integer, TextureRegionDrawable> rowBgCache = new java.util.HashMap<Integer, TextureRegionDrawable>();
     TextureRegionDrawable rowBgDragging, rowBgDropIntoGroup, rowBgDropBefore, rowBgDropAfter;
+    TextureRegionDrawable dndDropLineDrawable;
+    Image layerMgrDropLine, tsetMgrDropLine;
+    boolean layerMgrDragging, tsetMgrDragging;
     TextPromptListener pNewLayer;
     TextPromptListener pNewLayerSC;
     TextPromptListener pAddMacro;
@@ -541,7 +548,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     TextPromptListener pEditProp2;
     TextButton bAddProp, bRemoveProp, bMoveProp, bEditProp, bBackProp;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> ltsetlist;
-    TextButton bAddTset, bRemoveTset, bMoveTset, bBackTset, bPropTset, bImportFolder;
+    TextButton bAddTset, bRemoveTset, bMoveTset, bBackTset, bPropTset, bImportFolder, bImportTsxFolder;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> lobjlist;
     TextPromptListener pNewObjLayer;
     TextPromptListener pNewObjLayerSC;
@@ -1428,7 +1435,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         lang.addimagetileset = "???";
         lang.importtsxfile = "???";
+        lang.importtsxfolder = "???";
         lang.importfolder = "???";
+        lang.importcollection = "???";
+        lang.newcollectiontileset = "???";
+        lang.addtileimages = "???";
+        lang.appendcollectionfiles = "???";
+        lang.selectcollectionfiles = "???";
+        lang.deselectall = "???";
         lang.saveastsx = "???";
 
         lang.set = "???";
@@ -1597,8 +1611,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             movepointer -= delta;
         if (movepointer <= 0 && movepointer != -1) {
             if (body != null && activeobjtoolmode != 2) {
-                body.setTransform(-99, 99, 0);
-                body.setAwake(true);
+                body.setAwake(false);
+                body.setTransform(-99999f, 99999f, 0);
             }
             movepointer = -1;
         }
@@ -2489,6 +2503,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (tilePicker == "terraineditor") {
                         lastStage = null;
                         if (frompick) {
+                            restorePickAutoAfterTerrainEditor();
                             onToPicker();
                             frompick = false;
                         } else {
@@ -2519,14 +2534,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 tiles = tilesets.get(selTsetID).getTiles();
                 if (tiles.get(selTileID).getAnimation().size() > 0) {
 
-                    ini = tiles.get(selTileID).getActiveFrameID();
+                    int frameLocalId = (int) tiles.get(selTileID).getActiveFrameID();
 
                     int xpos = 160;
                     int ypos = -100;
-                    int xpos2 = (int) ini % ts.getWidth();
-                    int ypos2 = (int) ini / ts.getWidth();
+                    int srcX = ts.getSrcX(frameLocalId);
+                    int srcY = ts.getSrcY(frameLocalId);
 
-                    ui.draw(ts.getTexture(), xpos, ypos, xpos2 * ts.getTilewidth(), ypos2 * ts.getTileheight(),
+                    ui.draw(ts.getTexture(), xpos, ypos, srcX, srcY,
                             ts.getTilewidth(), ts.getTileheight());
 
                 } else {
@@ -2566,36 +2581,139 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         terrainPickerCachedTsetID = -1;
     }
 
+    private int terrainAutotileCenterLocalId(tileset ts, int terrainRowIndex) {
+        if (ts == null || terrainRowIndex < 0 || terrainRowIndex >= ts.getTerrains().size())
+            return -1;
+        java.util.List<tile> tiles = ts.getTiles();
+        for (int i = 0; i < tiles.size(); i++) {
+            tile t = tiles.get(i);
+            if (t.isTerrainForEditor() && t.isCenter() && t.getTerrain()[0] == terrainRowIndex
+                    && ts.hasTileImage(t.getTileID()))
+                return t.getTileID();
+        }
+        return terrainRepresentativeLocalId(ts, terrainRowIndex);
+    }
+
+    /** Terrain icon / brush: use the tile chosen in the terrain definition first. */
+    private int terrainRepresentativeLocalId(tileset ts, int terrainRowIndex) {
+        if (ts == null || terrainRowIndex < 0 || terrainRowIndex >= ts.getTerrains().size())
+            return -1;
+        int fromDef = ts.getTerrains().get(terrainRowIndex).getTile();
+        if (fromDef >= 0 && ts.hasTileImage(fromDef))
+            return fromDef;
+        return -1;
+    }
+
+    private int terrainStripIconLocalId(tileset ts, int terrainRowIndex) {
+        int rep = terrainRepresentativeLocalId(ts, terrainRowIndex);
+        if (rep >= 0)
+            return rep;
+        if (ts == null || terrainRowIndex < 0 || terrainRowIndex >= ts.getTerrains().size())
+            return -1;
+        java.util.List<tile> tiles = ts.getTiles();
+        for (int i = 0; i < tiles.size(); i++) {
+            tile t = tiles.get(i);
+            if (t.isTerrainForEditor() && t.isCenter() && t.getTerrain()[0] == terrainRowIndex
+                    && ts.hasTileImage(t.getTileID()))
+                return t.getTileID();
+        }
+        for (int i = 0; i < tiles.size(); i++) {
+            tile t = tiles.get(i);
+            if (t.isTerrainForEditor() && t.getTerrain()[0] == terrainRowIndex
+                    && ts.hasTileImage(t.getTileID()))
+                return t.getTileID();
+        }
+        return -1;
+    }
+
+    private tile resolveTerrainAutotileCenter(tileset ts, tile t) {
+        if (t == null || ts == null)
+            return t;
+        if (t.isTerrainForEditor() && t.isCenter())
+            return t;
+        if (!t.isTerrainForEditor())
+            return t;
+        int[] tr = t.getTerrain();
+        if (tr == null)
+            return t;
+        int terrainRow = tr[0];
+        for (int i = 0; i < 4; i++) {
+            if (tr[i] >= 0) {
+                terrainRow = tr[i];
+                break;
+            }
+        }
+        int localId = terrainAutotileCenterLocalId(ts, terrainRow);
+        if (localId >= 0) {
+            tile center = ts.getTileMeta(localId);
+            if (center != null)
+                return center;
+        }
+        return t;
+    }
+
+    private void offsetTileTerrainIndices(tile t, int offset) {
+        if (t == null || offset <= 0)
+            return;
+        int[] tr = t.getTerrain();
+        if (tr == null)
+            return;
+        int a = tr[0], b = tr[1], c = tr[2], d = tr[3];
+        if (a >= 0)
+            a += offset;
+        if (b >= 0)
+            b += offset;
+        if (c >= 0)
+            c += offset;
+        if (d >= 0)
+            d += offset;
+        t.setTerrain(a, b, c, d);
+    }
+
+    private tile getOrCreateTileMetaAtGrid(tileset ts, int gridIndex) {
+        if (!ts.isCollection())
+            return getOrCreateTileMeta(ts, gridIndex);
+        int localId = ts.getTileIdAtGridIndex(gridIndex);
+        if (localId >= 0)
+            return getOrCreateTileMeta(ts, localId);
+        localId = ts.nextCollectionTileId();
+        tile tt = new tile();
+        tt.setTileID(localId);
+        ts.addTileMetadata(tt);
+        ts.mapLocalTileToGrid(localId, gridIndex);
+        return ts.getTileMeta(localId);
+    }
+
     private void rebuildTerrainPickerCaches(tileset ts) {
         clearTerrainPickerCaches();
         if (ts == null)
             return;
         int wd = ts.getWidth();
-        int tileCount = ts.getTilecount();
-        if (wd <= 0 || tileCount <= 0)
+        int pickerSlots = CollectionTilesetOps.getPickerGridSlots(ts);
+        if (wd <= 0 || pickerSlots <= 0)
             return;
         int hcw = terrainEditorHalfCellW(ts);
         int hch = terrainEditorHalfCellH(ts);
         int margin = ts.getMargin();
         int spacing = ts.getSpacing();
         int chunkSize = 1024;
-        int numChunks = (tileCount + chunkSize - 1) / chunkSize;
+        int numChunks = (pickerSlots + chunkSize - 1) / chunkSize;
         for (int chunk = 0; chunk < numChunks; chunk++) {
             com.badlogic.gdx.graphics.g2d.SpriteCache cache = new com.badlogic.gdx.graphics.g2d.SpriteCache(chunkSize, true);
             cache.beginCache();
             int startIdx = chunk * chunkSize;
-            int endIdx = Math.min(startIdx + chunkSize, tileCount);
+            int endIdx = Math.min(startIdx + chunkSize, pickerSlots);
             for (int i = startIdx; i < endIdx; i++) {
+                int localId = ts.isCollection() ? ts.getTileIdAtGridIndex(i) : i;
+                if (localId < 0)
+                    continue;
                 boolean isAnimated = false;
                 if (sShowAnimations) {
                     java.util.List<tile> tiles = ts.getTiles();
-                    int tilesize = tiles.size();
-                    if (tilesize > 0) {
-                        for (int n = 0; n < tilesize; n++) {
-                            if (tiles.get(n).getAnimation().size() > 0 && i == tiles.get(n).getTileID()) {
-                                isAnimated = true;
-                                break;
-                            }
+                    for (int n = 0; n < tiles.size(); n++) {
+                        if (tiles.get(n).getAnimation().size() > 0 && localId == tiles.get(n).getTileID()) {
+                            isAnimated = true;
+                            break;
                         }
                     }
                 }
@@ -2603,12 +2721,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     continue;
                 int xpos = i % wd;
                 int ypos = i / wd;
-                int xpos2 = xpos;
-                int ypos2 = ypos;
+                int srcX = ts.getSrcX(localId);
+                int srcY = ts.getSrcY(localId);
                 cache.add(ts.getTexture(), xpos * hcw, -ypos * hch, hcw, hch,
-                        (xpos2 * (ts.getTilewidth() + spacing)) + margin,
-                        (ypos2 * (ts.getTileheight() + spacing)) + margin,
-                        ts.getTilewidth(), ts.getTileheight(), false, false);
+                        srcX, srcY, ts.getTilewidth(), ts.getTileheight(), false, false);
             }
             int cacheID = cache.endCache();
             terrainPickerCaches.add(cache);
@@ -2625,33 +2741,33 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         int wd = ts.getWidth();
-        int tileCount = ts.getTilecount();
-        if (wd <= 0 || tileCount <= 0) {
+        int pickerSlots = CollectionTilesetOps.getPickerGridSlots(ts);
+        if (wd <= 0 || pickerSlots <= 0) {
             return;
         }
 
         int chunkSize = 1024;
-        int numChunks = (tileCount + chunkSize - 1) / chunkSize;
+        int numChunks = (pickerSlots + chunkSize - 1) / chunkSize;
 
         for (int chunk = 0; chunk < numChunks; chunk++) {
             com.badlogic.gdx.graphics.g2d.SpriteCache cache = new com.badlogic.gdx.graphics.g2d.SpriteCache(chunkSize, true);
             cache.beginCache();
 
             int startIdx = chunk * chunkSize;
-            int endIdx = Math.min(startIdx + chunkSize, tileCount);
+            int endIdx = Math.min(startIdx + chunkSize, pickerSlots);
 
             for (int i = startIdx; i < endIdx; i++) {
                 boolean isAnimated = false;
                 if (sShowAnimations) {
+                    int localAtGrid = ts.isCollection() ? ts.getTileIdAtGridIndex(i) : i;
                     java.util.List<tile> tiles = ts.getTiles();
                     int tilesize = tiles.size();
-                    if (tilesize > 0) {
+                    if (localAtGrid >= 0 && tilesize > 0) {
                         for (int n = 0; n < tilesize; n++) {
-                            if (tiles.get(n).getAnimation().size() > 0) {
-                                if (i == tiles.get(n).getTileID()) {
-                                    isAnimated = true;
-                                    break;
-                                }
+                            if (tiles.get(n).getAnimation().size() > 0
+                                    && localAtGrid == tiles.get(n).getTileID()) {
+                                isAnimated = true;
+                                break;
                             }
                         }
                     }
@@ -2660,18 +2776,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     continue;
                 }
 
-                long ini = i;
-                long ist = ini;
                 int xpos = i % wd;
                 int ypos = i / wd;
-                int xpos2 = (int) (ist) % wd;
-                int ypos2 = (int) (ist) / wd;
-                int margin = ts.getMargin();
-                int spacing = ts.getSpacing();
+                int localId = ts.isCollection() ? ts.getTileIdAtGridIndex(i) : i;
+                if (localId < 0)
+                    continue;
+                int srcX = ts.getSrcX(localId);
+                int srcY = ts.getSrcY(localId);
 
                 cache.add(ts.getTexture(), xpos * ts.getTilewidth(), -ypos * ts.getTileheight(),
-                        (xpos2 * (ts.getTilewidth() + spacing)) + margin,
-                        (ypos2 * (ts.getTileheight() + spacing)) + margin, ts.getTilewidth(), ts.getTileheight());
+                        srcX, srcY, ts.getTilewidth(), ts.getTileheight());
             }
 
             int cacheID = cache.endCache();
@@ -2728,9 +2842,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             ts = tilesets.get(seltset);
 
             java.util.List<terrain> tr = tilesets.get(seltset).getTerrains();
+            int[] terrainIconLocalIds = null;
+            if (tr.size() > 0) {
+                terrainIconLocalIds = new int[tr.size()];
+                for (int n = 0; n < tr.size(); n++)
+                    terrainIconLocalIds[n] = terrainStripIconLocalId(ts, n);
+            }
 
             int wd = ts.getWidth();
-            int tileCount = ts.getTilecount();
+            int pickerSlots = CollectionTilesetOps.getPickerGridSlots(ts);
             int tileWidth = ts.getTilewidth();
             int tileHeight = ts.getTileheight();
             int Tswa = ts.getTilewidth();
@@ -2745,7 +2865,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             int startCol = 0;
             int endCol = wd - 1;
             int startRow = 0;
-            int totalRows = wd > 0 ? (tileCount + wd - 1) / wd : 0;
+            int totalRows = ts.isCollection() ? ts.getHeight()
+                    : (wd > 0 ? (pickerSlots + wd - 1) / wd : 0);
             int endRow = totalRows - 1;
 
             if (tileWidth > 0 && tileHeight > 0 && wd > 0) {
@@ -2764,7 +2885,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 pickerCacheValid = false;
             }
 
-            if (pickAuto) { // auto list
+            if (pickAuto && !isTerrainEditorPicker()) { // auto list
                 int startTerrainRow = 0;
                 int endTerrainRow = tr.size() - 1;
                 if (tileHeight > 0) {
@@ -2774,17 +2895,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (endTerrainRow >= tr.size()) endTerrainRow = tr.size() - 1;
                 }
                 for (int n = startTerrainRow; n <= endTerrainRow; n++) {
-                    // tile t =tilesets.get( seltset ).getTiles().get( tr.get( n ).getTile());
-                    long ist = tr.get(n).getTile();// t.getTileID();//-tilesets.get(seltset).getFirstgid();
-                    int wd2 = ts.getWidth();
-                    int xpos2 = (int) (ist) % wd2;
-                    int ypos2 = (int) (ist) / wd2;
-                    int margin = ts.getMargin();
-                    int spacing = ts.getSpacing();
+                    int localId = terrainIconLocalIds != null ? terrainIconLocalIds[n] : terrainStripIconLocalId(ts, n);
+                    if (localId < 0 || !ts.hasTileImage(localId))
+                        continue;
+                    int srcX = ts.getSrcX(localId);
+                    int srcY = ts.getSrcY(localId);
 
                     batch.draw(ts.getTexture(), 0, -n * ts.getTileheight(),
-                            (xpos2 * (ts.getTilewidth() + spacing)) + margin,
-                            (ypos2 * (ts.getTileheight() + spacing)) + margin, ts.getTilewidth(), ts.getTileheight());
+                            srcX, srcY, ts.getTilewidth(), ts.getTileheight());
                     str1.getData().setScale(.2f);
                     str1.draw(batch, tr.get(n).getName(), 24, 14 + -n * ts.getTileheight(), ts.getTilewidth(),
                             Align.left, false);
@@ -2808,7 +2926,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     int chunkSize = 1024;
                     for (int chunk = 0; chunk < pickerCaches.size(); chunk++) {
                         int startIdx = chunk * chunkSize;
-                        int endIdx = Math.min(startIdx + chunkSize, tileCount);
+                        int endIdx = Math.min(startIdx + chunkSize, pickerSlots);
                         int startRowOfChunk = startIdx / wd;
                         int endRowOfChunk = (endIdx - 1) / wd;
 
@@ -2832,17 +2950,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         batch.begin();
                         java.util.List<tile> tiles = ts.getTiles();
                         int tilesize = tiles.size();
-                        for (int i = 0; i < tileCount; i++) {
+                        for (int i = 0; i < pickerSlots; i++) {
                             boolean isAnimated = false;
                             tile animTile = null;
-                            if (tilesize > 0) {
+                            int localAtGrid = ts.isCollection() ? ts.getTileIdAtGridIndex(i) : i;
+                            if (localAtGrid >= 0 && tilesize > 0) {
                                 for (int n = 0; n < tilesize; n++) {
-                                    if (tiles.get(n).getAnimation().size() > 0) {
-                                        if (i == tiles.get(n).getTileID()) {
-                                            isAnimated = true;
-                                            animTile = tiles.get(n);
-                                            break;
-                                        }
+                                    if (tiles.get(n).getAnimation().size() > 0
+                                            && localAtGrid == tiles.get(n).getTileID()) {
+                                        isAnimated = true;
+                                        animTile = tiles.get(n);
+                                        break;
                                     }
                                 }
                             }
@@ -2851,14 +2969,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 int ypos = i / wd;
                                 if (xpos >= startCol && xpos <= endCol && ypos >= startRow && ypos <= endRow) {
                                     long activeFrameId = animTile.getActiveFrameID();
-                                    int xpos2 = (int) (activeFrameId) % wd;
-                                    int ypos2 = (int) (activeFrameId) / wd;
-                                    int margin = ts.getMargin();
-                                    int spacing = ts.getSpacing();
-
+                                    int srcX = ts.getSrcX((int) activeFrameId);
+                                    int srcY = ts.getSrcY((int) activeFrameId);
                                     batch.draw(ts.getTexture(), xpos * ts.getTilewidth(), -ypos * ts.getTileheight(),
-                                            (xpos2 * (ts.getTilewidth() + spacing)) + margin,
-                                            (ypos2 * (ts.getTileheight() + spacing)) + margin, ts.getTilewidth(), ts.getTileheight());
+                                            srcX, srcY, ts.getTilewidth(), ts.getTileheight());
                                 }
                             }
                         }
@@ -2869,34 +2983,33 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     for (int y = startRow; y <= endRow; y++) {
                         for (int x = startCol; x <= endCol; x++) {
                             int i = y * wd + x;
-                            if (i >= ts.getTilecount()) continue;
+                            if (i >= pickerSlots) continue;
 
                             long ini = i;
-                            long ist = ini;
-                            if (sShowAnimations) {
+                            int localAtGrid = ts.isCollection() ? ts.getTileIdAtGridIndex(i) : i;
+                            long frameLocalId = localAtGrid >= 0 ? localAtGrid : i;
+                            if (sShowAnimations && localAtGrid >= 0) {
                                 java.util.List<tile> tiles = ts.getTiles();
                                 int tilesize = tiles.size();
                                 if (tilesize > 0) {
                                     for (int n = 0; n < tilesize; n++) {
-                                        if (tiles.get(n).getAnimation().size() > 0) {
-                                            if (i == tiles.get(n).getTileID()) {
-                                                ist = tiles.get(n).getActiveFrameID();
-                                                break;
-                                            }
+                                        if (tiles.get(n).getAnimation().size() > 0
+                                                && localAtGrid == tiles.get(n).getTileID()) {
+                                            frameLocalId = tiles.get(n).getActiveFrameID();
+                                            break;
                                         }
                                     }
                                 }
                             }
+                            if (localAtGrid < 0)
+                                continue;
                             int xpos = x;
                             int ypos = y;
-                            int xpos2 = (int) (ist) % wd;
-                            int ypos2 = (int) (ist) / wd;
-                            int margin = ts.getMargin();
-                            int spacing = ts.getSpacing();
+                            int srcX = ts.getSrcX((int) frameLocalId);
+                            int srcY = ts.getSrcY((int) frameLocalId);
 
                             batch.draw(ts.getTexture(), xpos * ts.getTilewidth(), -ypos * ts.getTileheight(),
-                                    (xpos2 * (ts.getTilewidth() + spacing)) + margin,
-                                    (ypos2 * (ts.getTileheight() + spacing)) + margin, ts.getTilewidth(), ts.getTileheight());
+                                    srcX, srcY, ts.getTilewidth(), ts.getTileheight());
                         }
                     }
                     batch.end();
@@ -2907,32 +3020,41 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     for (int y = startRow; y <= endRow; y++) {
                         for (int x = startCol; x <= endCol; x++) {
                             int i = y * wd + x;
-                            if (i >= ts.getTilecount()) continue;
+                            if (i >= pickerSlots) continue;
 
-                            long ini = i;
+                            int localAtGrid = ts.isCollection() ? ts.getTileIdAtGridIndex(i) : i;
                             boolean terrain = false, autotl = false;
 
-                            if (tr.size() > 0) {
-                                    for (int n = 0; n < tr.size(); n++) {
-                                        if (ini == tr.get(n).getTile()) {
+                            if (terrainIconLocalIds != null) {
+                                if (localAtGrid >= 0) {
+                                    for (int n = 0; n < terrainIconLocalIds.length; n++) {
+                                        if (localAtGrid == terrainIconLocalIds[n]) {
                                             terrain = true;
+                                            break;
                                         }
                                     }
+                                }
                             }
 
                             if (sShowGID || terrain || autotl) {
                                 int xpos = x;
                                 int ypos = y;
 
-                                if (sShowGID) {
+                                if (sShowGID && localAtGrid >= 0) {
+                                    long gid = ts.getFirstgid() + (long) localAtGrid;
                                     str1.getData().setScale(0.1f);
-                                    str1.draw(batch, Long.toString(ini + tilesets.get(seltset).getFirstgid()),
+                                    str1.draw(batch, Long.toString(gid),
                                             (float) xpos * ts.getTilewidth() + 2,
                                             (float) -ypos * ts.getTileheight() + ts.getTileheight() - 2, ts.getTilewidth(),
                                             Align.left, false);
-                                    str1.draw(batch, Long.toString(ini), (float) xpos * ts.getTilewidth() + 2,
+                                    str1.draw(batch, Long.toString(localAtGrid), (float) xpos * ts.getTilewidth() + 2,
                                             (float) -ypos * ts.getTileheight() + ts.getTileheight() - 10, ts.getTilewidth(),
                                             Align.left, false);
+                                    if (ts.isCollection()) {
+                                        str1.draw(batch, "@" + i, (float) xpos * ts.getTilewidth() + 2,
+                                                (float) -ypos * ts.getTileheight() + ts.getTileheight() - 18,
+                                                ts.getTilewidth(), Align.left, false);
+                                    }
 
                                     str1.getData().setScale(1f);
                                 }
@@ -2972,7 +3094,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 int cch = terrainEditorCornerCellH(ts);
                 int gridW = ts.getWidth() * 2;
                 int gridH = ts.getHeight() * 2;
-                float lineW = terrainEditorGridLineWidth(ts);
+                float tileLineW = terrainEditorGridLineWidth(ts);
+                float subLineW = Math.max(0.35f, tileLineW * 0.35f);
                 float gridTop = hch;
                 float gridBottom = hch - cch * gridH;
                 int gridStartCol = (int) Math.floor(minX / ccw);
@@ -2983,10 +3106,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (gridEndCol > gridW) gridEndCol = gridW;
                 if (gridStartRow < 0) gridStartRow = 0;
                 if (gridEndRow > gridH) gridEndRow = gridH;
-                for (int i = gridStartCol; i <= gridEndCol; i++)
-                    sr.rectLine(ccw * i, gridTop, ccw * i, gridBottom, lineW);
-                for (int j = gridStartRow; j <= gridEndRow; j++)
-                    sr.rectLine(0, gridTop - cch * j, ccw * gridW, gridTop - cch * j, lineW);
+                for (int i = gridStartCol; i <= gridEndCol; i++) {
+                    boolean tileEdge = (i % 2) == 0;
+                    sr.setColor(0, 0, 0, tileEdge ? 0.5f : 0.18f);
+                    sr.rectLine(ccw * i, gridTop, ccw * i, gridBottom, tileEdge ? tileLineW : subLineW);
+                }
+                for (int j = gridStartRow; j <= gridEndRow; j++) {
+                    boolean tileEdge = (j % 2) == 0;
+                    sr.setColor(0, 0, 0, tileEdge ? 0.5f : 0.18f);
+                    sr.rectLine(0, gridTop - cch * j, ccw * gridW, gridTop - cch * j, tileEdge ? tileLineW : subLineW);
+                }
             } else if (!pickAuto) {
                 int gridStartCol = startCol;
                 int gridEndCol = endCol + 1;
@@ -3054,7 +3183,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 for (int y = startRow; y <= endRow; y++) {
                     for (int x = startCol; x <= endCol; x++) {
                         int i = y * wd + x;
-                        if (i >= ts.getTilecount()) continue;
+                        if (i >= pickerSlots) continue;
                         if (massprops.get(i)) {
                             sr.setColor(1, 0, 0, 0.5f);
                             sr.rect(x * ts.getTilewidth(), -y * ts.getTileheight(), ts.getTilewidth(),
@@ -3070,7 +3199,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 for (int y = startRow; y <= endRow; y++) {
                     for (int x = startCol; x <= endCol; x++) {
                         int i = y * wd + x;
-                        if (i >= ts.getTilecount()) continue;
+                        if (i >= pickerSlots) continue;
                         if (massprops.get(i)) {
                             sr.rect(x * ts.getTilewidth(), -y * ts.getTileheight(), ts.getTilewidth(),
                                     ts.getTileheight());
@@ -3085,7 +3214,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 int cch = terrainEditorCornerCellH(ts);
                 int curTerrain = tilesets.get(selTsetID).getSelTerrain();
                 int teWd = ts.getWidth();
-                int teTotalRows = teWd > 0 ? (ts.getTilecount() + teWd - 1) / teWd : 0;
+                int teTotalRows = ts.isCollection() ? ts.getHeight()
+                        : (teWd > 0 ? (CollectionTilesetOps.getPickerGridSlots(ts) + teWd - 1) / teWd : 0);
                 float teMinX = tilecam.position.x - (tilecam.viewportWidth * tilecam.zoom) / 2f;
                 float teMaxX = tilecam.position.x + (tilecam.viewportWidth * tilecam.zoom) / 2f;
                 float teMinY = tilecam.position.y - (tilecam.viewportHeight * tilecam.zoom) / 2f;
@@ -3101,11 +3231,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     tile teTile = teTiles.get(n);
                     if (!teTile.isTerrainForEditor())
                         continue;
-                    int i = teTile.getTileID();
-                    if (i < 0 || i >= ts.getTilecount())
+                    int gi = ts.getGridIndex(teTile.getTileID());
+                    if (gi < 0 || gi >= CollectionTilesetOps.getPickerGridSlots(ts))
                         continue;
-                    int x = i % teWd;
-                    int y = i / teWd;
+                    int x = gi % teWd;
+                    int y = gi / teWd;
                     if (x < teStartCol || x > teEndCol || y < teStartRow || y > teEndRow)
                         continue;
                     int[] curNodes = teTile.getTerrain();
@@ -3398,6 +3528,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     boolean pickAuto = false;
     boolean curpickAuto = false;
+    boolean pickAutoBeforeTerrainEditor = false;
 
     private void drawGrid() {
         if (cammode != "View only") {
@@ -3820,10 +3951,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     }
                                 }
 
-                                sprX = (int) (mm - tilesets.get(initset).getFirstgid())
-                                        % (tilesets.get(initset).getWidth());
-                                sprY = (int) (mm - tilesets.get(initset).getFirstgid())
-                                        / (tilesets.get(initset).getWidth());
+                                resolveSprite(tilesets.get(initset), (int) (mm - tilesets.get(initset).getFirstgid()));
                                 margin = tilesets.get(initset).getMargin();
                                 spacing = tilesets.get(initset).getSpacing();
                                 Tswa = tilesets.get(initset).getTilewidth();
@@ -3852,50 +3980,50 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     case "20":// diagonal flip 'THIS ONE"
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f,
-                                                1f, 90f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                                1f, 90f, sprX,
+                                                sprY, Tswa, Tsha, true, false);
                                         break;
                                     case "40":// flipy nd
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f,
-                                                1f, 0f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
+                                                1f, 0f, sprX,
+                                                sprY, Tswa, Tsha, false, true);
                                         break;
                                     case "60":// 270 degrees clockwise nd
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f,
-                                                1f, 90f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                                1f, 90f, sprX,
+                                                sprY, Tswa, Tsha, false, false);
                                         break;
                                     case "80":// flipx nd
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f,
-                                                1f, 0f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                                1f, 0f, sprX,
+                                                sprY, Tswa, Tsha, true, false);
                                         break;
                                     case "a0":// 90 degress cw
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f,
-                                                1f, 270f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                                1f, 270f, sprX,
+                                                sprY, Tswa, Tsha, false, false);
                                         break;
                                     case "c0":// 180 degrees cw nd
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f,
-                                                1f, 180f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                                1f, 180f, sprX,
+                                                sprY, Tswa, Tsha, false, false);
                                         break;
                                     case "e0":// 180 degrees ccw "AND THIS ONE"
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f,
-                                                1f, 270f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                                1f, 270f, sprX,
+                                                sprY, Tswa, Tsha, true, false);
                                         break;
                                     case "00":
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f,
-                                                1f, 0f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                                1f, 0f, sprX,
+                                                sprY, Tswa, Tsha, false, false);
                                         break;
                                 }
                                 drawers.add(tempdrawer);
@@ -4071,10 +4199,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     }
                                 }
 
-                                sprX = (int) (mm - tilesets.get(initset).getFirstgid())
-                                        % (tilesets.get(initset).getWidth());
-                                sprY = (int) (mm - tilesets.get(initset).getFirstgid())
-                                        / (tilesets.get(initset).getWidth());
+                                resolveSprite(tilesets.get(initset), (int) (mm - tilesets.get(initset).getFirstgid()));
                                 margin = tilesets.get(initset).getMargin();
                                 spacing = tilesets.get(initset).getSpacing();
                                 Tswa = tilesets.get(initset).getTilewidth();
@@ -4103,50 +4228,50 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     case "20":// diagonal flip 'THIS ONE"
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f,
-                                                1f, 90f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                                1f, 90f, sprX,
+                                                sprY, Tswa, Tsha, true, false);
                                         break;
                                     case "40":// flipy nd
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f,
-                                                1f, 0f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
+                                                1f, 0f, sprX,
+                                                sprY, Tswa, Tsha, false, true);
                                         break;
                                     case "60":// 270 degrees clockwise nd
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f,
-                                                1f, 90f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                                1f, 90f, sprX,
+                                                sprY, Tswa, Tsha, false, false);
                                         break;
                                     case "80":// flipx nd
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f,
-                                                1f, 0f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                                1f, 0f, sprX,
+                                                sprY, Tswa, Tsha, true, false);
                                         break;
                                     case "a0":// 90 degress cw
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f,
-                                                1f, 270f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                                1f, 270f, sprX,
+                                                sprY, Tswa, Tsha, false, false);
                                         break;
                                     case "c0":// 180 degrees cw nd
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f,
-                                                1f, 180f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                                1f, 180f, sprX,
+                                                sprY, Tswa, Tsha, false, false);
                                         break;
                                     case "e0":// 180 degrees ccw "AND THIS ONE"
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f,
-                                                1f, 270f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                                1f, 270f, sprX,
+                                                sprY, Tswa, Tsha, true, false);
                                         break;
                                     case "00":
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 -ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f,
-                                                1f, 0f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                                1f, 0f, sprX,
+                                                sprY, Tswa, Tsha, false, false);
                                         break;
                                 }
                                 drawers.add(tempdrawer);
@@ -4532,8 +4657,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         tiles = tilesets.get(initset).getTiles();
                         tilesize = tiles.size();
 
-                        sprX = (int) (mm - tilesets.get(initset).getFirstgid()) % (tilesets.get(initset).getWidth());
-                        sprY = (int) (mm - tilesets.get(initset).getFirstgid()) / (tilesets.get(initset).getWidth());
+                        resolveSprite(tilesets.get(initset), (int) (mm - tilesets.get(initset).getFirstgid()));
                         margin = tilesets.get(initset).getMargin();
                         spacing = tilesets.get(initset).getSpacing();
                         Tswa = tilesets.get(initset).getTilewidth();
@@ -4551,43 +4675,43 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         switch (flag) {
                             case "20":// diagonal flip 'THIS ONE"
                                 tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin,
-                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, sprX,
+                                        sprY, Tswa, Tsha, true, false);
                                 break;
                             case "40":// flipy nd
                                 tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin,
-                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, sprX,
+                                        sprY, Tswa, Tsha, false, true);
                                 break;
                             case "60":// 270 degrees clockwise nd
                                 tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin,
-                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, sprX,
+                                        sprY, Tswa, Tsha, false, false);
                                 break;
                             case "80":// flipx nd
                                 tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin,
-                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, sprX,
+                                        sprY, Tswa, Tsha, true, false);
                                 break;
                             case "a0":// 90 degress cw
                                 tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin,
-                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, sprX,
+                                        sprY, Tswa, Tsha, false, false);
                                 break;
                             case "c0":// 180 degrees cw nd
                                 tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin,
-                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, sprX,
+                                        sprY, Tswa, Tsha, false, false);
                                 break;
                             case "e0":// 180 degrees ccw "AND THIS ONE"
                                 tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin,
-                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, sprX,
+                                        sprY, Tswa, Tsha, true, false);
                                 break;
                             case "00":
                                 tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin,
-                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, sprX,
+                                        sprY, Tswa, Tsha, false, false);
                                 break;
 
                         }
@@ -4738,8 +4862,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         tiles = tilesets.get(initset).getTiles();
                         tilesize = tiles.size();
 
-                        sprX = (int) (mm - tilesets.get(initset).getFirstgid()) % (tilesets.get(initset).getWidth());
-                        sprY = (int) (mm - tilesets.get(initset).getFirstgid()) / (tilesets.get(initset).getWidth());
+                        resolveSprite(tilesets.get(initset), (int) (mm - tilesets.get(initset).getFirstgid()));
                         margin = tilesets.get(initset).getMargin();
                         spacing = tilesets.get(initset).getSpacing();
                         Tswa = tilesets.get(initset).getTilewidth();
@@ -4757,43 +4880,43 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         switch (flag) {
                             case "20":
                                 tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin,
-                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, sprX,
+                                        sprY, Tswa, Tsha, true, false);
                                 break;
                             case "40":
                                 tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin,
-                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, sprX,
+                                        sprY, Tswa, Tsha, false, true);
                                 break;
                             case "60":
                                 tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin,
-                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, sprX,
+                                        sprY, Tswa, Tsha, false, false);
                                 break;
                             case "80":
                                 tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin,
-                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, sprX,
+                                        sprY, Tswa, Tsha, true, false);
                                 break;
                             case "a0":
                                 tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin,
-                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, sprX,
+                                        sprY, Tswa, Tsha, false, false);
                                 break;
                             case "c0":
                                 tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin,
-                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, sprX,
+                                        sprY, Tswa, Tsha, false, false);
                                 break;
                             case "e0":
                                 tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin,
-                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, sprX,
+                                        sprY, Tswa, Tsha, true, false);
                                 break;
                             case "00":
                                 tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin,
-                                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                        Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, sprX,
+                                        sprY, Tswa, Tsha, false, false);
                                 break;
                         }
                         drawers.add(tempdrawer);
@@ -4949,8 +5072,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                 }
 
-                sprX = (int) (mm - tilesets.get(initset).getFirstgid()) % (tilesets.get(initset).getWidth());
-                sprY = (int) (mm - tilesets.get(initset).getFirstgid()) / (tilesets.get(initset).getWidth());
+                {
+                    int localTile = (int) (mm - tilesets.get(initset).getFirstgid());
+                    sprX = tilesets.get(initset).getSprX(localTile);
+                    sprY = tilesets.get(initset).getSprY(localTile);
+                }
                 margin = tilesets.get(initset).getMargin();
                 spacing = tilesets.get(initset).getSpacing();
                 Tswa = tilesets.get(initset).getTilewidth();
@@ -4968,43 +5094,43 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 switch (flag) {
                     case "20":
                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin,
-                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, sprX,
+                                sprY, Tswa, Tsha, true, false);
                         break;
                     case "40":
                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin,
-                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
+                                Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, sprX,
+                                sprY, Tswa, Tsha, false, true);
                         break;
                     case "60":
                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, (sprX * (Tswa + spacing)) + margin,
-                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, sprX,
+                                sprY, Tswa, Tsha, false, false);
                         break;
                     case "80":
                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin,
-                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, sprX,
+                                sprY, Tswa, Tsha, true, false);
                         break;
                     case "a0":
                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin,
-                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, sprX,
+                                sprY, Tswa, Tsha, false, false);
                         break;
                     case "c0":
                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, (sprX * (Tswa + spacing)) + margin,
-                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, sprX,
+                                sprY, Tswa, Tsha, false, false);
                         break;
                     case "e0":
                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, (sprX * (Tswa + spacing)) + margin,
-                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, sprX,
+                                sprY, Tswa, Tsha, true, false);
                         break;
                     case "00":
                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, (sprX * (Tswa + spacing)) + margin,
-                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, sprX,
+                                sprY, Tswa, Tsha, false, false);
                         break;
                 }
                 drawers.add(tempdrawer);
@@ -5785,17 +5911,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             }
 
                             if (ox.getGid() != 0) {
-                                int sprX = (ox.getGid() - tilesets.get(kyut).getFirstgid())
-                                        % (tilesets.get(kyut).getWidth());
-                                int sprY = (ox.getGid() - tilesets.get(kyut).getFirstgid())
-                                        / (tilesets.get(kyut).getWidth());
+                                int localOx = ox.getGid() - tilesets.get(kyut).getFirstgid();
+                                int sprX = tilesets.get(kyut).getSprX(localOx);
+                                int sprY = tilesets.get(kyut).getSprY(localOx);
                                 int margin = tilesets.get(kyut).getMargin();
                                 int spacing = tilesets.get(kyut).getSpacing();
                                 int Tswa = tilesets.get(kyut).getTilewidth();
                                 int Tsha = tilesets.get(kyut).getTileheight();
 
                                 TextureRegion region = new TextureRegion(tilesets.get(kyut).getTexture(),
-                                        (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin, Tswa,
+                                        sprX, sprY, Tswa,
                                         Tsha);
                                 Sprite s = new Sprite(region);
                                 // s.setX( ox.getX() );
@@ -6677,16 +6802,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         break;
                     }
                 }
-                sprX = (int) (num - tilesets.get(initset).getFirstgid()) % (tilesets.get(initset).getWidth());
-                sprY = (int) (num - tilesets.get(initset).getFirstgid()) / (tilesets.get(initset).getWidth());
+                resolveSprite(tilesets.get(initset), (int) (num - tilesets.get(initset).getFirstgid()));
                 margin = tilesets.get(initset).getMargin();
                 spacing = tilesets.get(initset).getSpacing();
                 Tswa = tilesets.get(initset).getTilewidth();
                 Tsha = tilesets.get(initset).getTileheight();
                 // TextureRegion region= new TextureRegion(tilesets.get(initset).getTexture(),
                 // );
-                uidraw(tilesets.get(initset).getTexture(), gui.picker, 1, (sprX * (Tswa + spacing)) + margin,
-                        (sprY * (Tsha + spacing)) + margin, Tswa, Tsha);
+                uidraw(tilesets.get(initset).getTexture(), gui.picker, 1, sprX,
+                        sprY, Tswa, Tsha);
             }
 
             if (tilesets.size() > 0 && mode == "tile" && swatches) {
@@ -6703,8 +6827,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             break;
                         }
                     }
-                    sprX = (int) (num - tilesets.get(initset).getFirstgid()) % (tilesets.get(initset).getWidth());
-                    sprY = (int) (num - tilesets.get(initset).getFirstgid()) / (tilesets.get(initset).getWidth());
+                    resolveSprite(tilesets.get(initset), (int) (num - tilesets.get(initset).getFirstgid()));
                     margin = tilesets.get(initset).getMargin();
                     spacing = tilesets.get(initset).getSpacing();
                     Tswa = tilesets.get(initset).getTilewidth();
@@ -6716,28 +6839,28 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         mgn = 0;
                     switch (ii + 1) {
                         case 1:
-                            uidraw(tilesets.get(initset).getTexture(), gui.sw1, mgn, (sprX * (Tswa + spacing)) + margin,
-                                    (sprY * (Tsha + spacing)) + margin, Tswa, Tsha);
+                            uidraw(tilesets.get(initset).getTexture(), gui.sw1, mgn, sprX,
+                                    sprY, Tswa, Tsha);
                             break;
                         case 2:
-                            uidraw(tilesets.get(initset).getTexture(), gui.sw2, mgn, (sprX * (Tswa + spacing)) + margin,
-                                    (sprY * (Tsha + spacing)) + margin, Tswa, Tsha);
+                            uidraw(tilesets.get(initset).getTexture(), gui.sw2, mgn, sprX,
+                                    sprY, Tswa, Tsha);
                             break;
                         case 3:
-                            uidraw(tilesets.get(initset).getTexture(), gui.sw3, mgn, (sprX * (Tswa + spacing)) + margin,
-                                    (sprY * (Tsha + spacing)) + margin, Tswa, Tsha);
+                            uidraw(tilesets.get(initset).getTexture(), gui.sw3, mgn, sprX,
+                                    sprY, Tswa, Tsha);
                             break;
                         case 4:
-                            uidraw(tilesets.get(initset).getTexture(), gui.sw4, mgn, (sprX * (Tswa + spacing)) + margin,
-                                    (sprY * (Tsha + spacing)) + margin, Tswa, Tsha);
+                            uidraw(tilesets.get(initset).getTexture(), gui.sw4, mgn, sprX,
+                                    sprY, Tswa, Tsha);
                             break;
                         case 5:
-                            uidraw(tilesets.get(initset).getTexture(), gui.sw5, mgn, (sprX * (Tswa + spacing)) + margin,
-                                    (sprY * (Tsha + spacing)) + margin, Tswa, Tsha);
+                            uidraw(tilesets.get(initset).getTexture(), gui.sw5, mgn, sprX,
+                                    sprY, Tswa, Tsha);
                             break;
                         case 6:
-                            uidraw(tilesets.get(initset).getTexture(), gui.sw6, mgn, (sprX * (Tswa + spacing)) + margin,
-                                    (sprY * (Tsha + spacing)) + margin, Tswa, Tsha);
+                            uidraw(tilesets.get(initset).getTexture(), gui.sw6, mgn, sprX,
+                                    sprY, Tswa, Tsha);
                             break;
                     }
                 }
@@ -7699,6 +7822,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         String faths = basepath + "NotTiled/sample/template/" + ltemplate.getSelected();
         FileHandle fh = Gdx.files.absolute(faths);
         if (!fh.exists()) {
+            loadingfile = false;
             msgbox("Template file not found. Please redownload.");
             return;
         }
@@ -8320,8 +8444,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             loadtsx(thefile, tilesets, curdir);
                         }
 
+                    } else if (cImportCollection.isChecked()) {
+                        addImageToCollectionTileset(thefile, null);
                     } else {
-                        // sending filehandle, drive letter is irrelevant
                         addImageTset(thefile);
                     }
 
@@ -8401,6 +8526,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         fImportWidth.setTextFieldFilter(tffint);
         fImportHeight.setTextFieldFilter(tffint);
         cImportEmbed = new CheckBox(z.embedtileset, skin);
+        cImportCollection = new CheckBox(z.importcollection, skin);
 
         tImport = new Table();
         tImport.setFillParent(true);
@@ -8416,6 +8542,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tImport.add(new Label(z.tileheight, skin)).width(btnx / 2).padTop(10);
         tImport.add(fImportHeight).width(btnx / 2).row();
         tImport.add(cImportEmbed).colspan(2).row();
+        tImport.add(cImportCollection).colspan(2).row();
         tImport.add(bImportOK).colspan(2).row();
 
     }
@@ -10724,10 +10851,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     }
                                 }
 
-                                sprX = (int) (mm - tilesets.get(initset).getFirstgid())
-                                        % (tilesets.get(initset).getWidth());
-                                sprY = (int) (mm - tilesets.get(initset).getFirstgid())
-                                        / (tilesets.get(initset).getWidth());
+                                resolveSprite(tilesets.get(initset), (int) (mm - tilesets.get(initset).getFirstgid()));
                                 margin = tilesets.get(initset).getMargin();
                                 spacing = tilesets.get(initset).getSpacing();
                                 Tswa = tilesets.get(initset).getTilewidth();
@@ -10745,43 +10869,43 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     case "20":// diagonal flip
                                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety,
                                                 Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f,
-                                                (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                                sprX, sprY,
                                                 Tswa, Tsha, true, true);
                                         break;
                                     case "40":// flipy
                                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety,
                                                 Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f,
-                                                (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                                sprX, sprY,
                                                 Tswa, Tsha, false, true);
                                         break;
                                     case "60":// 270 degrees clockwise
                                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety,
                                                 Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f,
-                                                (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                                sprX, sprY,
                                                 Tswa, Tsha, false, false);
                                         break;
                                     case "80":// flipx
                                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety,
                                                 Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f,
-                                                (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                                sprX, sprY,
                                                 Tswa, Tsha, true, false);
                                         break;
                                     case "a0":// 90 degress cw
                                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety,
                                                 Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f,
-                                                (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                                sprX, sprY,
                                                 Tswa, Tsha, false, false);
                                         break;
                                     case "c0":// 180 degrees cw
                                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety,
                                                 Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 180f,
-                                                (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                                sprX, sprY,
                                                 Tswa, Tsha, false, false);
                                         break;
                                     case "00":
                                         tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety,
                                                 Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f,
-                                                (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                                sprX, sprY,
                                                 Tswa, Tsha, false, false);
                                         break;
                                 }
@@ -11053,10 +11177,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     }
                                 }
 
-                                sprX = (int) (mm - tilesets.get(initset).getFirstgid())
-                                        % (tilesets.get(initset).getWidth());
-                                sprY = (int) (mm - tilesets.get(initset).getFirstgid())
-                                        / (tilesets.get(initset).getWidth());
+                                resolveSprite(tilesets.get(initset), (int) (mm - tilesets.get(initset).getFirstgid()));
                                 margin = tilesets.get(initset).getMargin();
                                 spacing = tilesets.get(initset).getSpacing();
                                 Tswa = tilesets.get(initset).getTilewidth();
@@ -11076,50 +11197,50 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     case "20":// diagonal flip 'THIS ONE"
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f,
-                                                1f, 90f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                                1f, 90f, sprX,
+                                                sprY, Tswa, Tsha, true, false);
                                         break;
                                     case "40":// flipy nd
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f,
-                                                0f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, true);
+                                                0f, sprX,
+                                                sprY, Tswa, Tsha, false, true);
                                         break;
                                     case "60":// 270 degrees clockwise nd
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f,
-                                                90f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                                90f, sprX,
+                                                sprY, Tswa, Tsha, false, false);
                                         break;
                                     case "80":// flipx nd
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f,
-                                                0f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                                0f, sprX,
+                                                sprY, Tswa, Tsha, true, false);
                                         break;
                                     case "a0":// 90 degress cw
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f,
-                                                270f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                                270f, sprX,
+                                                sprY, Tswa, Tsha, false, false);
                                         break;
                                     case "c0":// 180 degrees cw nd
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f,
-                                                180f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                                180f, sprX,
+                                                sprY, Tswa, Tsha, false, false);
                                         break;
                                     case "e0":// 180 degrees ccw "AND THIS ONE"
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f,
-                                                270f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, true, false);
+                                                270f, sprX,
+                                                sprY, Tswa, Tsha, true, false);
                                         break;
                                     case "00":
                                         tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                                 ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f,
-                                                0f, (sprX * (Tswa + spacing)) + margin,
-                                                (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                                0f, sprX,
+                                                sprY, Tswa, Tsha, false, false);
                                         break;
                                 }
                                 drawers.add(tempdrawer);
@@ -11272,10 +11393,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                             }
 
-                            sprX = (int) (mm - tilesets.get(initset).getFirstgid())
-                                    % (tilesets.get(initset).getWidth());
-                            sprY = (int) (mm - tilesets.get(initset).getFirstgid())
-                                    / (tilesets.get(initset).getWidth());
+                            resolveSprite(tilesets.get(initset), (int) (mm - tilesets.get(initset).getFirstgid()));
                             margin = tilesets.get(initset).getMargin();
                             spacing = tilesets.get(initset).getSpacing();
                             Tswa = tilesets.get(initset).getTilewidth();
@@ -11295,49 +11413,49 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 case "20":// diagonal flip 'THIS ONE"
                                     tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                             ypos * Tsh + tty - offsety, Tswad / 2f, Tshad / 2f, Tswad, Tshad, 1f, 1f,
-                                            90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                            90f, sprX, sprY,
                                             Tswa, Tsha, true, false);
                                     break;
                                 case "40":// flipy nd
                                     tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                             ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 0f,
-                                            (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                            sprX, sprY,
                                             Tswa, Tsha, false, true);
                                     break;
                                 case "60":// 270 degrees clockwise nd
                                     tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                             ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 90f,
-                                            (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                            sprX, sprY,
                                             Tswa, Tsha, false, false);
                                     break;
                                 case "80":// flipx nd
                                     tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                             ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 0f,
-                                            (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                            sprX, sprY,
                                             Tswa, Tsha, true, false);
                                     break;
                                 case "a0":// 90 degress cw
                                     tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                             ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 270f,
-                                            (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                            sprX, sprY,
                                             Tswa, Tsha, false, false);
                                     break;
                                 case "c0":// 180 degrees cw nd
                                     tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                             ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 180f,
-                                            (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                            sprX, sprY,
                                             Tswa, Tsha, false, false);
                                     break;
                                 case "e0":// 180 degrees ccw "AND THIS ONE"
                                     tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                             ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 270f,
-                                            (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                            sprX, sprY,
                                             Tswa, Tsha, true, false);
                                     break;
                                 case "00":
                                     tempdrawer.setdrawer(initset, xpos * Tsw + ttx - offsetx,
                                             ypos * Tsh + tty - offsety, Tsw / 2f, Tsh / 2f, Tswad, Tshad, 1f, 1f, 0f,
-                                            (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                            sprX, sprY,
                                             Tswa, Tsha, false, false);
                                     break;
                             }
@@ -11516,10 +11634,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 }
                             }
 
-                            sprX = (int) (mm - tilesets.get(initset).getFirstgid())
-                                    % (tilesets.get(initset).getWidth());
-                            sprY = (int) (mm - tilesets.get(initset).getFirstgid())
-                                    / (tilesets.get(initset).getWidth());
+                            resolveSprite(tilesets.get(initset), (int) (mm - tilesets.get(initset).getFirstgid()));
                             margin = tilesets.get(initset).getMargin();
                             spacing = tilesets.get(initset).getSpacing();
                             Tswa = tilesets.get(initset).getTilewidth();
@@ -11538,43 +11653,43 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 case "20":// diagonal flip
                                     tempdrawer.setdrawer(initset, xpos * Tsw - offsetx + addsubsetx,
                                             ypos * Tsh - offsety + addsubsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f,
-                                            0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                            0f, sprX, sprY,
                                             Tswa, Tsha, true, true);
                                     break;
                                 case "40":// flipy
                                     tempdrawer.setdrawer(initset, xpos * Tsw - offsetx + addsubsetx,
                                             ypos * Tsh - offsety + addsubsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f,
-                                            0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                            0f, sprX, sprY,
                                             Tswa, Tsha, false, true);
                                     break;
                                 case "60":// 270 degrees clockwise
                                     tempdrawer.setdrawer(initset, xpos * Tsw - offsetx + addsubsetx,
                                             ypos * Tsh - offsety + addsubsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f,
-                                            90f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                            90f, sprX, sprY,
                                             Tswa, Tsha, false, false);
                                     break;
                                 case "80":// flipx
                                     tempdrawer.setdrawer(initset, xpos * Tsw - offsetx + addsubsetx,
                                             ypos * Tsh - offsety + addsubsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f,
-                                            0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                            0f, sprX, sprY,
                                             Tswa, Tsha, true, false);
                                     break;
                                 case "a0":// 90 degress cw
                                     tempdrawer.setdrawer(initset, xpos * Tsw - offsetx + addsubsetx,
                                             ypos * Tsh - offsety + addsubsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f,
-                                            270f, (sprX * (Tswa + spacing)) + margin,
-                                            (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                            270f, sprX,
+                                            sprY, Tswa, Tsha, false, false);
                                     break;
                                 case "c0":// 180 degrees cw
                                     tempdrawer.setdrawer(initset, xpos * Tsw - offsetx + addsubsetx,
                                             ypos * Tsh - offsety + addsubsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f,
-                                            180f, (sprX * (Tswa + spacing)) + margin,
-                                            (sprY * (Tsha + spacing)) + margin, Tswa, Tsha, false, false);
+                                            180f, sprX,
+                                            sprY, Tswa, Tsha, false, false);
                                     break;
                                 case "00":
                                     tempdrawer.setdrawer(initset, xpos * Tsw - offsetx + addsubsetx,
                                             ypos * Tsh - offsety + addsubsety, Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f,
-                                            0f, (sprX * (Tswa + spacing)) + margin, (sprY * (Tsha + spacing)) + margin,
+                                            0f, sprX, sprY,
                                             Tswa, Tsha, false, false);
                                     break;
                             }
@@ -12217,13 +12332,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     temprotype = t;
                     temprovalue = v;
                     for (int o = 0; o < massprops.size(); o++) {
+                        int localId = tilesets.get(seltset).getTileIdAtGridIndex(o);
+                        if (localId < 0)
+                            continue;
                         boolean ada = false;
                         int ka = 0;
                         property tgt = null;
                         java.util.List<property> ppt = null;
 
                         for (int k = 0; k < tilesets.get(seltset).getTiles().size(); k++) {
-                            if (tilesets.get(seltset).getTiles().get(k).getTileID() == o) {
+                            if (tilesets.get(seltset).getTiles().get(k).getTileID() == localId) {
                                 ppt = tilesets.get(seltset).getTiles().get(k).getProperties();
                                 if (ppt == null) {
                                     ada = false;
@@ -12256,7 +12374,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             if (massprops.get(o)) {
                                 boolean adatile = false;
                                 for (int k = 0; k < tilesets.get(seltset).getTiles().size(); k++) {
-                                    if (tilesets.get(seltset).getTiles().get(k).getTileID() == o) {
+                                    if (tilesets.get(seltset).getTiles().get(k).getTileID() == localId) {
                                         adatile = true;
                                         ka = k;
                                     }
@@ -12266,7 +12384,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 pt.getProperties().add(new property(temproname, temprotype, temprovalue));
                                 if (!adatile) {
                                     tile tile = new tile();
-                                    tile.setTileID(o);
+                                    tile.setTileID(localId);
                                     tile.getProperties().add(new property(temproname, temprotype, temprovalue));
                                     ka = tilesets.get(seltset).addTileMetadata(tile);
                                 } else {
@@ -12286,11 +12404,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     temprotype = t;
                     temprovalue = v;
                     massprops.clear();
-                    for (int i = 0; i < tilesets.get(selTsetID).getTilecount(); i++) {
+                    tileset massTs = tilesets.get(selTsetID);
+                    int massSlots = CollectionTilesetOps.getPickerGridSlots(massTs);
+                    for (int i = 0; i < massSlots; i++) {
+                        int localId = massTs.getTileIdAtGridIndex(i);
                         boolean ada = false;
+                        if (localId < 0) {
+                            massprops.add(false);
+                            continue;
+                        }
 
-                        for (int k = 0; k < tilesets.get(selTsetID).getTiles().size(); k++) {
-                            if (tilesets.get(selTsetID).getTiles().get(k).getTileID() == i) {
+                        for (int k = 0; k < massTs.getTiles().size(); k++) {
+                            if (massTs.getTiles().get(k).getTileID() == localId) {
                                 java.util.List<property> ppt = tilesets.get(selTsetID).getTiles().get(k)
                                         .getProperties();
                                 for (int j = 0; j < ppt.size(); j++) {
@@ -12583,6 +12708,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         sShowGIDmap = prefs.getBoolean("gidmap", false);
         sShowCoords = prefs.getBoolean("coords", false);
         sSaveTsx = prefs.getBoolean("tsx", false);
+        sPrettyPrintTmx = prefs.getBoolean("prettyprinttmx", false);
         scrollspeed = prefs.getInteger("ss", 3);
         sShowCustomGrid = prefs.getBoolean("customgrid", false);
         sNoScrollBoundary = prefs.getBoolean("noscrollboundary", false);
@@ -12648,6 +12774,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 sdGridOpacity.setValue(gridOpacity);
                 fAutoSaveInterval.setText(Integer.toString(autosaveInterval));
                 cbMapBackups.setChecked(sMapBackups);
+                cbPrettyPrintTmx.setChecked(sPrettyPrintTmx);
                 fBackupMax.setText(Integer.toString(backupMaxCount));
                 fBackupInterval.setText(Integer.toString(backupMinIntervalMin));
                 cbShowGid.setChecked(sShowGID);
@@ -12714,6 +12841,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         fAutoSaveInterval.setTextFieldFilter(tffint);
 
         cbMapBackups = new CheckBox(z.mapbackups, skin);
+        cbPrettyPrintTmx = new CheckBox(z.prettyprinttmx, skin);
         fBackupMax = new TextField(Integer.toString(backupMaxCount), skin);
         fBackupMax.setTextFieldFilter(tffint);
         fBackupInterval = new TextField(Integer.toString(backupMinIntervalMin), skin);
@@ -12783,6 +12911,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 sMapBackups = cbMapBackups.isChecked();
                 prefs.putBoolean("mapbackups", sMapBackups).flush();
+                sPrettyPrintTmx = cbPrettyPrintTmx.isChecked();
+                prefs.putBoolean("prettyprinttmx", sPrettyPrintTmx).flush();
                 try {
                     backupMaxCount = Integer.parseInt(fBackupMax.getText());
                 } catch (NumberFormatException e) {
@@ -12944,6 +13074,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tPreference2.add(new Label(z.interval, skin)).width(btnx / 2);
         tPreference2.add(fAutoSaveInterval).width(btnx / 2).row();
         tPreference2.add(cbMapBackups).colspan(2).left().row();
+        tPreference2.add(cbPrettyPrintTmx).colspan(2).left().row();
         tPreference2.add(new Label(z.backupmax, skin)).width(btnx / 2);
         tPreference2.add(fBackupMax).width(btnx / 2).row();
         tPreference2.add(new Label(z.backupinterval, skin)).width(btnx / 2);
@@ -13015,6 +13146,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             z.saving = "Saving...";
         if (z.mapbackups == null)
             z.mapbackups = "Keep map backups (TMX)";
+        if (z.prettyprinttmx == null)
+            z.prettyprinttmx = "Pretty print TMX on save";
         if (z.backupmax == null)
             z.backupmax = "Max backups";
         if (z.backupinterval == null)
@@ -13382,19 +13515,80 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
+    private void ensureDndDropLineDrawable() {
+        if (dndDropLineDrawable == null)
+            dndDropLineDrawable = tintedRowBg(new Color(0.15f, 0.9f, 1f, 1f));
+    }
+
+    private Image ensureListDropLine(Table listTable, Image line) {
+        ensureDndDropLineDrawable();
+        if (line == null) {
+            line = new Image(dndDropLineDrawable);
+            line.setTouchable(Touchable.disabled);
+            line.setVisible(false);
+        }
+        if (line.getParent() != listTable)
+            listTable.addActor(line);
+        return line;
+    }
+
+    private void showDropLine(Table listTable, Image line, Actor anchor, boolean topEdge) {
+        if (listTable == null || anchor == null)
+            return;
+        line = ensureListDropLine(listTable, line);
+        float lineH = 3f;
+        float anchorY = topEdge ? anchor.getHeight() : 0f;
+        Vector2 pos = anchor.localToActorCoordinates(listTable, new Vector2(0f, anchorY));
+        float w = listTable.getWidth();
+        if (w <= 0f)
+            w = btnx - 40f;
+        line.setSize(w, lineH);
+        line.setPosition(0f, topEdge ? pos.y - lineH : pos.y);
+        line.setVisible(true);
+        line.toFront();
+    }
+
+    private void hideDropLine(Image line) {
+        if (line != null)
+            line.setVisible(false);
+    }
+
+    private Actor createDndEdgeAutoScroller(final ScrollPane pane, final boolean layerList) {
+        Actor scroller = new Actor() {
+            @Override
+            public void act(float delta) {
+                boolean dragging = layerList ? layerMgrDragging : tsetMgrDragging;
+                if (!dragging || pane == null)
+                    return;
+                float edge = 56f;
+                float speed = 320f;
+                Vector2 local = pane.screenToLocalCoordinates(new Vector2(Gdx.input.getX(), Gdx.input.getY()));
+                float h = pane.getHeight();
+                // Actor y=0 is the bottom edge: low y = visual bottom, high y = visual top.
+                if (local.y < edge)
+                    pane.setScrollY(pane.getScrollY() + speed * delta);
+                else if (local.y > h - edge)
+                    pane.setScrollY(pane.getScrollY() - speed * delta);
+            }
+        };
+        scroller.setTouchable(Touchable.disabled);
+        return scroller;
+    }
+
     private enum LayerDropMode {
         BEFORE, INTO_GROUP, AFTER
     }
 
     private LayerDropMode resolveDropMode(layer dstLayer, float y, float rowH) {
+        // libGDX actor coords: y=0 is the bottom edge, so the visual top of a row has the larger y.
         if (dstLayer.getType() == layer.Type.GROUP) {
-            if (y < rowH * 0.28f)
-                return LayerDropMode.BEFORE;
             if (y > rowH * 0.72f)
+                return LayerDropMode.BEFORE;
+            if (y < rowH * 0.28f)
                 return LayerDropMode.AFTER;
             return LayerDropMode.INTO_GROUP;
         }
-        if (y < rowH * 0.5f)
+        if (y >= rowH * 0.5f)
             return LayerDropMode.BEFORE;
         return LayerDropMode.AFTER;
     }
@@ -13480,13 +13674,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public boolean drag(DragAndDrop.Source source, DragAndDrop.Payload payload,
                                 float x, float y, int pointer) {
-                gap.setBackground(rowBgDropBefore);
+                showDropLine(layerMgrListTable, layerMgrDropLine, gap, false);
                 return true;
             }
 
             @Override
             public void reset(DragAndDrop.Source source, DragAndDrop.Payload payload) {
-                gap.setBackground((Drawable) null);
+                hideDropLine(layerMgrDropLine);
             }
 
             @Override
@@ -13650,6 +13844,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         layerMgrScrollPane.setFadeScrollBars(false);
         layerMgrScrollPane.setScrollingDisabled(true, false);
         tLayerMgrMain.add(layerMgrScrollPane).width(btnx).expandY().fillY().padBottom(5).row();
+        tLayerMgrMain.addActor(createDndEdgeAutoScroller(layerMgrScrollPane, true));
 
         TextButton btnBack = new TextButton(z.ok, skin);
         btnBack.addListener(new ChangeListener() {
@@ -13675,6 +13870,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         ensureLayerManagerShell(rowH);
         ensureLayerMgrDropDrawables();
         layerMgrListTable.clear();
+        layerMgrDropLine = ensureListDropLine(layerMgrListTable, layerMgrDropLine);
         if (layerMgrDnd != null)
             layerMgrDnd.clear();
         layerMgrDnd = new DragAndDrop();
@@ -13823,6 +14019,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 @Override
                 public DragAndDrop.Payload dragStart(InputEvent event, float x, float y, int pointer) {
                     if (!isLongPressed) return null;
+                    layerMgrDragging = true;
                     Label ghost = new Label(lay.getName(), skin);
                     ghost.setColor(1, 1, 0.5f, 0.85f);
                     payload.setDragActor(ghost);
@@ -13833,6 +14030,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 @Override
                 public void dragStop(InputEvent event, float x, float y, int pointer,
                                      DragAndDrop.Payload payload, DragAndDrop.Target target) {
+                    layerMgrDragging = false;
+                    hideDropLine(layerMgrDropLine);
                     updateLayerManagerHighlight();
                 }
             });
@@ -13854,16 +14053,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             && isDescendant(dstLayer.getId(), dragged.getId()))
                         return false;
                     LayerDropMode mode = resolveDropMode(dstLayer, y, rowH);
-                    if (mode == LayerDropMode.INTO_GROUP)
+                    if (mode == LayerDropMode.INTO_GROUP) {
+                        hideDropLine(layerMgrDropLine);
                         row.setBackground(rowBgDropIntoGroup);
-                    else if (mode == LayerDropMode.BEFORE)
-                        row.setBackground(rowBgDropBefore);
-                    else
-                        row.setBackground(rowBgDropAfter);
+                    } else {
+                        applyLayerRowBackground(row, layerIdx);
+                        showDropLine(layerMgrListTable, layerMgrDropLine, row,
+                                mode == LayerDropMode.BEFORE);
+                    }
                     return true;
                 }
                 @Override
                 public void reset(DragAndDrop.Source source, DragAndDrop.Payload payload) {
+                    hideDropLine(layerMgrDropLine);
                     applyLayerRowBackground(row, layerIdx);
                 }
                 @Override
@@ -13877,6 +14079,29 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             });
         }
+
+        Table bottomGap = new Table();
+        layerMgrListTable.add(bottomGap).width(btnx - 40f).height(Math.max(14, rowH * 0.12f)).row();
+        layerMgrDnd.addTarget(new DragAndDrop.Target(bottomGap) {
+            @Override
+            public boolean drag(DragAndDrop.Source source, DragAndDrop.Payload payload,
+                                float x, float y, int pointer) {
+                showDropLine(layerMgrListTable, layerMgrDropLine, bottomGap, true);
+                return true;
+            }
+
+            @Override
+            public void reset(DragAndDrop.Source source, DragAndDrop.Payload payload) {
+                hideDropLine(layerMgrDropLine);
+            }
+
+            @Override
+            public void drop(DragAndDrop.Source source, DragAndDrop.Payload payload,
+                             float x, float y, int pointer) {
+                int from = (Integer) payload.getObject();
+                applyLayerBlockDrop(from, layers.size(), -1);
+            }
+        });
     }
 
     public void showLayerManager() {
@@ -14073,7 +14298,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Gdx.input.setInputProcessor(stage);
         final Dialog optionsDlg = new Dialog("", skin, "dialog");
         Table optionsTable = optionsDlg.getContentTable();
-        float dialogBtnWidth = Math.min(stage.getWidth() * 0.8f, 400f);
+        float dialogBtnWidth = getDialogContentWidth();
 
         Label titleLabel = new Label(lay.getName(), skin);
         titleLabel.setWrap(true);
@@ -14239,7 +14464,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         if (ct.getName() != null)
             fTsPropName.setText(ct.getName());
-        if (ct.getSource() != null)
+        if (ct.isCollection())
+            fTsPropSource.setText(z.importcollection);
+        else if (ct.getSource() != null)
             fTsPropSource.setText(ct.getSource());
         if (ct.getTsxfile() != null)
             fTsPropTsxFile.setText(ct.getTsxfile());
@@ -14376,6 +14603,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tsetMgrScrollPane.setFadeScrollBars(false);
         tsetMgrScrollPane.setScrollingDisabled(true, false);
         tTsetMgrMain.add(tsetMgrScrollPane).width(btnx).expandY().fillY().padBottom(5).row();
+        tTsetMgrMain.addActor(createDndEdgeAutoScroller(tsetMgrScrollPane, false));
 
         TextButton btnBack = new TextButton(z.ok, skin);
         btnBack.addListener(new ChangeListener() {
@@ -14395,6 +14623,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         ensureTilesetManagerShell(rowH);
         ensureLayerMgrDropDrawables();
         tsetMgrListTable.clear();
+        tsetMgrDropLine = ensureListDropLine(tsetMgrListTable, tsetMgrDropLine);
         if (tsetMgrDnd != null)
             tsetMgrDnd.clear();
         tsetMgrDnd = new DragAndDrop();
@@ -14406,13 +14635,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public boolean drag(DragAndDrop.Source source, DragAndDrop.Payload payload,
                                 float x, float y, int pointer) {
-                topGap.setBackground(rowBgDropBefore);
+                showDropLine(tsetMgrListTable, tsetMgrDropLine, topGap, false);
                 return true;
             }
 
             @Override
             public void reset(DragAndDrop.Source source, DragAndDrop.Payload payload) {
-                topGap.setBackground((Drawable) null);
+                hideDropLine(tsetMgrDropLine);
             }
 
             @Override
@@ -14432,10 +14661,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             Table nameCell = new Table();
             nameCell.left();
-            Image typeImg = new Image(new SpriteDrawable(new Sprite(txTypeImage)));
+            Texture tsetTypeTex = ts.isCollection() ? txTypeGroup : txTypeImage;
+            Image typeImg = new Image(new SpriteDrawable(new Sprite(tsetTypeTex)));
             ClickListener rowTapListener = new ClickListener() {
                 @Override
                 public void clicked(InputEvent event, float x, float y) {
+                    if (seltset != tsetIdx)
+                        onActiveTilesetChanged();
                     seltset = tsetIdx;
                     ltsetlist.setSelectedIndex(tsetIdx);
                     adjustPickAuto();
@@ -14500,6 +14732,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 @Override
                 public DragAndDrop.Payload dragStart(InputEvent event, float x, float y, int pointer) {
                     if (!isLongPressed) return null;
+                    tsetMgrDragging = true;
                     Label ghost = new Label(ts.getName(), skin);
                     ghost.setColor(1, 1, 0.5f, 0.85f);
                     payload.setDragActor(ghost);
@@ -14511,6 +14744,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 @Override
                 public void dragStop(InputEvent event, float x, float y, int pointer,
                                      DragAndDrop.Payload payload, DragAndDrop.Target target) {
+                    tsetMgrDragging = false;
+                    hideDropLine(tsetMgrDropLine);
                     updateTilesetManagerHighlight();
                 }
             });
@@ -14523,15 +14758,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     int from = (Integer) payload.getObject();
                     if (from == dstIdx)
                         return false;
-                    if (y < rowH * 0.5f)
-                        row.setBackground(rowBgDropBefore);
-                    else
-                        row.setBackground(rowBgDropAfter);
+                    applyTilesetRowStyle(row, tsetIdx);
+                    showDropLine(tsetMgrListTable, tsetMgrDropLine, row, y >= rowH * 0.5f);
                     return true;
                 }
 
                 @Override
                 public void reset(DragAndDrop.Source source, DragAndDrop.Payload payload) {
+                    hideDropLine(tsetMgrDropLine);
                     applyTilesetRowStyle(row, tsetIdx);
                 }
 
@@ -14541,12 +14775,42 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     int from = (Integer) payload.getObject();
                     if (from == dstIdx)
                         return;
-                    int insertAt = y < rowH * 0.5f ? dstIdx : dstIdx + 1;
+                    int insertAt = y >= rowH * 0.5f ? dstIdx : dstIdx + 1;
                     moveTilesetTo(from, insertAt);
                     rebuildTilesetManagerList();
                 }
             });
         }
+
+        Table bottomGap = new Table();
+        tsetMgrListTable.add(bottomGap).width(btnx - 40f).height(Math.max(14, rowH * 0.12f)).row();
+        tsetMgrDnd.addTarget(new DragAndDrop.Target(bottomGap) {
+            @Override
+            public boolean drag(DragAndDrop.Source source, DragAndDrop.Payload payload,
+                                float x, float y, int pointer) {
+                showDropLine(tsetMgrListTable, tsetMgrDropLine, bottomGap, true);
+                return true;
+            }
+
+            @Override
+            public void reset(DragAndDrop.Source source, DragAndDrop.Payload payload) {
+                hideDropLine(tsetMgrDropLine);
+            }
+
+            @Override
+            public void drop(DragAndDrop.Source source, DragAndDrop.Payload payload,
+                             float x, float y, int pointer) {
+                moveTilesetTo((Integer) payload.getObject(), tilesets.size());
+                rebuildTilesetManagerList();
+            }
+        });
+    }
+
+    private float getDialogContentWidth() {
+        float stageW = stage != null ? stage.getWidth() : 0f;
+        if (stageW > 0f)
+            return stageW * 0.95f;
+        return btnx > 0 ? btnx : ssx * 0.95f;
     }
 
     public void showTilesetManager() {
@@ -14566,7 +14830,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Gdx.input.setInputProcessor(stage);
         final Dialog addDlg = new Dialog("", skin, "dialog");
         Table addTable = addDlg.getContentTable();
-        float dialogBtnWidth = Math.min(stage.getWidth() * 0.8f, 400f);
+        float dialogBtnWidth = getDialogContentWidth();
 
         Label titleLabel = new Label(z.addnew + " " + z.tileset, skin);
         titleLabel.setAlignment(Align.center);
@@ -14595,6 +14859,30 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         });
         addTable.add(btnTsx).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        TextButton btnCollection = new TextButton(z.newcollectiontileset, skin);
+        btnCollection.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                addDlg.hide();
+                frompick = true;
+                fImportWidth.setText(Tsw + "");
+                fImportHeight.setText(Tsh + "");
+                FileDialog(z.selectfolder, "selfoldercollection", "dir", new String[] {}, nullTable);
+            }
+        });
+        addTable.add(btnCollection).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        TextButton btnTsxFolder = new TextButton(z.importtsxfolder, skin);
+        btnTsxFolder.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                addDlg.hide();
+                frompick = true;
+                FileDialog(z.selectfolder, "selfoldertsx", "dir", new String[] {}, nullTable);
+            }
+        });
+        addTable.add(btnTsxFolder).width(dialogBtnWidth).height(btny).pad(5).row();
 
         TextButton btnFolder = new TextButton(z.importfolder, skin);
         btnFolder.addListener(new ChangeListener() {
@@ -14627,7 +14915,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Gdx.input.setInputProcessor(stage);
         final Dialog optionsDlg = new Dialog("", skin, "dialog");
         Table optionsTable = optionsDlg.getContentTable();
-        float dialogBtnWidth = Math.min(stage.getWidth() * 0.8f, 400f);
+        float dialogBtnWidth = getDialogContentWidth();
 
         Label titleLabel = new Label(ts.getName(), skin);
         titleLabel.setWrap(true);
@@ -14668,6 +14956,34 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         });
         optionsTable.add(btnSavePng).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        if (ts.isCollection()) {
+            TextButton btnAddTiles = new TextButton(
+                    z.appendcollectionfiles != null ? z.appendcollectionfiles : z.addtileimages, skin);
+            btnAddTiles.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    optionsDlg.hide();
+                    selTsetID = tsetIdx;
+                    seltset = tsetIdx;
+                    fImportWidth.setText(ts.getTilewidth() + "");
+                    fImportHeight.setText(ts.getTileheight() + "");
+                    frompick = kartu.equals("tile");
+                    if (ts.getCollectionBase() != null && !ts.getCollectionBase().isEmpty()) {
+                        String abs = convertToAbsolutepath(ts.getCollectionBase(), curdir);
+                        FileHandle bh = Gdx.files.absolute(abs);
+                        if (bh.exists() && bh.isDirectory()) {
+                            lastpath = bh.path();
+                            prefs.putString("lastpath", lastpath);
+                            prefs.flush();
+                        }
+                    }
+                    Table exit = frompick ? nullTable : tTsetMgrMain;
+                    FileDialog(z.selectfolder, "pickcollectionappend", "dir", new String[] {}, exit);
+                }
+            });
+            optionsTable.add(btnAddTiles).width(dialogBtnWidth).height(btny).pad(5).row();
+        }
 
         if (!isProtectedPixelArtTileset(tsetIdx)) {
             TextButton btnDel = new TextButton(z.remove, skin);
@@ -15875,15 +16191,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             break;
                         }
                     }
-                    sprX = (num - tilesets.get(initset).getFirstgid()) % (tilesets.get(initset).getWidth());
-                    sprY = (num - tilesets.get(initset).getFirstgid()) / (tilesets.get(initset).getWidth());
+                    resolveSprite(tilesets.get(initset), (int) (num - tilesets.get(initset).getFirstgid()));
                     margin = tilesets.get(initset).getMargin();
                     spacing = tilesets.get(initset).getSpacing();
                     Tswa = tilesets.get(initset).getTilewidth();
                     Tsha = tilesets.get(initset).getTileheight();
                     TextureRegion region = null;
-                    region = new TextureRegion(tilesets.get(initset).getTexture(), (sprX * (Tsw + spacing)) + margin,
-                            (sprY * (Tsh + spacing)) + margin, Tsw, Tsh);
+                    region = new TextureRegion(tilesets.get(initset).getTexture(), sprX, sprY, Tsw, Tsh);
                     if (type.equalsIgnoreCase("assembly")) {
                         region = new TextureRegion(txautopick, 96, 96);
                     }
@@ -16671,6 +16985,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bPropTset = new TextButton(z.properties, skin);
         bUseTsx = new TextButton(z.importtsxfile, skin);
         bImportFolder = new TextButton(z.importfolder, skin);
+        bImportTsxFolder = new TextButton(z.importtsxfolder, skin);
         int aaa = 1;
 
         bTsPropSaveAsTsx = new TextButton(z.saveastsx, skin);
@@ -16717,6 +17032,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 FileDialog(z.selectfolder, "selfolder", "dir", new String[] {}, tTsetMgmt);
+            }
+        });
+
+        bImportTsxFolder.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                frompick = false;
+                FileDialog(z.selectfolder, "selfoldertsx", "dir", new String[] {}, tTsetMgmt);
             }
         });
 
@@ -16769,7 +17092,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                     if (ct.getName() != null)
                         fTsPropName.setText(ct.getName());
-                    if (ct.getSource() != null)
+                    if (ct.isCollection())
+                        fTsPropSource.setText(z.importcollection);
+                    else if (ct.getSource() != null)
                         fTsPropSource.setText(ct.getSource());
                     if (ct.getTsxfile() != null)
                         fTsPropTsxFile.setText(ct.getTsxfile());
@@ -16861,6 +17186,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tTsetMgmt.add(scrollPane8).height(btny * 4).padBottom(2).row();
         tTsetMgmt.add(bAddTset).padBottom(2).row();
         tTsetMgmt.add(bUseTsx).padBottom(2).row();
+        tTsetMgmt.add(bImportTsxFolder).padBottom(2).row();
         tTsetMgmt.add(bImportFolder).padBottom(2).row();
         tTsetMgmt.add(bPropTset).padBottom(2).row();
         tTsetMgmt.add(bTsPropSaveAsTsx).padBottom(2).row();
@@ -16995,13 +17321,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         prefs.putString("Tw", fNTw.getText());
         prefs.putString("Th", fNTh.getText());
         prefs.flush();
+        backToMap();
         if (newFileTemplateFolder != null) {
             selectTemplateFolder(newFileTemplateFolder);
             newtmxfileplus(true);
             cue("newfilecreate");
         } else {
             newtmxfile(true);
-            backToMap();
             cue("newmap");
         }
     }
@@ -17787,13 +18113,39 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return count;
     }
 
-    public int getSingleSelectedTileID() {
+    public int getSingleSelectedGridIndex() {
         for (int i = 0; i < massprops.size(); i++) {
-            if (massprops.get(i)) {
+            if (massprops.get(i))
                 return i;
-            }
         }
         return -1;
+    }
+
+    public int getSingleSelectedTileID() {
+        int gridIdx = getSingleSelectedGridIndex();
+        if (gridIdx < 0)
+            return -1;
+        if (seltset >= 0 && seltset < tilesets.size())
+            return tilesets.get(seltset).getTileIdAtGridIndex(gridIdx);
+        return gridIdx;
+    }
+
+    private int ensureTileMetaListIndex(tileset ts, int localTileId) {
+        int idx = ts.findTileListIndex(localTileId);
+        if (idx >= 0)
+            return idx;
+        tile t = new tile();
+        t.setTileID(localTileId);
+        return ts.addTileMetadata(t);
+    }
+
+    private tile getSelectedTileMeta() {
+        if (seltset < 0 || seltset >= tilesets.size() || selTileID < 0)
+            return null;
+        java.util.List<tile> tiles = tilesets.get(seltset).getTiles();
+        if (selTileID >= tiles.size())
+            return null;
+        return tiles.get(selTileID);
     }
 
     public void loadTileOptions() {
@@ -18159,20 +18511,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
                     tile newanim = new tile();
-                    tileset ts = tilesets.get(seltset);
-                    boolean ada = false;
                     newanim.setTileID(selectedLocalTileID);
-
-                    java.util.List<tile> tiles = tilesets.get(seltset).getTiles();
-                    for (int o = 0; o < tiles.size(); o++) {
-                        if (tiles.get(o).getTileID() == selectedLocalTileID) {
-                            ada = true;
-                            selTileID = o;
-                        }
-                    }
-                    if (!ada) {
-                        selTileID = tilesets.get(seltset).addTileMetadata(newanim);
-                    }
+                    selTileID = ensureTileMetaListIndex(tilesets.get(seltset), selectedLocalTileID);
 
                     refreshProperties(tilesets.get(seltset).getTiles().get(selTileID).getProperties());
 
@@ -18190,19 +18530,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 public void changed(ChangeEvent event, Actor actor) {
                     tile newanim = new tile();
                     tileset ts = tilesets.get(seltset);
-                    boolean ada = false;
                     newanim.setTileID(selectedLocalTileID);
-
-                    java.util.List<tile> tiles = tilesets.get(seltset).getTiles();
-                    for (int o = 0; o < tiles.size(); o++) {
-                        if (tiles.get(o).getTileID() == selectedLocalTileID) {
-                            ada = true;
-                            selTileID = o;
-                        }
-                    }
-                    if (!ada) {
-                        selTileID = tilesets.get(seltset).addTileMetadata(newanim);
-                    }
+                    selTileID = ensureTileMetaListIndex(tilesets.get(seltset), selectedLocalTileID);
 
                     curspr = selectedLocalTileID + ts.getFirstgid();
                     lFrameID.setText(z.animation + ": " + tilesets.get(seltset).getTiles().get(selTileID).getTileID());
@@ -18217,20 +18546,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
                     tile newanim = new tile();
-                    tileset ts = tilesets.get(seltset);
-                    boolean ada = false;
                     newanim.setTileID(selectedLocalTileID);
-
-                    java.util.List<tile> tiles = ts.getTiles();
-                    for (int o = 0; o < tiles.size(); o++) {
-                        if (tiles.get(o).getTileID() == selectedLocalTileID) {
-                            ada = true;
-                            selTileID = o;
-                        }
-                    }
-                    if (!ada) {
-                        selTileID = ts.addTileMetadata(newanim);
-                    }
+                    selTileID = ensureTileMetaListIndex(tilesets.get(seltset), selectedLocalTileID);
 
                     showTileCollisionEditor();
                 }
@@ -18276,8 +18593,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             String propNameToRemove = text.trim();
                             for (int i = 0; i < massprops.size(); i++) {
                                 if (massprops.get(i)) {
+                                    int localId = tilesets.get(seltset).getTileIdAtGridIndex(i);
+                                    if (localId < 0)
+                                        continue;
                                     for (tile t : tilesets.get(seltset).getTiles()) {
-                                        if (t.getTileID() == i) {
+                                        if (t.getTileID() == localId) {
                                             for (int j = t.getProperties().size() - 1; j >= 0; j--) {
                                                 if (t.getProperties().get(j).getName().equalsIgnoreCase(propNameToRemove)) {
                                                     t.getProperties().remove(j);
@@ -18323,10 +18643,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         terrainHoldPending = false;
         clearTerrainPickerCaches();
         if (sender.equals("terraineditor")) {
+            pickAutoBeforeTerrainEditor = pickAuto;
+            pickAuto = false;
             clearTerrainUndoHistory();
             if (tilesets.size() > 0)
                 recenterpick();
         }
+    }
+
+    private void restorePickAutoAfterTerrainEditor() {
+        if (tilesets.size() > 0 && seltset >= 0 && seltset < tilesets.size()
+                && tilesets.get(seltset).getTerrains().size() >= 2) {
+            pickAuto = pickAutoBeforeTerrainEditor;
+        } else {
+            pickAuto = false;
+        }
+        recenterpick();
     }
 
     private void resumeTerrainEditor() {
@@ -18480,7 +18812,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 String tso = "";
                 if (t.getSource() != null)
                     tso = t.getSource();
-                if (!tso.equalsIgnoreCase(fTsPropSource.getText())) {
+                if (!t.isCollection() && !tso.equalsIgnoreCase(fTsPropSource.getText())) {
 
                     // Gdx.app.log( "LLL","LL" );
                     ///
@@ -18588,20 +18920,24 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 } else {
                     t.setSpacing(0);
                 }
-                try {
-                    FileHandle f = Gdx.files
-                            .absolute(curdir + "/" + tilesets.get(ltsetlist.getSelectedIndex()).getSource());
-                    if (f.exists()) {
+                if (t.isCollection()) {
+                    rebuildCollectionTileset(t, curdir);
+                } else {
+                    try {
+                        FileHandle f = Gdx.files
+                                .absolute(curdir + "/" + tilesets.get(ltsetlist.getSelectedIndex()).getSource());
+                        if (f.exists()) {
 
-                        tilesets.get(ltsetlist.getSelectedIndex()).setTexture(new Texture(Gdx.files
-                                .absolute(curdir + "/" + tilesets.get(ltsetlist.getSelectedIndex()).getSource())));
-                        if (tilesets.get(ltsetlist.getSelectedIndex()).getTrans() != null) {
-                            tilesets.get(ltsetlist.getSelectedIndex())
-                                    .setTexture(chromaKey(tilesets.get(ltsetlist.getSelectedIndex()).getTexture(),
-                                            tilesets.get(ltsetlist.getSelectedIndex()).getTrans()));
+                            tilesets.get(ltsetlist.getSelectedIndex()).setTexture(new Texture(Gdx.files
+                                    .absolute(curdir + "/" + tilesets.get(ltsetlist.getSelectedIndex()).getSource())));
+                            if (tilesets.get(ltsetlist.getSelectedIndex()).getTrans() != null) {
+                                tilesets.get(ltsetlist.getSelectedIndex())
+                                        .setTexture(chromaKey(tilesets.get(ltsetlist.getSelectedIndex()).getTexture(),
+                                                tilesets.get(ltsetlist.getSelectedIndex()).getTrans()));
+                            }
                         }
+                    } catch (Exception e) {
                     }
-                } catch (Exception e) {
                 }
 
                 ////////////////////
@@ -19057,23 +19393,33 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 break;
             case "tsetfolder":
                 errors = "";
-
+                tileset folderCollection = null;
+                int folderAdded = 0;
                 for (int i = 0; i < nativeFilenames.size(); i++) {
                     FileHandle fh = Gdx.files.absolute(basepath + "NotTiled/Temp/" + nativeFilenames.get(i));
 
                     switch (fh.extension().toLowerCase()) {
                         case "tsx":
-                            // loadtsx( fh.path(), tilesets, curdir ); //image only, tsx crash the app
+                            loadtsx(fh, tilesets, curdir);
                             break;
                         case "png":
                         case "jpg":
                         case "jpeg":
                         case "gif":
                         case "bmp":
-                            addImageTset(fh);
+                            if (folderCollection == null) {
+                                folderCollection = createCollectionTileset("collection");
+                                folderCollection.setCollectionBase(convertToRelativePath(curdir,
+                                        basepath + "NotTiled/Temp"));
+                                tilesets.add(folderCollection);
+                            }
+                            folderAdded += addTilesFromImageFile(fh, folderCollection);
                             break;
                     }
                 }
+                if (folderCollection != null && folderAdded > 0)
+                    rebuildCollectionTileset(folderCollection, curdir);
+                CacheAllTset();
                 int saiz = tilesets.size();
                 String[] srr = new String[saiz];
                 for (int i = 0; i < saiz; i++) {
@@ -19304,8 +19650,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Gdx.input.setInputProcessor(stage);
         final Dialog optionsDlg = new Dialog("", skin, "dialog");
         Table optionsTable = optionsDlg.getContentTable();
-        float stageWidth = stage.getWidth();
-        float dialogBtnWidth = Math.min(stageWidth * 0.8f, 400f);
+        float dialogBtnWidth = getDialogContentWidth();
 
         Label titleLabel = new Label(child.name(), skin);
         titleLabel.setWrap(true);
@@ -19539,17 +19884,41 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             case "importassets":
                 status(z.filesaved, 4);
                 break;
+            case "selfoldercollection":
+                showCollectionFileSelectDialog(Gdx.files.absolute(file.path()), -1, false,
+                        frompick ? nullTable : tTsetMgrMain);
+                break;
+            case "selfoldertsx":
+                showCollectionFileSelectDialog(Gdx.files.absolute(file.path()), -1, true,
+                        frompick ? nullTable : tTsetMgrMain);
+                break;
+            case "pickcollectionappend":
+                if (selTsetID >= 0 && selTsetID < tilesets.size())
+                    showCollectionFileSelectDialog(Gdx.files.absolute(file.path()), selTsetID, false,
+                            frompick ? nullTable : tTsetMgrMain);
+                break;
+            case "addcollectiontiles":
+                if (selTsetID >= 0 && selTsetID < tilesets.size())
+                    showCollectionFileSelectDialog(Gdx.files.absolute(file.path()), selTsetID, false,
+                            frompick ? nullTable : tTsetMgrMain);
+                break;
             case "selfolder":
 
                 errors = "";
                 String dir = file.path();
                 FileHandle[] filehandles;
                 filehandles = Gdx.files.absolute(dir).list();
+                int tsxFromFolder = 0;
                 for (int i = 0; i < filehandles.length; i++) {
 
                     switch (filehandles[i].extension().toLowerCase()) {
                         case "tsx":
-                            loadtsx(filehandles[i], tilesets, curdir);
+                            {
+                                int before = tilesets.size();
+                                loadtsx(filehandles[i], tilesets, curdir);
+                                if (tilesets.size() > before)
+                                    tsxFromFolder++;
+                            }
                             break;
                         case "png":
                         case "jpg":
@@ -19561,6 +19930,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                     }
                 }
+                if (tsxFromFolder > 0)
+                    rebuildAllCollectionTilesets(curdir);
+                CacheAllTset();
                 int saiz = tilesets.size();
                 String[] srr = new String[saiz];
                 for (int i = 0; i < saiz; i++) {
@@ -19761,6 +20133,803 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return t;
     }
 
+    private void resolveSprite(tileset ts, int localTileId) {
+        sprX = ts.getSrcX(localTileId);
+        sprY = ts.getSrcY(localTileId);
+    }
+
+    /** Strip Tiled flip/diag flags from a stored layer GID. */
+    private long stripTileGidFlags(long gid) {
+        int total = Tw * Th;
+        if (gid > total) {
+            String hex = Long.toHexString(gid);
+            String trailer = "00000000" + hex;
+            hex = trailer.substring(trailer.length() - 8);
+            return Long.decode("#00" + hex.substring(2, 8));
+        }
+        return gid;
+    }
+
+    private tile getLayerTileMeta(int layerIdx, int cellIdx) {
+        if (layerIdx < 0 || layerIdx >= layers.size())
+            return null;
+        layer lay = layers.get(layerIdx);
+        if (cellIdx < 0 || cellIdx >= lay.getStr().size())
+            return null;
+        long gid = lay.getStr().get(cellIdx);
+        if (gid == 0)
+            return null;
+        int tsetIdx = lay.getTset().get(cellIdx);
+        if (tsetIdx < 0 || tsetIdx >= tilesets.size())
+            return null;
+        tileset ts = tilesets.get(tsetIdx);
+        int localId = (int) (stripTileGidFlags(gid) - ts.getFirstgid());
+        if (localId < 0)
+            return null;
+        return ts.getTileMeta(localId);
+    }
+
+    private FileHandle resolveCollectionTileFile(tileset ts, tile t, String basePath) {
+        if (t.getImageSource() == null || t.getImageSource().isEmpty())
+            return null;
+        String internalpath = "rusted_warfare/assets/tilesets";
+        String collectionBaseAbs = ts.getCollectionBase() != null && !ts.getCollectionBase().isEmpty()
+                ? convertToAbsolutepath(ts.getCollectionBase(), curdir) : null;
+        String tsxBase = null;
+        if (ts.getTsxfile() != null && !ts.getTsxfile().isEmpty()) {
+            String tsxAbs = convertToAbsolutepath(ts.getTsxfile(), curdir);
+            int slash = tsxAbs.lastIndexOf('/');
+            if (slash > 0)
+                tsxBase = tsxAbs.substring(0, slash);
+        }
+        String[] bases = new String[] {
+                basePath != null ? basePath : curdir,
+                curdir,
+                collectionBaseAbs,
+                tsxBase
+        };
+        for (int i = 0; i < bases.length; i++) {
+            if (bases[i] == null || bases[i].isEmpty())
+                continue;
+            String exter = convertToAbsolutepath(t.getImageSource(), bases[i]);
+            FileHandle fexter = Gdx.files.absolute(exter);
+            if (fexter.exists())
+                return fexter;
+        }
+        String inter = convertToAbsolutepath(t.getImageSource(), internalpath);
+        FileHandle finter = Gdx.files.internal(inter);
+        if (finter.exists())
+            return finter;
+        if (collectionBaseAbs != null && !collectionBaseAbs.isEmpty()) {
+            String src = t.getImageSource().replace("\\", "/");
+            int slash = src.lastIndexOf('/');
+            String basename = slash >= 0 ? src.substring(slash + 1) : src;
+            FileHandle fb = Gdx.files.absolute(collectionBaseAbs + "/" + basename);
+            if (fb.exists())
+                return fb;
+        }
+        return null;
+    }
+
+    private Pixmap loadCollectionTilePixmap(tileset ts, tile t, String basePath) {
+        FileHandle filehand = resolveCollectionTileFile(ts, t, basePath);
+        if (filehand == null)
+            return null;
+        try {
+            return new Pixmap(filehand);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private void rebuildCollectionTileset(tileset ts, String basePath) {
+        final String bp = basePath != null ? basePath : curdir;
+        repairCollectionSheetTiles(ts, bp);
+        final tileset fts = ts;
+        CollectionTilesetOps.rebuildAtlas(ts, new CollectionTilesetOps.ImageLoader() {
+            @Override
+            public Pixmap loadPixmap(tile t) {
+                return loadCollectionTilePixmap(fts, t, bp);
+            }
+        });
+        pickerCacheValid = false;
+        terrainPickerCacheValid = false;
+    }
+
+    private void remapTerrainDefinitionTiles(tileset ts, java.util.Map<Integer, Integer> idRemap) {
+        if (ts == null || idRemap == null || idRemap.isEmpty())
+            return;
+        for (int i = 0; i < ts.getTerrains().size(); i++) {
+            terrain tr = ts.getTerrains().get(i);
+            Integer mapped = idRemap.get(tr.getTile());
+            if (mapped != null)
+                tr.setTile(mapped);
+        }
+    }
+
+    /** Re-slice sheet images when the top-left tile is missing after load (save/reload coord loss). */
+    private void repairCollectionSheetTiles(tileset ts, String basePath) {
+        if (ts == null)
+            return;
+        int tw = Math.max(1, ts.getTilewidth());
+        int th = Math.max(1, ts.getTileheight());
+        int margin = ts.getMargin();
+        int spacing = ts.getSpacing();
+        java.util.LinkedHashMap<String, java.util.List<tile>> bySrc = new java.util.LinkedHashMap<String, java.util.List<tile>>();
+        for (int i = 0; i < ts.getTiles().size(); i++) {
+            tile t = ts.getTiles().get(i);
+            if (!t.hasImage())
+                continue;
+            java.util.List<tile> g = bySrc.get(t.getImageSource());
+            if (g == null) {
+                g = new java.util.ArrayList<tile>();
+                bySrc.put(t.getImageSource(), g);
+            }
+            g.add(t);
+        }
+        java.util.Map<Integer, Integer> idRemap = new java.util.HashMap<Integer, Integer>();
+        for (java.util.Map.Entry<String, java.util.List<tile>> e : bySrc.entrySet()) {
+            java.util.List<tile> group = e.getValue();
+            if (group.size() < 2)
+                continue;
+            FileHandle img = resolveCollectionTileFile(ts, group.get(0), basePath);
+            if (img == null || !img.exists())
+                continue;
+            int iw, ih;
+            try {
+                SimpleImageInfo sii = new SimpleImageInfo(img.file());
+                iw = sii.getWidth();
+                ih = sii.getHeight();
+            } catch (Exception ex) {
+                continue;
+            }
+            if (iw <= tw && ih <= th)
+                continue;
+            if (CollectionTilesetOps.sheetHasTileAtOrigin(group, tw, th, margin, spacing))
+                continue;
+            int cols = CollectionTilesetOps.sheetColumns(iw, tw, margin, spacing);
+            java.util.Map<Integer, tile> metaByIdx = new java.util.HashMap<Integer, tile>();
+            java.util.Map<Integer, Integer> oldIdByIdx = new java.util.HashMap<Integer, Integer>();
+            for (int i = 0; i < group.size(); i++) {
+                tile t = group.get(i);
+                int rx = CollectionTilesetOps.sheetColFromSrcX(t.getImageSrcX(), tw, margin, spacing);
+                int ry = CollectionTilesetOps.sheetRowFromSrcY(t.getImageSrcY(), th, margin, spacing);
+                int idx = CollectionTilesetOps.sheetTileIndex(rx, ry, cols);
+                if (!metaByIdx.containsKey(idx))
+                    metaByIdx.put(idx, t);
+                oldIdByIdx.put(idx, t.getTileID());
+            }
+            for (int i = 0; i < group.size(); i++)
+                ts.getTiles().remove(group.get(i));
+            java.util.List<tile> added = new java.util.ArrayList<tile>();
+            addTilesFromImageFileWithMeta(img, ts, metaByIdx, added, margin, spacing, 0);
+            for (int i = 0; i < added.size(); i++) {
+                tile nt = added.get(i);
+                int rx = CollectionTilesetOps.sheetColFromSrcX(nt.getImageSrcX(), tw, margin, spacing);
+                int ry = CollectionTilesetOps.sheetRowFromSrcY(nt.getImageSrcY(), th, margin, spacing);
+                int idx = CollectionTilesetOps.sheetTileIndex(rx, ry, cols);
+                Integer oldId = oldIdByIdx.get(idx);
+                if (oldId != null)
+                    idRemap.put(oldId, nt.getTileID());
+            }
+        }
+        if (!idRemap.isEmpty()) {
+            remapTerrainDefinitionTiles(ts, idRemap);
+            remapTileAnimations(ts.getTiles(), idRemap);
+        }
+    }
+
+    private void rebuildAllCollectionTilesets(String basePath) {
+        for (int i = 0; i < tilesets.size(); i++) {
+            tileset ts = tilesets.get(i);
+            if (ts.isCollection() || CollectionTilesetOps.tilesWithImages(ts).size() > 0) {
+                ts.setCollection(true);
+                rebuildCollectionTileset(ts, basePath);
+            }
+        }
+    }
+
+    private tileset createCollectionTileset(String name) {
+        tileset t = new tileset();
+        t.setCollection(true);
+        t.setName(name);
+        t.setSource("");
+        int Tswa = Tsw;
+        int Tsha = Tsh;
+        if (!fImportWidth.getText().equalsIgnoreCase("")) {
+            Tswa = Integer.parseInt(fImportWidth.getText());
+            Tsha = Integer.parseInt(fImportHeight.getText());
+        }
+        t.setTilewidth(Tswa);
+        t.setTileheight(Tsha);
+        t.setColumns(8);
+        t.setMargin(0);
+        t.setSpacing(0);
+        t.setTrans("");
+        t.setFirstgid(requestGid());
+        return t;
+    }
+
+    private FileHandle resolveTsxSheetImage(String imageSource, String tsxBasePath, String collectionBaseRel) {
+        if (imageSource == null || imageSource.isEmpty())
+            return null;
+        String norm = imageSource.replace("\\", "/");
+        String collectionBaseAbs = collectionBaseRel != null && !collectionBaseRel.isEmpty()
+                ? convertToAbsolutepath(collectionBaseRel, curdir) : tsxBasePath;
+        int slash = norm.lastIndexOf('/');
+        String basename = slash >= 0 ? norm.substring(slash + 1) : norm;
+        FileHandle tsxParent = Gdx.files.absolute(tsxBasePath).parent();
+        String parentPath = tsxParent != null ? tsxParent.path() : tsxBasePath;
+        String[] paths = new String[] {
+                convertToAbsolutepath(norm, tsxBasePath),
+                convertToAbsolutepath(norm, collectionBaseAbs),
+                tsxBasePath + "/" + norm,
+                tsxBasePath + "/" + basename,
+                tsxBasePath + "/bitmaps/" + basename,
+                collectionBaseAbs + "/" + basename,
+                collectionBaseAbs + "/bitmaps/" + basename,
+                parentPath + "/bitmaps/" + basename,
+                parentPath + "/rw bitmaps/" + basename
+        };
+        for (int i = 0; i < paths.length; i++) {
+            if (paths[i] == null || paths[i].isEmpty())
+                continue;
+            FileHandle fh = Gdx.files.absolute(paths[i]);
+            if (fh.exists())
+                return fh;
+        }
+        return null;
+    }
+
+    private String readTsxImageSource(FileHandle tsxFile) {
+        try {
+            String content = tsxFile.readString();
+            int img = content.indexOf("<image");
+            if (img < 0)
+                return null;
+            int src = content.indexOf("source=\"", img);
+            if (src < 0)
+                return null;
+            src += 8;
+            int end = content.indexOf("\"", src);
+            if (end < 0)
+                return null;
+            return content.substring(src, end);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private int readTsxIntAttr(FileHandle tsxFile, String attr, int defaultValue) {
+        try {
+            String content = tsxFile.readString();
+            int ts = content.indexOf("<tileset");
+            if (ts < 0)
+                return defaultValue;
+            String pattern = attr + "=\"";
+            int idx = content.indexOf(pattern, ts);
+            if (idx < 0)
+                return defaultValue;
+            idx += pattern.length();
+            int end = content.indexOf("\"", idx);
+            if (end < 0)
+                return defaultValue;
+            return Integer.parseInt(content.substring(idx, end).trim());
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
+
+    private int addTilesFromImageFileWithMeta(FileHandle f, tileset t,
+            java.util.Map<Integer, tile> metaById, java.util.List<tile> outAdded) {
+        return addTilesFromImageFileWithMeta(f, t, metaById, outAdded,
+                t.getMargin(), t.getSpacing(), 0);
+    }
+
+    private int addTilesFromImageFileWithMeta(FileHandle f, tileset t,
+            java.util.Map<Integer, tile> metaById, java.util.List<tile> outAdded,
+            int margin, int spacing, int forcedCols) {
+        try {
+            SimpleImageInfo s = new SimpleImageInfo(f.file());
+            int Tswa = t.getTilewidth();
+            int Tsha = t.getTileheight();
+            int cols = forcedCols > 0 ? forcedCols
+                    : CollectionTilesetOps.sheetColumns(s.getWidth(), Tswa, margin, spacing);
+            int rows = CollectionTilesetOps.sheetRows(s.getHeight(), Tsha, margin, spacing);
+            String relPath = convertToRelativePath(curdir, f.path());
+            int count = 0;
+            for (int ry = 0; ry < rows; ry++) {
+                for (int rx = 0; rx < cols; rx++) {
+                    int sx = CollectionTilesetOps.sheetSrcX(rx, Tswa, margin, spacing);
+                    int sy = CollectionTilesetOps.sheetSrcY(ry, Tsha, margin, spacing);
+                    if (sx + Tswa > s.getWidth() || sy + Tsha > s.getHeight())
+                        continue;
+                    int localId = CollectionTilesetOps.sheetTileIndex(rx, ry, cols);
+                    tile tt = new tile();
+                    tt.setTileID(t.nextCollectionTileId());
+                    tt.setImageSource(relPath);
+                    tt.setImageWidth(s.getWidth());
+                    tt.setImageHeight(s.getHeight());
+                    tt.setImageSrcX(sx);
+                    tt.setImageSrcY(sy);
+                    if (metaById != null) {
+                        tile meta = metaById.get(localId);
+                        if (meta != null)
+                            copyTileMetadata(meta, tt, false);
+                    }
+                    t.addTileMetadata(tt);
+                    if (outAdded != null)
+                        outAdded.add(tt);
+                    count++;
+                }
+            }
+            return count;
+        } catch (Exception e) {
+            errors += "\nError: " + f.name();
+            ErrorBung(e, "eRRROBUNG.txt");
+            return 0;
+        }
+    }
+
+    private int addTilesFromImageFile(FileHandle f, tileset t) {
+        return addTilesFromImageFileWithMeta(f, t, null, null);
+    }
+
+    public tileset addImageToCollectionTileset(FileHandle f, tileset existing) {
+        try {
+            if (!CollectionTilesetOps.isImageFile(f)) {
+                errors += "\nError: " + f.name();
+                return existing;
+            }
+            tileset t = existing;
+            if (t == null) {
+                String nn = f.name();
+                if (f.name().indexOf(".") > 0)
+                    nn = f.name().substring(0, f.name().lastIndexOf("."));
+                t = createCollectionTileset(nn);
+            }
+            if (!tilesets.contains(t))
+                tilesets.add(t);
+            int added = addTilesFromImageFile(f, t);
+            if (added == 0) {
+                errors += "\nError: " + f.name();
+                return t;
+            }
+            rebuildCollectionTileset(t, curdir);
+            curspr = t.getFirstgid() + t.getTiles().get(t.getTiles().size() - 1).getTileID();
+            recenterpick();
+            return t;
+        } catch (Exception e) {
+            errors += "\nError: " + f.name();
+            ErrorBung(e, "eRRROBUNG.txt");
+            return existing;
+        }
+    }
+
+    private void copyTileMetadata(tile from, tile to, boolean copyImageFields) {
+        if (from == null || to == null)
+            return;
+        if (copyImageFields && from.hasImage()) {
+            to.setImageSource(from.getImageSource());
+            to.setImageWidth(from.getImageWidth());
+            to.setImageHeight(from.getImageHeight());
+            to.setImageSrcX(from.getImageSrcX());
+            to.setImageSrcY(from.getImageSrcY());
+        }
+        if (from.getTerrain() != null)
+            to.setTerrain(from.getTerrainString());
+        for (int i = 0; i < from.getProperties().size(); i++) {
+            property p = from.getProperties().get(i);
+            to.getProperties().add(new property(p.getName(), p.getType(), p.getValue()));
+        }
+        for (int i = 0; i < from.getAnimation().size(); i++) {
+            frame f = from.getAnimation().get(i);
+            to.getAnimation().add(new frame(f.getTileID(), f.getDuration()));
+        }
+        for (int i = 0; i < from.getObjects().size(); i++) {
+            obj o = from.getObjects().get(i);
+            obj copy = new obj();
+            copy.setX(o.getX());
+            copy.setY(o.getY());
+            copy.setW(o.getW());
+            copy.setH(o.getH());
+            copy.setName(o.getName());
+            copy.setId(o.getId());
+            copy.setRotation(o.getRotation());
+            copy.setType(o.getType());
+            copy.setGid(o.getGid());
+            copy.setShape(o.getShape());
+            copy.setText(o.getText());
+            copy.setWrap(o.isWrap());
+            for (int j = 0; j < o.getProperties().size(); j++) {
+                property p = o.getProperties().get(j);
+                copy.getProperties().add(new property(p.getName(), p.getType(), p.getValue()));
+            }
+            to.getObjects().add(copy);
+        }
+    }
+
+    private String collectionImagePath(String imageSource, String tsxBasePath) {
+        if (imageSource == null || imageSource.isEmpty())
+            return "";
+        String abs = convertToAbsolutepath(imageSource, tsxBasePath);
+        String rel = convertToRelativePath(curdir, abs);
+        return rel != null ? rel : imageSource;
+    }
+
+    private void remapTileAnimations(java.util.List<tile> tiles, java.util.Map<Integer, Integer> idRemap) {
+        for (int i = 0; i < tiles.size(); i++) {
+            tile t = tiles.get(i);
+            for (int j = 0; j < t.getAnimation().size(); j++) {
+                frame f = t.getAnimation().get(j);
+                Integer mapped = idRemap.get(f.getTileID());
+                if (mapped != null)
+                    f.setTileID(mapped);
+            }
+        }
+    }
+
+    private int mergeTsxTilesetIntoCollection(tileset src, tileset collection, FileHandle tsxFile) {
+        if (src == null || collection == null || tsxFile == null)
+            return 0;
+        String tsxBasePath = tsxFile.parent().path();
+        int terrainOffset = collection.getTerrains().size();
+
+        java.util.Map<Integer, tile> metaById = new java.util.HashMap<Integer, tile>();
+        for (int i = 0; i < src.getTiles().size(); i++)
+            metaById.put(src.getTiles().get(i).getTileID(), src.getTiles().get(i));
+
+        java.util.Map<Integer, Integer> idRemap = new java.util.HashMap<Integer, Integer>();
+        java.util.List<tile> added = new ArrayList<tile>();
+        int count = 0;
+
+        if (src.isCollection() || CollectionTilesetOps.tilesWithImages(src).size() > 0) {
+            java.util.List<tile> imageTiles = CollectionTilesetOps.tilesWithImages(src);
+            for (int i = 0; i < imageTiles.size(); i++) {
+                tile srcTile = imageTiles.get(i);
+                FileHandle imgFile = resolveTsxSheetImage(srcTile.getImageSource(), tsxBasePath,
+                        collection.getCollectionBase());
+                int tw = Math.max(1, collection.getTilewidth());
+                int th = Math.max(1, collection.getTileheight());
+                boolean sliced = false;
+                if (imgFile != null && imgFile.exists()) {
+                    try {
+                        SimpleImageInfo sii = new SimpleImageInfo(imgFile.file());
+                        if (sii.getWidth() > tw || sii.getHeight() > th) {
+                            java.util.Map<Integer, tile> tileMeta = new java.util.HashMap<Integer, tile>();
+                            tileMeta.put(srcTile.getTileID(), srcTile);
+                            java.util.List<tile> sliceAdded = new ArrayList<tile>();
+                            int sliceCount = addTilesFromImageFileWithMeta(imgFile, collection, tileMeta,
+                                    sliceAdded, src.getMargin(), src.getSpacing(), src.getColumns());
+                            if (sliceCount > 0) {
+                                count += sliceCount;
+                                for (int s = 0; s < sliceAdded.size(); s++)
+                                    offsetTileTerrainIndices(sliceAdded.get(s), terrainOffset);
+                                added.addAll(sliceAdded);
+                                idRemap.put(srcTile.getTileID(), sliceAdded.get(0).getTileID());
+                                sliced = true;
+                            }
+                        }
+                    } catch (Exception ignored) {
+                    }
+                }
+                if (sliced)
+                    continue;
+                int newId = collection.nextCollectionTileId();
+                idRemap.put(srcTile.getTileID(), newId);
+                tile nt = new tile();
+                nt.setTileID(newId);
+                if (imgFile != null && imgFile.exists()) {
+                    String rel = convertToRelativePath(curdir, imgFile.path());
+                    nt.setImageSource(rel != null ? rel : collectionImagePath(srcTile.getImageSource(), tsxBasePath));
+                    try {
+                        SimpleImageInfo sii = new SimpleImageInfo(imgFile.file());
+                        nt.setImageWidth(srcTile.getImageWidth() > 0 ? srcTile.getImageWidth() : sii.getWidth());
+                        nt.setImageHeight(srcTile.getImageHeight() > 0 ? srcTile.getImageHeight() : sii.getHeight());
+                    } catch (Exception e) {
+                        nt.setImageWidth(srcTile.getImageWidth());
+                        nt.setImageHeight(srcTile.getImageHeight());
+                    }
+                } else {
+                    nt.setImageSource(collectionImagePath(srcTile.getImageSource(), tsxBasePath));
+                    nt.setImageWidth(srcTile.getImageWidth());
+                    nt.setImageHeight(srcTile.getImageHeight());
+                }
+                nt.setImageSrcX(srcTile.getImageSrcX());
+                nt.setImageSrcY(srcTile.getImageSrcY());
+                copyTileMetadata(srcTile, nt, false);
+                offsetTileTerrainIndices(nt, terrainOffset);
+                collection.addTileMetadata(nt);
+                added.add(nt);
+                count++;
+            }
+        } else {
+            String imageSource = src.getSource();
+            if (imageSource == null || imageSource.isEmpty())
+                imageSource = readTsxImageSource(tsxFile);
+            FileHandle imgFile = resolveTsxSheetImage(imageSource, tsxBasePath,
+                    collection.getCollectionBase());
+            if (imgFile != null && imgFile.exists()) {
+                count = addTilesFromImageFileWithMeta(imgFile, collection, metaById, added,
+                        src.getMargin(), src.getSpacing(), src.getColumns());
+                if (count > 0) {
+                    int tw = Math.max(1, collection.getTilewidth());
+                    int th = Math.max(1, collection.getTileheight());
+                    int margin = src.getMargin();
+                    int spacing = src.getSpacing();
+                    int cols = src.getColumns() > 0 ? src.getColumns()
+                            : CollectionTilesetOps.sheetColumns(added.get(0).getImageWidth(), tw, margin, spacing);
+                    for (int i = 0; i < added.size(); i++) {
+                        tile nt = added.get(i);
+                        int rx = CollectionTilesetOps.sheetColFromSrcX(nt.getImageSrcX(), tw, margin, spacing);
+                        int ry = CollectionTilesetOps.sheetRowFromSrcY(nt.getImageSrcY(), th, margin, spacing);
+                        int sheetIdx = CollectionTilesetOps.sheetTileIndex(rx, ry, cols);
+                        idRemap.put(sheetIdx, nt.getTileID());
+                        tile srcMeta = metaById.get(sheetIdx);
+                        if (srcMeta != null)
+                            idRemap.put(srcMeta.getTileID(), nt.getTileID());
+                        offsetTileTerrainIndices(nt, terrainOffset);
+                    }
+                }
+            }
+        }
+
+        remapTileAnimations(added, idRemap);
+        for (int i = 0; i < src.getTerrains().size(); i++) {
+            terrain tr = src.getTerrains().get(i);
+            terrain copy = new terrain();
+            copy.setName(tr.getName());
+            Integer mapped = idRemap.get(tr.getTile());
+            if (mapped == null) {
+                tile srcMeta = metaById.get(tr.getTile());
+                if (srcMeta != null)
+                    mapped = idRemap.get(srcMeta.getTileID());
+            }
+            copy.setTile(mapped != null ? mapped : -1);
+            collection.getTerrains().add(copy);
+        }
+        if (count > 0)
+            collection.clearTerrainCache();
+        return count;
+    }
+
+    private int mergeTsxFileIntoCollection(FileHandle tsxFile, tileset collection) {
+        if (tsxFile == null || collection == null)
+            return 0;
+        String tsxBase = tsxFile.parent().path();
+        java.util.List<tileset> scratch = new ArrayList<tileset>();
+        loadtsx(tsxFile, scratch, curdir);
+        if (!scratch.isEmpty())
+            return mergeTsxTilesetIntoCollection(scratch.get(0), collection, tsxFile);
+        String imageSource = readTsxImageSource(tsxFile);
+        if (imageSource == null) {
+            errors += "\nError: " + tsxFile.name();
+            return 0;
+        }
+        FileHandle imgFile = resolveTsxSheetImage(imageSource, tsxBase, collection.getCollectionBase());
+        if (imgFile == null) {
+            errors += "\nError: " + tsxFile.name();
+            return 0;
+        }
+        java.util.List<tile> added = new ArrayList<tile>();
+        int margin = readTsxIntAttr(tsxFile, "margin", 0);
+        int spacing = readTsxIntAttr(tsxFile, "spacing", 0);
+        int columns = readTsxIntAttr(tsxFile, "columns", 0);
+        return addTilesFromImageFileWithMeta(imgFile, collection, null, added, margin, spacing, columns);
+    }
+
+    private boolean isCollectionImportFile(FileHandle f, boolean tsxOnly) {
+        if (f == null || f.isDirectory())
+            return false;
+        if (tsxOnly)
+            return f.extension().equalsIgnoreCase("tsx");
+        return CollectionTilesetOps.isImageFile(f) || f.extension().equalsIgnoreCase("tsx");
+    }
+
+    private java.util.List<FileHandle> listCollectionImportFiles(FileHandle dir, boolean tsxOnly) {
+        java.util.List<FileHandle> out = new ArrayList<FileHandle>();
+        if (dir == null || !dir.exists())
+            return out;
+        FileHandle[] files = dir.list();
+        java.util.Arrays.sort(files, new java.util.Comparator<FileHandle>() {
+            @Override
+            public int compare(FileHandle a, FileHandle b) {
+                return a.name().compareToIgnoreCase(b.name());
+            }
+        });
+        for (int i = 0; i < files.length; i++) {
+            if (isCollectionImportFile(files[i], tsxOnly))
+                out.add(files[i]);
+        }
+        return out;
+    }
+
+    private int importSelectedFilesIntoCollection(tileset collection, FileHandle[] files) {
+        if (collection == null || files == null)
+            return 0;
+        int count = 0;
+        for (int i = 0; i < files.length; i++) {
+            FileHandle f = files[i];
+            if (CollectionTilesetOps.isImageFile(f))
+                count += addTilesFromImageFile(f, collection);
+            else if (f.extension().equalsIgnoreCase("tsx"))
+                count += mergeTsxFileIntoCollection(f, collection);
+        }
+        return count;
+    }
+
+    private void afterCollectionImport(int tsetIdx, boolean goToPicker) {
+        int saiz = tilesets.size();
+        String[] srr = new String[saiz];
+        for (int i = 0; i < saiz; i++)
+            srr[i] = tilesets.get(i).getName();
+        ltsetlist.setItems(srr);
+        if (tsetIdx >= 0 && tsetIdx < saiz)
+            ltsetlist.setSelectedIndex(tsetIdx);
+        else if (saiz > 0)
+            ltsetlist.setSelectedIndex(saiz - 1);
+        status(errors, 5);
+        pushUpdateIfCollaborating();
+        if (tsetIdx < 0 || tsetIdx >= saiz)
+            return;
+        seltset = tsetIdx;
+        curtset = seltset;
+        curspr = tilesets.get(seltset).getFirstgid();
+        resetCaches();
+        recenterpick();
+        if (goToPicker)
+            onToPicker();
+        else
+            showTilesetManager();
+    }
+
+    private void finishCollectionImport(FileHandle dir, int appendTsetIdx, FileHandle[] files, Table exitPoint) {
+        errors = "";
+        if (files == null || files.length == 0) {
+            errors += "\nNo files selected.";
+            exitDialog(exitPoint);
+            return;
+        }
+        loadingfile = true;
+        tileset collection;
+        int tsetIdx;
+        boolean isNew = appendTsetIdx < 0 || appendTsetIdx >= tilesets.size();
+        if (isNew) {
+            collection = createCollectionTileset(dir.name());
+            collection.setCollectionBase(convertToRelativePath(curdir, dir.path()));
+            tilesets.add(collection);
+            tsetIdx = tilesets.size() - 1;
+        } else {
+            collection = tilesets.get(appendTsetIdx);
+            tsetIdx = appendTsetIdx;
+            if (!collection.isCollection()) {
+                errors += "\nNot a collection tileset.";
+                loadingfile = false;
+                exitDialog(exitPoint);
+                return;
+            }
+            if (collection.getCollectionBase() == null || collection.getCollectionBase().isEmpty())
+                collection.setCollectionBase(convertToRelativePath(curdir, dir.path()));
+        }
+        int imported = importSelectedFilesIntoCollection(collection, files);
+        if (imported > 0)
+            rebuildCollectionTileset(collection, curdir);
+        else
+            errors += "\nNo tiles imported.";
+        if (isNew && imported == 0)
+            tilesets.remove(collection);
+        CacheAllTset();
+        loadingfile = false;
+        boolean goToPicker = exitPoint == nullTable;
+        if (imported > 0) {
+            afterCollectionImport(tsetIdx, goToPicker);
+        } else {
+            status(errors, 5);
+            if (goToPicker)
+                onToPicker();
+            else
+                exitDialog(exitPoint);
+        }
+    }
+
+    private void showCollectionFileSelectDialog(final FileHandle dir, final int appendTsetIdx,
+            final boolean tsxOnly, final Table exitPoint) {
+        if (dir == null || !dir.exists()) {
+            errors += "\nFolder not found.";
+            exitDialog(exitPoint);
+            return;
+        }
+        final java.util.List<FileHandle> importable = listCollectionImportFiles(dir, tsxOnly);
+        if (importable.isEmpty()) {
+            errors += tsxOnly ? "\nNo TSX files in folder." : "\nNo images or TSX in folder.";
+            exitDialog(exitPoint);
+            return;
+        }
+
+        Gdx.input.setInputProcessor(stage);
+        final Dialog dlg = new Dialog("", skin, "dialog");
+        Table content = dlg.getContentTable();
+        float dialogBtnWidth = getDialogContentWidth();
+
+        String title = z.selectcollectionfiles != null ? z.selectcollectionfiles : "Select files";
+        Label titleLabel = new Label(title + "\n" + dir.name(), skin);
+        titleLabel.setWrap(true);
+        titleLabel.setAlignment(Align.center);
+        content.add(titleLabel).width(dialogBtnWidth).pad(8).row();
+
+        Table fileTable = new Table();
+        fileTable.top().left();
+        fileTable.padLeft(8);
+        fileTable.defaults().left().align(Align.left).padBottom(2);
+        final java.util.List<CheckBox> checks = new ArrayList<CheckBox>();
+        for (int i = 0; i < importable.size(); i++) {
+            CheckBox cb = new CheckBox(importable.get(i).name(), skin);
+            cb.setChecked(true);
+            cb.align(Align.left);
+            cb.getLabel().setAlignment(Align.left);
+            checks.add(cb);
+            fileTable.add(cb).left().align(Align.left).row();
+        }
+        fileTable.setWidth(dialogBtnWidth);
+        fileTable.layout();
+        ScrollPane scroll = new ScrollPane(fileTable, skin);
+        scroll.setFadeScrollBars(false);
+        scroll.setScrollingDisabled(true, false);
+        float listH = Math.min(ssy * 0.45f, Math.max(btny * 4, importable.size() * btny * 0.85f));
+        content.add(scroll).width(dialogBtnWidth).height(listH).padBottom(6).row();
+
+        Table toggleRow = new Table();
+        TextButton btnAll = new TextButton(z.selectall, skin);
+        TextButton btnNone = new TextButton(z.deselectall != null ? z.deselectall : "Select None", skin);
+        btnAll.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                for (int i = 0; i < checks.size(); i++)
+                    checks.get(i).setChecked(true);
+            }
+        });
+        btnNone.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                for (int i = 0; i < checks.size(); i++)
+                    checks.get(i).setChecked(false);
+            }
+        });
+        toggleRow.add(btnAll).width(dialogBtnWidth * 0.48f).height(btny).padRight(4);
+        toggleRow.add(btnNone).width(dialogBtnWidth * 0.48f).height(btny);
+        content.add(toggleRow).padBottom(6).row();
+
+        String importLabel = z.importx != null ? z.importx : z.ok;
+        TextButton btnImport = new TextButton(importLabel, skin);
+        btnImport.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                java.util.List<FileHandle> selected = new ArrayList<FileHandle>();
+                for (int i = 0; i < checks.size(); i++) {
+                    if (checks.get(i).isChecked())
+                        selected.add(importable.get(i));
+                }
+                dlg.hide();
+                finishCollectionImport(dir, appendTsetIdx,
+                        selected.toArray(new FileHandle[selected.size()]), exitPoint);
+            }
+        });
+        content.add(btnImport).width(dialogBtnWidth).height(btny).padBottom(4).row();
+
+        TextButton btnCancel = new TextButton(z.cancel, skin);
+        btnCancel.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                dlg.hide();
+                exitDialog(exitPoint);
+            }
+        });
+        content.add(btnCancel).width(dialogBtnWidth).height(btny).row();
+
+        dlg.show(stage);
+        dlg.setWidth(dialogBtnWidth);
+    }
+
     public void addImageTset(FileHandle f, boolean internal) {
         try {
             if (!internal) {
@@ -19836,8 +21005,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void resetMassprops() {
         massprops.clear();
-        if (tilesets.size() > 0) {
-            for (int i = 0; i < tilesets.get(seltset).getTilecount(); i++) {
+        if (tilesets.size() > 0 && seltset >= 0 && seltset < tilesets.size()) {
+            int slots = CollectionTilesetOps.getPickerGridSlots(tilesets.get(seltset));
+            for (int i = 0; i < slots; i++) {
                 massprops.add(false);
             }
         }
@@ -19990,7 +21160,74 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         srz.endTag(null, "object");
     }
 
-    private void writeTmxTileInnerContent(XmlSerializer srz, tile oj) throws Exception {
+    private void writeTmxTilesetBody(XmlSerializer srz, tileset t) throws Exception {
+        if (!t.isCollection() && t.getSource() != null && !t.getSource().isEmpty()) {
+            srz.startTag(null, "image");
+            srz.attribute("", "source", t.getSource())
+                    .attribute("", "width", Integer.toString(t.getOriginalwidth()))
+                    .attribute("", "height", Integer.toString(t.getOriginalheight()));
+            if (t.getTrans() != null && !t.getTrans().equals(""))
+                srz.attribute("", "trans", t.getTrans());
+            srz.endTag(null, "image");
+        }
+        if (t.getTerrains().size() > 0) {
+            srz.startTag(null, "terraintypes");
+            for (int ee = 0; ee < t.getTerrains().size(); ee++) {
+                srz.startTag(null, "terrain");
+                srz.attribute("", "name", t.getTerrains().get(ee).getName());
+                srz.attribute("", "tile", Integer.toString(t.getTerrains().get(ee).getTile()));
+                srz.endTag(null, "terrain");
+            }
+            srz.endTag(null, "terraintypes");
+        }
+        if (t.getTiles().size() > 0) {
+            for (int u = 0; u < t.getTiles().size(); u++) {
+                tile oj = t.getTiles().get(u);
+                srz.startTag(null, "tile");
+                srz.attribute("", "id", Integer.toString(oj.getTileID()));
+                if (!oj.getTerrainString().equalsIgnoreCase("-1,-1,-1,-1"))
+                    srz.attribute("", "terrain", oj.getTerrainString());
+                writeTmxTileInnerContent(srz, t, oj);
+                srz.endTag(null, "tile");
+            }
+        }
+    }
+
+    private void writeTmxTileInnerContent(XmlSerializer srz, tileset ts, tile oj) throws Exception {
+        if (oj.hasImage()) {
+            srz.startTag(null, "image");
+            String imgSrc = oj.getImageSource();
+            if (imgSrc != null && (imgSrc.startsWith("/") || imgSrc.contains(":")))
+                imgSrc = convertToRelativePath(curdir, imgSrc);
+            if (imgSrc == null)
+                imgSrc = oj.getImageSource();
+            srz.attribute("", "source", imgSrc);
+            if (oj.getImageWidth() > 0)
+                srz.attribute("", "width", Integer.toString(oj.getImageWidth()));
+            if (oj.getImageHeight() > 0)
+                srz.attribute("", "height", Integer.toString(oj.getImageHeight()));
+            srz.endTag(null, "image");
+        }
+        boolean extraTileProps = CollectionTilesetOps.hasCollectionTileWriteProperties(oj,
+                ts.getTilewidth(), ts.getTileheight());
+        if (oj.getProperties().size() > 0 || extraTileProps) {
+            srz.startTag(null, "properties");
+            for (int m = 0; m < oj.getProperties().size(); m++) {
+                property p = oj.getProperties().get(m);
+                if (extraTileProps && p.getName() != null
+                        && (CollectionTilesetOps.PROP_IMAGE_SRC_X.equalsIgnoreCase(p.getName())
+                                || CollectionTilesetOps.PROP_IMAGE_SRC_Y.equalsIgnoreCase(p.getName())))
+                    continue;
+                writeTmxProperty(srz, p);
+            }
+            if (extraTileProps) {
+                writeTmxProperty(srz, new property(CollectionTilesetOps.PROP_IMAGE_SRC_X, "int",
+                        Integer.toString(oj.getImageSrcX())));
+                writeTmxProperty(srz, new property(CollectionTilesetOps.PROP_IMAGE_SRC_Y, "int",
+                        Integer.toString(oj.getImageSrcY())));
+            }
+            srz.endTag(null, "properties");
+        }
         if (oj.getAnimation().size() > 0) {
             srz.startTag(null, "animation");
             for (int m = 0; m < oj.getAnimation().size(); m++) {
@@ -20000,12 +21237,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 srz.endTag(null, "frame");
             }
             srz.endTag(null, "animation");
-        }
-        if (oj.getProperties().size() > 0) {
-            srz.startTag(null, "properties");
-            for (int m = 0; m < oj.getProperties().size(); m++)
-                writeTmxProperty(srz, oj.getProperties().get(m));
-            srz.endTag(null, "properties");
         }
         if (oj.getObjects().size() > 0) {
             srz.startTag(null, "objectgroup");
@@ -20259,7 +21490,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         kartu = "stage";
         Gdx.input.setInputProcessor(stage);
         final Dialog dlg = new Dialog(z.info != null ? z.info : "", skin, "dialog");
-        float dialogWidth = Math.min(btnx, stage.getWidth() * 0.92f);
+        float dialogWidth = getDialogContentWidth();
         Label prompt = new Label(z.restorebackupprompt, skin);
         prompt.setWrap(true);
         prompt.setAlignment(Align.center);
@@ -20347,6 +21578,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
+    private static final String XML_INDENT_FEATURE = "http://xmlpull.org/v1/doc/features.html#indent-output";
+
+    private void configureTmxSerializer(XmlSerializer srz) {
+        if (!sPrettyPrintTmx)
+            return;
+        try {
+            srz.setFeature(XML_INDENT_FEATURE, true);
+        } catch (Exception ignored) {
+        }
+    }
+
     private void writeTmxLayerAttributes(XmlSerializer srz, layer lay) throws Exception {
         srz.attribute("", "id", Integer.toString(lay.getId()));
         srz.attribute("", "name", lay.getName());
@@ -20394,6 +21636,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             ensureXmlFactory();
             XmlSerializer srz = xmlFactoryObject.newSerializer();
             srz.setOutput(fos, "UTF-8");
+            configureTmxSerializer(srz);
 
             srz.startDocument(null, Boolean.valueOf(true));
 
@@ -20442,9 +21685,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     srz.attribute("", "tileheight", Integer.toString(t.getTileheight()));
                     srz.attribute("", "tilewidth", Integer.toString(t.getTilewidth()));
 
-                    if (t.getProperties().size() > 0) {
+                    boolean writeCollectionBase = CollectionTilesetOps.needsCollectionBaseProperty(t);
+                    if (t.getProperties().size() > 0 || writeCollectionBase) {
                         srz.startTag(null, "properties");
+                        boolean wroteCollectionBase = false;
                         for (int m = 0; m < t.getProperties().size(); m++) {
+                            if (t.getProperties().get(m).getName() != null
+                                    && CollectionTilesetOps.PROP_COLLECTION_BASE
+                                            .equalsIgnoreCase(t.getProperties().get(m).getName()))
+                                wroteCollectionBase = true;
                             srz.startTag(null, "property");
                             if (t.getProperties().get(m).getName() != null)
                                 srz.attribute("", "name", t.getProperties().get(m).getName());
@@ -20471,43 +21720,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             }
                             srz.endTag(null, "property");
                         }
+                        if (writeCollectionBase && !wroteCollectionBase)
+                            writeTmxProperty(srz, new property(CollectionTilesetOps.PROP_COLLECTION_BASE, "string",
+                                    t.getCollectionBase()));
                         srz.endTag(null, "properties");
                     }
-                    if (t.getSource() != null) {
-                        srz.startTag(null, "image");
-                        srz.attribute("", "source", t.getSource())
-                                .attribute("", "width", Integer.toString(t.getOriginalwidth()))
-                                .attribute("", "height", Integer.toString(t.getOriginalheight()));
-                        if (t.getTrans() != null && t.getTrans() != "")
-                            srz.attribute("", "trans", t.getTrans());
-                        srz.endTag(null, "image");
-                    }
-                    if (t.getTerrains().size() > 0) {
-                        srz.startTag(null, "terraintypes");
-                        for (int ee = 0; ee < t.getTerrains().size(); ee++) {
-                            srz.startTag(null, "terrain");
-                            srz.attribute("", "name", t.getTerrains().get(ee).getName());
-                            srz.attribute("", "tile", Integer.toString(t.getTerrains().get(ee).getTile()));
-                            srz.endTag(null, "terrain");
-                        }
-                        srz.endTag(null, "terraintypes");
-                    }
-                    if (t.getTiles().size() > 0) {
-                        for (int u = 0; u < t.getTiles().size(); u++) {
-                            tile oj = t.getTiles().get(u);
-
-                            srz.startTag(null, "tile");
-                            srz.attribute("", "id", Integer.toString(t.getTiles().get(u).getTileID()));
-                            if (!t.getTiles().get(u).getTerrainString().equalsIgnoreCase("-1,-1,-1,-1")) {
-                                srz.attribute("", "terrain", t.getTiles().get(u).getTerrainString());
-
-                            }
-
-                            writeTmxTileInnerContent(srz, oj);
-
-                            srz.endTag(null, "tile");
-                        }
-                    }
+                    writeTmxTilesetBody(srz, t);
 
                     srz.endTag(null, "tileset");
                 }
@@ -20810,6 +22028,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             ensureXmlFactory();
             XmlSerializer srz = xmlFactoryObject.newSerializer();
             srz.setOutput(fos, "UTF-8");
+            configureTmxSerializer(srz);
             srz.startDocument(null, Boolean.valueOf(true));
 
             tileset t = tilesets.get(index);
@@ -20826,45 +22045,24 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             srz.attribute("", "tileheight", Integer.toString(t.getTileheight()));
             srz.attribute("", "tilewidth", Integer.toString(t.getTilewidth()));
 
-            if (t.getProperties().size() > 0) {
+            boolean writeCollectionBaseTsx = CollectionTilesetOps.needsCollectionBaseProperty(t);
+            if (t.getProperties().size() > 0 || writeCollectionBaseTsx) {
                 srz.startTag(null, "properties");
-                for (int m = 0; m < t.getProperties().size(); m++)
-                    writeTmxProperty(srz, t.getProperties().get(m));
+                boolean wroteCollectionBaseTsx = false;
+                for (int m = 0; m < t.getProperties().size(); m++) {
+                    property p = t.getProperties().get(m);
+                    if (p.getName() != null
+                            && CollectionTilesetOps.PROP_COLLECTION_BASE.equalsIgnoreCase(p.getName()))
+                        wroteCollectionBaseTsx = true;
+                    writeTmxProperty(srz, p);
+                }
+                if (writeCollectionBaseTsx && !wroteCollectionBaseTsx)
+                    writeTmxProperty(srz, new property(CollectionTilesetOps.PROP_COLLECTION_BASE, "string",
+                            t.getCollectionBase()));
                 srz.endTag(null, "properties");
             }
 
-            srz.startTag(null, "image");
-            if (!t.getSource().isEmpty())
-                srz.attribute("", "source", t.getSource())
-                        .attribute("", "width", Integer.toString(t.getOriginalwidth()))
-                        .attribute("", "height", Integer.toString(t.getOriginalheight()));
-            if (t.getTrans() != null && t.getTrans() != "")
-                srz.attribute("", "trans", t.getTrans());
-            srz.endTag(null, "image");
-            if (t.getTerrains().size() > 0) {
-                srz.startTag(null, "terraintypes");
-                for (int ee = 0; ee < t.getTerrains().size(); ee++) {
-                    srz.startTag(null, "terrain");
-                    srz.attribute("", "name", t.getTerrains().get(ee).getName());
-                    srz.attribute("", "tile", Integer.toString(t.getTerrains().get(ee).getTile()));
-                    srz.endTag(null, "terrain");
-                }
-                srz.endTag(null, "terraintypes");
-            }
-            if (t.getTiles().size() > 0) {
-                for (int u = 0; u < t.getTiles().size(); u++) {
-                    tile oj = t.getTiles().get(u);
-
-                    srz.startTag(null, "tile");
-                    srz.attribute("", "id", Integer.toString(t.getTiles().get(u).getTileID()));
-                    if (!t.getTiles().get(u).getTerrainString().equalsIgnoreCase("-1,-1,-1,-1"))
-                        srz.attribute("", "terrain", t.getTiles().get(u).getTerrainString());
-
-                    writeTmxTileInnerContent(srz, oj);
-
-                    srz.endTag(null, "tile");
-                }
-            }
+            writeTmxTilesetBody(srz, t);
 
             srz.endTag(null, "tileset");
             srz.endDocument();
@@ -21314,15 +22512,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     t.setOriginalheight(j.imageheight);
                     t.setWidth(j.columns);
                     t.setHeight(j.tilecount / j.columns);
-                    t.setSource(j.image);
-                    String sp = convertToAbsolutepath(t.getSource(), curdir);
-                    log(sp);
-                    t.setTexture(new Texture(Gdx.files.absolute(sp)));
-                    t.setPixmap(pixmapfromtexture(t.getTexture(), t.getTrans()));
+                    t.setSource(j.image != null ? j.image : "");
+                    if (j.image != null && !j.image.isEmpty()) {
+                        String sp = convertToAbsolutepath(t.getSource(), curdir);
+                        log(sp);
+                        t.setTexture(new Texture(Gdx.files.absolute(sp)));
+                        t.setPixmap(pixmapfromtexture(t.getTexture(), t.getTrans()));
+                    }
                     if (j.properties != null) {
                         for (int x = 0; x < j.properties.length; x++) {
                             jsonmap.property p = j.properties[x];
                             t.properties.add(new property(p.name, p.type, p.value));
+                            CollectionTilesetOps.applyTilesetProperty(t, p.name, p.value);
                         }
                     }
 
@@ -21343,11 +22544,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             tile tt = new tile();
                             tt.setTileID(jt.id);
                             tt.setTerrain(jt.terrain);
+                            if (jt.image != null && !jt.image.isEmpty()) {
+                                tt.setImageSource(jt.image);
+                                tt.setImageWidth(jt.imagewidth);
+                                tt.setImageHeight(jt.imageheight);
+                            }
 
                             if (jt.properties != null) {
                                 for (int y = 0; y < jt.properties.length; y++) {
                                     jsonmap.property p = jt.properties[y];
                                     tt.properties.add(new property(p.name, p.type, p.value));
+                                    CollectionTilesetOps.applyTileProperty(tt, p.name, p.value);
                                 }
                             }
                             if (jt.animation != null) {
@@ -21383,6 +22590,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
                     }
                     t.sortTilesById();
+                    if (CollectionTilesetOps.tilesWithImages(t).size() > 0) {
+                        t.setCollection(true);
+                        rebuildCollectionTileset(t, curdir);
+                    }
                     tilesets.add(t);
                 }
             }
@@ -21457,9 +22668,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     j.spacing = t.getSpacing();
                     j.imagewidth = t.getOriginalwidth();
                     j.imageheight = t.getOriginalheight();
-                    j.image = t.getSource();
+                    if (!t.isCollection())
+                        j.image = t.getSource();
 
-                    if (t.properties.size() > 0) {
+                    {
                         List<jsonmap.property> tmprops = new ArrayList<>();
                         for (int x = 0; x < t.properties.size(); x++) {
                             property p = t.properties.get(x);
@@ -21469,7 +22681,25 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             pj.value = p.getValue();
                             tmprops.add(pj);
                         }
-                        j.properties = tmprops.toArray(new jsonmap.property[tmprops.size()]);
+                        if (CollectionTilesetOps.needsCollectionBaseProperty(t)) {
+                            boolean hasBase = false;
+                            for (jsonmap.property pj : tmprops) {
+                                if (pj.name != null
+                                        && CollectionTilesetOps.PROP_COLLECTION_BASE.equalsIgnoreCase(pj.name)) {
+                                    hasBase = true;
+                                    break;
+                                }
+                            }
+                            if (!hasBase) {
+                                jsonmap.property pj = new jsonmap.property();
+                                pj.name = CollectionTilesetOps.PROP_COLLECTION_BASE;
+                                pj.type = "string";
+                                pj.value = t.getCollectionBase();
+                                tmprops.add(pj);
+                            }
+                        }
+                        if (!tmprops.isEmpty())
+                            j.properties = tmprops.toArray(new jsonmap.property[tmprops.size()]);
                     }
 
                     if (t.terrains.size() > 0) {
@@ -21492,18 +22722,48 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             jt.id = tt.getTileID();
                             if (!tt.getTerrainString().equalsIgnoreCase("-1,-1,-1,-1"))
                                 jt.terrain = tt.getTerrainString();
+                            if (tt.hasImage()) {
+                                String imgSrc = tt.getImageSource();
+                                if (imgSrc != null && (imgSrc.startsWith("/") || imgSrc.contains(":")))
+                                    imgSrc = convertToRelativePath(curdir, imgSrc);
+                                if (imgSrc == null)
+                                    imgSrc = tt.getImageSource();
+                                jt.image = imgSrc;
+                                jt.imagewidth = tt.getImageWidth();
+                                jt.imageheight = tt.getImageHeight();
+                            }
 
-                            if (tt.properties.size() > 0) {
+                            {
                                 List<jsonmap.property> tmprops = new ArrayList<>();
                                 for (int z = 0; z < tt.properties.size(); z++) {
                                     property p = tt.properties.get(z);
+                                    if (CollectionTilesetOps.hasCollectionTileWriteProperties(tt, t.getTilewidth(),
+                                            t.getTileheight()) && p.getName() != null
+                                            && (CollectionTilesetOps.PROP_IMAGE_SRC_X.equalsIgnoreCase(p.getName())
+                                                    || CollectionTilesetOps.PROP_IMAGE_SRC_Y
+                                                            .equalsIgnoreCase(p.getName())))
+                                        continue;
                                     jsonmap.property pj = new jsonmap.property();
                                     pj.name = p.getName();
                                     pj.type = p.getType();
                                     pj.value = p.getValue();
                                     tmprops.add(pj);
                                 }
-                                jt.properties = tmprops.toArray(new jsonmap.property[tmprops.size()]);
+                                if (CollectionTilesetOps.hasCollectionTileWriteProperties(tt, t.getTilewidth(),
+                                        t.getTileheight())) {
+                                    jsonmap.property pj = new jsonmap.property();
+                                    pj.name = CollectionTilesetOps.PROP_IMAGE_SRC_X;
+                                    pj.type = "int";
+                                    pj.value = Integer.toString(tt.getImageSrcX());
+                                    tmprops.add(pj);
+                                    pj = new jsonmap.property();
+                                    pj.name = CollectionTilesetOps.PROP_IMAGE_SRC_Y;
+                                    pj.type = "int";
+                                    pj.value = Integer.toString(tt.getImageSrcY());
+                                    tmprops.add(pj);
+                                }
+                                if (!tmprops.isEmpty())
+                                    jt.properties = tmprops.toArray(new jsonmap.property[tmprops.size()]);
                             }
 
                             if (tt.animation.size() > 0) {
@@ -22395,7 +23655,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             layers.get(k).setTset(lts);
                         }
 
-                        kartu = "stage";
                         mode = "tile";
                         curspr = 0;
                         resetcam(false);
@@ -22467,6 +23726,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void loadmap(String filepath) {
         final boolean keepView = restoreViewAfterLoad;
         List<String> xtree = new ArrayList<String>();
+        boolean tilesetHasTopImage = false;
         stamp = false;
         assemblymode = false;
         curpickAuto = true;
@@ -22592,6 +23852,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             log("Loading tileset..." + source);
                             xtree.add("tileset");
                             alreadyloaded = false;
+                            tilesetHasTopImage = false;
 
                             if (myParser.getAttributeValue(null, "firstgid") != null) {
                                 tempTset.setFirstgid(Integer.parseInt(myParser.getAttributeValue(null, "firstgid")));
@@ -22665,7 +23926,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
 
                         if (name.equals("image")) {
+                            if (xtree.size() > 0 && xtree.get(xtree.size() - 1).equalsIgnoreCase("tile")) {
+                                if (myParser.getAttributeValue(null, "source") != null)
+                                    tempTile.setImageSource(myParser.getAttributeValue(null, "source"));
+                                if (myParser.getAttributeValue(null, "width") != null) {
+                                    tempTile.setImageWidth(
+                                            Integer.parseInt(myParser.getAttributeValue(null, "width")));
+                                    tempTile.setImageHeight(
+                                            Integer.parseInt(myParser.getAttributeValue(null, "height")));
+                                }
+                                break;
+                            }
                             if (xtree.get(xtree.size() - 1).equalsIgnoreCase("tileset")) {
+                                tilesetHasTopImage = true;
                                 String internalpath = "rusted_warfare/assets/tilesets";
                                 tempTset = tilesets.get(tilesets.size() - 1);
                                 // if (myParser.getAttributeValue(null, "trans")!=null) {
@@ -23014,9 +24287,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         }
                         if (name.equals("tileset")) {
-                            if (tempTset != null)
+                            if (tempTset != null) {
                                 tempTset.sortTilesById();
+                                if (!tilesetHasTopImage
+                                        && CollectionTilesetOps.tilesWithImages(tempTset).size() > 0) {
+                                    tempTset.setCollection(true);
+                                    rebuildCollectionTileset(tempTset, curdir);
+                                }
+                            }
                             tempTset = null;
+                            tilesetHasTopImage = false;
                             xtree.remove(xtree.size() - 1);
 
                         }
@@ -23096,12 +24376,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     break;
                                 case "tileset":
                                     tempTset.getProperties().add(tempe);
+                                    CollectionTilesetOps.applyTilesetProperty(tempTset, tempe.getName(), data);
                                     break;
                                 case "layer":
                                     tempLayer.getProperties().add(tempe);
                                     break;
                                 case "tile":
                                     tempTile.getProperties().add(tempe);
+                                    CollectionTilesetOps.applyTileProperty(tempTile, tempe.getName(), data);
                                     break;
                                 case "map":
                                     properties.add(tempe);
@@ -23205,6 +24487,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
         ensureDefaultTileLayer();
         clampSelLayerToSelectable();
+        rebuildAllCollectionTilesets(curdir);
         CacheAllTset();
         resetSwatches();
         initPixelArtTilesets();
@@ -23326,6 +24609,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             templastID = 1;
             // seltset = 0;
             String owner = "";
+            boolean tilesetHasTopImage2 = false;
             // layers.clear();
             tilesets2.clear();
             // properties.clear();
@@ -23359,6 +24643,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                             owner = "tileset";
                             alreadyloaded = false;
+                            tilesetHasTopImage2 = false;
 
                             if (myParser.getAttributeValue(null, "firstgid") != null) {
                                 tempTset.setFirstgid(Integer.parseInt(myParser.getAttributeValue(null, "firstgid")));
@@ -23409,7 +24694,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
 
                         if (name.equals("image")) {
+                            if (owner.equalsIgnoreCase("tile")) {
+                                if (myParser.getAttributeValue(null, "source") != null)
+                                    tempTile.setImageSource(myParser.getAttributeValue(null, "source"));
+                                if (myParser.getAttributeValue(null, "width") != null) {
+                                    tempTile.setImageWidth(
+                                            Integer.parseInt(myParser.getAttributeValue(null, "width")));
+                                    tempTile.setImageHeight(
+                                            Integer.parseInt(myParser.getAttributeValue(null, "height")));
+                                }
+                                break;
+                            }
                             if (owner.equalsIgnoreCase("tileset")) {
+                                tilesetHasTopImage2 = true;
                                 String internalpath = "rusted_warfare/assets/tilesets";
                                 tempTset = tilesets2.get(tilesets2.size() - 1);
                                 // if (myParser.getAttributeValue(null, "trans")!=null) {
@@ -23571,9 +24868,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             oldowner = "";
                         }
                         if (name.equals("tileset")) {
-                            if (tempTset != null)
+                            if (tempTset != null) {
                                 tempTset.sortTilesById();
+                                if (!tilesetHasTopImage2
+                                        && CollectionTilesetOps.tilesWithImages(tempTset).size() > 0) {
+                                    tempTset.setCollection(true);
+                                    rebuildCollectionTileset(tempTset, tempcurdir);
+                                }
+                            }
                             tempTset = null;
+                            tilesetHasTopImage2 = false;
                         }
                         if (name.equals("text")) {
                         }
@@ -23598,6 +24902,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     bucket = new Texture(new Pixmap(decodedBytes, 0, decodedBytes.length));
 
                                     tempTset.setTexture(bucket);
+                                    tilesetHasTopImage2 = true;
 
                                     if (tempTset.getTrans() != null) {
                                         tempTset.setTexture(chromaKey(tempTset.getTexture(), tempTset.getTrans()));
@@ -23630,9 +24935,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             switch (owner) {
                                 case "tileset":
                                     tempTset.getProperties().add(tempe);
+                                    CollectionTilesetOps.applyTilesetProperty(tempTset, tempe.getName(), data);
                                     break;
                                 case "tile":
                                     tempTile.getProperties().add(tempe);
+                                    CollectionTilesetOps.applyTileProperty(tempTile, tempe.getName(), data);
                                     break;
                             }
 
@@ -24205,6 +25512,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             int event = myParser.getEventType();
             tile tempTile = new tile();
             templastID = 1;
+            boolean tilesetHasTopImage = false;
             while (event != XmlPullParser.END_DOCUMENT) {
                 String name = myParser.getName();
 
@@ -24212,6 +25520,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case XmlPullParser.START_TAG:
                         if (name.equals("tileset")) {
                             owner = "tileset";
+                            tilesetHasTopImage = false;
                             if (tempTset == null) {
                                 tempTset = new tileset();
                                 tempTset.setFirstgid(requestGid());
@@ -24344,6 +25653,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         }
                         if (name.equals("image")) {
+                            if (owner.equals("tile")) {
+                                if (myParser.getAttributeValue(null, "source") != null)
+                                    tempTile.setImageSource(myParser.getAttributeValue(null, "source"));
+                                if (myParser.getAttributeValue(null, "width") != null) {
+                                    tempTile.setImageWidth(
+                                            Integer.parseInt(myParser.getAttributeValue(null, "width")));
+                                    tempTile.setImageHeight(
+                                            Integer.parseInt(myParser.getAttributeValue(null, "height")));
+                                }
+                                break;
+                            }
+                            tilesetHasTopImage = true;
                             log("loading image from tsx...");
                             tempTset.setTrans(myParser.getAttributeValue(null, "trans"));
                             log("trans=" + tempTset.getTrans());
@@ -24442,13 +25763,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             owner = "tileset";
                         }
                         if (name.equals("tileset")) {
-                            if (tempTset.getTexture() == null) {
+                            tempTset.sortTilesById();
+                            if (!tilesetHasTopImage
+                                    && CollectionTilesetOps.tilesWithImages(tempTset).size() > 0) {
+                                tempTset.setCollection(true);
+                                rebuildCollectionTileset(tempTset, tsxpath);
+                            } else if (tempTset.getTexture() == null) {
                                 log("NO TEXTURE!");
                                 return;
                             }
-                            tempTset.sortTilesById();
                             tilesets.add(tempTset);
                             tempTset = null;
+                            tilesetHasTopImage = false;
                         }
                         if (name.equals("property")) {
                             String data = isi.replace("\n", "").trim();
@@ -24458,9 +25784,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             switch (owner) {
                                 case "tileset":
                                     tempTset.getProperties().add(tempe);
+                                    CollectionTilesetOps.applyTilesetProperty(tempTset, tempe.getName(),
+                                            tempe.getValue());
                                     break;
                                 case "tile":
                                     tempTile.getProperties().add(tempe);
+                                    CollectionTilesetOps.applyTileProperty(tempTile, tempe.getName(),
+                                            tempe.getValue());
                                     break;
                             }
                         }
@@ -24557,16 +25887,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (tapWorldMenu(touch2))
                             return true;
 
-                    if (layers.size() > 0 && layers.get(selLayer).getType() == layer.Type.OBJECT) {
-                        if (activeobjtoolmode != 2) {
-                            Vector3 touch = new Vector3();
-                            cam.unproject(touch.set(new Vector3(p1, p2, 0)));
-                            float ae = touch.x;
-                            float ab = touch.y;
-                            updatePointer(ae, -ab);
-                        }
-                    }
-
                     if (tilesets.size() == 0) {
                         kartu = "tile";
                         return true;
@@ -24638,8 +25958,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         tapTile(num, false, true, false, curspr);
                         log(num + "");
                     } else if (mode == "object") {
-                        // tapObject(num, ae, ab);
-                        final obj[] foundObj = {null};
+                        final java.util.List<obj> foundObjs = new ArrayList<obj>();
                         Vector3 touchObj = new Vector3();
                         cam.unproject(touchObj.set(p1, p2, 0));
                         float objX = touchObj.x;
@@ -24650,31 +25969,36 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 Object userData = fixture.getUserData();
                                 if (userData instanceof obj) {
                                     obj candidate = (obj) userData;
-                                    if (layers.get(selLayer).getObjects().contains(candidate)) {
-                                        foundObj[0] = candidate;
-                                        return false; // Stop querying
+                                    if (layers.get(selLayer).getObjects().contains(candidate)
+                                            && !foundObjs.contains(candidate)) {
+                                        foundObjs.add(candidate);
                                     }
                                 }
-                                return true; // Keep querying
+                                return true;
                             }
                         }, objX - 3, objY - 3, objX + 3, objY + 3);
 
                         if (activeobjtoolmode == 1) {
-                            if (foundObj[0] == null) {
-                                activeobjtoolmode = 0; // Switch to create mode
-                                selobjs.clear();
-                                longpressObject(p1, p2);
-                            } else {
-                                boolean isMulti = sMultiSelect || Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT);
-                                if (!isMulti) {
+                            boolean isMulti = sMultiSelect || Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT);
+                            if (!foundObjs.isEmpty()) {
+                                if (isMulti) {
+                                    checkBox2D(foundObjs.get(0));
+                                } else {
                                     selobjs.clear();
+                                    for (obj o : foundObjs) {
+                                        checkBox2D(o);
+                                    }
                                 }
+                            } else if (!isMulti) {
+                                selobjs.clear();
                             }
                         } else if (activeobjtoolmode == 0) {
-                            if (foundObj[0] != null) {
+                            if (!foundObjs.isEmpty()) {
                                 activeobjtoolmode = 1; // Switch to select mode
                                 selobjs.clear();
-                                checkBox2D(foundObj[0]);
+                                for (obj o : foundObjs) {
+                                    checkBox2D(o);
+                                }
                             } else {
                                 longpressObject(p1, p2);
                             }
@@ -24835,19 +26159,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         int tileX = hcx / 2;
         int tileY = hcy / 2;
         int corner = (hcx % 2) + (hcy % 2) * 2;
-        int dst = tileY * ts.getWidth() + tileX;
-        if (dst < 0 || dst >= ts.getTilecount())
+        int gridIdx = tileY * ts.getWidth() + tileX;
+        if (gridIdx < 0 || gridIdx >= CollectionTilesetOps.getPickerGridSlots(ts))
             return -1;
-        java.util.List<tile> tiles = ts.getTiles();
-        for (int n = 0; n < tiles.size(); n++) {
-            if (tiles.get(n).getTileID() == dst) {
-                int[] tr = tiles.get(n).getTerrain();
-                if (tr == null)
-                    return -1;
-                return tr[corner];
-            }
-        }
-        return -1;
+        tile t = ts.getTileMeta(ts.isCollection() ? ts.getTileIdAtGridIndex(gridIdx) : gridIdx);
+        if (t == null && !ts.isCollection())
+            return -1;
+        if (t == null)
+            return -1;
+        int[] tr = t.getTerrain();
+        if (tr == null)
+            return -1;
+        return tr[corner];
     }
 
     private void setTerrainHalfCell(tileset ts, int halfCellIndex, int terrainId) {
@@ -24857,10 +26180,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         int tileX = hcx / 2;
         int tileY = hcy / 2;
         int corner = (hcx % 2) + (hcy % 2) * 2;
-        int dst = tileY * ts.getWidth() + tileX;
-        if (dst < 0 || dst >= ts.getTilecount())
+        int gridIdx = tileY * ts.getWidth() + tileX;
+        if (gridIdx < 0 || gridIdx >= CollectionTilesetOps.getPickerGridSlots(ts))
             return;
-        tile t = getOrCreateTileMeta(ts, dst);
+        tile t = getOrCreateTileMetaAtGrid(ts, gridIdx);
         int[] cn = t.getTerrain();
         int a = cn[0], b = cn[1], c = cn[2], d = cn[3];
         switch (corner) {
@@ -25305,8 +26628,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         int wd = ts.getWidth();
         int hcw = terrainEditorHalfCellW(ts);
         int hch = terrainEditorHalfCellH(ts);
-        int tileCount = ts.getTilecount();
-        int totalRows = wd > 0 ? (tileCount + wd - 1) / wd : 0;
+        int pickerSlots = CollectionTilesetOps.getPickerGridSlots(ts);
+        int totalRows = wd > 0 ? (pickerSlots + wd - 1) / wd : 0;
         int startCol = 0, endCol = wd - 1, startRow = 0, endRow = totalRows - 1;
         if (hcw > 0 && hch > 0 && wd > 0) {
             startCol = (int) Math.floor(minX / hcw);
@@ -25328,7 +26651,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             int chunkSize = 1024;
             for (int chunk = 0; chunk < terrainPickerCaches.size(); chunk++) {
                 int startIdx = chunk * chunkSize;
-                int endIdx = Math.min(startIdx + chunkSize, tileCount);
+                int endIdx = Math.min(startIdx + chunkSize, pickerSlots);
                 int startRowOfChunk = startIdx / wd;
                 int endRowOfChunk = (endIdx - 1) / wd;
                 float chunkMinY = -endRowOfChunk * hch;
@@ -25350,27 +26673,24 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         if (sShowAnimations) {
             java.util.List<tile> tiles = ts.getTiles();
-            int margin = ts.getMargin();
-            int spacing = ts.getSpacing();
             batch.begin();
             for (int n = 0; n < tiles.size(); n++) {
                 tile animTile = tiles.get(n);
                 if (animTile.getAnimation().size() == 0)
                     continue;
-                int i = animTile.getTileID();
-                if (i < 0 || i >= tileCount)
+                int localId = animTile.getTileID();
+                int gi = ts.isCollection() ? ts.getGridIndex(localId) : localId;
+                if (gi < 0 || gi >= pickerSlots)
                     continue;
-                int xpos = i % wd;
-                int ypos = i / wd;
+                int xpos = gi % wd;
+                int ypos = gi / wd;
                 if (xpos < startCol || xpos > endCol || ypos < startRow || ypos > endRow)
                     continue;
                 long activeFrameId = animTile.getActiveFrameID();
-                int xpos2 = (int) activeFrameId % wd;
-                int ypos2 = (int) activeFrameId / wd;
+                int srcX = ts.getSrcX((int) activeFrameId);
+                int srcY = ts.getSrcY((int) activeFrameId);
                 batch.draw(ts.getTexture(), xpos * hcw, -ypos * hch, hcw, hch,
-                        (xpos2 * (ts.getTilewidth() + spacing)) + margin,
-                        (ypos2 * (ts.getTileheight() + spacing)) + margin,
-                        ts.getTilewidth(), ts.getTileheight(), false, false);
+                        srcX, srcY, ts.getTilewidth(), ts.getTileheight(), false, false);
             }
             batch.end();
         }
@@ -25423,6 +26743,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "terraineditor":
                         clearTerrainUndoHistory();
                         if (frompick) {
+                            restorePickAutoAfterTerrainEditor();
                             onToPicker();
                             frompick = false;
                         } else {
@@ -25491,13 +26812,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
             if (tilePicker == "massprops" && kartu == "pickanim") {
                 for (int o = 0; o < massprops.size(); o++) {
+                    int localId = tilesets.get(selTsetID).getTileIdAtGridIndex(o);
+                    if (localId < 0)
+                        continue;
                     boolean ada = false;
                     int ka = 0;
                     property tgt = null;
                     java.util.List<property> ppt = null;
 
                     for (int k = 0; k < tilesets.get(selTsetID).getTiles().size(); k++) {
-                        if (tilesets.get(selTsetID).getTiles().get(k).getTileID() == o) {
+                        if (tilesets.get(selTsetID).getTiles().get(k).getTileID() == localId) {
                             ppt = tilesets.get(selTsetID).getTiles().get(k).getProperties();
                             for (int j = 0; j < ppt.size(); j++) {
                                 if (ppt.get(j).getName().equalsIgnoreCase(temproname)
@@ -25525,7 +26849,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (massprops.get(o)) {
                             boolean adatile = false;
                             for (int k = 0; k < tilesets.get(selTsetID).getTiles().size(); k++) {
-                                if (tilesets.get(selTsetID).getTiles().get(k).getTileID() == o) {
+                                if (tilesets.get(selTsetID).getTiles().get(k).getTileID() == localId) {
                                     adatile = true;
                                     ka = k;
                                 }
@@ -25535,7 +26859,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             pt.getProperties().add(new property(temproname, temprotype, temprovalue));
                             if (!adatile) {
                                 tile tile = new tile();
-                                tile.setTileID(o);
+                                tile.setTileID(localId);
                                 tile.getProperties().add(new property(temproname, temprotype, temprovalue));
                                 ka = tilesets.get(selTsetID).addTileMetadata(tile);
                             } else {
@@ -25654,6 +26978,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         pixelEditSlot = -1;
                     }
 
+                    onActiveTilesetChanged();
                     adjustPickAuto();
                     recenterpick();
                     resetMassprops();
@@ -25670,6 +26995,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         pixelEditSlot = -1;
                     }
 
+                    onActiveTilesetChanged();
                     adjustPickAuto();
                     recenterpick();
                     resetMassprops();
@@ -25809,10 +27135,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 int heit = ts.getTerrains().size();
                 if (touch.y < ts.getTileheight() && touch.y > -ts.getTileheight() * heit + ts.getTileheight()
                         && touch.x > 0 && touch.x < ts.getTilewidth() * 6) {
-                    Integer aaaa = ts.getTerrains().get(((-ab + ts.getTileheight()) / ts.getTileheight())).getTile();
-                    Integer num = ts.getFirstgid() + aaaa;
+                    int terrainRow = ((-ab + ts.getTileheight()) / ts.getTileheight());
+                    int localId = terrainStripIconLocalId(ts, terrainRow);
+                    if (localId < 0)
+                        return true;
+                    Integer num = ts.getFirstgid() + localId;
                     curspr = num;
                     curtset = seltset;
+                    setTsetFromCurspr();
                     updateAT();
                     curpickAuto = pickAuto;
                     adjustLayer(ts);
@@ -25837,15 +27167,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         if (touch.y < ts.getTileheight() && touch.y > -ts.getTileheight() * ts.getHeight() + ts.getTileheight()
                 && touch.x > 0 && touch.x < ts.getTilewidth() * ts.getWidth()) {
-            Integer num = ts.getFirstgid()
-                    + (ts.getWidth() * ((-ab + ts.getTileheight()) / ts.getTileheight()) + (ae / ts.getTilewidth()));
-            Integer numis = (ts.getWidth() * ((-ab + ts.getTileheight()) / ts.getTileheight())
-                    + (ae / ts.getTilewidth()));
+            int gridIdx = ts.getWidth() * ((-ab + ts.getTileheight()) / ts.getTileheight())
+                    + (ae / ts.getTilewidth());
+            int localPickId = ts.getTileIdAtGridIndex(gridIdx);
+            if (localPickId < 0)
+                return true;
+            Integer num = ts.getFirstgid() + localPickId;
+            Integer numis = gridIdx;
 
             if (kartu == "tile") {
                 if (!issettingtile) {
                     curspr = num;
                     curtset = seltset;
+                    setTsetFromCurspr();
                     curpickAuto = pickAuto;
 
                     adjustLayer(ts);
@@ -25859,6 +27193,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 } else {
                     curspr = num;
                     curtset = seltset;
+                    setTsetFromCurspr();
                     int cont = 0;
                     for (boolean b : massprops) {
                         if (b)
@@ -25866,7 +27201,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                     if (cont < 2)
                         resetMassprops();
-                    massprops.set(numis, !massprops.get(numis));
+                    if (numis >= 0 && numis < massprops.size())
+                        massprops.set(numis, !massprops.get(numis));
                     return true;
                 }
             } else {
@@ -26095,18 +27431,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         backToMap();
                         break;
                     case "newterrain":
-                        newTerrainID = num - ts.getFirstgid();
+                        {
+                            int pickedLocal = num - ts.getFirstgid();
+                            tile picked = ts.getTileMeta(pickedLocal);
+                            if (picked == null || !picked.hasImage())
+                                return true;
+                            newTerrainID = pickedLocal;
+                        }
                         tilePicker = "terraineditor";
                         getNewTextInput(pNewTerrain, "New Terrain Name", "", "");
                         kartu = "pickanim";
                         Gdx.input.setInputProcessor(im);
                         return true;
                     case "massprops":
-                        if (massprops.get(num - ts.getFirstgid())) {
-                            massprops.set(num - ts.getFirstgid(), false);
-                        } else {
-                            massprops.set(num - ts.getFirstgid(), true);
-                        }
+                        if (numis >= 0 && numis < massprops.size())
+                            massprops.set(numis, !massprops.get(numis));
                         return true;
                     case "terraineditor":
                         return true;
@@ -26169,6 +27508,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             fixture = body.createFixture(fdef);
             objType = obj.objecttype.POINTER;
             fixture.setUserData(objType);
+            movepointer = 0.25f;
         }
 
     }
@@ -26531,13 +27871,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private void longpressObject(float p1, float p2) {
         if (activeobjtoolmode != 0)
             return;
-        if (layers.size() > 0 && layers.get(selLayer).getType() == layer.Type.OBJECT) {
-            Vector3 touch = new Vector3();
-            cam.unproject(touch.set(new Vector3(p1, p2, 0)));
-            float ae = touch.x;
-            float ab = touch.y;
-            updatePointer(ae, -ab);
-        }
         if (markermode)
             return;
 
@@ -26784,14 +28117,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void updateTileData(int lay, int num, long str, int tsetID) {
         int newtile = -1;
 
-        if (str != 0 && tsetID >= 0 && tsetID < tilesets.size()) {
-            tileset ts = tilesets.get(tsetID);
-            if (ts.getTiles().size() > 0) {
-                for (int j = 0; j < ts.getTiles().size(); j++) {
-                    tile tt = ts.getTiles().get(j);
-                    if (tt.getTileID() + ts.getFirstgid() == str) {
-                        newtile = j;
-                        break;
+        if (str != 0) {
+            long bareGid = stripTileGidFlags(str);
+            int resolvedTset = getTsetFromSpr((int) bareGid);
+            if (resolvedTset >= 0)
+                tsetID = resolvedTset;
+            if (tsetID >= 0 && tsetID < tilesets.size()) {
+                tileset ts = tilesets.get(tsetID);
+                if (ts.getTiles().size() > 0) {
+                    for (int j = 0; j < ts.getTiles().size(); j++) {
+                        tile tt = ts.getTiles().get(j);
+                        if (tt.getTileID() + ts.getFirstgid() == bareGid) {
+                            newtile = j;
+                            break;
+                        }
                     }
                 }
             }
@@ -26840,11 +28179,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tapTile(num, terra, smartStamp, curspr);
     }
 
-    public void tapTile(int num, boolean terra, boolean smartStamp, int curspr) {
+    public void tapTile(int num, boolean terra, boolean smartStamp, int brushGidParam) {
         if (cammode == "View only")
             return;
         if (layers.size() == 0)
             return;
+        if (brushGidParam > 0)
+            this.curspr = brushGidParam;
         // the actual stamping process.
         if (assemblymode) {
             assemblynum = num;
@@ -26873,7 +28214,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             int nyum = num + xx + (yy * Tw) + onset;
                             if (nyum < 0)
                                 return;
-                            long oi = (long) curspr + xx + (yy * tilesets.get(curtset).getWidth());
+                            long oi = tilesets.get(curtset).getGidAtGridIndex(
+                                    startSelect + xx + (yy * tilesets.get(curtset).getWidth()));
 
                             Long from = layers.get(selLayer).getStr().get(nyum);
                             int tzet = layers.get(selLayer).getTset().get(nyum);
@@ -26895,7 +28237,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         } else {
 
             // first, work with rotation.
-            String hex = Long.toHexString(curspr);
+            if (!eraser && !prepareBrushForDraw()) {
+                status("Pick a tile in the tileset first", 2);
+                return;
+            }
+            int drawGid = this.curspr;
+            String hex = Long.toHexString(drawGid);
             String trailer = "00000000" + hex;
             hex = trailer.substring(trailer.length() - 8);
 
@@ -26949,13 +28296,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         updateTileData(selLayer, num, oi, curtset);
                         return;
                     }
-                    tile t = null;
-
-                    for (int k = 0; k < tilesets.get(curtset).getTiles().size(); k++) {
-                        if (tilesets.get(curtset).getTiles().get(k).getTileID() == noi) {
-                            t = tilesets.get(curtset).getTiles().get(k);
-                        }
-                    }
+                    tile t = tilesets.get(curtset).getTileMeta((int) noi);
+                    t = resolveTerrainAutotileCenter(tilesets.get(curtset), t);
 
                     updateTileData(selLayer, num, oi, curtset);
 
@@ -27379,16 +28721,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     break;
             }
 
-            if (layers.get(selLayer).getTile().get(gogo) != -1) {
-                int neighborTset = layers.get(selLayer).getTset().get(gogo);
-                int neighborTile = layers.get(selLayer).getTile().get(gogo);
-                if (neighborTset >= 0 && neighborTset < tilesets.size()
-                        && neighborTile < tilesets.get(neighborTset).getTiles().size()) {
-                    tile trleft = tilesets.get(neighborTset).getTiles().get(neighborTile);
-                    bb = trleft.getTerrain();
-                } else {
-                    bb = new int[] { -1, -1, -1, -1 };
-                }
+            tile neighborMeta = getLayerTileMeta(selLayer, gogo);
+            if (neighborMeta != null) {
+                bb = neighborMeta.getTerrain();
             } else {
                 bb = new int[] { -1, -1, -1, -1 };
             }
@@ -27501,19 +28836,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
                 // why is this here?
 
-                int neighborTset = -1;
-                tile neighborTileObj = null;
+                int neighborTset = layers.get(selLayer).getTset().get(gogo);
+                tile neighborTileObj = getLayerTileMeta(selLayer, gogo);
                 int[] bb;
-                if (layers.get(selLayer).getTile().get(gogo) != -1) {
-                    neighborTset = layers.get(selLayer).getTset().get(gogo);
-                    int neighborTile = layers.get(selLayer).getTile().get(gogo);
-                    if (neighborTset >= 0 && neighborTset < tilesets.size()
-                            && neighborTile < tilesets.get(neighborTset).getTiles().size()) {
-                        neighborTileObj = tilesets.get(neighborTset).getTiles().get(neighborTile);
-                        bb = neighborTileObj.getTerrain();
-                    } else {
-                        bb = new int[] { -1, -1, -1, -1 };
-                    }
+                if (neighborTileObj != null) {
+                    bb = neighborTileObj.getTerrain();
                 } else {
                     bb = new int[] { -1, -1, -1, -1 };
                 }
@@ -28910,6 +30237,29 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         }
 
+    }
+
+    /** Picker tileset changed — drop stale brush GID from the previous tileset. */
+    private void onActiveTilesetChanged() {
+        pickerCacheValid = false;
+        terrainPickerCacheValid = false;
+        curtset = seltset;
+        curspr = 0;
+    }
+
+    /** Ensure curspr/curtset match before painting (avoids drawing with a stale GID). */
+    private boolean prepareBrushForDraw() {
+        if (tilesets.isEmpty() || curspr <= 0)
+            return false;
+        if (seltset >= 0 && seltset < tilesets.size()) {
+            tileset active = tilesets.get(seltset);
+            if (curspr >= active.getFirstgid()
+                    && curspr < active.getFirstgid() + active.getTilecount()) {
+                curtset = seltset;
+                return true;
+            }
+        }
+        return false;
     }
 
     private int getTsetFromSpr(int i) {
@@ -32952,7 +34302,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (stamp && kartu == "tile") {
             if (!issettingtile) {
                 currentShape = ShapeTool.RECTANGLE;
-                curspr = startSelect + tilesets.get(seltset).getFirstgid();
+                curspr = (int) tilesets.get(seltset).getGidAtGridIndex(startSelect);
                 curtset = seltset;
                 curpickAuto = pickAuto;
                 kartu = "world";
@@ -32969,7 +34319,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     for (int xx = 0; xx < widih; xx++) {
                         int num = startSelect;
                         int nyum = num + xx + (yy * ts.getWidth());
-                        if (nyum < ts.getHeight() * ts.getWidth()) {
+                        int pickerSlots = CollectionTilesetOps.getPickerGridSlots(ts);
+                        if (nyum >= 0 && nyum < pickerSlots && nyum < massprops.size()) {
                             if (nyum % ts.getWidth() >= num % ts.getWidth()) {
                                 massprops.set(nyum, !massprops.get(nyum));
                             }
@@ -32994,7 +34345,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 for (int xx = 0; xx < widih; xx++) {
                     int num = startSelect;
                     int nyum = num + xx + (yy * ts.getWidth());
-                    if (nyum < ts.getHeight() * ts.getWidth()) {
+                    int pickerSlots = CollectionTilesetOps.getPickerGridSlots(ts);
+                    if (nyum >= 0 && nyum < pickerSlots && nyum < massprops.size()) {
                         if (nyum % ts.getWidth() >= num % ts.getWidth()) {
                             if (massprops.get(nyum)) {
                                 massprops.set(nyum, false);
@@ -33047,7 +34399,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             // no more activetool =1
             if (activetool == 0) {
 
-                int awidih = 0, aheih = 0, anum = 0;
+                int awidih = 0, aheih = 0;
                 int widih = mapendSelect % Tw - mapstartSelect % Tw;
                 int heih = mapendSelect / Tw - mapstartSelect / Tw;
                 boolean follower = false;
@@ -33057,7 +34409,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                     // get data from tileset
                     curtset = seltset;
-                    anum = startSelect + tilesets.get(curtset).getFirstgid();
                     int aTw = tilesets.get(seltset).getWidth();
                     awidih = endSelect % aTw - startSelect % aTw; // width of stamp
                     aheih = endSelect / aTw - startSelect / aTw; // height of stamp
@@ -33067,7 +34418,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                     for (int yy = 0; yy <= aheih; yy++) {
                         for (int xx = 0; xx <= awidih; xx++) {
-                            int kodok = anum + xx + (yy * aTw);
+                            int gridIdx = startSelect + xx + (yy * aTw);
+                            int kodok = (int) tilesets.get(curtset).getGidAtGridIndex(gridIdx);
                             if (xx == 0 && yy == 0) {
                                 // topleft
                                 pon[0] = kodok;
@@ -34180,12 +35532,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             batch.begin();
 
             int localTileID = ts.getTiles().get(selTileID).getTileID();
-            int xpos2 = localTileID % ts.getWidth();
-            int ypos2 = localTileID / ts.getWidth();
-            int margin = ts.getMargin();
-            int spacing = ts.getSpacing();
-            int srcX = xpos2 * (ts.getTilewidth() + spacing) + margin;
-            int srcY = ypos2 * (ts.getTileheight() + spacing) + margin;
+            int srcX = ts.getSrcX(localTileID);
+            int srcY = ts.getSrcY(localTileID);
 
             batch.draw(ts.getTexture(), drawX, drawY, drawWidth, drawHeight, srcX, srcY, ts.getTilewidth(), ts.getTileheight(), false, false);
 
