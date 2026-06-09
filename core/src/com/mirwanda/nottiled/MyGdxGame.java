@@ -635,7 +635,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     int loadtime = 10;
     private CheckBox[] newcb;
     private int scrollspeed;
-    private Slider sdScrollSpeed, sdGridOpacity;
+    private Slider sdScrollSpeed, sdGridOpacity, sdZoomLimit;
     private SelectBox sbLanguage;
     private SelectBox sbScreenOrientation;
     private Online templates = new Online();
@@ -657,7 +657,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private Texture background;
     private boolean sEnableBlending;
     private CheckBox cbEnableBlending;
-    private String cammode = "";
+    private TextButton bScreenshot;
+    private TextPromptListener pScreenshotSize;
+    private float screenshotCamX, screenshotCamY, screenshotCamZoom;
     private java.util.List<Boolean> massprops = new ArrayList<Boolean>();
     private int mapstartSelect;
     private int mapendSelect;
@@ -699,7 +701,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private Texture txresources;
     private TextButton bMassAddProp, bTileCollision;
     private int zoomTreshold;
-    private TextField fzoomtresh, frwpath;
+    private TextField frwpath;
     private TextField tfAiApiKey, tfAiApiUrl, tfAiModel, fAiPrompt;
     private String aiApiKey = "", aiApiUrl = "https://openrouter.ai/api/v1/chat/completions",
             aiModel = "deepseek/deepseek-v4-flash";
@@ -990,7 +992,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 } else {
                     ocam.zoom = ocam.zoom * 0.8f;
                 }
-                if (ocam.zoom > Tsw * 2) {
+                if (ocam == cam) {
+                    if (ocam.zoom > maxWorldZoomOut())
+                        ocam.zoom = maxWorldZoomOut();
+                } else if (ocam.zoom > Tsw * 2) {
                     ocam.zoom = Tsw * 2;
                 }
                 if (ocam.zoom < Tsw / 320f)// zoom in
@@ -2169,38 +2174,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (mapstartSelect == mapendSelect) {
                     roll = false;
                 }
+            } else {
+                float pex = (float) Gdx.input.getX() / nssx;
+                float pey = (float) Gdx.input.getY() / nssy;
+                float edgeStep = 15f * cam.zoom;
+                if (pex > 0.90f)
+                    cam.translate(edgeStep, 0);
+                if (pex < 0.10f)
+                    cam.translate(-edgeStep, 0);
+                if (pey > 0.90f)
+                    cam.translate(0, -edgeStep);
+                if (pey < 0.10f)
+                    cam.translate(0, edgeStep);
+                clampWorldCamPosition();
+                cam.update();
             }
-
-            float pex, pey;
-            pex = (float) Gdx.input.getX() / nssx;
-            pey = (float) Gdx.input.getY() / nssy;
-
-            // Gdx.app.log("pexpey", ""+ Gdx.input.getX() + " | "+ nssx + " | "+
-            // Gdx.input.getY() + " | "+ nssy);
-            if (pex > 0.90f)
-                cam.translate(5, 0);
-            if (pex < 0.10f)
-                cam.translate(-5, 0);
-            if (pey > 0.90f)
-                cam.translate(0, -5);
-            if (pey < 0.10f)
-                cam.translate(0, 5);
-            int onset = 0;
-            if (orientation.equalsIgnoreCase("isometric")) {
-                onset = Tsw * Tw / 2;
-            }
-            if (!orientation.equalsIgnoreCase("isometric") && !sNoScrollBoundary) {
-                if (cam.position.x < 0 - onset)
-                    cam.position.x = 0 - onset;
-                if (cam.position.x > Tsw * Tw - onset)
-                    cam.position.x = Tsw * Tw - onset;
-                if (cam.position.y < -Tsh * Th)
-                    cam.position.y = -Tsh * Th;
-                if (cam.position.y > 0)
-                    cam.position.y = 0;
-            }
-
-            cam.update();
         }
 
         if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) && Gdx.input.isKeyJustPressed(Input.Keys.Z)) {
@@ -2273,19 +2261,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         if (Gdx.input.isKeyPressed(Input.Keys.X)) {
-            if (cammode == "View only") {
-                if (cam.zoom < zoomTreshold) {
-                    cammode = "";
-                }
-            } else {
-                if (cam.zoom > zoomTreshold) {
-                    cammode = "View only";
-                    cacheTiles();
-                }
-            }
             if (kartu == "world") {
-                if (cam.zoom < 100) {
-                    cam.zoom = cam.zoom * 1.1f;
+                if (cam.zoom < maxWorldZoomOut()) {
+                    cam.zoom = Math.min(cam.zoom * 1.1f, maxWorldZoomOut());
                     cam.update();
                 }
             } else if (kartu == "tile" || kartu == "pickanim") {
@@ -2296,19 +2274,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         }
         if (Gdx.input.isKeyPressed(Input.Keys.C)) {
-            if (cammode == "View only") {
-                if (cam.zoom < zoomTreshold) {
-                    cammode = "";
-                }
-            } else {
-                if (cam.zoom > zoomTreshold) {
-                    cammode = "View only";
-                    cacheTiles();
-                }
-            }
             if (kartu == "world") {
-                if (cam.zoom > 0.01) {
+                if (cam.zoom > Tsw / 320f) {
                     cam.zoom = cam.zoom / 1.1f;
+                    if (cam.zoom < Tsw / 320f)
+                        cam.zoom = Tsw / 320f;
                     cam.update();
                 }
             } else if (kartu == "tile" || kartu == "pickanim") {
@@ -2500,7 +2470,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     backToMap();
                     break;
                 case "pickanim":
-                    if (tilePicker == "terraineditor") {
+                    if (tilePicker == "newterrain") {
+                        resumeTerrainEditor();
+                    } else if (tilePicker == "terraineditor") {
                         lastStage = null;
                         if (frompick) {
                             restorePickAutoAfterTerrainEditor();
@@ -3531,7 +3503,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     boolean pickAutoBeforeTerrainEditor = false;
 
     private void drawGrid() {
-        if (cammode != "View only") {
             // GRID IN MAIN VIEW
             if (sEnableBlending) {
                 Gdx.gl.glEnable(GL20.GL_BLEND);
@@ -3631,6 +3602,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             Gdx.gl20.glLineWidth(1);// average
             sr.setColor(0, 0, 0, gridOpacity / 10f);
+            boolean showTileGrid = sShowGrid && cam.zoom <= 2f;
 
             int offsetx = 0, offsety = 0;
             if (orientation.equalsIgnoreCase("isometric")) {
@@ -3642,7 +3614,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             {
 
                 if (orientation.equalsIgnoreCase("isometric")) {
-                    if (sShowGrid)
+                    if (showTileGrid)
                         sr.rectLine(Tsw / 2 + i * Tsw / 2, -i * Tsh / 2 + Tsh, Tsw / 2 + i * Tsw / 2 - Tsw * Th / 2,
                                 -i * Tsh / 2 - Tsh * Th / 2 + Tsh, Tsw / 32f);
                     // sr.rectLine(Tsw / 2 + i * Tsw / 2, -i * Tsh / 2 + Tsh, Tsw / 2 + i * Tsw / 2
@@ -3655,7 +3627,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             continue;
                     }
 
-                    if (sShowGrid || i == 0 || i == Tw) {
+                    if (showTileGrid || i == 0 || i == Tw) {
                         sr.rectLine((Tsw * i), Tsh, (i * Tsw), -Tsh * Th + Tsh, Tsw / 16f);
                     }
 
@@ -3665,7 +3637,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             {
 
                 if (orientation.equalsIgnoreCase("isometric")) {
-                    if (sShowGrid)
+                    if (showTileGrid)
                         sr.rectLine(0 - j * Tsw / 2, Tsh / 2 - (Tsh * j / 2), (0 - j * Tsw / 2) + Tsw * Tw / 2,
                                 Tsh / 2 - (Tsh * j / 2) - Tsh * Tw / 2, Tsw / 32f);
                 } else {
@@ -3675,7 +3647,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if ((-Tsh * j) - 2 * Tsh > cam.position.y + (reduy + Tsh) * cam.zoom)
                         continue;
 
-                    if (sShowGrid || j == -1 || j == Th - 1) {
+                    if (showTileGrid || j == -1 || j == Th - 1) {
                         sr.rectLine(0, -(Tsh * j), Tsw * Tw, -(j * Tsh), Tsw / 16f);
                     }
                 }
@@ -3691,7 +3663,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             if (sShowCustomGrid) {
-                sr.setColor(1, 0, 0, 0.5f);
+                sr.setColor(0, 0, 0, gridOpacity / 10f);
                 offsetx = 0;
                 offsety = 0;
                 if (orientation.equalsIgnoreCase("isometric")) {
@@ -3793,7 +3765,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (sEnableBlending) {
                 Gdx.gl.glDisable(GL20.GL_BLEND);
             }
-        }
     }
 
     private void drawTiles() {
@@ -6443,32 +6414,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         uis.begin(ShapeRenderer.ShapeType.Filled);
         uis.setColor(0f, 0f, 0, 0.6f);
 
-        if (cammode == "View only") {
-            if (!takingss) {
-                uisrect(gui.screenshot, mouse, null);// tile/obj switch
-                uisrect(gui.center, mouse, vis("center"));// map props. button
-
-            }
-            uis.end();
-            ui.setProjectionMatrix(uicam.combined);
-            ui.begin();
-            if (!takingss) {
-                uidraw(txcenter, gui.center, 2);
-                str1draw(ui, z.screenshot, gui.screenshot);
-
-            }
-
-            if (statustimeout > 0) {
-                statustimeout -= delta;
-                str1.setColor(1, 0, 0, 1);
-                if (!takingss)
-                    str1draw(ui, debugMe, gui.status);
-                str1.setColor(1, 1, 1, 1);
-            }
-
-            ui.end();
-        } else if (cammode != "View only") {
-
             if (roll || stamp || assemblymode)
                 uisrect(gui.info, mouse, null);// info
 
@@ -6873,8 +6818,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 uidrawbutton(txUp, "-", gui.editordown, 1);
             }
 
-            if (cammode != "View only") {
-
                 if (mode == "tile" || mode == "object" || mode == "image") {
 
                     if (sMinimap) {
@@ -7186,11 +7129,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 }
 
-            }
             // turn it back to normal and end.
 
             ui.end();
-        }
         str1.setColor(1, 1, 1, 1);
         str1.getData().setScale(1f);
 
@@ -10039,6 +9980,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tTools1.add(bBackground).row();
             tTools1.add(tracebackground).row();
             tTools1.add(randomize).row();
+            tTools1.add(bScreenshot).row();
 
             tTools2.add(generateterrain).row();
             tTools2.add(bCollaboration).row();
@@ -10057,6 +9999,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             ttools.add(bBackground).row();
             ttools.add(tracebackground).row();
             ttools.add(randomize).row();
+            ttools.add(bScreenshot).row();
             ttools.add(generateterrain).row();
             ttools.add(bCollaboration).row();
             ttools.add(bAutoMgmt).row();
@@ -10079,6 +10022,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         generateterrain = new TextButton(z.generateterrain, skin);
         tracebackground = new TextButton(z.tracebackground, skin);
         toback = new TextButton(z.back, skin);
+        bScreenshot = new TextButton(z.screenshot, skin);
 
         bMirrorMenu = new TextButton(z.mirror, skin);
         bMirrorMenu.addListener(new ChangeListener() {
@@ -10101,6 +10045,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
 
                 traceBackground();
+            }
+        });
+
+        bScreenshot.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                promptMapScreenshotExport();
             }
         });
 
@@ -12688,13 +12639,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         sShowCoords = prefs.getBoolean("coords", false);
         sSaveTsx = prefs.getBoolean("tsx", false);
         sPrettyPrintTmx = prefs.getBoolean("prettyprinttmx", false);
-        scrollspeed = prefs.getInteger("ss", 3);
+        scrollspeed = prefs.getInteger("ss", 5);
         sShowCustomGrid = prefs.getBoolean("customgrid", false);
         sNoScrollBoundary = prefs.getBoolean("noscrollboundary", false);
         sGridX = prefs.getInteger("gridx", 5);
         sResizeTiles = prefs.getBoolean("resize", false);
         sGridY = prefs.getInteger("gridy", 5);
-        zoomTreshold = prefs.getInteger("zoom", 2);
+        zoomTreshold = prefs.getInteger("zoom", 5);
+        if (zoomTreshold < 1)
+            zoomTreshold = 1;
+        if (zoomTreshold > 10)
+            zoomTreshold = 10;
         defaultObjW = prefs.getInteger("defaultobjw", -1);
         defaultObjH = prefs.getInteger("defaultobjh", -1);
         aiApiKey = prefs.getString("aiapikey", "");
@@ -12751,6 +12706,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 cbEnableBlending.setChecked(sEnableBlending);
                 sdScrollSpeed.setValue(scrollspeed);
                 sdGridOpacity.setValue(gridOpacity);
+                sdZoomLimit.setValue(zoomTreshold);
                 fAutoSaveInterval.setText(Integer.toString(autosaveInterval));
                 cbMapBackups.setChecked(sMapBackups);
                 cbPrettyPrintTmx.setChecked(sPrettyPrintTmx);
@@ -12773,7 +12729,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 cbNoScrollBoundary.setChecked(sNoScrollBoundary);
                 fGridX.setText(Integer.toString(sGridX));
                 fGridY.setText(Integer.toString(sGridY));
-                fzoomtresh.setText(Integer.toString(zoomTreshold));
                 fDefaultObjW.setText(defaultObjW > 0 ? Integer.toString(defaultObjW) : "");
                 fDefaultObjH.setText(defaultObjH > 0 ? Integer.toString(defaultObjH) : "");
                 tfAiApiKey.setText(aiApiKey);
@@ -12791,8 +12746,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         cbShowCoords = new CheckBox(z.showcoords, skin);
         cbShowFPS = new CheckBox(z.showfps, skin);
         cbEnableBlending = new CheckBox(z.enableblending, skin);
-        sdScrollSpeed = new Slider(1, 5, 1, false, skin);
+        sdScrollSpeed = new Slider(1, 10, 1, false, skin);
         sdGridOpacity = new Slider(1, 10, 1, false, skin);
+        sdZoomLimit = new Slider(1, 10, 1, false, skin);
 
         cbShowGid = new CheckBox(z.showgidinpicker, skin);
         cbAutoSave = new CheckBox(z.autosaving, skin);
@@ -12800,9 +12756,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         cbShowGidmap = new CheckBox(z.showgidinmap, skin);
         cbShowCustomGrid = new CheckBox(z.showcustomgrid, skin);
         cbNoScrollBoundary = new CheckBox(z.removescrollboundary, skin);
-        fzoomtresh = new TextField(Integer.toString(zoomTreshold), skin);
         tfCustomFont = new TextField("", skin);
-        fzoomtresh.setTextFieldFilter(tffint);
         fBgcolor = new TextField(sBgcolor, skin);
         TextButton tbcustomfont = new TextButton(z.selectfile, skin);
         fBgcolor.setTextFieldFilter(tffcolor);
@@ -12980,13 +12934,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     sGridX = 10;
                 prefs.putInteger("gridx", sGridX).flush();
 
-                try {
-                    zoomTreshold = Integer.parseInt(fzoomtresh.getText());
-                } catch (NumberFormatException e) {
-                    zoomTreshold = 4;
-                }
-                if (zoomTreshold == 0)
-                    zoomTreshold = 4;
+                zoomTreshold = (int) sdZoomLimit.getValue();
+                if (zoomTreshold < 1)
+                    zoomTreshold = 1;
+                if (zoomTreshold > 10)
+                    zoomTreshold = 10;
                 prefs.putInteger("zoom", zoomTreshold).flush();
 
                 try {
@@ -13040,8 +12992,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tPreference2.add(sbLanguage).width(btnx / 2).padBottom(5).row();
         tPreference2.add(new Label(z.screenorientation, skin)).width(btnx / 2);
         tPreference2.add(sbScreenOrientation).width(btnx / 2).padBottom(5).row();
-        tPreference2.add(new Label(z.zoomlimit, skin)).width(btnx / 2);
-        tPreference2.add(fzoomtresh).width(btnx / 2).padBottom(2).row();
+        tPreference2.add(new Label(z.zoomlimit, skin)).align(Align.left).width(btnx).colspan(2).left().row();
+        tPreference2.add(sdZoomLimit).align(Align.left).width(btnx).colspan(2).left().padBottom(2).row();
         tPreference2.add(new Label(z.background, skin)).width(btnx / 2);
         tPreference2.add(fBgcolor).width(btnx / 2).padBottom(2).row();
         tPreference2.add(new Label(z.customfont, skin)).width(btnx / 2);
@@ -15291,6 +15243,35 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void cancel() {
             }
 
+        };
+
+        pScreenshotSize = new TextPromptListener() {
+            @Override
+            public void confirm(String input) {
+                int w = 400, h = 400;
+                if (input != null && !input.trim().isEmpty()) {
+                    String s = input.trim().toLowerCase().replace(" ", "");
+                    try {
+                        if (s.contains("x")) {
+                            String[] parts = s.split("x");
+                            if (parts.length >= 2) {
+                                w = Integer.parseInt(parts[0]);
+                                h = Integer.parseInt(parts[1]);
+                            }
+                        } else {
+                            w = h = Integer.parseInt(s);
+                        }
+                    } catch (Exception e) {
+                    }
+                }
+                w = Math.max(1, Math.min(w, 4096));
+                h = Math.max(1, Math.min(h, 4096));
+                exportMapScreenshot(w, h);
+            }
+
+            @Override
+            public void cancel() {
+            }
         };
 
         pNewLayerSC = new TextPromptListener() {
@@ -17916,7 +17897,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             @Override
             public void confirm(String input) {
-                if (input == "") {
+                if (input == null || input.isEmpty()) {
                     return;
                 }
 
@@ -25195,6 +25176,103 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return row * cols + col;
     }
 
+    private float maxWorldZoomOut() {
+        return Math.max(zoomTreshold, 0.5f);
+    }
+
+    private void clampWorldCamPosition() {
+        int onset = 0;
+        if (orientation.equalsIgnoreCase("isometric")) {
+            onset = Tsw * Tw / 2;
+        }
+        if (!orientation.equalsIgnoreCase("isometric") && !sNoScrollBoundary) {
+            if (cam.position.x < 0 - onset)
+                cam.position.x = 0 - onset;
+            if (cam.position.x > Tsw * Tw - onset)
+                cam.position.x = Tsw * Tw - onset;
+            if (cam.position.y < -Tsh * Th)
+                cam.position.y = -Tsh * Th;
+            if (cam.position.y > 0)
+                cam.position.y = 0;
+        }
+    }
+
+    private int mapTileAtWorld(float wx, float wy) {
+        if (orientation.equalsIgnoreCase("orthogonal")) {
+            return orthogonalTileGridAt(wx, wy, Tw, Th, Tsw, Tsh);
+        } else if (orientation.equalsIgnoreCase("isometric")) {
+            int ae = (int) wx;
+            int ab = (int) wy;
+            int newae = ae - ((Tsw / Tsh) * ab) + Tsw / 2;
+            int newab = (ae / (Tsw / Tsh)) + ab - Tsh / 2;
+            int num = (Tw * ((-newab + Tsh) / Tsh) + (newae / Tsw));
+            if (num < 0 || num > Tw * Th)
+                return -1;
+            return num;
+        }
+        return -1;
+    }
+
+    private void stampBrushAt(int num) {
+        for (int bx = 0; bx < brushsize; bx++) {
+            for (int by = 0; by < brushsize; by++) {
+                int curx = num % Tw;
+                int cury = num / Tw;
+                final int locx = curx - brushsize / 2 + bx;
+                final int locy = cury - brushsize / 2 + by;
+                if (locx < 0 || locy < 0 || locx >= Tw || locy >= Th)
+                    continue;
+                boolean terrar = false;
+                if (bx == 0 && by == 0)
+                    terrar = true;
+                if (bx == brushsize - 1 && by == 0)
+                    terrar = true;
+                if (bx == brushsize - 1 && by == brushsize - 1)
+                    terrar = true;
+                if (by == brushsize - 1 && bx == 0)
+                    terrar = true;
+                if (bx == 0 && by % 2 == 0)
+                    terrar = true;
+                if (by == 0 && bx % 2 == 0)
+                    terrar = true;
+                if (bx == brushsize - 1 && by % 2 == 0)
+                    terrar = true;
+                if (by == brushsize - 1 && bx % 2 == 0)
+                    terrar = true;
+                tapTile(locy * Tw + locx, true, terrar, false, curspr);
+            }
+        }
+    }
+
+    private void stampBrushBetween(int fromNum, int toNum) {
+        if (fromNum < 0 || toNum < 0)
+            return;
+        if (fromNum == toNum) {
+            stampBrushAt(toNum);
+            return;
+        }
+        int x0 = fromNum % Tw, y0 = fromNum / Tw;
+        int x1 = toNum % Tw, y1 = toNum / Tw;
+        int dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+        int sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+        int err = dx - dy;
+        int cx = x0, cy = y0;
+        while (true) {
+            stampBrushAt(cy * Tw + cx);
+            if (cx == x1 && cy == y1)
+                break;
+            int e2 = 2 * err;
+            if (e2 > -dy) {
+                err -= dy;
+                cx += sx;
+            }
+            if (e2 < dx) {
+                err += dx;
+                cy += sy;
+            }
+        }
+    }
+
     /** Tile index under world-space touch for orthogonal tile grids, or -1. */
     private int orthogonalTileGridAt(float wx, float wy, int cols, int rows, int tileW, int tileH) {
         if (tileW < 1 || tileH < 1)
@@ -25335,7 +25413,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         float mapH = Math.max(Th * Tsh, 1f);
         float fit = Math.max(mapW / viewMin, mapH / viewMin) * 0.88f;
         float minZoom = Tsw / 320f;
-        return Math.min(Math.max(fit, minZoom), Tsw * 2f);
+        return Math.min(Math.max(fit, minZoom), maxWorldZoomOut());
     }
 
     private float pixelArtTilePickerZoom(tileset t) {
@@ -26774,6 +26852,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             gotoStage(tTileMgmt);
                         }
                         return true;
+                    case "newterrain":
+                        resumeTerrainEditor();
+                        return true;
                     case "props":
                         gotoStage(tPropEditor);
                         return true;
@@ -27457,8 +27538,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "newterrain":
                         {
                             int pickedLocal = num - ts.getFirstgid();
-                            tile picked = ts.getTileMeta(pickedLocal);
-                            if (picked == null || !picked.hasImage())
+                            if (!ts.hasTileImage(pickedLocal))
                                 return true;
                             newTerrainID = pickedLocal;
                         }
@@ -28204,8 +28284,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     public void tapTile(int num, boolean terra, boolean smartStamp, int brushGidParam) {
-        if (cammode == "View only")
-            return;
         if (layers.size() == 0)
             return;
         if (brushGidParam > 0)
@@ -30413,31 +30491,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private boolean tapWorldMenu(Vector3 touch2) {
-        if (cammode == "View only") {
-            if (tapped(touch2, gui.center)) {
-                resetcam(true);
-                cammode = "";
-                return true;
-            }
-
-            if (tapped(touch2, gui.screenshot)) {
-                takingss = true;
-                // Gdx.input.vibrate(100);
-
-                com.badlogic.gdx.utils.Timer.schedule(new com.badlogic.gdx.utils.Timer.Task() {
-                    @Override
-                    public void run() {
-                        // Gdx.input.vibrate(200);
-                        screenshot();
-                        cue("screenshot");
-                        takingss = false;
-                    }
-                }, 1f);
-
-            }
-            return true;
-        }
-
         // layer selection (top mid)
         if (tapped(touch2, gui.layer)) {
             if (layers.size() == 0)
@@ -30906,7 +30959,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
                 // updateMinimap();
                 // if (sMinimap) cacheTiles();
-                return true;
             } else if (mode.equalsIgnoreCase("object")) {
                 boolean undone = false;
                 while (undolayerobject.size() > 0) {
@@ -30970,11 +31022,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             if (mode == "newpoly") {
-
                 newobject.undoPoint();
-                return true;
             }
 
+            return true;
         }
 
         // redo
@@ -31084,8 +31135,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         pushUpdateIfCollaborating();
                     }
                 }
-                return true;
             }
+
+            return true;
         }
 
         // view mode selector (top roght)
@@ -31408,31 +31460,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private boolean tapEditorMenu(Vector3 touch2) {
-        if (cammode == "View only") {
-            if (tapped(touch2, gui.center)) {
-                resetcam(true);
-                cammode = "";
-                return true;
-            }
-
-            if (tapped(touch2, gui.screenshot)) {
-                takingss = true;
-                // Gdx.input.vibrate(100);
-
-                com.badlogic.gdx.utils.Timer.schedule(new com.badlogic.gdx.utils.Timer.Task() {
-                    @Override
-                    public void run() {
-                        // Gdx.input.vibrate(200);
-                        screenshot();
-                        cue("screenshot");
-                        takingss = false;
-                    }
-                }, 1f);
-
-            }
-            return true;
-        }
-
         if (mode == "pick") {
 
             if (tapped(touch2, gui.tilesetsmid)) {
@@ -31892,9 +31919,44 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return null;
     }
 
-    private void screenshot() {
+    private void promptMapScreenshotExport() {
+        getNewTextInput(pScreenshotSize, z.screenshot, "400x400", "WxH (e.g. 400x400)");
+    }
 
-        // status("screenshot?",5);
+    private void fitCameraForMapScreenshot() {
+        int onset = 0;
+        if (orientation.equalsIgnoreCase("isometric")) {
+            onset = Tsw * Tw / 2;
+        }
+        cam.position.set(Tsw * Tw / 2f - onset, -Tsh * Th / 2f, 0);
+        float fitZoom = Math.max((Tw * Tsw) / cam.viewportWidth, (Th * Tsh) / cam.viewportHeight) * 1.05f;
+        cam.zoom = Math.min(fitZoom, maxWorldZoomOut());
+        cam.update();
+    }
+
+    private void exportMapScreenshot(final int exportW, final int exportH) {
+        if (curfile == null || curfile.isEmpty()) {
+            msgbox(z.saveas != null ? z.saveas : "Save the map first.");
+            return;
+        }
+        screenshotCamX = cam.position.x;
+        screenshotCamY = cam.position.y;
+        screenshotCamZoom = cam.zoom;
+        fitCameraForMapScreenshot();
+        takingss = true;
+        com.badlogic.gdx.utils.Timer.schedule(new com.badlogic.gdx.utils.Timer.Task() {
+            @Override
+            public void run() {
+                screenshot(exportW, exportH);
+                cam.position.set(screenshotCamX, screenshotCamY, 0);
+                cam.zoom = screenshotCamZoom;
+                cam.update();
+                takingss = false;
+            }
+        }, 0.2f);
+    }
+
+    private void screenshot(int exportW, int exportH) {
         int ax = 1, ay = Tsh, az = 0;
         int bx = Tw * Tsw, by = Th * Tsh + Tsh - 1, bz = 0;
         Vector3 va = new Vector3(ax, ay, az);
@@ -31903,14 +31965,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Vector3 upvb = cam.project(vb);
 
         FileHandle fh = Gdx.files.absolute(curdir + "/" + curfile.substring(0, curfile.length() - 4) + "_map.png");
-        Pixmap data = getScreenshot((int) upva.x, (int) upva.y - (int) (upvb.y - upva.y), (int) (upvb.x - upva.x),
-                (int) (upvb.y - upva.y), true);
-        // if (layers.size()>2 && tilesets.size()>0){
-        // if (layers.get(2).getName().equalsIgnoreCase("Units") &&
-        // tilesets.get(0).getName().equalsIgnoreCase("units")){
-        // data = resizepixmap(data,Tsw*Tw,Tsh*Th);
-        // }}
-        PixmapIO.writePNG(fh, data);
+        int capW = (int) (upvb.x - upva.x);
+        int capH = (int) (upvb.y - upva.y);
+        Pixmap data = getScreenshot((int) upva.x, (int) upva.y - capH, capW, capH, true);
+        Pixmap out = data;
+        if (exportW > 0 && exportH > 0
+                && (data.getWidth() != exportW || data.getHeight() != exportH)) {
+            out = resizepixmap(data, exportW, exportH);
+        }
+        PixmapIO.writePNG(fh, out);
+        if (out != data)
+            data.dispose();
 
         status(z.screenshotsaved, 2);
     }
@@ -33050,6 +33115,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 // code for the rest, so basically longpressing is just flagging "roll"
                 mapendSelect = mapstartSelect;
                 mapinitialSelect = mapstartSelect;
+                prevnum = mapinitialSelect;
 
                 // you will need this, otherwise the app will crash because it relies on panStop
                 // to
@@ -34082,125 +34148,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             usetool = true;
             Vector3 touch = new Vector3();
             cam.unproject(touch.set(p1, p2, 0));
-            int ae = (int) touch.x;
-            int ab = (int) touch.y;
             int posx = 0;
             int posy = 0;
             int initx = 0;
             int inity = 0;
-            Integer num = -1;
+            Integer num = mapTileAtWorld(touch.x, touch.y);
 
-            // so basically, find the tile id.
-            if (orientation.equalsIgnoreCase("orthogonal")) {
-                num = orthogonalTileGridAt(touch.x, touch.y, Tw, Th, Tsw, Tsh);
-            } else if (orientation.equalsIgnoreCase("isometric")) {
-
-                // cool way to convert isometric to orthogonal, new iso tap detection
-                int newae = ae - ((Tsw / Tsh) * ab) + Tsw / 2;
-                int newab = (ae / (Tsw / Tsh)) + ab - Tsh / 2;
-                num = (Tw * ((-newab + Tsh) / Tsh) + (newae / Tsw));
-                if (num < 0 || num > Tw * Th)
-                    return true;
-
-                /*
-                 * old way
-                 * 
-                 * float closest = 9999;
-                 * for (int i = 0; i < Tw * Th; i++) {
-                 * int offsetx = 0, offsety = 0;
-                 * xpos = i % Tw;
-                 * ypos = i / Tw;
-                 * offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
-                 * offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
-                 * int drawx = xpos * Tsw - offsetx;
-                 * int drawy = -ypos * Tsh - offsety;
-                 * int x = ae - drawx;
-                 * int y = ab - drawy;
-                 * int Tsws = Tsw / 2;
-                 * int Tshs = Tsh / 2;
-                 * float dx = Math.abs(x - Tsws);
-                 * float dy = Math.abs(y - Tshs);
-                 * if (dx / Tsws + dy / Tshs < closest) {
-                 * num = i;
-                 * closest = dx / Tsws + dy / Tshs;
-                 * }
-                 * }
-                 * 
-                 */
-            }
-
-            // if the tile ID cannot be found, just return.
             if (num == -1)
                 return true;
 
             // brushing, basically other tools are not using pan,
             // remember that longpressing fill will turn it into brush?
-            // log(prevnum+"|"+num);
-            if (activetool == 4 & num != -1 & prevnum != num) {
+            if (activetool == 4 && num != -1 && prevnum != num) {
+                stampBrushBetween((int) prevnum, num);
                 prevnum = num;
-                // small brush
-                // tapTile(num, false, fal\size+"");
-                for (int bx = 0; bx < brushsize; bx++) {
-                    for (int by = 0; by < brushsize; by++) {
-                        // celorasu=in
-                        int curx = num % Tw;
-                        int cury = num / Tw;
-                        final int locx = curx - brushsize / 2 + bx;
-                        final int locy = cury - brushsize / 2 + by;
-                        // Gdx.app.log( "", cury + "/" + curx + "/" + locy + "/" + locx );
-                        if (locx < 0)
-                            continue;
-                        if (locy < 0)
-                            continue;
-                        if (locx >= Tw)
-                            continue;
-                        if (locy >= Th)
-                            continue;
-                        boolean terrar = false;
-                        // if (bx==0 || by ==0 || bx==brushsize-1 || by==brushsize-1) terrar=true;
-
-                        // this code halves the needed taptile with terrain true.
-                        if (bx == 0 && by == 0)
-                            terrar = true;
-                        if (bx == brushsize - 1 && by == 0)
-                            terrar = true;
-                        if (bx == brushsize - 1 && by == brushsize - 1)
-                            terrar = true;
-                        if (by == brushsize - 1 && bx == 0)
-                            terrar = true;
-                        if (bx == 0 && by % 2 == 0)
-                            terrar = true;
-                        if (by == 0 && bx % 2 == 0)
-                            terrar = true;
-                        if (bx == brushsize - 1 && by % 2 == 0)
-                            terrar = true;
-                        if (by == brushsize - 1 && bx % 2 == 0)
-                            terrar = true;
-
-                        final boolean ft = terrar;
-                        // log(ft+"");
-                        // if (!ft) continue;
-
-                        tapTile(locy * Tw + locx, true, ft, false, curspr);
-
-                        /*
-                         * 
-                         * try {
-                         * autotilePool.execute( new Runnable( ){
-                         * 
-                         * @Override
-                         * public void run() {
-                         * 
-                         * }
-                         * });
-                         * } catch (Exception e) {
-                         * e.printStackTrace();
-                         * }
-                         * 
-                         */
-                        // threadPool.waitUntilAllTasksFinished();
-                    }
-                }
 
                 nofling = 0.4f;
                 velx = 0;
@@ -34245,7 +34206,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             // if not "roll", just move the screen then.
             drag = true;
             int buffer = Tsw + Tsh;
-            float panspeed = (float) scrollspeed / 2;
+            float panspeed = (float) scrollspeed;
 
             switch (kartu) {
 
@@ -34256,21 +34217,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                     cam.translate(-x, y);
                     // uicam.translate(-x, y);
-
-                    int onset = 0;
-                    if (orientation.equalsIgnoreCase("isometric")) {
-                        onset = Tsw * Tw / 2;
-                    }
-                    if (!orientation.equalsIgnoreCase("isometric") && !sNoScrollBoundary) {
-                        if (cam.position.x < 0 - onset)
-                            cam.position.x = 0 - onset;
-                        if (cam.position.x > Tsw * Tw - onset)
-                            cam.position.x = Tsw * Tw - onset;
-                        if (cam.position.y < -Tsh * Th)
-                            cam.position.y = -Tsh * Th;
-                        if (cam.position.y > 0)
-                            cam.position.y = 0;
-                    }
+                    clampWorldCamPosition();
 
                     cam.update();
                     // uicam.update();
@@ -34687,21 +34634,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         prevy = (p3.y + p4.y) / 2;
         // pan((p1.x+p2.x)/2,(p1.y+p2.y)/2,((p1.x+p2.x)/2)/((p3.x+p4.x)/2),((p1.y+p2.y)/2)/((p3.y+p4.y)/2));
         // zooming=true;
-        if (cammode == "View only") {
-            if (cam.zoom < zoomTreshold) {
-                cammode = "";
-            }
-        } else {
-            if (cam.zoom > zoomTreshold) {
-                cammode = "View only";
-                cacheTiles();
-            }
-        }
         if (kartu == "world") {
             cam.zoom = initialZoom * pa1 / pa2;
 
-            if (cam.zoom > Tsw * 2) {
-                cam.zoom = Tsw * 2;
+            if (cam.zoom > maxWorldZoomOut()) {
+                cam.zoom = maxWorldZoomOut();
             }
             if (cam.zoom < Tsw / 320f)// zoom in
             {
