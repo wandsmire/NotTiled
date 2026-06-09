@@ -54,7 +54,18 @@ public class drawer implements Comparable
 	boolean flipX;
 	boolean flipY;
 	boolean flagged;
+	boolean orphan;
 	long mm;
+
+	public void setOrphan(boolean orphan)
+	{
+		this.orphan = orphan;
+	}
+
+	public boolean isOrphan()
+	{
+		return orphan;
+	}
 	public drawer(){}
 	public void setdrawer(int initset, float x, float y, float originX, float originY, float width, float height, float scaleX, float scaleY, float rotation, int srcX, int srcY, int srcWidth, int srcHeight, boolean flipX, boolean flipY)
 	{
@@ -84,8 +95,12 @@ public class drawer implements Comparable
 		}
 	}
 	
-	public void draw(Pixmap pm2, List<tileset> tilesets, int Tsw, int Tsh)
+	public void draw(Pixmap pm2, List<tileset> tilesets, int Tsw, int Tsh, Pixmap orphanPixmap)
 	{
+		if (orphan && orphanPixmap != null) {
+			drawOrphanPixmap(pm2, orphanPixmap, Tsw, Tsh);
+			return;
+		}
 		if (tilesets.get(initset).getTexture()!=null){
 			for (int xa = 0; xa < Tsw; xa++) {
 				for (int ya = 0; ya < Tsh; ya++) {
@@ -202,6 +217,24 @@ public class drawer implements Comparable
 				}
 			}
 			//batch.draw(tilesets.get(initset).getTexture(), x, y, originX, originY, width, height, scaleX, scaleY, rotation, srcX, srcY, srcWidth, srcHeight, flipX, flipY);
+		}
+	}
+
+	public void draw(Pixmap pm2, List<tileset> tilesets, int Tsw, int Tsh)
+	{
+		draw(pm2, tilesets, Tsw, Tsh, null);
+	}
+
+	private void drawOrphanPixmap(Pixmap pm2, Pixmap orphanPixmap, int Tsw, int Tsh)
+	{
+		int ow = orphanPixmap.getWidth();
+		int oh = orphanPixmap.getHeight();
+		for (int xa = 0; xa < Tsw; xa++) {
+			for (int ya = 0; ya < Tsh; ya++) {
+				int sx = xa * ow / Math.max(1, Tsw);
+				int sy = ya * oh / Math.max(1, Tsh);
+				pm2.drawPixel((int) x + xa, (int) y + ya, orphanPixmap.getPixel(sx, sy));
+			}
 		}
 	}
 

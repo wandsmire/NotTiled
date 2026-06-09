@@ -708,6 +708,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private Texture txmenu, txmap, txundo, txredo, txtile, txauto, txlayer, txautopick, txcenter;
     private Texture txstamp, txadd, txdelete, txinfo, txtiles, txplay;
     private Texture txresources;
+    private static final int ORPHAN_TILE_PX = 8;
+    private Pixmap orphanTilePixmap;
+    private Texture orphanTileTexture;
     private TextButton bMassAddProp, bTileCollision;
     private int zoomTreshold;
     private TextField frwpath;
@@ -3949,17 +3952,27 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                                 position = (abs(a) * Tw) + abs(b);
                                 ini = layers.get(jo).getStr().get(position);
-                                initset = resolveTilesetIndexForGid(ini, layers.get(jo).getTset().get(position));
-                                if (initset == -1)
-                                    continue;
                                 if (ini == 0)
                                     continue;// dont draw empty, amazing performance boost
+                                int preferredTset = layers.get(jo).getTset().get(position);
                                 xpos = position % Tw;
                                 ypos = position / Tw;
                                 if (orientation.equalsIgnoreCase("isometric")) {
                                     offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
                                     offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
                                 }
+                                if (isOrphanedLayerTile(ini, preferredTset)) {
+                                    float ttxOrphan = 0;
+                                    float ttyOrphan = 0;
+                                    if (!orientation.equalsIgnoreCase("isometric")) {
+                                        ttxOrphan = -(Tsw / 2f) + (Tsw / 2f);
+                                        ttyOrphan = -(Tsh / 2f) + (Tsh / 2f);
+                                    }
+                                    drawers.add(orphanTileDrawer(xpos * Tsw + ttxOrphan - offsetx,
+                                            -ypos * Tsh + ttyOrphan - offsety, Tsw / 2f, Tsh / 2f, Tsw, Tsh, ini));
+                                    continue;
+                                }
+                                initset = resolveTilesetIndexForGid(ini, preferredTset);
 
                                 mm = ini;
                                 flag = "00";
@@ -4064,7 +4077,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         } // for a
 
                         for (drawer d : drawers) {
-                            d.draw(batch, tilesets.get(d.initset).getTexture());
+                            drawMapDrawer(batch, d);
                         }
 
                         drawCoordinates();
@@ -4199,14 +4212,23 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     hix = xpos;
                                 if (ypos > hiy)
                                     hiy = ypos;
-                                if (initset == -1)
-                                    continue;
                                 if (ini == 0)
                                     continue;// dont draw empty, amazing performance boost
 
                                 if (orientation.equalsIgnoreCase("isometric")) {
                                     offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
                                     offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
+                                }
+                                if (isOrphanedLayerTile(ini, initset)) {
+                                    float ttxOrphan = 0;
+                                    float ttyOrphan = 0;
+                                    if (!orientation.equalsIgnoreCase("isometric")) {
+                                        ttxOrphan = -(Tsw / 2f) + (Tsw / 2f);
+                                        ttyOrphan = -(Tsh / 2f) + (Tsh / 2f);
+                                    }
+                                    drawers.add(orphanTileDrawer(xpos * Tsw + ttxOrphan - offsetx,
+                                            -ypos * Tsh + ttyOrphan - offsety, Tsw / 2f, Tsh / 2f, Tsw, Tsh, ini));
+                                    continue;
                                 }
 
                                 long mm = ini;
@@ -4326,7 +4348,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 batch.begin();
                 if (assemblymode && assemblynum != -1) {
                     for (drawer d : drawers) {
-                        d.draw(batch, tilesets.get(d.initset).getTexture());
+                        drawMapDrawer(batch, d);
                     }
                 }
                 drawCoordinates();
@@ -4664,19 +4686,23 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         int position = (abs(a) * Tw) + abs(b);
                         ini = layers.get(jo).getStr().get(position);
-                        int initset = -1;
-                        if (tilesets.size() > 0)
-                            initset = resolveTilesetIndexForGid(ini, layers.get(jo).getTset().get(position));
-                        if (initset == -1)
-                            continue;
                         if (ini == 0)
                             continue;// dont draw empty, amazing performance boost
+                        int preferredTset = layers.get(jo).getTset().get(position);
                         int xpos = position % Tw;
                         int ypos = position / Tw;
                         if (orientation.equalsIgnoreCase("isometric")) {
                             offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
                             offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
                         }
+                        if (isOrphanedLayerTile(ini, preferredTset)) {
+                            int TswadOrphan = sResizeTiles ? Tsw : Tsw;
+                            int TshadOrphan = sResizeTiles ? Tsh : Tsh;
+                            drawers.add(orphanTileDrawer(xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2f,
+                                    Tsh / 2f, TswadOrphan, TshadOrphan, ini));
+                            continue;
+                        }
+                        int initset = resolveTilesetIndexForGid(ini, preferredTset);
 
                         mm = ini;
                         flag = "00";
@@ -4759,7 +4785,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 for (drawer drawer : drawers) {
 
                     counting += 1;
-                    drawer.add(cache, tilesets);
+                    addMapDrawer(cache, drawer);
 
                 }
 
@@ -4843,13 +4869,23 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     for (int b = cc; b < dd; b++) {
                         int position = (abs(a) * Tw) + abs(b);
                         ini = layers.get(jo).getStr().get(position);
-                        int initset = -1;
-                        if (tilesets.size() > 0)
-                            initset = resolveTilesetIndexForGid(ini, layers.get(jo).getTset().get(position));
-                        if (initset == -1)
-                            continue;
                         if (ini == 0)
                             continue;
+                        int preferredTset = layers.get(jo).getTset().get(position);
+                        int xpos = position % Tw;
+                        int ypos = position / Tw;
+                        if (orientation.equalsIgnoreCase("isometric")) {
+                            offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
+                            offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
+                        }
+                        if (isOrphanedLayerTile(ini, preferredTset)) {
+                            int TswadOrphan = sResizeTiles ? Tsw : Tsw;
+                            int TshadOrphan = sResizeTiles ? Tsh : Tsh;
+                            drawers.add(orphanTileDrawer(xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2f,
+                                    Tsh / 2f, TswadOrphan, TshadOrphan, ini));
+                            continue;
+                        }
+                        int initset = resolveTilesetIndexForGid(ini, preferredTset);
                         
                         boolean isAnimated = false;
                         long mm_check = ini;
@@ -4874,13 +4910,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
                         if (isAnimated) {
                             continue;
-                        }
-                        
-                        int xpos = position % Tw;
-                        int ypos = position / Tw;
-                        if (orientation.equalsIgnoreCase("isometric")) {
-                            offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
-                            offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
                         }
 
                         mm = ini;
@@ -4957,7 +4986,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
 
                 for (drawer drawer : drawers) {
-                    drawer.add(cache, tilesets);
+                    addMapDrawer(cache, drawer);
                 }
 
                 cids[jo] = cache.endCache();
@@ -5174,7 +5203,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             batch.setProjectionMatrix(cam.combined);
             batch.begin();
             for (drawer drawer : drawers) {
-                drawer.draw(batch, tilesets.get(drawer.initset).getTexture());
+                drawMapDrawer(batch, drawer);
             }
             batch.end();
         }
@@ -7963,7 +7992,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 if (tset == tilesets2) {
                     for (tileset t : tilesets2) {
-                        t.setFirstgid(requestGid());
+                        t.setFirstgid(allocateFirstgid(Math.max(1, t.getTilecount())));
                         tilesets.add(t);
                     }
                 }
@@ -11057,17 +11086,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                                 position = (abs(a) * Tw) + abs(b);
                                 ini = layers.get(jo).getStr().get(position);
-                                initset = resolveTilesetIndexForGid(ini, layers.get(jo).getTset().get(position));
-                                if (initset == -1)
-                                    continue;
                                 if (ini == 0)
                                     continue;// dont draw empty, amazing performance boost
+                                int preferredTset = layers.get(jo).getTset().get(position);
                                 xpos = position % Tw;
                                 ypos = position / Tw;
                                 if (orientation.equalsIgnoreCase("isometric")) {
                                     // offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
                                     // offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
                                 }
+                                if (isOrphanedLayerTile(ini, preferredTset)) {
+                                    drawers.add(orphanTileDrawer(xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2f,
+                                            Tsh / 2f, Tsw, Tsh, ini));
+                                    continue;
+                                }
+                                initset = resolveTilesetIndexForGid(ini, preferredTset);
 
                                 mm = ini;
                                 flag = "00";
@@ -11278,7 +11311,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         java.util.Collections.sort(drawers);// fps hogger
 
                         for (drawer drawer : drawers) {
-                            drawer.draw(pm2, tilesets, Tsw, Tsh);
+                            drawMapDrawerPixmap(drawer, pm2, Tsw, Tsh);
                         }
 
                         for (drawer drawer : drawers2) {
@@ -11383,17 +11416,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                                 position = (abs(a) * Tw) + abs(b);
                                 ini = layers.get(jo).getStr().get(position);
-                                initset = resolveTilesetIndexForGid(ini, layers.get(jo).getTset().get(position));
-                                if (initset == -1)
-                                    continue;
                                 if (ini == 0)
                                     continue;// dont draw empty, amazing performance boost
+                                int preferredTset = layers.get(jo).getTset().get(position);
                                 xpos = position % Tw;
                                 ypos = position / Tw;
                                 if (orientation.equalsIgnoreCase("isometric")) {
                                     offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
                                     offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
                                 }
+                                if (isOrphanedLayerTile(ini, preferredTset)) {
+                                    drawers.add(orphanTileDrawer(xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2f,
+                                            Tsh / 2f, Tsw, Tsh, ini));
+                                    continue;
+                                }
+                                initset = resolveTilesetIndexForGid(ini, preferredTset);
 
                                 mm = ini;
                                 flag = "00";
@@ -11492,7 +11529,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         java.util.Collections.sort(drawers);// fps hogger
 
                         for (drawer drawer : drawers) {
-                            drawer.draw(pm2, tilesets, Tsw, Tsh);
+                            drawMapDrawerPixmap(drawer, pm2, Tsw, Tsh);
                         }
                     }
                 } // for jo
@@ -11585,11 +11622,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             position = (abs(a) * Tw) + abs(b);
 
                             ini = layers.get(jo).getStr().get(position);
-                            initset = resolveTilesetIndexForGid(ini, layers.get(jo).getTset().get(position));
-                            if (initset == -1)
-                                continue;
                             if (ini == 0)
                                 continue;// dont draw empty, amazing performance boost
+                            int preferredTset = layers.get(jo).getTset().get(position);
                             xpos = (b - posx);
                             ypos = (a - posy);
 
@@ -11597,6 +11632,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
                                 offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
                             }
+                            if (isOrphanedLayerTile(ini, preferredTset)) {
+                                drawers.add(orphanTileDrawer(xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2f,
+                                        Tsh / 2f, Tsw, Tsh, ini));
+                                continue;
+                            }
+                            initset = resolveTilesetIndexForGid(ini, preferredTset);
 
                             mm = ini;
                             flag = "00";
@@ -11708,7 +11749,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     // java.util.Collections.sort(drawers);//fps hogger
 
                     for (drawer drawer : drawers) {
-                        drawer.draw(pm2, tilesets, Tsw, Tsh);
+                        drawMapDrawerPixmap(drawer, pm2, Tsw, Tsh);
                     }
                 }
 
@@ -11840,17 +11881,23 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                             position = (abs(a) * Tw) + abs(b);
                             ini = layers.get(jo).getStr().get(position);
-                            initset = resolveTilesetIndexForGid(ini, layers.get(jo).getTset().get(position));
-                            if (initset == -1)
-                                continue;
                             if (ini == 0)
                                 continue;// dont draw empty, amazing performance boost
+                            int preferredTset = layers.get(jo).getTset().get(position);
                             xpos = position % Tw;
                             ypos = position / Tw;
                             if (orientation.equalsIgnoreCase("isometric")) {
                                 offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
                                 offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
                             }
+                            int addsubsetx = subsetx * Tsw * Tw;
+                            int addsubsety = subsety * Tsh * Th;
+                            if (isOrphanedLayerTile(ini, preferredTset)) {
+                                drawers.add(orphanTileDrawer(xpos * Tsw - offsetx + addsubsetx,
+                                        ypos * Tsh - offsety + addsubsety, Tsw / 2f, Tsh / 2f, Tsw, Tsh, ini));
+                                continue;
+                            }
+                            initset = resolveTilesetIndexForGid(ini, preferredTset);
 
                             mm = ini;
                             flag = "00";
@@ -11888,8 +11935,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                             Tswad = Tswa;
                             Tshad = Tsha;
-                            int addsubsetx = subsetx * Tsw * Tw;
-                            int addsubsety = subsety * Tsh * Th;
                             switch (flag) {
                                 case "20":// diagonal flip
                                     tempdrawer.setdrawer(initset, xpos * Tsw - offsetx + addsubsetx,
@@ -11941,7 +11986,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     java.util.Collections.sort(drawers);// fps hogger
 
                     for (drawer drawer : drawers) {
-                        drawer.draw(pm2, tilesets, Tsw, Tsh);
+                        drawMapDrawerPixmap(drawer, pm2, Tsw, Tsh);
                     }
                     subsetx += 1;
                 }
@@ -14754,6 +14799,66 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         gotoStage(tTsProp);
     }
 
+    private int countMapTilesUsingTileset(int tsetIdx) {
+        if (tsetIdx < 0 || tsetIdx >= tilesets.size())
+            return 0;
+        int count = 0;
+        for (int lay = 0; lay < layers.size(); lay++) {
+            layer l = layers.get(lay);
+            if (l.getType() != layer.Type.TILE)
+                continue;
+            for (int k = 0; k < l.getStr().size(); k++) {
+                if (l.getStr().get(k) == 0)
+                    continue;
+                int cached = l.getTset().get(k);
+                if (cached == tsetIdx) {
+                    count++;
+                    continue;
+                }
+                if (resolveTilesetIndexForGid(l.getStr().get(k), cached) == tsetIdx)
+                    count++;
+            }
+        }
+        return count;
+    }
+
+    private void confirmRemoveTilesetAt(final int dex, final Runnable afterRemove) {
+        if (dex < 0 || dex >= tilesets.size())
+            return;
+        if (isProtectedPixelArtTileset(dex)) {
+            msgbox("Swatch and Palette cannot be removed from a Pixel Editor map.");
+            return;
+        }
+        int used = countMapTilesUsingTileset(dex);
+        if (used == 0) {
+            removeTilesetAt(dex);
+            if (afterRemove != null)
+                afterRemove.run();
+            return;
+        }
+        final int usedFinal = used;
+        Dialog confirmDlg = new Dialog(z.confirmation, skin, "dialog") {
+            @Override
+            protected void result(Object object) {
+                if (Boolean.TRUE.equals(object)) {
+                    removeTilesetAt(dex);
+                    if (afterRemove != null)
+                        afterRemove.run();
+                }
+            }
+        };
+        confirmDlg.getContentTable().clear();
+        confirmDlg.text("This tileset is used on " + usedFinal
+                + " tile(s) on the map.\n\nDelete it anyway? Map placements will be kept so you can restore the tileset later.");
+        confirmDlg.button(z.yes, true);
+        confirmDlg.button(z.no, false);
+        confirmDlg.show(stage);
+    }
+
+    private void confirmRemoveTilesetAt(final int dex) {
+        confirmRemoveTilesetAt(dex, null);
+    }
+
     private void removeTilesetAt(final int dex) {
         if (dex < 0 || dex >= tilesets.size())
             return;
@@ -14761,15 +14866,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             msgbox("Swatch and Palette cannot be removed from a Pixel Editor map.");
             return;
         }
-        int saiz = tilesets.size();
         tilesets.remove(dex);
         CacheAllTset();
         if (seltset > dex)
             seltset -= 1;
         else if (seltset == dex)
             seltset = Math.max(0, Math.min(seltset, tilesets.size() - 1));
-        saiz -= 1;
         refreshTsetList();
+        if (ltsetlist != null && tilesets.size() > 0) {
+            int sel = Math.min(dex, tilesets.size() - 1);
+            if (sel < 0)
+                sel = 0;
+            ltsetlist.setSelectedIndex(sel);
+        }
         pickAuto = false;
         resetMassprops();
         if (tilesets.size() > 0)
@@ -15254,19 +15363,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
                     optionsDlg.hide();
-                    Dialog confirmDlg = new Dialog(z.confirmation, skin, "dialog") {
+                    confirmRemoveTilesetAt(tsetIdx, new Runnable() {
                         @Override
-                        protected void result(Object object) {
-                            if (object.equals(true)) {
-                                removeTilesetAt(tsetIdx);
-                                showTilesetManager();
-                            }
+                        public void run() {
+                            showTilesetManager();
                         }
-                    };
-                    confirmDlg.text(z.confirmdelete != null ? z.confirmdelete : "Delete this tileset?");
-                    confirmDlg.button(z.yes, true);
-                    confirmDlg.button(z.no, false);
-                    confirmDlg.show(stage);
+                    });
                 }
             });
             optionsTable.add(btnDel).width(dialogBtnWidth).height(btny).pad(5).row();
@@ -17531,38 +17633,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bRemoveTset.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-
-                int saiz = tilesets.size();
-                if (saiz > 0) {
-                    int dex = ltsetlist.getSelectedIndex();
-                    if (isProtectedPixelArtTileset(dex)) {
-                        msgbox("Swatch and Palette cannot be removed from a Pixel Editor map.");
-                        return;
-                    }
-                    tilesets.remove(dex);
-                    java.util.List<Integer> nyot = new ArrayList<Integer>();
-                    CacheAllTset();
-                    if (seltset > 0)
-                        seltset -= 1;
-                    // reindexing
-                    templastID = 1;
-                    /*
-                     * for (int i=0;i<tilesets.size();i++){
-                     * tilesets.get(i).setFirstgid(templastID);
-                     * templastID+=tilesets.get(i).getTilecount();
-                     * }
-                     */
-                    saiz -= 1;
-                    refreshTsetList();
-                    if (dex > 0) {
-                        if (saiz > 0)
-                            ltsetlist.setSelectedIndex(dex - 1);
-                    } else {
-                        if (saiz > 0)
-                            ltsetlist.setSelectedIndex(0);
-                    }
-                    pushUpdateIfCollaborating();
-                }
+                if (tilesets.size() > 0)
+                    confirmRemoveTilesetAt(ltsetlist.getSelectedIndex());
             }
         });
 
@@ -20489,7 +20561,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             t.setTexture(new Texture(f));
             t.setPixmap(pixmapfromtexture(t.getTexture(), t.getTrans()));
 
-            t.setFirstgid(requestGid());
+            t.setFirstgid(allocateFirstgid(t.getTilecount()));
 
             if (cImportEmbed.isChecked()) {
                 byte[] fileContent = f.readBytes();
@@ -20529,7 +20601,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             t.setTrans("");
             t.setTexture(new Texture(f));
             t.setPixmap(pixmapfromtexture(t.getTexture(), t.getTrans()));
-            t.setFirstgid(requestGid());
+            t.setFirstgid(allocateFirstgid(t.getTilecount()));
             if (embed) {
                 byte[] fileContent = f.readBytes();
                 String asu = android.util.Base64.encodeToString(fileContent, 0);
@@ -20561,7 +20633,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         copy.drawPixmap(pm, 0, 0);
         t.setPixmap(copy);
         t.setTexture(new Texture(copy));
-        t.setFirstgid(requestGid());
+        t.setFirstgid(allocateFirstgid(t.getTilecount()));
         if (embed) {
             FileHandle tmp = Gdx.files.local(".pixel_palette_import.png");
             try {
@@ -20800,7 +20872,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         t.setMargin(0);
         t.setSpacing(0);
         t.setTrans("");
-        t.setFirstgid(requestGid());
+        t.setFirstgid(allocateFirstgid(1));
         return t;
     }
 
@@ -21422,7 +21494,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             t.setTrans("");
             t.setPixmap(pixmapfromtexture(t.getTexture(), t.getTrans()));
 
-            t.setFirstgid(requestGid());
+            t.setFirstgid(allocateFirstgid(t.getTilecount()));
 
             if (cImportEmbed.isChecked()) {
                 byte[] fileContent = f.readBytes();
@@ -24316,7 +24388,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             if (myParser.getAttributeValue(null, "firstgid") != null) {
                                 tempTset.setFirstgid(Integer.parseInt(myParser.getAttributeValue(null, "firstgid")));
                             } else {
-                                tempTset.setFirstgid(requestGid());
+                                tempTset.setFirstgid(0);
                             }
                             if (source == null) {
 
@@ -24346,6 +24418,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     tempTset.setTileheight(Tsh);
                                 }
 
+                                ensureAutoFirstgid(tempTset);
                                 tilesets.add(tempTset);
                             } else {
 
@@ -24490,6 +24563,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     tempTset.setTilecount(tempTset.getWidth() * tempTset.getHeight());
                                 }
 
+                                ensureAutoFirstgid(tempTset);
                                 templastID += tempTset.getWidth() * tempTset.getHeight();
                             } else if (xtree.get(xtree.size() - 1).equalsIgnoreCase("imagelayer")) {
                                 if (myParser.getAttributeValue(null, "trans") != null) {
@@ -25108,7 +25182,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             if (myParser.getAttributeValue(null, "firstgid") != null) {
                                 tempTset.setFirstgid(Integer.parseInt(myParser.getAttributeValue(null, "firstgid")));
                             } else {
-                                tempTset.setFirstgid(requestGid());
+                                tempTset.setFirstgid(0);
                             }
                             if (source == null) {
 
@@ -25138,6 +25212,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     tempTset.setTileheight(Tsh);
                                 }
 
+                                ensureAutoFirstgid(tempTset);
                                 tilesets2.add(tempTset);
                             } else {
 
@@ -25253,6 +25328,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     tempTset.setTilecount(tempTset.getWidth() * tempTset.getHeight());
                                 }
 
+                                ensureAutoFirstgid(tempTset);
                                 templastID += tempTset.getWidth() * tempTset.getHeight();
                             }
 
@@ -26063,15 +26139,51 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     }
 
+    /** Assign firstgid for a new tileset, reusing the lowest gap that fits (ignores orphan layer GIDs). */
+    public int allocateFirstgid(int tilecount) {
+        int need = Math.max(1, tilecount);
+        if (tilesets.isEmpty())
+            return 1;
+        java.util.List<int[]> ranges = new ArrayList<>();
+        for (int i = 0; i < tilesets.size(); i++) {
+            tileset ts = tilesets.get(i);
+            int start = ts.getFirstgid();
+            if (start < 1)
+                continue;
+            int end = start + Math.max(1, ts.getTilecount()) - 1;
+            ranges.add(new int[] { start, end });
+        }
+        if (ranges.isEmpty())
+            return 1;
+        java.util.Collections.sort(ranges, new Comparator<int[]>() {
+            @Override
+            public int compare(int[] a, int[] b) {
+                return Integer.compare(a[0], b[0]);
+            }
+        });
+        if (ranges.get(0)[0] > 1) {
+            int gapSize = ranges.get(0)[0] - 1;
+            if (gapSize >= need)
+                return 1;
+        }
+        for (int i = 0; i < ranges.size() - 1; i++) {
+            int gapStart = ranges.get(i)[1] + 1;
+            int gapEnd = ranges.get(i + 1)[0] - 1;
+            if (gapEnd >= gapStart && gapEnd - gapStart + 1 >= need)
+                return gapStart;
+        }
+        return ranges.get(ranges.size() - 1)[1] + 1;
+    }
+
+    private void ensureAutoFirstgid(tileset ts) {
+        if (ts == null || ts.getFirstgid() > 0)
+            return;
+        ts.setFirstgid(allocateFirstgid(Math.max(1, ts.getTilecount())));
+    }
+
     public int requestGid() {
         try {
-            if (tilesets.size() > 0) {
-                int ct = 1;
-                for (int i = 0; i < tilesets.size(); i++) {
-                    ct = tilesets.get(i).getFirstgid() + tilesets.get(i).getTilecount();
-                }
-                return ct;
-            }
+            return allocateFirstgid(1);
         } catch (Exception e) {
             status("error loading file", 5);
         }
@@ -26113,7 +26225,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             tilesetHasTopImage = false;
                             if (tempTset == null) {
                                 tempTset = new tileset();
-                                tempTset.setFirstgid(requestGid());
+                                tempTset.setFirstgid(0);
                             }
 
                             tempTset.setUsetsx(true);
@@ -26362,6 +26474,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 log("NO TEXTURE!");
                                 return;
                             }
+                            ensureAutoFirstgid(tempTset);
                             tilesets.add(tempTset);
                             tempTset = null;
                             tilesetHasTopImage = false;
@@ -31331,6 +31444,75 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (ts.isCollection())
             return CollectionTilesetOps.hasTileImage(ts, localId) || ts.getTileMeta(localId) != null;
         return true;
+    }
+
+    private Pixmap getOrphanTilePixmap() {
+        if (orphanTilePixmap == null) {
+            orphanTilePixmap = new Pixmap(ORPHAN_TILE_PX, ORPHAN_TILE_PX, Pixmap.Format.RGBA8888);
+            int half = ORPHAN_TILE_PX / 2;
+            for (int x = 0; x < ORPHAN_TILE_PX; x++) {
+                for (int y = 0; y < ORPHAN_TILE_PX; y++) {
+                    boolean magenta = ((x / half) + (y / half)) % 2 == 0;
+                    orphanTilePixmap.setColor(magenta ? Color.MAGENTA : Color.BLACK);
+                    orphanTilePixmap.drawPixel(x, y);
+                }
+            }
+        }
+        return orphanTilePixmap;
+    }
+
+    private Texture getOrphanTileTexture() {
+        if (orphanTileTexture == null)
+            orphanTileTexture = new Texture(getOrphanTilePixmap());
+        return orphanTileTexture;
+    }
+
+    /** True when a non-empty layer GID no longer maps to a drawable tile (e.g. deleted tileset). */
+    private boolean isOrphanedLayerTile(long gid, int preferredTset) {
+        if (gid == 0)
+            return false;
+        if (tilesets.isEmpty())
+            return true;
+        long bare = stripTileGidFlags(gid);
+        int tsetIdx = resolveTilesetIndexForGid(gid, preferredTset);
+        if (tsetIdx < 0)
+            return true;
+        tileset ts = tilesets.get(tsetIdx);
+        int localId = (int) (bare - ts.getFirstgid());
+        if (localId < 0 || localId >= ts.getTilecount())
+            return true;
+        return !tileExistsInTileset(ts, localId);
+    }
+
+    private drawer orphanTileDrawer(float x, float y, float originX, float originY, float width, float height,
+            long mm) {
+        drawer d = new drawer();
+        d.mm = mm;
+        d.setOrphan(true);
+        d.setdrawer(0, x, y, originX, originY, width, height, 1f, 1f, 0f, 0, 0, ORPHAN_TILE_PX, ORPHAN_TILE_PX,
+                false, false);
+        return d;
+    }
+
+    private void drawMapDrawer(SpriteBatch batch, drawer d) {
+        if (d.isOrphan())
+            d.draw(batch, getOrphanTileTexture());
+        else
+            d.draw(batch, tilesets.get(d.initset).getTexture());
+    }
+
+    private void addMapDrawer(SpriteCache cache, drawer d) {
+        if (d.isOrphan())
+            d.add(cache, getOrphanTileTexture());
+        else
+            d.add(cache, tilesets);
+    }
+
+    private void drawMapDrawerPixmap(drawer d, Pixmap pm2, int Tsw, int Tsh) {
+        if (d.isOrphan())
+            d.draw(pm2, tilesets, Tsw, Tsh, getOrphanTilePixmap());
+        else
+            d.draw(pm2, tilesets, Tsw, Tsh);
     }
 
     /** Resolve which tileset owns a GID; prefers {@code preferredTset} and skips empty collection ranges. */
