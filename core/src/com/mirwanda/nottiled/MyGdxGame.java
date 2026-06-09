@@ -717,6 +717,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private float rotator = 0f;
     private float undohistory = 0f;
     private Table trandomgen, treplacetiles, tgenerateterrain, taiGenerate;
+    private Image iReplaceFrom, iReplaceTo;
+    private Label lReplaceRange;
+    private CheckBox cbReplaceRangeLimit, cbReplaceAllLayers;
+    private boolean replaceRangePicking;
+    private int replaceRangeMinX, replaceRangeMinY, replaceRangeMaxX = -1, replaceRangeMaxY = -1;
+    private int replaceRangeSavedTool;
     private TextField ffirstgen;
     private TextField fgencount;
     private TextField fbirthlim;
@@ -2443,8 +2449,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         setToolsMap();
                         gotoStage(ttools);
                     } else if (lastStage == treplacetiles) {
-                        setToolsMap();
-                        gotoStage(ttools);
+                        if (replaceRangePicking) {
+                            replaceRangePicking = false;
+                            roll = false;
+                            activetool = replaceRangeSavedTool;
+                            gotoStage(treplacetiles);
+                        } else {
+                            setToolsMap();
+                            gotoStage(ttools);
+                        }
                     } else if (lastStage == tgenerateterrain) {
                         setToolsMap();
                         gotoStage(ttools);
@@ -10128,6 +10141,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 fprevstr.setText(curspr + "");
+                updateReplaceTilePreviews();
+                updateReplaceRangeLabel();
                 gotoStage(treplacetiles);
             }
         });
@@ -10301,11 +10316,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         fprevstr = new TextField("0", skin);
         fnextstr = new TextField("0", skin);
+        iReplaceFrom = new Image();
+        iReplaceTo = new Image();
+        float replacePreviewSize = Math.max(32f, ssx / 12f);
+        iReplaceFrom.setSize(replacePreviewSize, replacePreviewSize);
+        iReplaceTo.setSize(replacePreviewSize, replacePreviewSize);
 
         TextButton runreplace = new TextButton(z.replacetiles, skin);
         TextButton pickrepa = new TextButton(z.picktile1, skin);
         TextButton pickrepb = new TextButton(z.picktile2, skin);
+        TextButton pickReplaceRange = new TextButton(
+                z.replacerangepick != null ? z.replacerangepick : "Pick range on map", skin);
         TextButton repback = new TextButton(z.back, skin);
+        cbReplaceRangeLimit = new CheckBox(z.replacerange != null ? z.replacerange : "Limit range", skin);
+        cbReplaceAllLayers = new CheckBox(z.replacealllayers != null ? z.replacealllayers : "All layers", skin);
+        lReplaceRange = new Label(z.replacerangenone != null ? z.replacerangenone : "Whole map", skin);
 
         pickrepa.addListener(new ChangeListener() {
             @Override
@@ -10331,14 +10356,39 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         });
 
+        pickReplaceRange.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                startReplaceRangePick();
+            }
+        });
+
+        cbReplaceRangeLimit.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                updateReplaceRangeLabel();
+            }
+        });
+
+        Table tReplaceFrom = new Table();
+        tReplaceFrom.add(iReplaceFrom).size(replacePreviewSize).padRight(4);
+        tReplaceFrom.add(fprevstr).growX();
+        Table tReplaceTo = new Table();
+        tReplaceTo.add(iReplaceTo).size(replacePreviewSize).padRight(4);
+        tReplaceTo.add(fnextstr).growX();
+
         treplacetiles.add(new Label(z.from, skin));
-        treplacetiles.add(fprevstr).row();
+        treplacetiles.add(tReplaceFrom).row();
         treplacetiles.add();
         treplacetiles.add(pickrepa).row();
         treplacetiles.add(new Label(z.to, skin));
-        treplacetiles.add(fnextstr).row();
+        treplacetiles.add(tReplaceTo).row();
         treplacetiles.add();
         treplacetiles.add(pickrepb).row();
+        treplacetiles.add(cbReplaceRangeLimit).colspan(2).left().row();
+        treplacetiles.add(lReplaceRange).colspan(2).left().padBottom(2).row();
+        treplacetiles.add(pickReplaceRange).colspan(2).row();
+        treplacetiles.add(cbReplaceAllLayers).colspan(2).left().padBottom(2).row();
         treplacetiles.add(runreplace).width(btnx).colspan(2).row();
         treplacetiles.add(repback).width(btnx).colspan(2);
 
@@ -10346,40 +10396,153 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 long p1 = Long.parseLong(fprevstr.getText());
-                int p2 = getTsetFromSpr((int) p1);
                 long p3 = Long.parseLong(fnextstr.getText());
                 int p4 = getTsetFromSpr((int) p3);
-                ;
-                replacetiles(p1, p2, p3, p4);
+                replacetiles(p1, p3, p4, cbReplaceAllLayers.isChecked(),
+                        cbReplaceRangeLimit.isChecked() && replaceRangeMaxX >= 0);
             }
         });
         ///////////////////
     }
 
-    private void replacetiles(long p1, int p2, long p3, int p4) {
-        if (layers.get(selLayer).getType() != layer.Type.TILE)
+    private void setReplaceTilePreview(Image img, long gid) {
+        if (img == null || tilesets.isEmpty() || gid <= 0) {
+            if (img != null)
+                img.setDrawable(null);
             return;
+        }
+        int initset = -1;
+        long stripped = stripTileGidFlags(gid);
+        for (int o = 0; o < tilesets.size(); o++) {
+            if (stripped >= tilesets.get(o).getFirstgid()
+                    && stripped < tilesets.get(o).getFirstgid() + tilesets.get(o).getTilecount()) {
+                initset = o;
+                break;
+            }
+        }
+        if (initset < 0) {
+            img.setDrawable(null);
+            return;
+        }
+        int localId = (int) (stripped - tilesets.get(initset).getFirstgid());
+        resolveSprite(tilesets.get(initset), localId);
+        int tw = tilesets.get(initset).getTilewidth();
+        int th = tilesets.get(initset).getTileheight();
+        TextureRegion region = new TextureRegion(tilesets.get(initset).getTexture(), sprX, sprY, tw, th);
+        img.setDrawable(new TextureRegionDrawable(region));
+    }
+
+    private void updateReplaceTilePreviews() {
+        try {
+            setReplaceTilePreview(iReplaceFrom, Long.parseLong(fprevstr.getText().trim()));
+        } catch (Exception e) {
+            if (iReplaceFrom != null)
+                iReplaceFrom.setDrawable(null);
+        }
+        try {
+            setReplaceTilePreview(iReplaceTo, Long.parseLong(fnextstr.getText().trim()));
+        } catch (Exception e) {
+            if (iReplaceTo != null)
+                iReplaceTo.setDrawable(null);
+        }
+    }
+
+    private void updateReplaceRangeLabel() {
+        if (lReplaceRange == null)
+            return;
+        if (cbReplaceRangeLimit == null || !cbReplaceRangeLimit.isChecked() || replaceRangeMaxX < 0) {
+            lReplaceRange.setText(z.replacerangenone != null ? z.replacerangenone : "Whole map");
+        } else {
+            lReplaceRange.setText("X " + replaceRangeMinX + "-" + replaceRangeMaxX + ", Y " + replaceRangeMinY + "-"
+                    + replaceRangeMaxY);
+        }
+    }
+
+    private boolean replaceTileInRange(int cellIdx) {
+        int x = cellIdx % Tw;
+        int y = cellIdx / Tw;
+        return x >= replaceRangeMinX && x <= replaceRangeMaxX && y >= replaceRangeMinY && y <= replaceRangeMaxY;
+    }
+
+    private void startReplaceRangePick() {
+        if (Tw <= 0 || Th <= 0)
+            return;
+        replaceRangePicking = true;
+        replaceRangeSavedTool = activetool;
+        activetool = 0;
+        stage.clear();
+        Gdx.input.setInputProcessor(im);
+        kartu = "world";
+    }
+
+    private void finishReplaceRangePick() {
+        replaceRangePicking = false;
+        roll = false;
+        activetool = replaceRangeSavedTool;
+
+        int x1 = mapstartSelect % Tw;
+        int y1 = mapstartSelect / Tw;
+        int x2 = mapendSelect % Tw;
+        int y2 = mapendSelect / Tw;
+        replaceRangeMinX = Math.min(x1, x2);
+        replaceRangeMaxX = Math.max(x1, x2);
+        replaceRangeMinY = Math.min(y1, y2);
+        replaceRangeMaxY = Math.max(y1, y2);
+        if (cbReplaceRangeLimit != null)
+            cbReplaceRangeLimit.setChecked(true);
+        updateReplaceRangeLabel();
+        gotoStage(treplacetiles);
+    }
+
+    private void replacetiles(long p1, long p3, int p4, boolean allLayers, boolean useRange) {
+        if (layers.isEmpty())
+            return;
+        if (!allLayers && layers.get(selLayer).getType() != layer.Type.TILE)
+            return;
+
+        int savedLayer = selLayer;
         curtset = p4;
         activetool = 4;
         eraser = false;
+        long fromGid = stripTileGidFlags(p1);
+        long toGid = p3;
 
-        for (int i = 0; i < layers.get(selLayer).getStr().size(); i++) {
-            long prev = layers.get(selLayer).getStr().get(i);
-            if (prev == p1) {
-                tapTile(i, true, false, false, (int) p3);
+        int layerStart = allLayers ? 0 : selLayer;
+        int layerEnd = allLayers ? layers.size() - 1 : selLayer;
+
+        for (int li = layerStart; li <= layerEnd; li++) {
+            if (layers.get(li).getType() != layer.Type.TILE)
+                continue;
+            selLayer = li;
+
+            for (int i = 0; i < layers.get(li).getStr().size(); i++) {
+                if (useRange && !replaceTileInRange(i))
+                    continue;
+                long prev = layers.get(li).getStr().get(i);
+                if (stripTileGidFlags(prev) == fromGid) {
+                    tapTile(i, true, false, false, (int) toGid);
+                }
             }
-        }
-        List<Long> sprs = new ArrayList<>();
-        for (Long l : layers.get(selLayer).getStr()) {
-            sprs.add(l);
         }
 
         curpickAuto = true;
-        for (int i = 0; i < layers.get(selLayer).getStr().size(); i++) {
-            if (p3 == sprs.get(i) && isEdge(i, p3, sprs)) {
-                tapTile(i, true, true, false, (int) p3);
+        for (int li = layerStart; li <= layerEnd; li++) {
+            if (layers.get(li).getType() != layer.Type.TILE)
+                continue;
+            selLayer = li;
+            List<Long> sprs = new ArrayList<>();
+            for (Long l : layers.get(li).getStr()) {
+                sprs.add(l);
+            }
+            for (int i = 0; i < layers.get(li).getStr().size(); i++) {
+                if (useRange && !replaceTileInRange(i))
+                    continue;
+                if (stripTileGidFlags(sprs.get(i)) == stripTileGidFlags(toGid) && isEdge(i, toGid, sprs)) {
+                    tapTile(i, true, true, false, (int) toGid);
+                }
             }
         }
+        selLayer = savedLayer;
     }
 
     private void exporttolua(String filenamenya) {
@@ -27332,10 +27495,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "repa":
                         gotoStage(treplacetiles);
                         fprevstr.setText(Integer.toString(num));
+                        updateReplaceTilePreviews();
                         break;
                     case "repb":
                         gotoStage(treplacetiles);
                         fnextstr.setText(Integer.toString(num));
+                        updateReplaceTilePreviews();
                         break;
                     case "gena":
                         gotoStage(tgenerateterrain);
@@ -33012,16 +33177,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     prefs.putBoolean("swatches", swatches).flush();
                     return true;
                 }
-                if (tilesets.size() == 0)
+                if (tilesets.size() == 0 && !replaceRangePicking)
                     return true;
 
                 // active tool 0-4 (rectangle 0 , eraser 1, ..... 2, copy paste 3, brush 4
                 // longpressing fill makes no sense, that is why just change it to brush.
-                if (activetool == 2)
+                if (!replaceRangePicking && activetool == 2)
                     activetool = 4;
 
                 // the main idea of longpressing is just this line.
                 roll = true;
+                if (replaceRangePicking)
+                    activetool = 0;
 
                 // isometric tile selection is so complicated, how did I make this? lol
                 if (orientation.equalsIgnoreCase("orthogonal")) {
@@ -33062,6 +33229,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                      */
                 }
                 // mapstartSelect = (Tw * ((-ab + Tsh) / Tsh) + (ae / Tsw));
+
+                if (replaceRangePicking) {
+                    mapendSelect = mapstartSelect;
+                    mapinitialSelect = mapstartSelect;
+                    return true;
+                }
 
                 // code for brush, so basically draw around
                 if (activetool == 4) {
@@ -34360,6 +34533,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         // after we roll the paint...
         if (roll) {
+
+            if (replaceRangePicking) {
+                finishReplaceRangePick();
+                return true;
+            }
 
             // rectangle (0) and eraser (1) (as they are basically the same tool...)
             // they are drawn on panstop

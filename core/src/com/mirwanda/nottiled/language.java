@@ -185,6 +185,10 @@ public class language
 	String exporttolua;
 	String exporttojson;
 	String replacetiles;
+	String replacerange;
+	String replacerangepick;
+	String replacealllayers;
+	String replacerangenone;
 	String from;
 	String to;
 	String selecttemplate;
