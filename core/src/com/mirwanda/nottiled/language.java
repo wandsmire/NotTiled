@@ -85,6 +85,8 @@ public class language
 	String tilesetting;
 	String animation;
 	String terraineditor;
+	String macroterraineditor;
+	String macroterraininfo;
 	String terrainshape;
 	String teshape1x1;
 	String teshape2x2;

@@ -401,6 +401,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     java.util.List<tileset> tilesets2 = new ArrayList<tileset>();
     java.util.List<drawer> drawers = new ArrayList<drawer>();
     java.util.List<autotile> autotiles = new ArrayList<autotile>();
+    MacroTerrainStore macroTerrain = new MacroTerrainStore();
+    boolean pickMacroTerrain = false;
+    boolean curpickMacroTerrain = false;
+    boolean macroTerrainEditorFromMacroMgmt = false;
+    private final java.util.ArrayList<MacroTerrainStore> macroTerrainUndoStack = new java.util.ArrayList<>();
+    int newMacroTerrainGid = -1;
     java.util.List<TextField> tf = new ArrayList<TextField>();
     java.util.List<Label> tla = new ArrayList<Label>();
     java.util.List<layerhistory> undolayer = new ArrayList<layerhistory>();
@@ -464,7 +470,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private Texture fmTxFolder;
     private Texture fmTxFile;
     ImageButton bcc;
-    TextButton btiled, bCollaboration, bPatreon2, bTools, bBackground;
+    TextButton btiled, bCollaboration, bPatreon2, bTools, bBackground, bMacroTerrainEditor;
     TextButton bTutorOK, bTutorBack, bPatreon, bExporter, bImporter, credito;
     Table tMap, tLayerMgmt, tTileMgmt, tObjMgmt, tFrameMgmt, tPropsMgmt, tPreference, tProperties, tTsetMgmt, tAutoMgmt,
             tAutoform, tTileOptions, tTileCollision;
@@ -501,7 +507,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     Table tLinks;
     TextButton bRusted, bManual;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> lautolist;
-    TextButton bAutoadd, bAutoprops, bAutoload, bAutosave, bAutorename, bAutoremove, bAutomoveup, bAutoback;
+    TextButton bAutoadd, bAutoprops, bAutoload, bAutosave, bAutorename, bAutoremove, bAutomoveup, bAutoback,
+            bMacroTerrainFromMacro;
+    Label lMacroTerrainInfo;
     TextPromptListener pAutoadd;
     TextPromptListener pAutorename;
     Table tLayerNew;
@@ -558,6 +566,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     TextButton bAddTileLayer, bTileAnimations, bReplaceTileLayer, bRemoveTileLayer, bMoveTileLayer, bBackTileLayer,
             bPropsTileLayer, bTerrainEditor;
     TextPromptListener pNewTerrain;
+    TextPromptListener pNewMacroTerrain;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> lframelist;
     TextPromptListener pNewFrame;
     TextPromptListener pEditFrame;
@@ -1430,6 +1439,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         lang.tilesetting = "???";
         lang.animation = "???";
         lang.terraineditor = "???";
+        lang.macroterraineditor = "???";
+        lang.macroterraininfo = "???";
         lang.addnew = "???";
         lang.rename = "???";
         lang.properties = "???";
@@ -1584,7 +1595,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             return;
         }
         delta = Gdx.graphics.getDeltaTime();
-        if (isTerrainEditorPicker()) {
+        if (isActiveTerrainEditorPicker()) {
             terrainEditorAnimPhase = (terrainEditorAnimPhase + delta * 0.35f) % 1f;
             if (pinchZoomActive || Gdx.input.isTouched(1))
                 terrainHoldPending = false;
@@ -1603,7 +1614,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 } else if (tilesets.size() > 0) {
                     Vector3 t = new Vector3();
                     tilecam.unproject(t.set(Gdx.input.getX(), Gdx.input.getY(), 0));
-                    paintTerrainBrush(tilesets.get(selTsetID), t.x, t.y);
+                    tileset editorTs = getActiveTerrainEditorTileset();
+                    if (editorTs != null)
+                        paintTerrainBrush(editorTs, t.x, t.y);
                 }
             }
         }
@@ -2496,6 +2509,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         } else {
                             gotoStage(tTileMgmt);
                         }
+                    } else if (tilePicker == "macroterraineditor") {
+                        saveMacroAutoTerrain();
+                        setToolsMap();
+                        gotoStage(ttools);
                     }
                     break;
             }
@@ -2718,7 +2735,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             terrainPickerCacheIDs.add(cacheID);
         }
         terrainPickerCacheValid = true;
-        terrainPickerCachedTsetID = selTsetID;
+        terrainPickerCachedTsetID = getActiveTerrainEditorTsetIndex();
     }
 
     private void rebuildPickerCaches(tileset ts) {
@@ -2820,6 +2837,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "sw6":
                         seltset = this.seltset;
                         break;
+                    case "macroterraineditor":
+                    case "newmacroterrain":
+                        seltset = this.seltset;
+                        break;
                     default:
                         seltset = this.selTsetID;
                         break;
@@ -2872,7 +2893,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 pickerCacheValid = false;
             }
 
-            if (pickAuto && !isTerrainEditorPicker()) { // auto list
+            if (pickAuto && !isActiveTerrainEditorPicker() && !pickMacroTerrain) { // auto list
                 int startTerrainRow = 0;
                 int endTerrainRow = tr.size() - 1;
                 if (tileHeight > 0) {
@@ -2897,7 +2918,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 }
             } else { // manual
-                final boolean terrainEditorDraw = isTerrainEditorPicker();
+                final boolean terrainEditorDraw = isActiveTerrainEditorPicker();
                 if (terrainEditorDraw) {
                     batch.end();
                     drawTerrainEditorTiles(batch, ts, minX, maxX, minY, maxY);
@@ -3060,7 +3081,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     batch.begin();
                 }
             } // end of drawing
-            if (!isTerrainEditorPicker())
+            if (!isActiveTerrainEditorPicker())
                 batch.end();
 
             // GRID FOR TILES SELECTOR
@@ -3075,7 +3096,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (Tsw >= 64)
                 weight = 2;
 
-            if (isTerrainEditorPicker()) {
+            if (isActiveTerrainEditorPicker()) {
                 int hch = terrainEditorHalfCellH(ts);
                 int ccw = terrainEditorCornerCellW(ts);
                 int cch = terrainEditorCornerCellH(ts);
@@ -3194,12 +3215,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                 }
             }
-            if (isTerrainEditorPicker()) {
+            if (isActiveTerrainEditorPicker()) {
                 int hcw = terrainEditorHalfCellW(ts);
                 int hch = terrainEditorHalfCellH(ts);
                 int ccw = terrainEditorCornerCellW(ts);
                 int cch = terrainEditorCornerCellH(ts);
-                int curTerrain = tilesets.get(selTsetID).getSelTerrain();
+                int curTerrain = getActiveEditorSelTerrain();
                 int teWd = ts.getWidth();
                 int teTotalRows = ts.isCollection() ? ts.getHeight()
                         : (teWd > 0 ? (CollectionTilesetOps.getPickerGridSlots(ts) + teWd - 1) / teWd : 0);
@@ -3212,13 +3233,25 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 int teStartRow = Math.max(0, (int) Math.floor(-teMaxY / hch));
                 int teEndRow = Math.min(teTotalRows - 1, (int) Math.ceil(-teMinY / hch) + 1);
                 int[][] corners = {{0, 0, cch}, {1, ccw, cch}, {2, 0, 0}, {3, ccw, 0}};
-                java.util.List<tile> teTiles = ts.getTiles();
+                java.util.List<tile> teTiles = isMacroTerrainEditorPicker()
+                        ? new java.util.ArrayList<tile>(macroTerrain.getAllTileMeta())
+                        : ts.getTiles();
                 int teTileMeta = teTiles.size();
                 for (int n = 0; n < teTileMeta; n++) {
                     tile teTile = teTiles.get(n);
                     if (!teTile.isTerrainForEditor())
                         continue;
-                    int gi = ts.getGridIndex(teTile.getTileID());
+                    int gi;
+                    if (isMacroTerrainEditorPicker()) {
+                        int gid = teTile.getTileID();
+                        int tsetIdx = resolveTilesetIndexForGid(gid, -1);
+                        if (tsetIdx != seltset)
+                            continue;
+                        int localId = (int) (stripTileGidFlags(gid) - tilesets.get(tsetIdx).getFirstgid());
+                        gi = ts.getGridIndex(localId);
+                    } else {
+                        gi = ts.getGridIndex(teTile.getTileID());
+                    }
                     if (gi < 0 || gi >= CollectionTilesetOps.getPickerGridSlots(ts))
                         continue;
                     int x = gi % teWd;
@@ -3263,7 +3296,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         } else {
             if (kartu == "pickanim") {
                 uisrect(gui.pickerback, mouse, null);// tool switch
-                if (tilePicker == "terraineditor") {
+                if (tilePicker == "terraineditor" || tilePicker == "macroterraineditor") {
                     uisrect(gui.terraindelete, mouse, null);
                     uisrect(gui.terrainshape, mouse, null);
                     uisrect(gui.newterrain, mouse, null);// tool switch
@@ -3482,18 +3515,32 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         break;
                     case "terraineditor":
-                        if (tilesets.get(seltset).getTerrains().size() > 0) {
+                        if (tilesets.get(selTsetID).getTerrains().size() > 0) {
                             uidrawbutton(txLeft, "", gui.tilesetsleft, 1);
-                            str1draw(ui, tilesets.get(seltset).getTerrains()
-                                    .get(tilesets.get(seltset).getSelTerrain()).getName(), gui.tilesetsmid);
+                            str1draw(ui, tilesets.get(selTsetID).getTerrains()
+                                    .get(tilesets.get(selTsetID).getSelTerrain()).getName(), gui.tilesetsmid);
                             uidrawbutton(txRight, "", gui.tilesetsright, 1);
                         }
                         uidrawbutton(txundo, z.undo, gui.terrainundo, 3);
-                        if (tilesets.get(seltset).getTerrains().size() > 0)
+                        if (tilesets.get(selTsetID).getTerrains().size() > 0)
                             uidrawbutton(txdelete, z.deleteterrain != null ? z.deleteterrain : "Delete", gui.terraindelete, 2f);
                         uidrawbutton(terrainShapeIcon(), terrainShapeLabel(), gui.terrainshape, 2f);
                         uidrawbutton(txadd, z.addnew, gui.newterrain, 2f);
 
+                        break;
+                    case "macroterraineditor":
+                        uidrawbutton(txLeft, "", gui.tilesetsleft, 1);
+                        if (macroTerrain.getTerrains().size() > 0)
+                            str1draw(ui, macroTerrain.getTerrains().get(macroTerrain.getSelTerrain()).getName(),
+                                    gui.tilesetsmid);
+                        else
+                            str1draw(ui, tilesets.get(seltset).getName(), gui.tilesetsmid);
+                        uidrawbutton(txRight, "", gui.tilesetsright, 1);
+                        uidrawbutton(txundo, z.undo, gui.terrainundo, 3);
+                        if (macroTerrain.getTerrains().size() > 0)
+                            uidrawbutton(txdelete, z.deleteterrain != null ? z.deleteterrain : "Delete", gui.terraindelete, 2f);
+                        uidrawbutton(terrainShapeIcon(), terrainShapeLabel(), gui.terrainshape, 2f);
+                        uidrawbutton(txadd, z.addnew, gui.newterrain, 2f);
                         break;
                     case "massprops":
                         str1draw(ui, z.tileset + ": " + tilesets.get(selTsetID).getName(), gui.tilesetsmid);
@@ -6519,7 +6566,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
 
                 uisrect(gui.picker, mouse, vis("tilepick"));// select tile
-                if (autotiles.size() > 0 || kartu == "editor")
+                if (autotiles.size() > 0 || kartu == "editor" || !macroTerrain.getTerrains().isEmpty())
                     uisrect(gui.autopicker, mouse, vis("autotilepick"));// select auto tile
                 if (autotiles.size() > 0 || kartu == "editor")
                     uisrect(gui.autotile, mouse, vis("refresh"));// tool switch
@@ -7000,6 +7047,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         if (assemblymode) {
                             str1draw(ui, autotiles.get(assemblyid).getName(), gui.info);
+                        } else if (pickMacroTerrain && macroTerrain.getTerrains().size() > 0) {
+                            terrain mtr = macroTerrain.getTerrains().get(macroTerrain.getSelTerrain());
+                            str1draw(ui, mtr.getName(), gui.info);
                         }
 
                         if (roll) {
@@ -7041,6 +7091,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (autotiles.size() > 0 || kartu == "editor") {
                         uidrawbutton(txautopick, z.macrotiles, gui.autopicker, 2);
                         uidrawbutton(txplay, z.runmacro, gui.autotile, 2);
+                    } else if (!macroTerrain.getTerrains().isEmpty()) {
+                        uidrawbutton(txautopick, z.macrotiles, gui.autopicker, 2);
                     }
 
                     switch (currentShape) {
@@ -7701,6 +7753,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         properties.clear();
         tilesets.clear();
         autotiles.clear();
+        macroTerrain.clear();
 
         int curgroupid = -1;
         int curobjid = -1;
@@ -9981,10 +10034,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void setToolsMap() {
+        Table content = new Table();
         if (landscape) {
-            ttools = new Table();
-            ttools.setFillParent(true);
-            ttools.defaults().width(btnx).height(btny + 2).padBottom(2);
+            content.defaults().width(btnx).height(btny + 2).padBottom(2);
             Table tTools1 = new Table();
             tTools1.defaults().width(btnx).height(btny * 2).padBottom(2);
             Table tTools2 = new Table();
@@ -9996,30 +10048,34 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tTools1.add(tracebackground).row();
             tTools1.add(randomize).row();
             tTools1.add(bScreenshot).row();
+            tTools1.add(bAutoMgmt).row();
 
             tTools2.add(generateterrain).row();
+            tTools2.add(bMacroTerrainEditor).row();
             tTools2.add(bCollaboration).row();
-            tTools2.add(bAutoMgmt).row();
             tTools2.add(toback).row();
 
-            ttools.add(tTools1);
-            ttools.add(tTools2);
+            content.add(tTools1);
+            content.add(tTools2);
         } else {
-            ttools = new Table();
-            ttools.setFillParent(true);
-            ttools.defaults().width(btnx).height(btny + 2).padBottom(2);
-
-            ttools.add(bMirrorMenu).row();
-            ttools.add(replacetiles).row();
-            ttools.add(bBackground).row();
-            ttools.add(tracebackground).row();
-            ttools.add(randomize).row();
-            ttools.add(bScreenshot).row();
-            ttools.add(generateterrain).row();
-            ttools.add(bCollaboration).row();
-            ttools.add(bAutoMgmt).row();
-            ttools.add(toback).row();
+            content.defaults().width(btnx).height(btny + 2).padBottom(2);
+            content.add(bMirrorMenu).row();
+            content.add(replacetiles).row();
+            content.add(bBackground).row();
+            content.add(tracebackground).row();
+            content.add(randomize).row();
+            content.add(bScreenshot).row();
+            content.add(generateterrain).row();
+            content.add(bAutoMgmt).row();
+            content.add(bMacroTerrainEditor).row();
+            content.add(bCollaboration).row();
+            content.add(toback).row();
         }
+        ttools = new Table();
+        ttools.setFillParent(true);
+        ScrollPane sp = new ScrollPane(content, skin);
+        sp.setFadeScrollBars(false);
+        ttools.add(sp).expand().fill();
     }
 
     private void loadTools() {
@@ -10035,6 +10091,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         btnAiSprite = new TextButton(z.aigenerate != null ? z.aigenerate : "AI Generate Sprite", skin);
         replacetiles = new TextButton(z.replacetiles, skin);
         generateterrain = new TextButton(z.generateterrain, skin);
+        bMacroTerrainEditor = new TextButton(z.macroterraineditor, skin);
         tracebackground = new TextButton(z.tracebackground, skin);
         toback = new TextButton(z.back, skin);
         bScreenshot = new TextButton(z.screenshot, skin);
@@ -10156,6 +10213,40 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 refreshGenerator();
                 updateGenTerrainPreviews();
                 gotoStage(tgenerateterrain);
+            }
+        });
+
+        pNewMacroTerrain = new TextPromptListener() {
+            @Override
+            public void confirm(String input) {
+                if (input == null || input.isEmpty())
+                    return;
+                terrain tr = new terrain();
+                tr.setName(input);
+                tr.setTile(newMacroTerrainGid);
+                macroTerrain.getTerrains().add(tr);
+                macroTerrain.setSelTerrain(macroTerrain.getTerrains().size() - 1);
+                ensureMacroTerrainCenterTile(macroTerrain.getSelTerrain());
+                saveMacroAutoTerrain();
+                resumeTerrainEditor();
+            }
+
+            @Override
+            public void cancel() {
+                resumeTerrainEditor();
+            }
+        };
+
+        bMacroTerrainEditor.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (tilesets.isEmpty()) {
+                    msgbox("No tileset.");
+                    return;
+                }
+                macroTerrainEditorFromMacroMgmt = false;
+                frompick = false;
+                pickTile("macroterraineditor");
             }
         });
 
@@ -16333,6 +16424,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         lautolist.setItems(srr);
     }
 
+    private void refreshMacroTerrainInfo() {
+        if (lMacroTerrainInfo == null)
+            return;
+        int count = macroTerrain.getTerrains().size();
+        String template = z.macroterraininfo != null ? z.macroterraininfo
+                : "Macro terrains (%d) — saved in macro auto.json";
+        lMacroTerrainInfo.setText(String.format(template, count));
+    }
+
     int assemblyid = -1;
     int assemblynum = -1;
     boolean assemblymode = false;
@@ -16431,6 +16531,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 // status(autotiles.get( a ).getName(),5);
                                 assemblymode = true;
                                 assemblyid = a;
+                                pickMacroTerrain = false;
+                                curpickMacroTerrain = false;
 
                             } else {
                                 curspr = Integer.parseInt(actor.getName());
@@ -16442,6 +16544,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     }
                                 }
                                 setTsetFromCurspr();
+                                pickMacroTerrain = false;
+                                curpickMacroTerrain = false;
+                                pickAuto = false;
+                                curpickAuto = false;
 
                             }
                             backToMap();
@@ -16451,6 +16557,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     break;
             }
         }
+        appendMacroTerrainPickButtons(tbl);
         TextButton tat = new TextButton(z.back, skin);
         tat.addListener(new ChangeListener() {
             @Override
@@ -16460,6 +16567,41 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         });
         tbl.add(tat).row();
         gotoStage(tblmain);
+    }
+
+    private void appendMacroTerrainPickButtons(Table tbl) {
+        if (macroTerrain.getTerrains().isEmpty())
+            return;
+        tbl.add(new Label(z.macroterraineditor, skin)).row();
+        for (int i = 0; i < macroTerrain.getTerrains().size(); i++) {
+            final int idx = i;
+            terrain tr = macroTerrain.getTerrains().get(i);
+            String name = tr.getName();
+            if (name == null || name.length() == 0)
+                name = "Terrain " + i;
+            addTerrainPickerRow(tbl, name, macroTerrainIconGid(idx), new Runnable() {
+                @Override
+                public void run() {
+                    macroTerrain.setSelTerrain(idx);
+                    tile center = ensureMacroTerrainCenterTile(idx);
+                    int gid = center != null ? center.getTileID() : tr.getTile();
+                    curspr = gid;
+                    setTsetFromCurspr();
+                    pickMacroTerrain = true;
+                    pickAuto = false;
+                    curpickMacroTerrain = true;
+                    curpickAuto = false;
+                    refreshAutotileGraph();
+                    kartu = "world";
+                    stamp = false;
+                    assemblymode = false;
+                    if (activetool == 1)
+                        activetool = 0;
+                    backToMap();
+                    cue("autopick");
+                }
+            });
+        }
     }
 
     private void addRecentTile(int num) {
@@ -17001,6 +17143,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void loadAutoManagement() {
         Label lAutotitle = new Label(z.macro, skin);
+        lMacroTerrainInfo = new Label("", skin);
+        lMacroTerrainInfo.setWrap(true);
+        bMacroTerrainFromMacro = new TextButton(z.macroterraineditor, skin);
         lautolist = new com.badlogic.gdx.scenes.scene2d.ui.List<String>(skin);
         bAutoadd = new TextButton(z.addnew, skin);
         bAutorename = new TextButton(z.rename, skin);
@@ -17014,8 +17159,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tAutoMgmt.setFillParent(true);
         tAutoMgmt.defaults().width(btnx).height(btny).padBottom(2);
         tAutoMgmt.add(lAutotitle).row();
+        tAutoMgmt.add(lMacroTerrainInfo).width(btnx).padBottom(4).row();
+        tAutoMgmt.add(bMacroTerrainFromMacro).row();
         ScrollPane spx = new ScrollPane(lautolist);
         tAutoMgmt.add(spx).height(btny * 4).row();
+        tAutoMgmt.add(new Label(z.macrotiles, skin)).padTop(4).row();
         tAutoMgmt.add(bAutoadd).row();
         tAutoMgmt.add(bAutorename).row();
         tAutoMgmt.add(bAutoprops).row();
@@ -17060,9 +17208,23 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bAutoMgmt.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                refreshMacroTerrainInfo();
                 gotoStage(tAutoMgmt);
                 assemblymode = false;
                 refreshAutoMgmt();
+            }
+        });
+
+        bMacroTerrainFromMacro.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (tilesets.isEmpty()) {
+                    msgbox("No tileset.");
+                    return;
+                }
+                macroTerrainEditorFromMacroMgmt = true;
+                frompick = false;
+                pickTile("macroterraineditor");
             }
         });
 
@@ -17153,6 +17315,31 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             // refreshAutoMgmt();
         } catch (Exception e) {
         }
+    }
+
+    public void loadMacroAutoTerrain() {
+        try {
+            FileHandle f = Gdx.files.absolute(curdir + "/" + MacroTerrainStore.FILE_NAME);
+            if (f.exists())
+                macroTerrain.fromJsonString(f.readString());
+            else
+                macroTerrain.clear();
+        } catch (Exception e) {
+            macroTerrain.clear();
+        }
+    }
+
+    public void saveMacroAutoTerrain() {
+        if (macroTerrain.isEmpty()) {
+            try {
+                FileHandle f = Gdx.files.absolute(curdir + "/" + MacroTerrainStore.FILE_NAME);
+                if (f.exists())
+                    f.delete();
+            } catch (Exception ignored) {
+            }
+            return;
+        }
+        writeThisAbs(curdir + "/" + MacroTerrainStore.FILE_NAME, macroTerrain.toJsonPretty());
     }
 
     public void saveRecents() {
@@ -18843,12 +19030,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         lastTerrainPaintCell = -1;
         terrainHoldPending = false;
         clearTerrainPickerCaches();
-        if (sender.equals("terraineditor")) {
+        if (sender.equals("terraineditor") || sender.equals("macroterraineditor")) {
             pickAutoBeforeTerrainEditor = pickAuto;
             pickAuto = false;
+            pickMacroTerrain = false;
             clearTerrainUndoHistory();
-            if (tilesets.size() > 0)
+            if (tilesets.size() > 0) {
+                if (sender.equals("macroterraineditor"))
+                    seltset = selTsetID >= 0 && selTsetID < tilesets.size() ? selTsetID : 0;
                 recenterpick();
+            }
         }
     }
 
@@ -18863,10 +19054,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void resumeTerrainEditor() {
+        if (isMacroTerrainEditorMode() && macroTerrain.getTerrains().isEmpty()) {
+            exitMacroTerrainEditor();
+            return;
+        }
         stage.clear();
         Gdx.input.setInputProcessor(im);
         kartu = "pickanim";
-        tilePicker = "terraineditor";
+        if (isMacroTerrainEditorPicker())
+            tilePicker = "macroterraineditor";
+        else
+            tilePicker = "terraineditor";
     }
 
     private int remapTerrainIdAfterDelete(int terrainId, int deletedIdx) {
@@ -18879,7 +19077,53 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return terrainId;
     }
 
+    private void exitMacroTerrainEditor() {
+        saveMacroAutoTerrain();
+        clearTerrainUndoHistory();
+        clearTerrainPickerCaches();
+        pickMacroTerrain = false;
+        curpickMacroTerrain = false;
+        tilePicker = "";
+        if (macroTerrainEditorFromMacroMgmt) {
+            macroTerrainEditorFromMacroMgmt = false;
+            refreshMacroTerrainInfo();
+            gotoStage(tAutoMgmt);
+        } else {
+            setToolsMap();
+            gotoStage(ttools);
+        }
+    }
+
     private void deleteSelectedTerrain(int deletedIdx) {
+        if (isMacroTerrainEditorMode()) {
+            java.util.List<terrain> trs = macroTerrain.getTerrains();
+            if (deletedIdx < 0 || deletedIdx >= trs.size())
+                return;
+            trs.remove(deletedIdx);
+            java.util.ArrayList<tile> metaTiles = new java.util.ArrayList<tile>(macroTerrain.getAllTileMeta());
+            for (tile t : metaTiles) {
+                int[] tr = t.getTerrain();
+                if (tr == null)
+                    continue;
+                int a = remapTerrainIdAfterDelete(tr[0], deletedIdx);
+                int b = remapTerrainIdAfterDelete(tr[1], deletedIdx);
+                int c = remapTerrainIdAfterDelete(tr[2], deletedIdx);
+                int d = remapTerrainIdAfterDelete(tr[3], deletedIdx);
+                t.setTerrain(a, b, c, d);
+                if (a == -1 && b == -1 && c == -1 && d == -1)
+                    macroTerrain.removeTileMetaIfEmpty(t.getTileID());
+            }
+            macroTerrain.clearTerrainCache();
+            macroTerrain.clampSelTerrain();
+            saveMacroAutoTerrain();
+            if (trs.isEmpty()) {
+                exitMacroTerrainEditor();
+                return;
+            }
+            clearTerrainPickerCaches();
+            resumeTerrainEditor();
+            return;
+        }
         if (tilesets.size() == 0)
             return;
         tileset ts = tilesets.get(selTsetID);
@@ -18925,11 +19169,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private void confirmDeleteSelectedTerrain() {
         if (tilesets.size() == 0)
             return;
-        tileset ts = tilesets.get(selTsetID);
-        if (ts.getTerrains().size() == 0)
+        java.util.List<terrain> activeTerrains = getActiveEditorTerrains();
+        if (activeTerrains.isEmpty())
             return;
-        final int delIdx = ts.getSelTerrain();
-        String name = ts.getTerrains().get(delIdx).getName();
+        final int delIdx = getActiveEditorSelTerrain();
+        String name = activeTerrains.get(delIdx).getName();
         if (name == null)
             name = "";
         final String msg = z.deleteterrainconfirm != null
@@ -21840,6 +22084,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             Json json = new Json();
             writeThisAbs(curdir + "/auto.json", json.prettyPrint(at));
         }
+        saveMacroAutoTerrain();
 
         try {
 
@@ -23632,6 +23877,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             properties.clear();
             tilesets.clear();
             autotiles.clear();
+        macroTerrain.clear();
             int curgroupid = -1;
             int curobjid = -1;
             curid = 1;
@@ -24723,6 +24969,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
          */
 
         loadautotiles();
+        loadMacroAutoTerrain();
         uicam.zoom = 0.5f;
         uicam.update();
         loadingfile = false;
@@ -26182,10 +26429,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 return true;
         } else if (kartu == "tile" || kartu == "pickanim") {
             initialZoom = tilecam.zoom;
-            if (isTerrainEditorPicker() && tilesets.size() > 0) {
+            if (isActiveTerrainEditorPicker() && tilesets.size() > 0) {
                 Vector3 touch = new Vector3();
                 tilecam.unproject(touch.set(p1, p2, 0));
-                if (terrainEditorHalfCellAt(tilesets.get(selTsetID), touch.x, touch.y) >= 0) {
+                tileset editorTs = getActiveTerrainEditorTileset();
+                if (editorTs != null && terrainEditorHalfCellAt(editorTs, touch.x, touch.y) >= 0) {
                     terrainHoldPending = true;
                     terrainHoldTimer = TERRAIN_HOLD_PAINT_SEC;
                     terrainHoldTouchX = p1;
@@ -26401,6 +26649,55 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return kartu.equals("pickanim") && tilePicker.equals("terraineditor");
     }
 
+    private boolean isMacroTerrainEditorMode() {
+        return tilePicker.equals("macroterraineditor");
+    }
+
+    private boolean isMacroTerrainEditorPicker() {
+        return kartu.equals("pickanim") && tilePicker.equals("macroterraineditor");
+    }
+
+    private boolean isActiveTerrainEditorPicker() {
+        return isTerrainEditorPicker() || isMacroTerrainEditorPicker();
+    }
+
+    private tileset getActiveTerrainEditorTileset() {
+        if (tilesets.isEmpty())
+            return null;
+        return tilesets.get(getActiveTerrainEditorTsetIndex());
+    }
+
+    private int getActiveTerrainEditorTsetIndex() {
+        if (tilesets.isEmpty())
+            return 0;
+        if (isMacroTerrainEditorMode())
+            return seltset;
+        return selTsetID;
+    }
+
+    private java.util.List<terrain> getActiveEditorTerrains() {
+        if (isMacroTerrainEditorMode())
+            return macroTerrain.getTerrains();
+        if (tilesets.isEmpty())
+            return new java.util.ArrayList<terrain>();
+        return tilesets.get(selTsetID).getTerrains();
+    }
+
+    private int getActiveEditorSelTerrain() {
+        if (isMacroTerrainEditorMode())
+            return macroTerrain.getSelTerrain();
+        if (tilesets.isEmpty())
+            return 0;
+        return tilesets.get(selTsetID).getSelTerrain();
+    }
+
+    private void setActiveEditorSelTerrain(int idx) {
+        if (isMacroTerrainEditorMode())
+            macroTerrain.setSelTerrain(idx);
+        else if (!tilesets.isEmpty())
+            tilesets.get(selTsetID).setSelTerrain(idx);
+    }
+
     private int terrainEditorHalfCellW(tileset ts) {
         return Math.max(1, ts.getTilewidth() / 2);
     }
@@ -26424,8 +26721,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private float tilePickerMinZoom() {
-        if (isTerrainEditorPicker() && tilesets.size() > 0)
-            return terrainEditorMinZoom(tilesets.get(selTsetID));
+        if (isActiveTerrainEditorPicker() && tilesets.size() > 0) {
+            tileset ts = getActiveTerrainEditorTileset();
+            if (ts != null)
+                return terrainEditorMinZoom(ts);
+        }
         return Tsw / 320f;
     }
 
@@ -26500,6 +26800,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return c;
     }
 
+    private int gridIndexToGid(tileset ts, int gridIdx) {
+        if (gridIdx < 0 || gridIdx >= CollectionTilesetOps.getPickerGridSlots(ts))
+            return -1;
+        if (ts.isCollection()) {
+            int localId = ts.getTileIdAtGridIndex(gridIdx);
+            if (localId < 0)
+                return -1;
+            return ts.getFirstgid() + localId;
+        }
+        return ts.getFirstgid() + gridIdx;
+    }
+
     private int getTerrainHalfCellValue(tileset ts, int halfCellIndex) {
         int gridW = ts.getWidth() * 2;
         int hcx = halfCellIndex % gridW;
@@ -26510,8 +26822,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         int gridIdx = tileY * ts.getWidth() + tileX;
         if (gridIdx < 0 || gridIdx >= CollectionTilesetOps.getPickerGridSlots(ts))
             return -1;
-        tile t = ts.getTileMeta(ts.isCollection() ? ts.getTileIdAtGridIndex(gridIdx) : gridIdx);
-        if (t == null && !ts.isCollection())
+        tile t;
+        if (isMacroTerrainEditorPicker()) {
+            int gid = gridIndexToGid(ts, gridIdx);
+            if (gid < 0)
+                return -1;
+            t = macroTerrain.getTileMeta(gid);
+        } else {
+            t = ts.getTileMeta(ts.isCollection() ? ts.getTileIdAtGridIndex(gridIdx) : gridIdx);
+        }
+        if (t == null && !ts.isCollection() && !isMacroTerrainEditorPicker())
             return -1;
         if (t == null)
             return -1;
@@ -26531,7 +26851,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         int gridIdx = tileY * ts.getWidth() + tileX;
         if (gridIdx < 0 || gridIdx >= CollectionTilesetOps.getPickerGridSlots(ts))
             return;
-        tile t = getOrCreateTileMetaAtGrid(ts, gridIdx);
+        tile t;
+        if (isMacroTerrainEditorPicker()) {
+            int gid = gridIndexToGid(ts, gridIdx);
+            if (gid < 0)
+                return;
+            t = macroTerrain.getOrCreateTileMeta(gid);
+            macroTerrain.clearTerrainCache();
+        } else {
+            t = getOrCreateTileMetaAtGrid(ts, gridIdx);
+        }
         int[] cn = t.getTerrain();
         int a = cn[0], b = cn[1], c = cn[2], d = cn[3];
         switch (corner) {
@@ -26549,6 +26878,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 break;
         }
         t.setTerrain(a, b, c, d);
+        if (isMacroTerrainEditorPicker()) {
+            if (a == -1 && b == -1 && c == -1 && d == -1)
+                macroTerrain.removeTileMetaIfEmpty(t.getTileID());
+        }
     }
 
     private void toggleTerrainHalfCell(tileset ts, int halfCellIndex, int terrainId) {
@@ -26814,6 +27147,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void pushTerrainUndo(tileset ts) {
+        if (isMacroTerrainEditorPicker()) {
+            MacroTerrainStore snap = new MacroTerrainStore();
+            snap.fromData(macroTerrain.toData());
+            macroTerrainUndoStack.add(snap);
+            if (macroTerrainUndoStack.size() > 100)
+                macroTerrainUndoStack.remove(0);
+            return;
+        }
         terrainUndoStack.add(captureTerrainUndoSnapshot(ts));
         if (terrainUndoStack.size() > 100)
             terrainUndoStack.remove(0);
@@ -26821,9 +27162,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void clearTerrainUndoHistory() {
         terrainUndoStack.clear();
+        macroTerrainUndoStack.clear();
     }
 
     private void undoTerrainEdit(tileset ts) {
+        if (isMacroTerrainEditorPicker()) {
+            if (macroTerrainUndoStack.isEmpty())
+                return;
+            macroTerrain.fromData(macroTerrainUndoStack.remove(macroTerrainUndoStack.size() - 1).toData());
+            clearTerrainPickerCaches();
+            return;
+        }
         if (terrainUndoStack.isEmpty())
             return;
         java.util.ArrayList<tile> snap = terrainUndoStack.remove(terrainUndoStack.size() - 1);
@@ -26861,6 +27210,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void cycleSelTerrain(int delta) {
+        if (isMacroTerrainEditorPicker()) {
+            if (macroTerrain.getTerrains().isEmpty())
+                return;
+            int sel = macroTerrain.getSelTerrain() + delta;
+            if (sel < 0)
+                sel = macroTerrain.getTerrains().size() - 1;
+            if (sel >= macroTerrain.getTerrains().size())
+                sel = 0;
+            macroTerrain.setSelTerrain(sel);
+            return;
+        }
         if (tilesets.size() == 0)
             return;
         tileset tt = tilesets.get(selTsetID);
@@ -26874,33 +27234,63 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tt.setSelTerrain(sel);
     }
 
+    private void addTerrainPickerRow(Table tbl, String name, int iconGid, final Runnable onPick) {
+        Button row = new Button(skin);
+        row.left();
+        Image icon = new Image();
+        setReplaceTilePreview(icon, iconGid);
+        row.add(icon).width(ssx / 15f).height(ssx / 15f).padRight(10).padLeft(2).padTop(2).padBottom(2);
+        Label lbl = new Label(name, skin);
+        lbl.setColor(1, 1, 1, 1);
+        lbl.setWrap(true);
+        row.add(lbl).width(btnx - 55).growX();
+        row.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                onPick.run();
+            }
+        });
+        tbl.add(row).height(btny * 1.5f).row();
+    }
+
+    private int terrainEditorPickIconGid(int terrainIdx, boolean macro) {
+        if (macro)
+            return macroTerrainIconGid(terrainIdx);
+        if (tilesets.isEmpty() || selTsetID < 0 || selTsetID >= tilesets.size())
+            return -1;
+        tileset ts = tilesets.get(selTsetID);
+        int localId = terrainStripIconLocalId(ts, terrainIdx);
+        if (localId < 0)
+            return -1;
+        return ts.getFirstgid() + localId;
+    }
+
     private void showTerrainPickerList() {
         if (tilesets.size() == 0)
             return;
-        final tileset ts = tilesets.get(selTsetID);
-        if (ts.getTerrains().size() == 0)
+        java.util.List<terrain> activeTerrains = getActiveEditorTerrains();
+        if (activeTerrains.isEmpty())
             return;
+        final boolean macro = isMacroTerrainEditorMode();
         Table tblmain = new Table();
         Table tbl = new Table();
         ScrollPane sp = new ScrollPane(tbl, skin);
         tblmain.add(sp).expand().fill();
         tblmain.setFillParent(true);
         tbl.defaults().width(btnx).height(btny * 1.5f).padBottom(2);
-        tbl.add(new Label(z.terraineditor, skin)).row();
-        for (int i = 0; i < ts.getTerrains().size(); i++) {
+        tbl.add(new Label(macro ? z.macroterraineditor : z.terraineditor, skin)).row();
+        for (int i = 0; i < activeTerrains.size(); i++) {
             final int idx = i;
-            String name = ts.getTerrains().get(i).getName();
+            String name = activeTerrains.get(i).getName();
             if (name == null || name.length() == 0)
                 name = "Terrain " + i;
-            TextButton b = new TextButton(name, skin);
-            b.addListener(new ChangeListener() {
+            addTerrainPickerRow(tbl, name, terrainEditorPickIconGid(idx, macro), new Runnable() {
                 @Override
-                public void changed(ChangeEvent event, Actor actor) {
-                    ts.setSelTerrain(idx);
+                public void run() {
+                    setActiveEditorSelTerrain(idx);
                     resumeTerrainEditor();
                 }
             });
-            tbl.add(b).row();
         }
         TextButton back = new TextButton(z.back, skin);
         back.addListener(new ChangeListener() {
@@ -26914,7 +27304,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void applyTerrainEditorTap(tileset ts, float touchX, float touchY) {
-        if (ts.getTerrains().size() == 0)
+        if (getActiveEditorTerrains().size() == 0)
             return;
         pushTerrainUndo(ts);
         int halfIdx = terrainEditorHalfCellAt(ts, touchX, touchY);
@@ -26923,7 +27313,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         int gridW = ts.getWidth() * 2;
         int anchorHcx = halfIdx % gridW;
         int anchorHcy = halfIdx / gridW;
-        int terrainId = ts.getSelTerrain();
+        int terrainId = getActiveEditorSelTerrain();
         switch (terrainBrushShape) {
             case TE_SHAPE_2X2:
                 stampTerrainFilledCornerBox(ts, anchorHcx, anchorHcy, 2, terrainId);
@@ -26954,21 +27344,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         terrainPainting = true;
         terrainPaintMoved = true;
         lastTerrainPaintCell = -1;
-        if (tilesets.size() > 0) {
-            pushTerrainUndo(tilesets.get(selTsetID));
+        tileset ts = getActiveTerrainEditorTileset();
+        if (ts != null) {
+            pushTerrainUndo(ts);
             Vector3 t = new Vector3();
             tilecam.unproject(t.set(screenX, screenY, 0));
-            paintTerrainBrush(tilesets.get(selTsetID), t.x, t.y);
+            paintTerrainBrush(ts, t.x, t.y);
         }
     }
 
     private void paintTerrainBrush(tileset ts, float touchX, float touchY) {
-        if (ts.getTerrains().size() == 0)
+        if (getActiveEditorTerrains().size() == 0)
             return;
         int halfIdx = terrainEditorHalfCellAt(ts, touchX, touchY);
         if (halfIdx < 0 || halfIdx == lastTerrainPaintCell)
             return;
-        setTerrainHalfCell(ts, halfIdx, ts.getSelTerrain());
+        setTerrainHalfCell(ts, halfIdx, getActiveEditorSelTerrain());
         lastTerrainPaintCell = halfIdx;
     }
 
@@ -26990,7 +27381,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (endRow >= totalRows) endRow = totalRows - 1;
         }
 
-        if (terrainPickerCachedTsetID != selTsetID)
+        int editorTsetId = getActiveTerrainEditorTsetIndex();
+        if (terrainPickerCachedTsetID != editorTsetId)
             terrainPickerCacheValid = false;
         if (!terrainPickerCacheValid)
             rebuildTerrainPickerCaches(ts);
@@ -27048,8 +27440,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         try {
             if (tilesets.size() == 0)
                 return;
-            if (isTerrainEditorPicker()) {
-                tileset ts = tilesets.get(selTsetID);
+            if (isActiveTerrainEditorPicker()) {
+                tileset ts = getActiveTerrainEditorTileset();
+                if (ts == null)
+                    return;
                 float hcw = terrainEditorHalfCellW(ts);
                 float hch = terrainEditorHalfCellH(ts);
                 tilecam.zoom = terrainEditorDefaultZoom(ts);
@@ -27098,7 +27492,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             gotoStage(tTileMgmt);
                         }
                         return true;
+                    case "macroterraineditor":
+                        exitMacroTerrainEditor();
+                        return true;
                     case "newterrain":
+                    case "newmacroterrain":
                         resumeTerrainEditor();
                         return true;
                     case "props":
@@ -27135,22 +27533,23 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         if (tapped(touch2, gui.terrainundo)) {
-            if (tilePicker == "terraineditor" && kartu == "pickanim") {
-                if (tilesets.size() > 0)
-                    undoTerrainEdit(tilesets.get(selTsetID));
+            if ((tilePicker == "terraineditor" || tilePicker == "macroterraineditor") && kartu == "pickanim") {
+                tileset ts = getActiveTerrainEditorTileset();
+                if (ts != null)
+                    undoTerrainEdit(ts);
                 return true;
             }
         }
 
         if (tapped(touch2, gui.terraindelete)) {
-            if (tilePicker == "terraineditor" && kartu == "pickanim") {
+            if ((tilePicker == "terraineditor" || tilePicker == "macroterraineditor") && kartu == "pickanim") {
                 confirmDeleteSelectedTerrain();
                 return true;
             }
         }
 
         if (tapped(touch2, gui.terrainshape)) {
-            if (tilePicker == "terraineditor" && kartu == "pickanim") {
+            if ((tilePicker == "terraineditor" || tilePicker == "macroterraineditor") && kartu == "pickanim") {
                 openTerrainShapeMenu();
                 return true;
             }
@@ -27159,6 +27558,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (tapped(touch2, gui.newterrain)) {
             if (tilePicker == "terraineditor" && kartu == "pickanim") {
                 pickTile("newterrain");
+                return true;
+            }
+            if (tilePicker == "macroterraineditor" && kartu == "pickanim") {
+                pickTile("newmacroterrain");
                 return true;
             }
             if (tilePicker == "massprops" && kartu == "pickanim") {
@@ -27246,6 +27649,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 if (tapped(touch2, gui.tilemode) && tilesets.get(seltset).getTerrains().size() > 0) {
                     pickAuto = !pickAuto;
+                    if (pickAuto) {
+                        pickMacroTerrain = false;
+                        curpickMacroTerrain = false;
+                    }
                     issettingtile = false;
                     resetMassprops();
                     recenterpick();
@@ -27401,6 +27808,28 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             return true;
                         }
                         break;
+                    case "macroterraineditor":
+                        if (tapped(touch2, gui.tilesetsleft)) {
+                            seltset -= 1;
+                            if (seltset <= -1)
+                                seltset = tilesets.size() - 1;
+                            clearTerrainPickerCaches();
+                            recenterpick();
+                            return true;
+                        }
+                        if (tapped(touch2, gui.tilesetsright)) {
+                            seltset += 1;
+                            if (seltset >= tilesets.size())
+                                seltset = 0;
+                            clearTerrainPickerCaches();
+                            recenterpick();
+                            return true;
+                        }
+                        if (tapped(touch2, gui.tilesetsmid)) {
+                            showTerrainPickerList();
+                            return true;
+                        }
+                        break;
                 }
             }
 
@@ -27430,22 +27859,29 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private boolean tapPick(float p1, float p2) {
         if (loadingfile)
             return true;
-        int seltset = 0;
         stamp = false;
         assemblymode = false;
         if (tilesets.size() == 0)
             return true;
         Vector3 touch = new Vector3();
         tilecam.unproject(touch.set(p1, p2, 0));
-        if (kartu == "tile" || tilePicker == "newimgobj" || tilePicker == "props" || tilePicker == "rnda"
-                || tilePicker == "rndb" || tilePicker == "repa" || tilePicker == "repb" || tilePicker == "gena"
-                || tilePicker == "genb" || tilePicker == "sw1" || tilePicker == "sw2" || tilePicker == "sw3"
-                || tilePicker == "sw4" || tilePicker == "sw5" || tilePicker == "sw6") {
-            seltset = this.seltset;
+        tileset ts;
+        if (isActiveTerrainEditorPicker()) {
+            ts = getActiveTerrainEditorTileset();
+            if (ts == null)
+                return true;
         } else {
-            seltset = this.selTsetID;
+            int seltset = 0;
+            if (kartu == "tile" || tilePicker == "newimgobj" || tilePicker == "props" || tilePicker == "rnda"
+                    || tilePicker == "rndb" || tilePicker == "repa" || tilePicker == "repb" || tilePicker == "gena"
+                    || tilePicker == "genb" || tilePicker == "sw1" || tilePicker == "sw2" || tilePicker == "sw3"
+                    || tilePicker == "sw4" || tilePicker == "sw5" || tilePicker == "sw6") {
+                seltset = this.seltset;
+            } else {
+                seltset = this.selTsetID;
+            }
+            ts = tilesets.get(seltset);
         }
-        tileset ts = tilesets.get(seltset);
         int ae = (int) touch.x;
         int ab = (int) touch.y;
         // this line is to sovlve problem of the first line not clicked on 1 x 1 tile.
@@ -27495,6 +27931,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     curtset = seltset;
                     setTsetFromCurspr();
                     updateAT();
+                    pickMacroTerrain = false;
+                    curpickMacroTerrain = false;
                     curpickAuto = pickAuto;
                     adjustLayer(ts);
                     addRecentTile(curspr);
@@ -27509,7 +27947,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         }
 
-        if (isTerrainEditorPicker()) {
+        if (isActiveTerrainEditorPicker()) {
             if (!terrainPaintMoved)
                 applyTerrainEditorTap(ts, touch.x, touch.y);
             terrainPaintMoved = false;
@@ -27532,6 +27970,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     curtset = seltset;
                     setTsetFromCurspr();
                     curpickAuto = pickAuto;
+                    if (!pickAuto) {
+                        pickMacroTerrain = false;
+                        curpickMacroTerrain = false;
+                    }
 
                     adjustLayer(ts);
                     addRecentTile(curspr);
@@ -27799,11 +28241,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         kartu = "pickanim";
                         Gdx.input.setInputProcessor(im);
                         return true;
+                    case "newmacroterrain":
+                        newMacroTerrainGid = num;
+                        tilePicker = "macroterraineditor";
+                        getNewTextInput(pNewMacroTerrain, "New Terrain Name", "", "");
+                        kartu = "pickanim";
+                        Gdx.input.setInputProcessor(im);
+                        return true;
                     case "massprops":
                         if (numis >= 0 && numis < massprops.size())
                             massprops.set(numis, !massprops.get(numis));
                         return true;
                     case "terraineditor":
+                        return true;
+                    case "macroterraineditor":
                         return true;
                 }
             }
@@ -28644,20 +29095,32 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     long noi = Long.decode("#" + 00 + hex.substring(2)) - tilesets.get(curtset).getFirstgid();
 
                     // not using terrain mode
-                    if (!curpickAuto) {
+                    if (!curpickAuto && !isMacroTerrainPaintMode()) {
                         if (isPixelArtSwatchActive())
                             return;
                         updateTileData(selLayer, num, oi, curtset);
                         return;
                     }
-                    tile t = tilesets.get(curtset).getTileMeta((int) noi);
-                    t = resolveTerrainAutotileCenter(tilesets.get(curtset), t);
-
-                    updateTileData(selLayer, num, oi, curtset);
+                    tile t;
+                    if (isMacroTerrainPaintMode()) {
+                        refreshAutotileGraph();
+                        int gid = (int) stripTileGidFlags(this.curspr);
+                        t = resolveMacroTerrainAutotileCenter(gid, macroTerrain.getTileMeta(gid));
+                        if (t == null)
+                            t = ensureMacroTerrainCenterTile(macroTerrain.getSelTerrain());
+                        if (t != null)
+                            gid = t.getTileID();
+                        int tsetIdx = resolveTilesetIndexForGid(gid, curtset);
+                        updateTileData(selLayer, num, gid, tsetIdx);
+                    } else {
+                        t = tilesets.get(curtset).getTileMeta((int) noi);
+                        t = resolveTerrainAutotileCenter(tilesets.get(curtset), t);
+                        updateTileData(selLayer, num, oi, curtset);
+                    }
 
                     //// CODE FOR TERRAINS!!! (14 JUNE)
 
-                    if (oi == 0)
+                    if (!isMacroTerrainPaintMode() && oi == 0)
                         return;
                     if (t == null)
                         return;
@@ -28901,6 +29364,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void updateAT() {
+        if (isMacroTerrainPaintMode()) {
+            updateMacroAT();
+            return;
+        }
         if (tilesets.isEmpty())
             return;
 
@@ -28954,6 +29421,240 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
+    private void updateMacroAT() {
+        if (macroTerrain.getTerrains().isEmpty())
+            return;
+
+        ATGraph = new ATGraph();
+        java.util.List<Vector2> history = new ArrayList<Vector2>();
+        java.util.List<Integer> historyA = new ArrayList<Integer>();
+
+        AutoTile myAT = new AutoTile(-1);
+        historyA.add(-1);
+        ATGraph.addAT(myAT);
+
+        for (tile t : macroTerrain.getAllTileMeta()) {
+            int cond = t.getTerrain()[0];
+            if (t.isTerrainForEditor() && t.isCenter() && !historyA.contains(cond)) {
+                myAT = new AutoTile(cond);
+                historyA.add(cond);
+                ATGraph.addAT(myAT);
+            }
+        }
+
+        for (tile t : macroTerrain.getAllTileMeta()) {
+            if (t.isTerrainForEditor() && t.isTransition()) {
+                Vector2 newHist = new Vector2(t.getTransA(), t.getTransB());
+                boolean sdh = false;
+                for (Vector2 v : history) {
+                    if (v.x == t.getTransA() && v.y == t.getTransB()) {
+                        sdh = true;
+                        break;
+                    }
+                }
+                if (!sdh) {
+                    if (newHist.x == -1)
+                        continue;
+                    if (newHist.y == -1)
+                        continue;
+                    try {
+                        AutoTile AT1 = ATGraph.getAT((int) newHist.x);
+                        AutoTile AT2 = ATGraph.getAT((int) newHist.y);
+                        ATGraph.connectAT(AT1, AT2);
+                        ATGraph.connectAT(AT2, AT1);
+                        history.add(newHist);
+                    } catch (Exception e) {
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean isMacroTerrainPaintMode() {
+        return curpickMacroTerrain || pickMacroTerrain;
+    }
+
+    private void refreshAutotileGraph() {
+        if (isMacroTerrainPaintMode())
+            updateMacroAT();
+        else
+            updateAT();
+    }
+
+    private tile getAutotileLayerTileMeta(int layerIdx, int cellIdx) {
+        if (!isMacroTerrainPaintMode())
+            return getLayerTileMeta(layerIdx, cellIdx);
+        if (layerIdx < 0 || layerIdx >= layers.size())
+            return null;
+        layer lay = layers.get(layerIdx);
+        if (cellIdx < 0 || cellIdx >= lay.getStr().size())
+            return null;
+        long gid = stripTileGidFlags(lay.getStr().get(cellIdx));
+        if (gid == 0)
+            return null;
+        tile t = macroTerrain.getTileMeta((int) gid);
+        if (t != null)
+            return t;
+        return getLayerTileMeta(layerIdx, cellIdx);
+    }
+
+    private tile ensureMacroTerrainCenterTile(int terrainIdx) {
+        if (terrainIdx < 0 || terrainIdx >= macroTerrain.getTerrains().size())
+            return null;
+        for (tile mt : macroTerrain.getAllTileMeta()) {
+            if (mt.isTerrainForEditor() && mt.isCenter() && mt.getTerrain()[0] == terrainIdx)
+                return mt;
+        }
+        terrain tr = macroTerrain.getTerrains().get(terrainIdx);
+        int repGid = tr.getTile();
+        if (repGid < 0)
+            return null;
+        tile t = macroTerrain.getOrCreateTileMeta(repGid);
+        if (!t.isCenter() || !t.isTerrainForEditor()) {
+            t.setTerrain(terrainIdx, terrainIdx, terrainIdx, terrainIdx);
+            macroTerrain.clearTerrainCache();
+            updateMacroAT();
+        }
+        return t;
+    }
+
+    private int macroTerrainIconGid(int terrainIdx) {
+        if (terrainIdx < 0 || terrainIdx >= macroTerrain.getTerrains().size())
+            return -1;
+        for (tile mt : macroTerrain.getAllTileMeta()) {
+            if (mt.isTerrainForEditor() && mt.isCenter() && mt.getTerrain()[0] == terrainIdx)
+                return mt.getTileID();
+        }
+        return macroTerrain.getTerrains().get(terrainIdx).getTile();
+    }
+
+    private tile resolveMacroTerrainAutotileCenter(int gid, tile t) {
+        if (t == null)
+            t = macroTerrain.getTileMeta(gid);
+        if (macroTerrain.getTerrains().isEmpty())
+            return t;
+        if (t != null && t.isTerrainForEditor() && t.isCenter())
+            return t;
+        int terrainRow = macroTerrain.getSelTerrain();
+        if (t != null && t.isTerrainForEditor()) {
+            int[] tr = t.getTerrain();
+            if (tr != null) {
+                terrainRow = tr[0];
+                for (int i = 0; i < 4; i++) {
+                    if (tr[i] >= 0) {
+                        terrainRow = tr[i];
+                        break;
+                    }
+                }
+            }
+        } else if (gid >= 0) {
+            for (int i = 0; i < macroTerrain.getTerrains().size(); i++) {
+                if (macroTerrain.getTerrains().get(i).getTile() == gid) {
+                    terrainRow = i;
+                    break;
+                }
+            }
+        }
+        return ensureMacroTerrainCenterTile(terrainRow);
+    }
+
+    private int neighborCellForDirection(int num, int direction) {
+        switch (direction) {
+            case 0:
+                if (num <= Tw || num % Tw == 0)
+                    return -1;
+                return num - Tw - 1;
+            case 1:
+                if (num <= Tw)
+                    return -1;
+                return num - Tw;
+            case 2:
+                if (num <= Tw || num % Tw == Tw - 1)
+                    return -1;
+                return num - Tw + 1;
+            case 3:
+                if (num <= 1 || num % Tw == 0)
+                    return -1;
+                return num - 1;
+            case 4:
+                if (num >= Tw * Th || num % Tw == Tw - 1)
+                    return -1;
+                return num + 1;
+            case 5:
+                if (num >= Tw * Th - Tw || num % Tw == 0)
+                    return -1;
+                return num + Tw - 1;
+            case 6:
+                if (num >= Tw * Th - Tw)
+                    return -1;
+                return num + Tw;
+            case 7:
+                if (num >= Tw * Th - Tw || num % Tw == Tw - 1)
+                    return -1;
+                return num + Tw + 1;
+            case 8:
+                return num;
+            default:
+                return -1;
+        }
+    }
+
+    /** @return 0 = done, 1 = request re-terrain, 2 = abort Terrainify */
+    private int placeMacroAutotileWithFallback(int num, int gogo, int direction, int[] aa, int[] bb,
+            String ccStr, boolean fill, tile sourceCenter) {
+        if (!macroTerrain.getGidsByTerrain(ccStr).isEmpty()) {
+            placeMacroAutotileCandidate(gogo, ccStr);
+            return 0;
+        }
+        if (bb[0] == -1 && bb[1] == -1 && bb[2] == -1 && bb[3] == -1)
+            return 2;
+        int against = bb[0];
+        if (bb[0] == aa[0])
+            against = bb[1];
+        if (bb[1] == aa[0])
+            against = bb[2];
+        if (bb[2] == aa[0])
+            against = bb[3];
+        findBestTile(aa[0], against);
+        if (ATPath == null || ATPath.getCount() <= 1) {
+            if (direction != 8)
+                applyAutotileOverwrite(direction, gogo, aa);
+            return 0;
+        }
+        int ATid = ATPath.get(1).name;
+        String centerStr = ATid + "," + ATid + "," + ATid + "," + ATid;
+        if (!(bb[0] == ATid && bb[1] == ATid && bb[2] == ATid && bb[3] == ATid)
+                && !macroTerrain.getGidsByTerrain(centerStr).isEmpty()) {
+            placeMacroAutotileCandidate(gogo, centerStr);
+            if (!fill) {
+                java.util.List<Integer> gids = macroTerrain.getGidsByTerrain(centerStr);
+                tile y = (gids.isEmpty() || macroTerrain.getTileMeta(gids.get(0)) == null)
+                        ? sourceCenter : macroTerrain.getTileMeta(gids.get(0));
+                int neighborNum = neighborCellForDirection(num, direction);
+                if (neighborNum >= 0 && y != null)
+                    numanuma.add(new tung(neighborNum, y, direction));
+                return 1;
+            }
+        } else if (direction != 8) {
+            applyAutotileOverwrite(direction, gogo, aa);
+        }
+        return 0;
+    }
+
+    private void placeMacroAutotileCandidate(int cellIdx, String terrainStr) {
+        java.util.List<Integer> gids = macroTerrain.getGidsByTerrain(terrainStr);
+        if (gids.isEmpty()) {
+            if (terrainStr.equalsIgnoreCase("-1,-1,-1,-1"))
+                updateTileData(selLayer, cellIdx, 0, -1, -1);
+            return;
+        }
+        int pickGid = gids.get((int) (Math.random() * gids.size()));
+        int tsetIdx = resolveTilesetIndexForGid(pickGid, -1);
+        if (tsetIdx < 0)
+            return;
+        updateTileData(selLayer, cellIdx, pickGid, tsetIdx, -1);
+    }
+
     private void findBestTile(int A, int B) {
         try {
             AutoTile AT1 = ATGraph.getAT(A);
@@ -28970,7 +29671,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             return false;
         if (neighborTile == null || !neighborTile.isTerrainForEditor())
             return false;
-        if (neighborTset != curtset)
+        if (!isMacroTerrainPaintMode() && neighborTset != curtset)
             return true;
         if (ATGraph == null)
             return true;
@@ -28996,13 +29697,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private void applyAutotileOverwrite(int direction, int gogo, int[] aa) {
         int[] empty = new int[] { -1, -1, -1, -1 };
         int[] cc = terrainInt(direction, aa, empty);
+        String ccStr = cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3];
+        if (isMacroTerrainPaintMode()) {
+            placeMacroAutotileCandidate(gogo, ccStr);
+            return;
+        }
         java.util.List<Integer> lint = new ArrayList<>(tilesets.get(curtset)
-                .getTilesByTerrain(cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3]));
+                .getTilesByTerrain(ccStr));
         if (lint.size() == 0)
             return;
         int tileindex = lint.get((int) (Math.random() * lint.size()));
         tile y = tilesets.get(curtset).getTiles().get(tileindex);
-        String ccStr = cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3];
         if (ccStr.equalsIgnoreCase("-1,-1,-1,-1")) {
             updateTileData(selLayer, gogo, 0, -1, -1);
         } else {
@@ -29191,7 +29896,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 // why is this here?
 
                 int neighborTset = layers.get(selLayer).getTset().get(gogo);
-                tile neighborTileObj = getLayerTileMeta(selLayer, gogo);
+                tile neighborTileObj = getAutotileLayerTileMeta(selLayer, gogo);
                 int[] bb;
                 if (neighborTileObj != null) {
                     bb = neighborTileObj.getTerrain();
@@ -29211,14 +29916,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (bb != null) {
                     cc = terrainInt(i, aa, bb);
                     // log(cc[0]+","+cc[1]+","+cc[2]+","+cc[3]);
+                    String ccStr = cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3];
+                    if (isMacroTerrainPaintMode()) {
+                        int macroResult = placeMacroAutotileWithFallback(num, gogo, i, aa, bb, ccStr, fill, n);
+                        if (macroResult == 2)
+                            return true;
+                        if (macroResult == 1)
+                            requestReterrain = true;
+                    } else {
                     java.util.List<Integer> lint = new ArrayList<Integer>(
-                            tilesets.get(curtset).getTilesByTerrain(cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3]));
+                            tilesets.get(curtset).getTilesByTerrain(ccStr));
                     // if it is found.
                     if (lint.size() > 0) {
                         int tileindex = lint.get((int) (Math.random() * lint.size()));
                         tile y = tilesets.get(curtset).getTiles().get(tileindex);
 
-                        if ((cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3]).equalsIgnoreCase("-1,-1,-1,-1")) {
+                        if (ccStr.equalsIgnoreCase("-1,-1,-1,-1")) {
                             updateTileData(selLayer, gogo, 0, -1, -1);
                         } else {
                             updateTileData(selLayer, gogo, (long) y.getTileID() + tilesets.get(curtset).getFirstgid(),
@@ -29311,6 +30024,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         }
 
+                    }
                     }
 
                 }
@@ -30896,8 +31610,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     return true;
                 }
             }
+        }
 
-            // select auto tile
+        if (autotiles.size() > 0 || !macroTerrain.getTerrains().isEmpty()) {
+            // select auto tile / macro terrain brush
             if (tapped(touch2, gui.autopicker)) {
                 if (mode == "tile") {
                     if (!softcue("autopick") && lockUI)
@@ -33493,9 +34209,23 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             || tapped(touch2, gui.terrainshape) || tapped(touch2, gui.newterrain))
                         return true;
                     stamp = false;
-                    if (tilesets.size() > 0) {
-                        tileset tt = tilesets.get(selTsetID);
-                        if (tt.getTerrains().size() > 0
+                    {
+                        tileset tt = getActiveTerrainEditorTileset();
+                        if (tt != null && tt.getTerrains().size() > 0
+                                && terrainEditorHalfCellAt(tt, touch3.x, touch3.y) >= 0)
+                            beginTerrainPaintAt(p1, p2);
+                    }
+                    return true;
+                case "macroterraineditor":
+                    if (tapped(touch2, gui.tilesetsleft) || tapped(touch2, gui.tilesetsright)
+                            || tapped(touch2, gui.tilesetsmid) || tapped(touch2, gui.terrainundo)
+                            || tapped(touch2, gui.pickerback) || tapped(touch2, gui.terraindelete)
+                            || tapped(touch2, gui.terrainshape) || tapped(touch2, gui.newterrain))
+                        return true;
+                    stamp = false;
+                    {
+                        tileset tt = getActiveTerrainEditorTileset();
+                        if (tt != null && getActiveEditorTerrains().size() > 0
                                 && terrainEditorHalfCellAt(tt, touch3.x, touch3.y) >= 0)
                             beginTerrainPaintAt(p1, p2);
                     }
@@ -34395,10 +35125,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
             return true;
         }
-        if (terrainHoldPending && isTerrainEditorPicker()
+        if (terrainHoldPending && isActiveTerrainEditorPicker()
                 && (Math.abs(p3) > TERRAIN_HOLD_CANCEL_PAN || Math.abs(p4) > TERRAIN_HOLD_CANCEL_PAN))
             terrainHoldPending = false;
-        if (terrainPainting && isTerrainEditorPicker()) {
+        if (terrainPainting && isActiveTerrainEditorPicker()) {
             terrainPaintMoved = true;
             return true;
         }
@@ -34497,9 +35227,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (kartu != "tile") {
                         switch (tilePicker) {
                             case "terraineditor":
-                                t = tilesets.get(selTsetID);
-                                scrollTw = terrainEditorHalfCellW(t);
-                                scrollTh = terrainEditorHalfCellH(t);
+                            case "macroterraineditor":
+                                t = getActiveTerrainEditorTileset();
+                                if (t != null) {
+                                    scrollTw = terrainEditorHalfCellW(t);
+                                    scrollTh = terrainEditorHalfCellH(t);
+                                }
                                 break;
                             case "newimgobj":
                             case "props":
@@ -34614,7 +35347,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         }
 
-        if (terrainPainting && isTerrainEditorPicker()) {
+        if (terrainPainting && isActiveTerrainEditorPicker()) {
             terrainPainting = false;
             lastTerrainPaintCell = -1;
         }
@@ -34885,7 +35618,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
         pinchZoomActive = true;
         terrainHoldPending = false;
-        if (isTerrainEditorPicker()) {
+        if (isActiveTerrainEditorPicker()) {
             terrainPainting = false;
             lastTerrainPaintCell = -1;
         }
