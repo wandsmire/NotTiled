@@ -717,7 +717,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private float rotator = 0f;
     private float undohistory = 0f;
     private Table trandomgen, treplacetiles, tgenerateterrain, taiGenerate;
-    private Image iReplaceFrom, iReplaceTo;
+    private Image iReplaceFrom, iReplaceTo, iRandomLive, iRandomDead, iGenTerrain1, iGenTerrain2;
     private Label lReplaceRange;
     private CheckBox cbReplaceRangeLimit, cbReplaceAllLayers;
     private boolean replaceRangePicking;
@@ -2177,7 +2177,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         if (roll) {
             if (!Gdx.input.isTouched()) {
-                if (mapstartSelect == mapendSelect) {
+                if (replaceRangePicking) {
+                    finishReplaceRangePick();
+                } else if (mapstartSelect == mapendSelect) {
                     roll = false;
                 }
             } else {
@@ -10092,6 +10094,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         randomize.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                updateRandomTilePreviews();
                 gotoStage(trandomgen);
             }
         });
@@ -10151,6 +10154,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 refreshGenerator();
+                updateGenTerrainPreviews();
                 gotoStage(tgenerateterrain);
             }
         });
@@ -10177,6 +10181,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         fdeadstr = new TextField("0", skin);
         fdeadstr.setTextFieldFilter(tffint);
         fdeadtset = new TextField("0", skin);
+        float toolPreviewSize = Math.max(32f, ssx / 12f);
+        iRandomLive = new Image();
+        iRandomDead = new Image();
+        Table tRandomLive = new Table();
+        tRandomLive.add(iRandomLive).size(toolPreviewSize).padRight(4);
+        tRandomLive.add(flivestr).growX();
+        Table tRandomDead = new Table();
+        tRandomDead.add(iRandomDead).size(toolPreviewSize).padRight(4);
+        tRandomDead.add(fdeadstr).growX();
         TextButton runrandomize = new TextButton(z.randomize, skin);
         TextButton pickrnda = new TextButton(z.picktile1, skin);
         TextButton pickrndb = new TextButton(z.picktile2, skin);
@@ -10212,11 +10225,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         trandomgen.add(slfirstgen).row();
 
         trandomgen.add(new Label("GID 1", skin));
-        trandomgen.add(flivestr).row();
+        trandomgen.add(tRandomLive).row();
         trandomgen.add();
         trandomgen.add(pickrnda).row();
         trandomgen.add(new Label("GID 2", skin));
-        trandomgen.add(fdeadstr).row();
+        trandomgen.add(tRandomDead).row();
         trandomgen.add();
         trandomgen.add(pickrndb).row();
         trandomgen.add(sbGenerate).width(btnx).colspan(2).row();
@@ -10244,6 +10257,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         fgen1.setTextFieldFilter(tffint);
         fgen2 = new TextField("0", skin);
         fgen2.setTextFieldFilter(tffint);
+        iGenTerrain1 = new Image();
+        iGenTerrain2 = new Image();
+        Table tGenTerrain1 = new Table();
+        tGenTerrain1.add(iGenTerrain1).size(toolPreviewSize).padRight(4);
+        tGenTerrain1.add(fgen1).growX();
+        Table tGenTerrain2 = new Table();
+        tGenTerrain2.add(iGenTerrain2).size(toolPreviewSize).padRight(4);
+        tGenTerrain2.add(fgen2).growX();
 
         TextButton rungenerate = new TextButton(z.generateterrain, skin);
         TextButton pickgena = new TextButton(z.picktile1, skin);
@@ -10277,11 +10298,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         });
 
         tgenerateterrain.add(new Label("GID 1", skin));
-        tgenerateterrain.add(fgen1).row();
+        tgenerateterrain.add(tGenTerrain1).row();
         tgenerateterrain.add();
         tgenerateterrain.add(pickgena).row();
         tgenerateterrain.add(new Label("GID 2", skin));
-        tgenerateterrain.add(fgen2).row();
+        tgenerateterrain.add(tGenTerrain2).row();
         tgenerateterrain.add();
         tgenerateterrain.add(pickgenb).row();
         tgenerateterrain.add();
@@ -10432,19 +10453,29 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         img.setDrawable(new TextureRegionDrawable(region));
     }
 
+    private void updateTileFieldPreview(Image img, TextField field) {
+        if (img == null || field == null)
+            return;
+        try {
+            setReplaceTilePreview(img, Long.parseLong(field.getText().trim()));
+        } catch (Exception e) {
+            img.setDrawable(null);
+        }
+    }
+
     private void updateReplaceTilePreviews() {
-        try {
-            setReplaceTilePreview(iReplaceFrom, Long.parseLong(fprevstr.getText().trim()));
-        } catch (Exception e) {
-            if (iReplaceFrom != null)
-                iReplaceFrom.setDrawable(null);
-        }
-        try {
-            setReplaceTilePreview(iReplaceTo, Long.parseLong(fnextstr.getText().trim()));
-        } catch (Exception e) {
-            if (iReplaceTo != null)
-                iReplaceTo.setDrawable(null);
-        }
+        updateTileFieldPreview(iReplaceFrom, fprevstr);
+        updateTileFieldPreview(iReplaceTo, fnextstr);
+    }
+
+    private void updateRandomTilePreviews() {
+        updateTileFieldPreview(iRandomLive, flivestr);
+        updateTileFieldPreview(iRandomDead, fdeadstr);
+    }
+
+    private void updateGenTerrainPreviews() {
+        updateTileFieldPreview(iGenTerrain1, fgen1);
+        updateTileFieldPreview(iGenTerrain2, fgen2);
     }
 
     private void updateReplaceRangeLabel() {
@@ -10464,6 +10495,29 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return x >= replaceRangeMinX && x <= replaceRangeMaxX && y >= replaceRangeMinY && y <= replaceRangeMaxY;
     }
 
+    private int mapTileAtScreen(float screenX, float screenY) {
+        Vector3 touch = new Vector3();
+        cam.unproject(touch.set(screenX, screenY, 0));
+        return mapTileAtWorld(touch.x, touch.y);
+    }
+
+    private boolean beginReplaceRangeDrag(float screenX, float screenY) {
+        if (!replaceRangePicking || !kartu.equals("world"))
+            return false;
+        int cell = mapTileAtScreen(screenX, screenY);
+        if (cell < 0)
+            return false;
+        roll = true;
+        activetool = 0;
+        usetool = true;
+        touched = true;
+        mapstartSelect = cell;
+        mapendSelect = cell;
+        mapinitialSelect = cell;
+        mapfinalSelect = cell;
+        return true;
+    }
+
     private void startReplaceRangePick() {
         if (Tw <= 0 || Th <= 0)
             return;
@@ -10473,9 +10527,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         stage.clear();
         Gdx.input.setInputProcessor(im);
         kartu = "world";
+        status(z.replacerangepick != null ? z.replacerangepick : "Drag on map to set range", 3);
     }
 
     private void finishReplaceRangePick() {
+        if (!replaceRangePicking)
+            return;
         replaceRangePicking = false;
         roll = false;
         activetool = replaceRangeSavedTool;
@@ -14208,6 +14265,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         rebuildLayerManagerList();
         updateLayerManagerHighlight();
         gotoStage(tLayerMgrMain);
+        scrollLayerManagerToSelection();
         Gdx.app.postRunnable(new Runnable() {
             @Override
             public void run() {
@@ -14217,6 +14275,27 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         cue("layerpick");
     }
 
+    private void instantScrollPaneTo(ScrollPane pane, Actor actor) {
+        instantScrollPaneTo(pane, actor, 0f);
+    }
+
+    private void instantScrollPaneTo(ScrollPane pane, Actor actor, float nudgeUp) {
+        pane.layout();
+        pane.setSmoothScrolling(false);
+        pane.scrollTo(actor.getX(), actor.getY(), actor.getWidth(), actor.getHeight());
+        pane.updateVisualScroll();
+        if (nudgeUp > 0f) {
+            float maxY = pane.getMaxY();
+            float scrollY = pane.getScrollY();
+            // scrollTo already pins to maxY for bottom rows; nudging would clip them.
+            if (maxY <= 0f || scrollY < maxY - 1f) {
+                pane.setScrollY(Math.max(0f, scrollY - nudgeUp));
+                pane.updateVisualScroll();
+            }
+        }
+        pane.setSmoothScrolling(true);
+    }
+
     private void scrollLayerManagerToSelection() {
         if (layerMgrScrollPane == null || layerMgrListTable == null)
             return;
@@ -14224,8 +14303,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (actor instanceof Table) {
                 Object tag = ((Table) actor).getUserObject();
                 if (tag instanceof Integer && (Integer) tag == selLayer) {
-                    layerMgrScrollPane.layout();
-                    layerMgrScrollPane.scrollTo(actor.getX(), actor.getY(), actor.getWidth(), actor.getHeight());
+                    instantScrollPaneTo(layerMgrScrollPane, actor, actor.getHeight() + 6f);
                     return;
                 }
             }
@@ -14667,8 +14745,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (actor instanceof Table) {
                 Object tag = ((Table) actor).getUserObject();
                 if (tag instanceof Integer && (Integer) tag == seltset) {
-                    tsetMgrScrollPane.layout();
-                    tsetMgrScrollPane.scrollTo(actor.getX(), actor.getY(), actor.getWidth(), actor.getHeight());
+                    instantScrollPaneTo(tsetMgrScrollPane, actor, actor.getHeight() + 6f);
                     return;
                 }
             }
@@ -14912,6 +14989,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             seltset = Math.max(0, tilesets.size() - 1);
         rebuildTilesetManagerList();
         gotoStage(tTsetMgrMain);
+        scrollTilesetManagerToSelection();
         Gdx.app.postRunnable(new Runnable() {
             @Override
             public void run() {
@@ -26100,6 +26178,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         pinchZoomActive = false;
         if (kartu == "world") {
             initialZoom = cam.zoom;
+            if (replaceRangePicking && beginReplaceRangeDrag(p1, p2))
+                return true;
         } else if (kartu == "tile" || kartu == "pickanim") {
             initialZoom = tilecam.zoom;
             if (isTerrainEditorPicker() && tilesets.size() > 0) {
@@ -26147,6 +26227,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         return true;
                     break;
                 case "world":
+
+                    if (replaceRangePicking)
+                        return true;
 
                     if (!roll)
                         if (tapWorldMenu(touch2))
@@ -27487,10 +27570,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "rnda":
                         gotoStage(trandomgen);
                         flivestr.setText(Integer.toString(num));
+                        updateRandomTilePreviews();
                         break;
                     case "rndb":
                         gotoStage(trandomgen);
                         fdeadstr.setText(Integer.toString(num));
+                        updateRandomTilePreviews();
                         break;
                     case "repa":
                         gotoStage(treplacetiles);
@@ -27505,10 +27590,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "gena":
                         gotoStage(tgenerateterrain);
                         fgen1.setText(Integer.toString(num));
+                        updateGenTerrainPreviews();
                         break;
                     case "genb":
                         gotoStage(tgenerateterrain);
                         fgen2.setText(Integer.toString(num));
+                        updateGenTerrainPreviews();
                         break;
                     case "sw1":
                         backToMap();
@@ -34328,11 +34415,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             Integer num = mapTileAtWorld(touch.x, touch.y);
 
             if (num == -1)
-                return true;
+                return replaceRangePicking;
 
             // brushing, basically other tools are not using pan,
             // remember that longpressing fill will turn it into brush?
-            if (activetool == 4 && num != -1 && prevnum != num) {
+            if (replaceRangePicking) {
+                activetool = 0;
+            } else if (activetool == 4 && num != -1 && prevnum != num) {
                 stampBrushBetween((int) prevnum, num);
                 prevnum = num;
 
@@ -34716,10 +34805,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                         double skor = (radx * radx + rady * rady);
                                         // double skor = Math.sqrt(Math.pow(radx,2)*Math.pow(rady,2));
                                         // skor = Math.pow(radx+rady,2)/Math.pow(myrad,2); //DIAMOND
-                                        if (skor <= myrad * myrad)
+                                        if (skor <= myrad * myrad) {
                                             tapTile(num + xx + (yy * Tw), !firstone, true, false, curspr);
-                                        if (firstone)
-                                            firstone = false;
+                                            if (firstone)
+                                                firstone = false;
+                                        }
                                         break;
 
                                 }
