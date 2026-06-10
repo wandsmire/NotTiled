@@ -701,6 +701,23 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private TextButton bPropParse;
     private Table tpt;
     private int brushsize = 1;
+    private int brushLastCenter = -1;
+    private boolean brushStrokeActive = false;
+    private boolean brushDeferSideEffects = false;
+    private java.util.HashSet<Integer> brushDirtyCacheChunks = null;
+    private java.util.LinkedHashSet<Integer> brushDeferredTerrainAnchors = null;
+    private java.util.HashSet<Integer> brushStrokePaintedCells = null;
+    private java.util.LinkedHashMap<Integer, BrushUndoSnapshot> brushUndoSnapshots = null;
+
+    private static final class BrushUndoSnapshot {
+        int layer;
+        long fromStr;
+        long toStr;
+        int fromTset;
+        int toTset;
+        int fromTile;
+        int toTile;
+    }
     private String language;
     private boolean landscape;
     private int redux;
@@ -2251,6 +2268,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (replaceRangePicking) {
                     finishReplaceRangePick();
                 } else if (mapstartSelect == mapendSelect) {
+                    if (activetool == 4)
+                        endBrushStroke();
                     roll = false;
                 }
             } else {
@@ -3719,6 +3738,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
                 sr.setColor(0, 0, 0, 1);
             }
+
+            if (activetool == 4)
+                drawBrushPreview();
 
             Gdx.gl20.glLineWidth(1);// average
             sr.setColor(0, 0, 0, gridOpacity / 10f);
@@ -26362,24 +26384,43 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
-    private boolean isBrushTerrainAnchor(int bx, int by, int size) {
-        if (bx == 0 && by == 0)
-            return true;
-        if (bx == size - 1 && by == 0)
-            return true;
-        if (bx == size - 1 && by == size - 1)
-            return true;
-        if (by == size - 1 && bx == 0)
-            return true;
-        if (bx == 0 && by % 2 == 0)
-            return true;
-        if (by == 0 && bx % 2 == 0)
-            return true;
-        if (bx == size - 1 && by % 2 == 0)
-            return true;
-        if (by == size - 1 && bx % 2 == 0)
-            return true;
+    private boolean isBrushShapeBoundary(int bx, int by, int size, BrushShape shape) {
+        if (!isBrushCell(bx, by, size, shape))
+            return false;
+        for (int ny = by - 1; ny <= by + 1; ny++) {
+            for (int nx = bx - 1; nx <= bx + 1; nx++) {
+                if (nx == bx && ny == by)
+                    continue;
+                if (!isBrushCell(nx, ny, size, shape))
+                    return true;
+            }
+        }
         return false;
+    }
+
+    private boolean isBrushTerrainAnchor(int bx, int by, int size) {
+        if (!isBrushCell(bx, by, size, brushShape))
+            return false;
+        if (brushShape == BrushShape.SQUARE) {
+            if (bx == 0 && by == 0)
+                return true;
+            if (bx == size - 1 && by == 0)
+                return true;
+            if (bx == size - 1 && by == size - 1)
+                return true;
+            if (by == size - 1 && bx == 0)
+                return true;
+            if (bx == 0 && by % 2 == 0)
+                return true;
+            if (by == 0 && bx % 2 == 0)
+                return true;
+            if (bx == size - 1 && by % 2 == 0)
+                return true;
+            if (by == size - 1 && bx % 2 == 0)
+                return true;
+            return false;
+        }
+        return isBrushShapeBoundary(bx, by, size, brushShape);
     }
 
     private void forEachBrushCell(int centerNum, BrushCellHandler handler) {
@@ -26482,14 +26523,231 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
-    private void applyBrushCell(int num, long oi, long bareLocalGid, boolean terra) {
+    private void beginBrushStroke() {
+        if (brushStrokeActive)
+            return;
+        brushStrokeActive = true;
+        brushDeferSideEffects = true;
+        brushLastCenter = -1;
+        redolayer.clear();
+        if (brushDirtyCacheChunks != null)
+            brushDirtyCacheChunks.clear();
+        if (brushDeferredTerrainAnchors != null)
+            brushDeferredTerrainAnchors.clear();
+        if (brushStrokePaintedCells != null)
+            brushStrokePaintedCells.clear();
+        if (brushUndoSnapshots != null)
+            brushUndoSnapshots.clear();
+    }
+
+    private void endBrushStroke() {
+        if (!brushStrokeActive)
+            return;
+        brushStrokeActive = false;
+        brushLastCenter = -1;
+        flushBrushDeferredTerrain();
+        commitBrushUndoBatch();
+        brushDeferSideEffects = false;
+        flushBrushDeferredCache();
+        pushUpdateIfCollaborating();
+        if (brushStrokePaintedCells != null)
+            brushStrokePaintedCells.clear();
+    }
+
+    private void trackBrushUndoCell(int lay, int num, long fromStr, int fromTset, int fromTile, long toStr, int toTset,
+            int toTile) {
+        if (!brushDeferSideEffects)
+            return;
+        if (brushUndoSnapshots == null)
+            brushUndoSnapshots = new java.util.LinkedHashMap<Integer, BrushUndoSnapshot>();
+        BrushUndoSnapshot snap = brushUndoSnapshots.get(num);
+        if (snap == null) {
+            snap = new BrushUndoSnapshot();
+            snap.layer = lay;
+            snap.fromStr = fromStr;
+            snap.fromTset = fromTset;
+            snap.fromTile = fromTile;
+            brushUndoSnapshots.put(num, snap);
+        }
+        snap.toStr = toStr;
+        snap.toTset = toTset;
+        snap.toTile = toTile;
+    }
+
+    private void commitBrushUndoBatch() {
+        if (brushUndoSnapshots == null || brushUndoSnapshots.isEmpty())
+            return;
+        boolean first = true;
+        for (java.util.Map.Entry<Integer, BrushUndoSnapshot> entry : brushUndoSnapshots.entrySet()) {
+            BrushUndoSnapshot snap = entry.getValue();
+            if (snap.fromStr == snap.toStr && snap.fromTset == snap.toTset && snap.fromTile == snap.toTile)
+                continue;
+            layerhistory lh = new layerhistory(!first, snap.layer, entry.getKey(), snap.fromStr, snap.toStr,
+                    snap.fromTset, snap.toTset, snap.fromTile, snap.toTile);
+            undolayer.add(lh);
+            uploaddata(lh);
+            first = false;
+        }
+        if (!first)
+            redolayer.clear();
+        brushUndoSnapshots.clear();
+    }
+
+    private void trackBrushPreviewCell(int tileIndex) {
+        if (!brushStrokeActive)
+            return;
+        if (brushStrokePaintedCells == null)
+            brushStrokePaintedCells = new java.util.HashSet<Integer>();
+        brushStrokePaintedCells.add(tileIndex);
+    }
+
+    private void drawBrushTileHighlight(int tileIndex) {
+        if (tileIndex < 0 || tileIndex >= Tw * Th)
+            return;
+        int locx = tileIndex % Tw;
+        int locy = tileIndex / Tw;
+        if (orientation.equalsIgnoreCase("orthogonal")) {
+            sr.rect(locx * Tsw, -locy * Tsh, Tsw, Tsh);
+        } else if (orientation.equalsIgnoreCase("isometric")) {
+            int offsetx = (locx * Tsw / 2) + (locy * Tsw / 2);
+            int offsety = (locx * Tsh / 2) - (locy * Tsh / 2);
+            sr.polygon(new float[] {
+                    locx * Tsw + (Tsw / 2f) - offsetx, -locy * Tsh - offsety,
+                    locx * Tsw + Tsw - offsetx, -locy * Tsh - (Tsh / 2f) - offsety,
+                    locx * Tsw + (Tsw / 2f) - offsetx, -locy * Tsh - Tsh - offsety,
+                    locx * Tsw - offsetx, -locy * Tsh - (Tsh / 2f) - offsety
+            });
+        }
+    }
+
+    private void drawBrushFootprintAt(int centerNum) {
+        if (centerNum < 0 || centerNum >= Tw * Th)
+            return;
+        int curx = centerNum % Tw;
+        int cury = centerNum / Tw;
+        int half = brushsize / 2;
+        for (int bx = 0; bx < brushsize; bx++) {
+            for (int by = 0; by < brushsize; by++) {
+                if (!isBrushCell(bx, by, brushsize, brushShape))
+                    continue;
+                int locx = curx - half + bx;
+                int locy = cury - half + by;
+                if (locx < 0 || locy < 0 || locx >= Tw || locy >= Th)
+                    continue;
+                drawBrushTileHighlight(locy * Tw + locx);
+            }
+        }
+    }
+
+    private void drawBrushPreview() {
+        if (activetool != 4 || !kartu.equals("world") || layers.size() == 0 || Tw <= 0 || Th <= 0)
+            return;
+
+        int previewCenter = -1;
+        if (Gdx.input.isTouched())
+            previewCenter = mapTileAtScreen(Gdx.input.getX(), Gdx.input.getY());
+
+        if (brushStrokeActive && brushStrokePaintedCells != null && !brushStrokePaintedCells.isEmpty()) {
+            sr.setColor(1f, 0f, 0f, 0.35f);
+            for (int tileIndex : brushStrokePaintedCells)
+                drawBrushTileHighlight(tileIndex);
+        }
+
+        if (previewCenter >= 0) {
+            sr.setColor(1f, 0f, 0f, 0.5f);
+            drawBrushFootprintAt(previewCenter);
+        }
+    }
+
+    private void deferBrushCache(int num) {
+        if (Tw <= 0 || Th <= 0 || widd <= 0 || heii <= 0 || tcaches.isEmpty())
+            return;
+        int posx = (num % Tw) / widd;
+        int posy = (num / Tw) / heii;
+        int maxx = Tw / widd;
+        if (Tw % widd != 0)
+            maxx++;
+        int tci = (posy * maxx) + posx;
+        if (tci < 0 || tci >= tcaches.size())
+            return;
+        if (brushDirtyCacheChunks == null)
+            brushDirtyCacheChunks = new java.util.HashSet<Integer>();
+        brushDirtyCacheChunks.add(tci);
+    }
+
+    private void flushBrushDeferredCache() {
+        if (brushDirtyCacheChunks == null || brushDirtyCacheChunks.isEmpty())
+            return;
+        for (int tci : brushDirtyCacheChunks) {
+            if (tci >= 0 && tci < tcaches.size()) {
+                tcaches.get(tci).setChanged(true);
+                isupdatingcache = true;
+            }
+        }
+        brushDirtyCacheChunks.clear();
+    }
+
+    private void flushBrushDeferredTerrain() {
+        if (brushDeferredTerrainAnchors == null || brushDeferredTerrainAnchors.isEmpty())
+            return;
+        for (int num : brushDeferredTerrainAnchors) {
+            tile t;
+            if (isMacroTerrainPaintMode()) {
+                int gid = (int) stripTileGidFlags(layers.get(selLayer).getStr().get(num));
+                t = resolveMacroTerrainAutotileCenter(gid, macroTerrain.getTileMeta(gid));
+                if (t == null)
+                    t = ensureMacroTerrainCenterTile(macroTerrain.getSelTerrain());
+            } else {
+                int tsetIdx = layers.get(selLayer).getTset().get(num);
+                if (tsetIdx < 0 || tsetIdx >= tilesets.size())
+                    continue;
+                long gid = layers.get(selLayer).getStr().get(num);
+                if (gid == 0)
+                    continue;
+                int localId = (int) (stripTileGidFlags(gid) - tilesets.get(tsetIdx).getFirstgid());
+                t = tilesets.get(tsetIdx).getTileMeta(localId);
+                t = resolveTerrainAutotileCenter(tilesets.get(tsetIdx), t);
+            }
+            if (t != null)
+                runTerrainifyFromCenter(num, t);
+        }
+        brushDeferredTerrainAnchors.clear();
+    }
+
+    private int resolveBrushTileListIndex(long oi, int tsetID) {
+        if (oi == 0 || tsetID < 0 || tsetID >= tilesets.size())
+            return -1;
+        long bareGid = stripTileGidFlags(oi);
+        tileset ts = tilesets.get(tsetID);
+        if (ts.getTiles().size() == 0)
+            return -1;
+        for (int j = 0; j < ts.getTiles().size(); j++) {
+            tile tt = ts.getTiles().get(j);
+            if (tt.getTileID() + ts.getFirstgid() == bareGid)
+                return j;
+        }
+        return -1;
+    }
+
+    private void paintBrushUnpaintedAt(int centerNum, long oi, long bareLocalGid, int brushTileIdx) {
+        forEachBrushCell(centerNum, new BrushCellHandler() {
+            @Override
+            public void onCell(int tileIndex, int bx, int by) {
+                if (brushStrokePaintedCells != null && brushStrokePaintedCells.contains(tileIndex))
+                    return;
+                applyBrushCell(tileIndex, oi, bareLocalGid, isBrushTerrainAnchor(bx, by, brushsize), brushTileIdx);
+            }
+        });
+    }
+
+    private void applyBrushCell(int num, long oi, long bareLocalGid, boolean terra, int brushTileIdx) {
+        trackBrushPreviewCell(num);
         if (!curpickAuto && !isMacroTerrainPaintMode()) {
-            updateTileData(selLayer, num, oi, curtset);
+            updateTileData(selLayer, num, oi, curtset, brushTileIdx);
             return;
         }
         tile t;
         if (isMacroTerrainPaintMode()) {
-            refreshAutotileGraph();
             int gid = (int) stripTileGidFlags(curspr);
             t = resolveMacroTerrainAutotileCenter(gid, macroTerrain.getTileMeta(gid));
             if (t == null)
@@ -26507,7 +26765,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             return;
         if (t == null || !terra)
             return;
-        runTerrainifyFromCenter(num, t);
+        if (brushDeferSideEffects) {
+            if (brushDeferredTerrainAnchors == null)
+                brushDeferredTerrainAnchors = new java.util.LinkedHashSet<Integer>();
+            brushDeferredTerrainAnchors.add(num);
+        } else {
+            runTerrainifyFromCenter(num, t);
+        }
     }
 
     private void stampBrushAt(int num) {
@@ -26520,31 +26784,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (isPixelArtSwatchActive())
             return;
 
-        final java.util.ArrayList<Integer> cells = new java.util.ArrayList<Integer>();
-        final java.util.ArrayList<Boolean> terraAnchors = new java.util.ArrayList<Boolean>();
-        forEachBrushCell(num, new BrushCellHandler() {
-            @Override
-            public void onCell(int tileIndex, int bx, int by) {
-                cells.add(tileIndex);
-                terraAnchors.add(isBrushTerrainAnchor(bx, by, brushsize));
-            }
-        });
-        if (cells.isEmpty())
-            return;
+        beginBrushStroke();
 
         long oi = computeBrushOutputGid();
         String hex = Long.toHexString(curspr);
         String trailer = "00000000" + hex;
         hex = trailer.substring(trailer.length() - 8);
         long bareLocalGid = Long.decode("#00" + hex.substring(2)) - tilesets.get(curtset).getFirstgid();
+        int brushTileIdx = resolveBrushTileListIndex(oi, curtset);
+        if (isMacroTerrainPaintMode())
+            refreshAutotileGraph();
         cue("tileclick");
-        follower = false;
-        for (int i = 0; i < cells.size(); i++) {
-            if (i > 0)
-                follower = true;
-            applyBrushCell(cells.get(i), oi, bareLocalGid, terraAnchors.get(i));
-        }
-        pushUpdateIfCollaborating();
+
+        paintBrushUnpaintedAt(num, oi, bareLocalGid, brushTileIdx);
+        brushLastCenter = num;
     }
 
     private String brushShapeLabel(BrushShape shape) {
@@ -28378,7 +28631,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                     if (mode == "tile" && touched && num >= 0) {
 
-                        tapTile(num, false, true, false, curspr);
+                        if (activetool == 4) {
+                            stampBrushAt(num);
+                            endBrushStroke();
+                        } else {
+                            tapTile(num, false, true, false, curspr);
+                        }
                         log(num + "");
                     } else if (mode == "object") {
                         final java.util.List<obj> foundObjs = new ArrayList<obj>();
@@ -30858,9 +31116,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         l.getTile().set(num, tileID);
 
         //////////////////// RECORD HISTORY//////////////////////////
-        layerhistory lh2 = new layerhistory(follower, lay, num, oldStr, str, oldTset, tsetID, oldTile, tileID);
-
-        if (oldStr != str) {
+        if (brushDeferSideEffects) {
+            trackBrushUndoCell(lay, num, oldStr, oldTset, oldTile, str, tsetID, tileID);
+        } else if (oldStr != str) {
+            layerhistory lh2 = new layerhistory(follower, lay, num, oldStr, str, oldTset, tsetID, oldTile, tileID);
             undolayer.add(lh2);
             uploaddata(lh2);
             redolayer.clear();
@@ -30868,7 +31127,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         ///////////////////// update graphic cache///////////////////
-        updateCache(num);
+        if (brushDeferSideEffects)
+            deferBrushCache(num);
+        else
+            updateCache(num);
 
     }
 
@@ -37400,8 +37662,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             roll = false;
             // updateMinimap();
         }
-        if (activetool == 4)
+        if (activetool == 4) {
+            endBrushStroke();
             roll = false;
+        }
         return false;
     }
 
