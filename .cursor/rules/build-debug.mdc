@@ -1,0 +1,16 @@
+---
+description: Always run debug build after making changes in NotTiled
+alwaysApply: true
+---
+
+# Debug build after changes
+
+After completing any task that modifies code, assets, or build config in this repo, run:
+
+```bash
+./build_debug.sh
+```
+
+Do this before finishing the response, even for small fixes. If the build fails, fix the errors and rebuild until it succeeds.
+
+Report the APK paths from `out/` when a build was run (Play Store and Standalone variants).

@@ -136,7 +136,7 @@ public class guis
 
 		info.setp(0, 100, 70, 80);
 		fps.setp(85,100,81,90);
-		status.setp(0,100,70,80);
+		status.setp(0,100,80,90);
 		mode.setp(15,30,90,100);
 		layer.setp(30,70,90,100);
 		viewmode.setp(70,85,90,100);

@@ -29,10 +29,9 @@ public class tutorial
 	public void setName(String transl, String name)
 	{
 
-		if (transl==""){
+		if (transl == null || transl.length() == 0) {
 			this.name = name;
-		}else
-		{
+		} else {
 			this.name = transl;
 		}
 	}
@@ -68,13 +67,12 @@ public class tutorial
 	{
 		step a = new step();
 
-		if (transl==""){
-			a.text=text;
-		}else
-		{
-			a.text=transl;
+		if (transl == null || transl.length() == 0) {
+			a.text = text;
+		} else {
+			a.text = transl;
 		}
-		a.trigger=trigger;
+		a.trigger = trigger;
 		steps.add(a);
 	}
 

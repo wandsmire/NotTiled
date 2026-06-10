@@ -68,6 +68,19 @@ if ./gradlew clean :android:assembleDebug; then
     echo "  Play Store: out/${PS_FILE}"
     echo "  Standalone: out/${SA_FILE}"
     echo "--------------------------------------------------"
+
+    # Keep only the latest Play Store and Standalone debug APKs in out/
+    shopt -s nullglob
+    for f in out/NotTiled_*_debug_*.apk; do
+        case "$f" in
+            *standalone*) ;;
+            *) [ "$f" = "out/${PS_FILE}" ] || rm -f "$f" ;;
+        esac
+    done
+    for f in out/NotTiled_*_standalone-debug_*.apk; do
+        [ "$f" = "out/${SA_FILE}" ] || rm -f "$f"
+    done
+    shopt -u nullglob
 else
     echo "ERROR: Build failed."
     exit 1

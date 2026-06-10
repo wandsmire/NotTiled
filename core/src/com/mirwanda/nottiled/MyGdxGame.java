@@ -30,6 +30,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.SpriteCache;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -125,6 +126,7 @@ import org.xmlpull.v1.XmlSerializer;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.lang.reflect.Field;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -379,9 +381,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private static final int TE_SHAPE_4X4_CORNER = 4;
     private static final int TE_SHAPE_4X4_CORNER_REV = 5;
     private static final int TE_SHAPE_6X6 = 6;
+    private static final int TE_SHAPE_6X6_CORNER = 7;
+    private static final int TE_SHAPE_6X6_INNER_CORNER = 8;
     private int terrainBrushShape = TE_SHAPE_1X1;
     private Table tTerrainShapeMenu;
-    private Texture[] terrainShapeIcons = new Texture[7];
+    private Texture[] terrainShapeIcons = new Texture[9];
+    private static final boolean[][] TE_PATTERN_6X6_INNER_CORNER = {
+            { false, true, false, false, true, false },
+            { true, true, false, false, true, true },
+            { false, false, false, false, false, false },
+            { false, false, false, false, false, false },
+            { true, true, false, false, true, true },
+            { false, true, false, false, true, false },
+    };
     private boolean terrainHoldPending = false;
     private boolean pinchZoomActive = false;
     private float terrainHoldTimer = 0f;
@@ -459,7 +471,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     TextButton bUseTsx, bApplyMP, bCancelMP, bPropertiesMap;
     ChangeListener listBack;
     Table tMenu, tMenu1, tMenu2, tOpen, tNewFile, tSaveAs, tLicense, tTutorial;
-    TextButton bNew, bOpen, bSave, bSaveAs, bRestoreBackup, bExit, bBack, bLicense, bReload, bTutorial, bCopyto, bFileManager;
+    TextButton bNew, bOpen, bSave, bSaveAs, bRestoreBackup, bExit, bBack, bLicense, bReload, bTutorial, bFileManager;
     private Table tRestoreBackup;
     private com.badlogic.gdx.scenes.scene2d.ui.List<String> lbackupList;
     private FileHandle fileManagerDir;
@@ -634,7 +646,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         RECTANGLE, CIRCLE, LINE
     }
 
+    enum BrushShape {
+        SQUARE, CIRCLE, DIAMOND
+    }
+
+    enum FillMode {
+        CONNECTED, ENTIRE_MAP
+    }
+
     ShapeTool currentShape = ShapeTool.RECTANGLE;
+    BrushShape brushShape = BrushShape.SQUARE;
+    FillMode fillMode = FillMode.CONNECTED;
     float timeToPan, panTargetX, panTargetY, panTargetZoom, panOriginX, panOriginY, panOriginZoom, panDuration;
     float timeToPan2, panTargetZoom2, panOriginZoom2, panDuration2;
     int panType = 0;
@@ -667,8 +689,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private boolean sEnableBlending;
     private CheckBox cbEnableBlending;
     private TextButton bScreenshot;
-    private TextPromptListener pScreenshotSize;
-    private float screenshotCamX, screenshotCamY, screenshotCamZoom;
     private java.util.List<Boolean> massprops = new ArrayList<Boolean>();
     private int mapstartSelect;
     private int mapendSelect;
@@ -698,7 +718,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private Texture txnumbers;
     private FrameBuffer fbo;
     private Texture blurBgTexture = null;
-    private boolean takingss;
     private Stage hstage;
     private Stage vstage;
     private Dialog dialog;
@@ -708,6 +727,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private Texture txmenu, txmap, txundo, txredo, txtile, txauto, txlayer, txautopick, txcenter;
     private Texture txstamp, txadd, txdelete, txinfo, txtiles, txplay;
     private Texture txresources;
+    private BitmapFont mapCoverFont;
+    private Pixmap mapCoverBadgesPixmap;
+    private static final int MAP_COVER_BADGE_CELL = 56;
+    private static final int MAP_COVER_BADGE_COLS = 10;
+    private static final int MAP_COVER_BADGE_POOL_INDEX = 99;
+    private static final int MAP_COVER_BADGE_MAX_TEAM = 98;
     private static final int ORPHAN_TILE_PX = 8;
     private Pixmap orphanTilePixmap;
     private Texture orphanTileTexture;
@@ -720,7 +745,24 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private final java.util.List<String> aiRefineSteps = new ArrayList<>();
     private boolean aiGenerating = false;
     private TextButton btnAiSprite;
-    TextButton hmirror, vmirror, hvmirror, hvmirrorrev, randomize, replacetiles, generateterrain, tracebackground, toback;
+    TextButton hmirror, vmirror, hvmirror, hvmirrorrev, randomize, replacetiles, renumberTilesetIds,
+            bFlattenObjectLayers, bObjectList, generateterrain, tracebackground, toback;
+    private static final int OBJECT_LIST_MAX_ROWS = 500;
+    private static final int OBJECT_LIST_ACTIVE_SCOPE_THRESHOLD = 300;
+    private Table tObjectList;
+    private TextField fObjectListSearch;
+    private CheckBox cbObjectListScopeActive;
+    private SelectBox<String> sbObjectListTypeFilter;
+    private Table objectListRowTable;
+    private ScrollPane objectListScrollPane;
+    private Label lObjectListCount;
+    private Label lObjectListTruncated;
+    private java.util.List<ObjectListRef> objectListAllRefs = new ArrayList<ObjectListRef>();
+    private java.util.List<ObjectListRef> objectListFilteredRefs = new ArrayList<ObjectListRef>();
+    private java.util.Set<obj> objectListSelection = new java.util.HashSet<obj>();
+    private java.util.Map<Long, TextureRegion> objectListIconCache = new java.util.HashMap<Long, TextureRegion>();
+    private float objectListSearchDebounce = -1f;
+    private boolean objectListShellReady = false;
     private CheckBox cball;
     private Table bigman;
     private boolean zooming;
@@ -1614,6 +1656,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     terrainPainting = false;
                     lastTerrainPaintCell = -1;
                     terrainHoldPending = false;
+                    if (isMacroTerrainEditorPicker())
+                        saveMacroAutoTerrain();
                 } else if (tilesets.size() > 0) {
                     Vector3 t = new Vector3();
                     tilecam.unproject(t.set(Gdx.input.getX(), Gdx.input.getY(), 0));
@@ -1632,6 +1676,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (selobjs.size() > 1 && activeobjtoolmode == 1 && !isMulti)
                 loadList("object");
             waittoloadlist = -1;
+        }
+
+        if (objectListSearchDebounce >= 0f) {
+            objectListSearchDebounce -= delta;
+            if (objectListSearchDebounce <= 0f) {
+                objectListSearchDebounce = -1f;
+                if (objectListShellReady && lastStage == tObjectList) {
+                    rebuildObjectListFilter();
+                    rebuildObjectListRows();
+                }
+            }
         }
 
         if (movepointer > 0)
@@ -3236,7 +3291,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 int teStartRow = Math.max(0, (int) Math.floor(-teMaxY / hch));
                 int teEndRow = Math.min(teTotalRows - 1, (int) Math.ceil(-teMinY / hch) + 1);
                 int[][] corners = {{0, 0, cch}, {1, ccw, cch}, {2, 0, 0}, {3, ccw, 0}};
-                java.util.List<tile> teTiles = isMacroTerrainEditorPicker()
+                java.util.List<tile> teTiles = isMacroTerrainEditorOverlayVisible()
                         ? new java.util.ArrayList<tile>(macroTerrain.getAllTileMeta())
                         : ts.getTiles();
                 int teTileMeta = teTiles.size();
@@ -3245,7 +3300,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (!teTile.isTerrainForEditor())
                         continue;
                     int gi;
-                    if (isMacroTerrainEditorPicker()) {
+                    if (isMacroTerrainEditorOverlayVisible()) {
                         int gid = teTile.getTileID();
                         int tsetIdx = resolveTilesetIndexForGid(gid, -1);
                         if (tsetIdx != seltset)
@@ -3270,7 +3325,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (curNodes[k] == curTerrain)
                             sr.setColor(terrainEditorRainbowColor());
                         else
-                            sr.setColor(0, 0, 0.5f, 0.45f);
+                            sr.setColor(terrainEditorOtherTerrainColor());
                         sr.rect(tx + corners[k][1], ty + corners[k][2], ccw, cch);
                     }
                 }
@@ -6892,8 +6947,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (statustimeout > 0) {
                 statustimeout -= delta;
                 str1.setColor(1, 0, 0, 1);
-                if (!takingss)
-                    str1draw(ui, debugMe, gui.status);
+                str1draw(ui, debugMe, gui.status);
                 str1.setColor(1, 1, 1, 1);
             }
             // z.canceltutorial="Cancel Tutorial";
@@ -7074,12 +7128,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
                     } else {
 
+                        String macroStatusLine = null;
                         if (assemblymode) {
-                            str1draw(ui, autotiles.get(assemblyid).getName(), gui.info);
+                            macroStatusLine = autotiles.get(assemblyid).getName();
                         } else if (pickMacroTerrain && macroTerrain.getTerrains().size() > 0) {
-                            terrain mtr = macroTerrain.getTerrains().get(macroTerrain.getSelTerrain());
-                            str1draw(ui, mtr.getName(), gui.info);
+                            macroStatusLine = macroTerrain.getTerrains().get(macroTerrain.getSelTerrain()).getName();
                         }
+                        if (macroStatusLine != null && statustimeout <= 0)
+                            str1draw(ui, macroStatusLine, gui.status);
 
                         if (roll) {
                             if (activetool == 0) {
@@ -7137,7 +7193,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
 
                     uidrawbutton(txeraser, z.eraser, gui.tool2, 3);
-                    uidrawbutton(txfill, z.fill, gui.tool3, 3);
+                    uidrawbutton(txfill, fillMode == FillMode.ENTIRE_MAP
+                            ? (z.floodmap != null ? z.floodmap : "Flood map")
+                            : z.fill, gui.tool3, 3);
                     switch (movetool) {
                         case PICKER:
                             uidrawbutton(txpicker, z.picker, gui.tool4, 3);
@@ -8297,11 +8355,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (Gdx.app.getType() == Android) {
             sbExport.setItems((Object[]) new String[] { "Export to storage", z.exportastemplate, z.exporttopng,
                     z.selectionastileset, z.exportastileset, "Export as Remixed Dungeon map", z.exporttolua,
-                    z.exporttojson, z.exporttomidi, "Export Standalone APK", "Export layer(s) as CSV" });
+                    z.exporttojson, z.exporttomidi, "Export Standalone APK", "Export layer(s) as CSV",
+                    z.exporttorwmod != null ? z.exporttorwmod : "Export as RW mod (.rwmod)" });
         } else {
             sbExport.setItems((Object[]) new String[] { "Export as...", z.exportastemplate, z.exporttopng,
                     z.selectionastileset, z.exportastileset, "Export as Remixed Dungeon map", z.exporttolua,
-                    z.exporttojson, z.exporttomidi, "Export Standalone APK", "Export layer(s) as CSV" });
+                    z.exporttojson, z.exporttomidi, "Export Standalone APK", "Export layer(s) as CSV",
+                    z.exporttorwmod != null ? z.exporttorwmod : "Export as RW mod (.rwmod)" });
         }
 
         sbExport.addListener(new ChangeListener() {
@@ -8334,6 +8394,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         break;
                     case 10:
                         updateExportFilenameExtension(".csv");
+                        break;
+                    case 11:
+                        updateExportFilenameExtension(".rwmod");
                         break;
                 }
             }
@@ -8390,6 +8453,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         break;
                     case 10:
                         exportascsv(fExportFilename.getText());
+                        break;
+                    case 11:
+                        exportToRwmod(fExportFilename.getText());
+                        cue("copytorw");
                         break;
                 }
             }
@@ -8641,7 +8708,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bBackground = new TextButton(z.background, skin);
         bCollaboration = new TextButton(z.collaboration, skin);
         bReload = new TextButton(z.reloadsamples, skin);
-        bCopyto = new TextButton(z.copytorustedwarfare, skin);
         bRusted = new TextButton("Rusted Warfare", skin);
         bManual = new TextButton(z.manualbook, skin);
         bVideos = new TextButton(z.videotutorials, skin);
@@ -8744,15 +8810,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         });
 
-        bCopyto.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-
-                copyToRW();
-
-            }
-        });
-
         bBack.addListener(listBack);
         bBack2 = new TextButton(z.back, skin);
         bBack2.addListener(listBack);
@@ -8850,6 +8907,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         case 8: ext = ".mid"; break;
                         case 9: ext = ".apk"; break;
                         case 10: ext = ".csv"; break;
+                        case 11: ext = ".rwmod"; break;
                         default: ext = ""; break;
                     }
                 }
@@ -9098,41 +9156,41 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         setLinksMap();
     }
 
-    private void copyToRW() {
-        /*
-         * FileHandle fl = Gdx.files.absolute( rwpath );
-         * if (!fl.exists()) fl.mkdirs();
-         * FileHandle fla = Gdx.files.absolute( rwpath + "/maps" );
-         * if (!fla.exists()) {
-         * fla.mkdirs();
-         * }
-         * 
-         */
-        cue("copytorw");
-
+    private void exportToRwmod(String outputFilename) {
+        if (curfile == null || curfile.isEmpty()) {
+            msgbox(z.saveas != null ? z.saveas : "Save the map first.");
+            return;
+        }
         saveMapBlocking(curdir + "/" + curfile);
         FileHandle map = Gdx.files.absolute(curdir + "/" + curfile);
-        // from.copyTo( Gdx.files.absolute( rwpath + "/maps" ) );
 
         createRWthumbnail(curfile.substring(0, curfile.length() - 4) + "_map");
         FileHandle thumbnail = Gdx.files
                 .absolute(curdir + "/" + curfile.substring(0, curfile.length() - 4) + "_map.png");
         try {
-            rwmod(new String[] { map.path(), thumbnail.path() });
+            String outputName = resolveUniqueExportFilename(outputFilename, ".rwmod");
+            if (fExportFilename != null)
+                fExportFilename.setText(outputName);
+            String zipPath = curdir + "/" + new File(outputName).getName();
+            rwmod(new String[] { map.path(), thumbnail.path() }, zipPath);
 
-            FileHandle zip = Gdx.files.absolute(curdir + "/" + curfile + ".rwmod");
+            FileHandle zip = Gdx.files.absolute(zipPath);
             byte[] b = zip.readBytes();
-            face.saveasFile(b, curfile + ".rwmod");
+            face.saveasFile(b, outputName);
             status(z.filesaved, 5);
-
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public void rwmod(String[] args) throws IOException {
+    private void copyToRW() {
+        cue("copytorw");
+        exportToRwmod(curfile + ".rwmod");
+    }
+
+    public void rwmod(String[] args, String outputPath) throws IOException {
         java.util.List<String> srcFiles = Arrays.asList(args);
-        FileOutputStream fos = new FileOutputStream(curdir + "/" + curfile + ".rwmod");
+        FileOutputStream fos = new FileOutputStream(outputPath);
         ZipOutputStream zipOut = new ZipOutputStream(fos);
         for (String srcFile : srcFiles) {
             File fileToZip = new File(srcFile);
@@ -9167,7 +9225,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tLinks1.add(bDiscord).row();
             // tLinks1.add( bWhatsapp ).row();
             tLinks1.add(bReload).row();
-            tLinks1.add(bCopyto).row();
 
             tLinks2.add(bUIEditor).row();
             tLinks2.add(credito).row();
@@ -9187,7 +9244,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tLinks.add(bDiscord).row();
             // tLinks.add( bWhatsapp ).row();
             tLinks.add(bReload).row();
-            tLinks.add(bCopyto).row();
             tLinks.add(bUIEditor).row();
             tLinks.add(credito).row();
             tLinks.add(bBack3).row();
@@ -10078,6 +10134,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tTools1.add(randomize).row();
             tTools1.add(bScreenshot).row();
             tTools1.add(bAutoMgmt).row();
+            tTools1.add(renumberTilesetIds).row();
+            tTools1.add(bFlattenObjectLayers).row();
+            tTools1.add(bObjectList).row();
 
             tTools2.add(generateterrain).row();
             tTools2.add(bMacroTerrainEditor).row();
@@ -10096,6 +10155,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             content.add(bScreenshot).row();
             content.add(generateterrain).row();
             content.add(bAutoMgmt).row();
+            content.add(renumberTilesetIds).row();
+            content.add(bFlattenObjectLayers).row();
+            content.add(bObjectList).row();
             content.add(bMacroTerrainEditor).row();
             content.add(bCollaboration).row();
             content.add(toback).row();
@@ -10119,8 +10181,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         randomize = new TextButton(z.randommap, skin);
         btnAiSprite = new TextButton(z.aigenerate != null ? z.aigenerate : "AI Generate Sprite", skin);
         replacetiles = new TextButton(z.replacetiles, skin);
+        renumberTilesetIds = new TextButton(
+                z.renumbertilesetids != null ? z.renumbertilesetids : "Renumber Tileset IDs", skin);
+        bFlattenObjectLayers = new TextButton(
+                z.flattenobjectlayers != null ? z.flattenobjectlayers : "Flatten Object Layers", skin);
+        bObjectList = new TextButton(z.objectlist != null ? z.objectlist : "Object List", skin);
         generateterrain = new TextButton(z.generateterrain, skin);
-        bMacroTerrainEditor = new TextButton(z.macroterraineditor, skin);
+        bMacroTerrainEditor = new TextButton(
+                z.macroterraineditor != null ? z.macroterraineditor : "Macro Terrain Editor", skin);
         tracebackground = new TextButton(z.tracebackground, skin);
         toback = new TextButton(z.back, skin);
         bScreenshot = new TextButton(z.screenshot, skin);
@@ -10236,6 +10304,27 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         });
 
+        renumberTilesetIds.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                promptRenumberTilesetIds();
+            }
+        });
+
+        bFlattenObjectLayers.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                showFlattenObjectLayersDialog();
+            }
+        });
+
+        bObjectList.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                showObjectList();
+            }
+        });
+
         generateterrain.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -10248,20 +10337,32 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         pNewMacroTerrain = new TextPromptListener() {
             @Override
             public void confirm(String input) {
-                if (input == null || input.isEmpty())
+                if (input == null || input.isEmpty()) {
+                    newMacroTerrainGid = -1;
+                    resumeTerrainEditor();
                     return;
+                }
+                if (newMacroTerrainGid < 0) {
+                    resumeTerrainEditor();
+                    return;
+                }
+                tileset ts = getActiveTerrainEditorTileset();
+                if (ts != null)
+                    pushTerrainUndo(ts);
                 terrain tr = new terrain();
                 tr.setName(input);
                 tr.setTile(newMacroTerrainGid);
                 macroTerrain.getTerrains().add(tr);
                 macroTerrain.setSelTerrain(macroTerrain.getTerrains().size() - 1);
                 ensureMacroTerrainCenterTile(macroTerrain.getSelTerrain());
+                newMacroTerrainGid = -1;
                 saveMacroAutoTerrain();
                 resumeTerrainEditor();
             }
 
             @Override
             public void cancel() {
+                newMacroTerrainGid = -1;
                 resumeTerrainEditor();
             }
         };
@@ -10736,7 +10837,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         sb.wl("tilewidth = " + Tsw + ",");
         sb.wl("tileheight = " + Tsh + ",");
         sb.wl("nextlayerid = " + (1 + layers.size()) + ",");
-        sb.wl("nextobjectid = " + curid + ",");
+        sb.wl("nextobjectid = " + exportNextObjectId() + ",");
         sb.wprop(properties);
 
         sortAllTilesetTileMetadata();
@@ -11021,322 +11122,540 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         status(z.exportfinished, 5);
     }
 
+    private static final int MAP_COVER_MAX_SIZE = 500;
+    private static final Color RW_RES_POOL_YELLOW = new Color(255 / 255f, 255 / 255f, 4 / 255f, 1f);
+    private static final Color[] RW_TEAM_COLORS = {
+            new Color(1 / 255f, 255 / 255f, 1 / 255f, 1f),
+            new Color(247 / 255f, 8 / 255f, 9 / 255f, 1f),
+            new Color(45 / 255f, 50 / 255f, 170 / 255f, 1f),
+            new Color(255 / 255f, 255 / 255f, 4 / 255f, 1f),
+            new Color(4 / 255f, 254 / 255f, 255 / 255f, 1f),
+            new Color(233 / 255f, 233 / 255f, 234 / 255f, 1f),
+            new Color(1 / 255f, 2 / 255f, 1 / 255f, 1f),
+            new Color(255 / 255f, 1 / 255f, 255 / 255f, 1f),
+            new Color(255 / 255f, 139 / 255f, 20 / 255f, 1f),
+            new Color(163 / 255f, 110 / 255f, 221 / 255f, 1f)
+    };
+
+    private static class MapCoverPoint {
+        int tileX;
+        int tileY;
+    }
+
+    private static class MapCoverTeamMarker extends MapCoverPoint {
+        int team;
+    }
+
+    private boolean isRustedWarfareMap() {
+        return findLayer("units") >= 0 && findLayer("items") >= 0;
+    }
+
+    private int computeMapCoverCellPx() {
+        return Math.max(1, (int) Math.ceil((double) MAP_COVER_MAX_SIZE / Math.max(Tw, Th)));
+    }
+
+    private Pixmap scalePixmapToMaxSize(Pixmap src, int maxW, int maxH) {
+        if (src == null)
+            return null;
+        int w = src.getWidth();
+        int h = src.getHeight();
+        if (w <= 0 || h <= 0)
+            return src;
+        float scale = Math.min((float) maxW / w, (float) maxH / h);
+        if (scale >= 1f)
+            return src;
+        int nw = Math.max(1, Math.round(w * scale));
+        int nh = Math.max(1, Math.round(h * scale));
+        Pixmap out = new Pixmap(nw, nh, src.getFormat());
+        out.drawPixmap(src, 0, 0, w, h, 0, 0, nw, nh);
+        return out;
+    }
+
+    private int[] mapCoverBadgeSpriteCoords(int index) {
+        if (index < 0 || index > MAP_COVER_BADGE_POOL_INDEX)
+            return null;
+        int col = index % MAP_COVER_BADGE_COLS;
+        int row = index / MAP_COVER_BADGE_COLS;
+        return new int[] { col * MAP_COVER_BADGE_CELL, row * MAP_COVER_BADGE_CELL };
+    }
+
+    private java.util.List<MapCoverTeamMarker> collectRWCommandCenters() {
+        java.util.List<MapCoverTeamMarker> out = new ArrayList<MapCoverTeamMarker>();
+        int unitsLayer = findLayer("units");
+        if (unitsLayer < 0)
+            return out;
+        layer lay = layers.get(unitsLayer);
+        for (int position = 0; position < Tw * Th; position++) {
+            long mm = lay.getStr().get(position);
+            if (mm == 0)
+                continue;
+            int mmo = lay.getTset().get(position);
+            if (mmo < 0 || mmo >= tilesets.size())
+                continue;
+            tileset ts = tilesets.get(mmo);
+            tile t = findTileAtGid(ts, mm);
+            if (t == null)
+                continue;
+            boolean isCC = false;
+            int team = -1;
+            for (property p : t.getProperties()) {
+                if (p.getName().equalsIgnoreCase("unit")
+                        && p.getValue().equalsIgnoreCase("commandCenter"))
+                    isCC = true;
+                if (p.getName().equalsIgnoreCase("team")) {
+                    try {
+                        team = Integer.parseInt(p.getValue());
+                    } catch (Exception e) {
+                    }
+                }
+            }
+            if (isCC && team >= 0) {
+                MapCoverTeamMarker m = new MapCoverTeamMarker();
+                m.tileX = position % Tw;
+                m.tileY = position / Tw;
+                m.team = team;
+                out.add(m);
+            }
+        }
+        return out;
+    }
+
+    private java.util.List<MapCoverPoint> collectRWResPools() {
+        java.util.List<MapCoverPoint> out = new ArrayList<MapCoverPoint>();
+        int itemsLayer = findLayer("items");
+        if (itemsLayer < 0)
+            return out;
+        java.util.HashSet<Long> poolGids = new java.util.HashSet<Long>();
+        for (int ti = 0; ti < tilesets.size(); ti++) {
+            tileset ts = tilesets.get(ti);
+            for (int i = 0; i < ts.getTiles().size(); i++) {
+                tile t = ts.getTiles().get(i);
+                for (property p : t.getProperties()) {
+                    if (p.getName().equalsIgnoreCase("res_pool")) {
+                        poolGids.add((long) (t.getTileID() + ts.getFirstgid()));
+                        break;
+                    }
+                }
+            }
+        }
+        layer lay = layers.get(itemsLayer);
+        for (int position = 0; position < Tw * Th; position++) {
+            long mm = lay.getStr().get(position);
+            if (mm == 0)
+                continue;
+            long bare = stripTileGidFlags(mm);
+            boolean isPool = poolGids.contains(bare) || poolGids.contains(mm);
+            if (!isPool) {
+                int mmo = lay.getTset().get(position);
+                if (mmo >= 0 && mmo < tilesets.size()) {
+                    tile t = findTileAtGid(tilesets.get(mmo), mm);
+                    if (t != null) {
+                        for (property p : t.getProperties()) {
+                            if (p.getName().equalsIgnoreCase("res_pool")) {
+                                isPool = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            if (isPool) {
+                MapCoverPoint pt = new MapCoverPoint();
+                pt.tileX = position % Tw;
+                pt.tileY = position / Tw;
+                out.add(pt);
+            }
+        }
+        return out;
+    }
+
+    private tile findTileAtGid(tileset ts, long gid) {
+        if (ts == null)
+            return null;
+        long bare = stripTileGidFlags(gid);
+        for (int i = 0; i < ts.getTiles().size(); i++) {
+            tile t = ts.getTiles().get(i);
+            if (t.getTileID() + ts.getFirstgid() == bare)
+                return t;
+        }
+        return null;
+    }
+
+    private String rwMapCoverTeamLabel(int team) {
+        if (team < 0)
+            return "?";
+        return String.valueOf(team + 1);
+    }
+
+    private Color rwMapCoverTeamColor(int team) {
+        if (team < 0)
+            return RW_TEAM_COLORS[0];
+        return RW_TEAM_COLORS[team % RW_TEAM_COLORS.length];
+    }
+
+    private BitmapFont getMapCoverFont() {
+        if (mapCoverFont == null) {
+            FreeTypeFontGenerator gen = new FreeTypeFontGenerator(Gdx.files.internal("font.ttf"));
+            FreeTypeFontGenerator.FreeTypeFontParameter p = new FreeTypeFontGenerator.FreeTypeFontParameter();
+            p.size = 48;
+            p.borderWidth = 0;
+            p.shadowOffsetX = 0;
+            p.shadowOffsetY = 0;
+            mapCoverFont = gen.generateFont(p);
+            gen.dispose();
+        }
+        return mapCoverFont;
+    }
+
+    private Pixmap renderMapCoverLabelPixmap(String label, Color color, int size) {
+        if (label == null || label.isEmpty() || size < 4)
+            return null;
+        BitmapFont font = getMapCoverFont();
+        boolean batchWasDrawing = batch.isDrawing();
+        if (batchWasDrawing)
+            batch.end();
+        float oldScaleX = font.getScaleX();
+        float oldScaleY = font.getScaleY();
+        FrameBuffer fb = null;
+        try {
+            int fbSize = Math.max(12, size + 4);
+            fb = new FrameBuffer(Pixmap.Format.RGBA8888, fbSize, fbSize, false);
+            fb.begin();
+            Gdx.gl.glClearColor(0f, 0f, 0f, 0f);
+            Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+            GlyphLayout layout = new GlyphLayout();
+            float scale = fbSize * 0.62f / Math.max(1f, font.getLineHeight());
+            if (label.length() == 3)
+                scale *= 0.62f;
+            else if (label.length() > 1)
+                scale *= 0.82f;
+            font.getData().setScale(scale);
+            layout.setText(font, label);
+            batch.getProjectionMatrix().setToOrtho2D(0, fbSize, fbSize, -fbSize);
+            batch.begin();
+            float tx = (fbSize - layout.width) / 2f;
+            float ty = (fbSize - layout.height) / 2f;
+            font.setColor(1f, 1f, 1f, 1f);
+            font.draw(batch, layout, tx + 1f, ty);
+            font.setColor(color.r, color.g, color.b, 1f);
+            font.draw(batch, layout, tx, ty);
+            batch.end();
+            Pixmap pm = Pixmap.createFromFrameBuffer(0, 0, fbSize, fbSize);
+            fb.end();
+            return pm;
+        } catch (Exception e) {
+            ErrorBung(e, "errorlog.txt");
+            return null;
+        } finally {
+            font.getData().setScale(oldScaleX, oldScaleY);
+            if (fb != null)
+                fb.dispose();
+            if (batchWasDrawing && !batch.isDrawing())
+                batch.begin();
+        }
+    }
+
+    private void drawMapCoverBadge(Pixmap target, int centerX, int centerY, int diameter, String label,
+            Color textColor) {
+        if (target == null || diameter < 4 || label == null || label.isEmpty())
+            return;
+        int radius = Math.max(2, Math.round(diameter * 0.44f));
+        target.setColor(0f, 0f, 0f, 0.55f);
+        target.fillCircle(centerX, centerY, radius);
+        Pixmap labelPm = renderMapCoverLabelPixmap(label, textColor, diameter);
+        if (labelPm == null)
+            return;
+        int x = centerX - labelPm.getWidth() / 2;
+        int y = centerY - labelPm.getHeight() / 2;
+        blitMapCoverOverlay(target, labelPm, 0, 0, labelPm.getWidth(), labelPm.getHeight(), x, y, labelPm.getWidth(),
+                labelPm.getHeight());
+        labelPm.dispose();
+    }
+
+    private void blitMapCoverOverlay(Pixmap target, Pixmap source, int srcX, int srcY, int srcW, int srcH, int destX,
+            int destY, int destW, int destH) {
+        if (target == null || source == null || destW < 1 || destH < 1)
+            return;
+        target.setBlending(Pixmap.Blending.SourceOver);
+        target.drawPixmap(source, srcX, srcY, srcW, srcH, destX, destY, destW, destH);
+    }
+
+    private void ensureMapCoverBadgesPixmap() {
+        if (mapCoverBadgesPixmap == null) {
+            mapCoverBadgesPixmap = new Pixmap(Gdx.files.internal("images/mapcover_badges.png"));
+        }
+    }
+
+    private void repairOverlayTextures() {
+        if (txnumbers != null)
+            txnumbers.dispose();
+        if (txresources != null)
+            txresources.dispose();
+        txnumbers = new Texture(Gdx.files.internal("images/numbers.png"));
+        txresources = new Texture(Gdx.files.internal("images/resources.png"));
+    }
+
+    private void drawRWMapCoverOverlays(Pixmap pm) {
+        if (pm == null || Tw <= 0 || Th <= 0)
+            return;
+        float cellPx = (float) pm.getWidth() / Tw;
+        int tz = Math.max(Tw, Th);
+        int teamDraw = Math.max(12, Math.round(pm.getWidth() / 6f * 0.9f));
+        int poolDraw = Math.max(7, Math.round(pm.getWidth() / 12f * 0.9f));
+        float teamOffPx = (tz / 12f) * cellPx;
+        float poolOffPx = (tz / 20f) * cellPx;
+
+        ensureMapCoverBadgesPixmap();
+        java.util.List<MapCoverPoint> pools = collectRWResPools();
+        for (int i = 0; i < pools.size(); i++) {
+            MapCoverPoint pt = pools.get(i);
+            int cx = Math.round((pt.tileX + 0.5f) * cellPx - poolOffPx);
+            int cy = Math.round((pt.tileY + 0.5f) * cellPx - poolOffPx);
+            int destX = cx - poolDraw / 2;
+            int destY = cy - poolDraw / 2;
+            int[] spr = mapCoverBadgeSpriteCoords(MAP_COVER_BADGE_POOL_INDEX);
+            if (spr != null && mapCoverBadgesPixmap != null) {
+                blitMapCoverOverlay(pm, mapCoverBadgesPixmap, spr[0], spr[1], MAP_COVER_BADGE_CELL,
+                        MAP_COVER_BADGE_CELL, destX, destY, poolDraw, poolDraw);
+            }
+        }
+        java.util.List<MapCoverTeamMarker> teams = collectRWCommandCenters();
+        for (int i = 0; i < teams.size(); i++) {
+            MapCoverTeamMarker m = teams.get(i);
+            int cx = Math.round((m.tileX + 0.5f) * cellPx - teamOffPx);
+            int cy = Math.round((m.tileY + 0.5f) * cellPx - teamOffPx);
+            int destX = cx - teamDraw / 2;
+            int destY = cy - teamDraw / 2;
+            if (m.team >= 0 && m.team <= MAP_COVER_BADGE_MAX_TEAM) {
+                int[] spr = mapCoverBadgeSpriteCoords(m.team);
+                if (spr != null && mapCoverBadgesPixmap != null) {
+                    blitMapCoverOverlay(pm, mapCoverBadgesPixmap, spr[0], spr[1], MAP_COVER_BADGE_CELL,
+                            MAP_COVER_BADGE_CELL, destX, destY, teamDraw, teamDraw);
+                }
+            } else if (m.team >= 0) {
+                drawMapCoverBadge(pm, cx, cy, teamDraw, rwMapCoverTeamLabel(m.team), rwMapCoverTeamColor(m.team));
+            }
+        }
+    }
+
+    private Pixmap renderMapCoverBasePixmap(int cellPx) {
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        int drawCell = Math.max(1, cellPx);
+        Pixmap pm2 = new Pixmap(Tw * drawCell, Th * drawCell, Pixmap.Format.RGBA8888);
+        tilesetsize = tilesets.size();
+        if (tilesetsize > 0 && !loadingfile) {
+            int offsetx = 0, offsety = 0;
+            long ini;
+            int total = Tw * Th;
+            int startx = 0, stopx = Tw;
+            int starty = 0, stopy = Th;
+            int aa = 0, bb = 0, cc = 0, dd = 0;
+            switch (renderorder) {
+                case "right-down":
+                    aa = starty;
+                    bb = stopy;
+                    cc = startx;
+                    dd = stopx;
+                    break;
+                case "left-down":
+                    aa = starty;
+                    bb = stopy;
+                    cc = -stopx + 1;
+                    dd = -startx + 1;
+                    break;
+                case "right-up":
+                    aa = -stopy + 1;
+                    bb = -starty + 1;
+                    cc = startx;
+                    dd = stopx;
+                    break;
+                case "left-up":
+                    aa = -stopy + 1;
+                    bb = -starty + 1;
+                    cc = -stopx + 1;
+                    dd = -startx + 1;
+                    break;
+            }
+            String flag;
+            Long mm = null;
+            flag = "00";
+            for (int jo = 0; jo < layers.size(); jo++) {
+                if (layers.get(jo).getType() == layer.Type.TILE && layers.get(jo).isVisible()) {
+                    java.util.List<drawer> drawers = new ArrayList<drawer>();
+                    for (int a = aa; a < bb; a++) {
+                        for (int b = cc; b < dd; b++) {
+                            position = (abs(a) * Tw) + abs(b);
+                            ini = layers.get(jo).getStr().get(position);
+                            if (ini == 0)
+                                continue;
+                            int preferredTset = layers.get(jo).getTset().get(position);
+                            xpos = position % Tw;
+                            ypos = position / Tw;
+                            if (isOrphanedLayerTile(ini, preferredTset)) {
+                                drawers.add(orphanTileDrawer(xpos * drawCell - offsetx, ypos * drawCell - offsety,
+                                        drawCell / 2f, drawCell / 2f, drawCell, drawCell, ini));
+                                continue;
+                            }
+                            initset = resolveTilesetIndexForGid(ini, preferredTset);
+                            mm = ini;
+                            flag = "00";
+                            if (ini > total) {
+                                hex = Long.toHexString(ini);
+                                trailer = "00000000" + hex;
+                                hex = trailer.substring(trailer.length() - 8);
+                                flag = hex.substring(0, 2);
+                                mm = Long.decode("#00" + hex.substring(2, 8));
+                            }
+                            tiles = tilesets.get(initset).getTiles();
+                            tilesize = tiles.size();
+                            if (tilesize > 0) {
+                                for (int n = 0; n < tilesize; n++) {
+                                    if (tiles.get(n).getAnimation().size() > 0) {
+                                        if (mm == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
+                                            mm = (long) tiles.get(n).getActiveFrameID()
+                                                    + tilesets.get(initset).getFirstgid();
+                                        }
+                                    }
+                                }
+                            }
+                            resolveSprite(tilesets.get(initset), (int) (mm - tilesets.get(initset).getFirstgid()));
+                            margin = tilesets.get(initset).getMargin();
+                            spacing = tilesets.get(initset).getSpacing();
+                            Tswa = tilesets.get(initset).getTilewidth();
+                            Tsha = tilesets.get(initset).getTileheight();
+                            tempdrawer = new drawer();
+                            tempdrawer.mm = mm;
+                            int Tswad = Tswa;
+                            int Tshad = Tsha;
+                            switch (flag) {
+                                case "20":
+                                    tempdrawer.setdrawer(initset, xpos * drawCell - offsetx, ypos * drawCell - offsety,
+                                            drawCell / 2f, drawCell / 2f, Tswad, Tshad, 1f, 1f, 0f, sprX, sprY, Tswa,
+                                            Tsha, true, true);
+                                    break;
+                                case "40":
+                                    tempdrawer.setdrawer(initset, xpos * drawCell - offsetx, ypos * drawCell - offsety,
+                                            drawCell / 2f, drawCell / 2f, Tswad, Tshad, 1f, 1f, 0f, sprX, sprY, Tswa,
+                                            Tsha, false, true);
+                                    break;
+                                case "60":
+                                    tempdrawer.setdrawer(initset, xpos * drawCell - offsetx, ypos * drawCell - offsety,
+                                            drawCell / 2f, drawCell / 2f, Tswad, Tshad, 1f, 1f, 90f, sprX, sprY, Tswa,
+                                            Tsha, false, false);
+                                    break;
+                                case "80":
+                                    tempdrawer.setdrawer(initset, xpos * drawCell - offsetx, ypos * drawCell - offsety,
+                                            drawCell / 2f, drawCell / 2f, Tswad, Tshad, 1f, 1f, 0f, sprX, sprY, Tswa,
+                                            Tsha, true, false);
+                                    break;
+                                case "a0":
+                                    tempdrawer.setdrawer(initset, xpos * drawCell - offsetx, ypos * drawCell - offsety,
+                                            drawCell / 2f, drawCell / 2f, Tswad, Tshad, 1f, 1f, 270f, sprX, sprY, Tswa,
+                                            Tsha, false, false);
+                                    break;
+                                case "c0":
+                                    tempdrawer.setdrawer(initset, xpos * drawCell - offsetx, ypos * drawCell - offsety,
+                                            drawCell / 2f, drawCell / 2f, Tswad, Tshad, 1f, 1f, 180f, sprX, sprY, Tswa,
+                                            Tsha, false, false);
+                                    break;
+                                default:
+                                    tempdrawer.setdrawer(initset, xpos * drawCell - offsetx, ypos * drawCell - offsety,
+                                            drawCell / 2f, drawCell / 2f, Tswad, Tshad, 1f, 1f, 0f, sprX, sprY, Tswa,
+                                            Tsha, false, false);
+                                    break;
+                            }
+                            drawers.add(tempdrawer);
+                        }
+                    }
+                    java.util.Collections.sort(drawers);
+                    for (drawer drawer : drawers) {
+                        drawMapDrawerPixmap(drawer, pm2, drawCell, drawCell);
+                    }
+                }
+            }
+        }
+        return pm2;
+    }
+
+    private Pixmap buildMapCoverPixmap(boolean includeRwOverlays) {
+        int cellPx = computeMapCoverCellPx();
+        Pixmap full = renderMapCoverBasePixmap(cellPx);
+        if (full == null)
+            return null;
+        Pixmap scaled = scalePixmapToMaxSize(full, MAP_COVER_MAX_SIZE, MAP_COVER_MAX_SIZE);
+        if (scaled != full)
+            full.dispose();
+        if (includeRwOverlays && isRustedWarfareMap()) {
+            try {
+                drawRWMapCoverOverlays(scaled);
+            } catch (Exception e) {
+                ErrorBung(e, "errorlog.txt");
+            }
+        }
+        return scaled;
+    }
+
+    private Pixmap createMapCoverPixmap(boolean includeRwOverlays) {
+        return buildMapCoverPixmap(includeRwOverlays);
+    }
+
+    private String mapCoverOutputBasename() {
+        if (curfile == null || curfile.isEmpty())
+            return "map";
+        int dot = curfile.lastIndexOf('.');
+        return dot > 0 ? curfile.substring(0, dot) : curfile;
+    }
+
+    private void exportMapCover() {
+        if (curfile == null || curfile.isEmpty()) {
+            msgbox(z.saveas != null ? z.saveas : "Save the map first.");
+            return;
+        }
+        Gdx.app.postRunnable(new Runnable() {
+            @Override
+            public void run() {
+                runExportMapCover();
+            }
+        });
+    }
+
+    private void runExportMapCover() {
+        boolean batchWasDrawing = batch.isDrawing();
+        try {
+            if (batchWasDrawing)
+                batch.end();
+            Pixmap scaled = buildMapCoverPixmap(isRustedWarfareMap());
+            if (scaled == null) {
+                msgbox(z.error);
+                return;
+            }
+            repairOverlayTextures();
+            saveMapCoverPixmap(scaled);
+        } catch (Exception e) {
+            msgbox(z.error);
+            ErrorBung(e, "errorlog.txt");
+        } finally {
+            if (batchWasDrawing && !batch.isDrawing())
+                batch.begin();
+            backToMap();
+        }
+    }
+
     private Pixmap createRWthumbnail(String filenamenya) {
         try {
-            Gdx.gl.glEnable(GL20.GL_BLEND);
-            int Tsw = 1;
-            int Tsh = 1;
-            Pixmap pm2 = new Pixmap(Tw, Th, Pixmap.Format.RGBA8888);
-            Pixmap pp = pixmapfromtexture(txresources, "ff00ff");
-            Pixmap pn = pixmapfromtexture(txnumbers, "ff0099");
-
-            int Tz = Math.max(Tw, Th);
-            tilesetsize = tilesets.size();
-            if (tilesetsize > 0 && !loadingfile) {
-                int offsetx = 0, offsety = 0;
-                int jon = 0, joni = 0;
-                long ini;
-                int total = Tw * Th;
-                int startx = 0, stopx = Tw;
-                int starty = 0, stopy = Th;
-
-                int aa = 0, bb = 0, cc = 0, dd = 0;
-                switch (renderorder) {
-                    case "right-down":
-                        aa = starty;
-                        bb = stopy;
-                        cc = startx;
-                        dd = stopx;
-                        break;
-                    case "left-down":
-                        aa = starty;
-                        bb = stopy;
-                        cc = -stopx + 1;
-                        dd = -startx + 1;
-                        break;
-                    case "right-up":
-                        aa = -stopy + 1;
-                        bb = -starty + 1;
-                        cc = startx;
-                        dd = stopx;
-                        break;
-                    case "left-up":
-                        aa = -stopy + 1;
-                        bb = -starty + 1;
-                        cc = -stopx + 1;
-                        dd = -startx + 1;
-                        break;
-                }
-
-                String flag;
-                Long mm = null;
-                flag = "00";
-
-                for (int jo = 0; jo < layers.size(); jo++) {
-                    if (layers.get(jo).getType() == layer.Type.TILE && layers.get(jo).isVisible()) {
-                        java.util.List<drawer> drawers = new ArrayList<drawer>();
-                        drawers.clear();
-                        java.util.List<drawer> drawers2 = new ArrayList<drawer>();
-                        drawers2.clear();
-                        java.util.List<drawer> drawers3 = new ArrayList<drawer>();
-                        drawers3.clear();
-                        for (int a = aa; a < bb; a++) {
-                            for (int b = cc; b < dd; b++) {
-                                // position=(Math.abs(a)*Tw)+Math.abs(b);
-
-                                position = (abs(a) * Tw) + abs(b);
-                                ini = layers.get(jo).getStr().get(position);
-                                if (ini == 0)
-                                    continue;// dont draw empty, amazing performance boost
-                                int preferredTset = layers.get(jo).getTset().get(position);
-                                xpos = position % Tw;
-                                ypos = position / Tw;
-                                if (orientation.equalsIgnoreCase("isometric")) {
-                                    // offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
-                                    // offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
-                                }
-                                if (isOrphanedLayerTile(ini, preferredTset)) {
-                                    drawers.add(orphanTileDrawer(xpos * Tsw - offsetx, ypos * Tsh - offsety, Tsw / 2f,
-                                            Tsh / 2f, Tsw, Tsh, ini));
-                                    continue;
-                                }
-                                initset = resolveTilesetIndexForGid(ini, preferredTset);
-
-                                mm = ini;
-                                flag = "00";
-                                if (ini > total) {
-                                    hex = Long.toHexString(ini);
-                                    trailer = "00000000" + hex;
-                                    hex = trailer.substring(trailer.length() - 8);
-                                    flag = hex.substring(0, 2);
-                                    mm = Long.decode("#00" + hex.substring(2, 8));
-                                }
-                                tiles = tilesets.get(initset).getTiles();
-                                tilesize = tiles.size();
-
-                                if (tilesize > 0) {
-                                    for (int n = 0; n < tilesize; n++) {
-                                        if (tiles.get(n).getAnimation().size() > 0) {
-                                            if (mm == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
-                                                mm = (long) tiles.get(n).getActiveFrameID()
-                                                        + tilesets.get(initset).getFirstgid();
-                                            }
-                                        }
-                                    }
-                                }
-
-                                resolveSprite(tilesets.get(initset), (int) (mm - tilesets.get(initset).getFirstgid()));
-                                margin = tilesets.get(initset).getMargin();
-                                spacing = tilesets.get(initset).getSpacing();
-                                Tswa = tilesets.get(initset).getTilewidth();
-                                Tsha = tilesets.get(initset).getTileheight();
-
-                                tempdrawer = new drawer();
-                                tempdrawer.mm = mm;
-                                int Tswad = 0;
-                                int Tshad = 0;
-
-                                Tswad = Tswa;
-                                Tshad = Tsha;
-
-                                switch (flag) {
-                                    case "20":// diagonal flip
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety,
-                                                Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f,
-                                                sprX, sprY,
-                                                Tswa, Tsha, true, true);
-                                        break;
-                                    case "40":// flipy
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety,
-                                                Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f,
-                                                sprX, sprY,
-                                                Tswa, Tsha, false, true);
-                                        break;
-                                    case "60":// 270 degrees clockwise
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety,
-                                                Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 90f,
-                                                sprX, sprY,
-                                                Tswa, Tsha, false, false);
-                                        break;
-                                    case "80":// flipx
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety,
-                                                Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f,
-                                                sprX, sprY,
-                                                Tswa, Tsha, true, false);
-                                        break;
-                                    case "a0":// 90 degress cw
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety,
-                                                Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 270f,
-                                                sprX, sprY,
-                                                Tswa, Tsha, false, false);
-                                        break;
-                                    case "c0":// 180 degrees cw
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety,
-                                                Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 180f,
-                                                sprX, sprY,
-                                                Tswa, Tsha, false, false);
-                                        break;
-                                    case "00":
-                                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, ypos * Tsh - offsety,
-                                                Tsw / 2, Tsh / 2, Tswad, Tshad, 1f, 1f, 0f,
-                                                sprX, sprY,
-                                                Tswa, Tsha, false, false);
-                                        break;
-                                }
-                                drawers.add(tempdrawer);
-
-                                ///////////////////
-                                if (layers.get(jo).getName().equalsIgnoreCase("Units")) {
-
-                                    mm = layers.get(jo).getStr().get(position);
-                                    int mmo = layers.get(jo).getTset().get(position);
-                                    if (mmo == -1)
-                                        continue;
-                                    int xpos = position % Tw;
-                                    int ypos = position / Tw;
-                                    int maex = -1, maye = -1;
-                                    for (tile t : tilesets.get(mmo).getTiles()) {
-                                        // log(mm+"P");
-
-                                        if (t.getTileID() + tilesets.get(mmo).getFirstgid() == mm) {
-                                            boolean isCC = false;
-                                            int team = -1;
-                                            for (property p : t.getProperties()) {
-                                                if (p.getName().equalsIgnoreCase("unit")
-                                                        && p.getValue().equalsIgnoreCase("commandCenter")) {
-                                                    isCC = true;
-                                                    // log(isCC+"P");
-                                                }
-                                                if (p.getName().equalsIgnoreCase("team")) {
-                                                    team = Integer.parseInt(p.getValue());
-                                                }
-                                            }
-                                            if (!isCC)
-                                                continue;
-                                            // log(isCC+"");
-                                            switch (team) {
-                                                case 0:
-                                                    maex = 0;
-                                                    maye = 0;
-                                                    break;
-                                                case 1:
-                                                    maex = 1 * 56;
-                                                    maye = 0;
-                                                    break;
-                                                case 2:
-                                                    maex = 2 * 56;
-                                                    maye = 0;
-                                                    break;
-                                                case 3:
-                                                    maex = 3 * 56;
-                                                    maye = 0;
-                                                    break;
-                                                case 4:
-                                                    maex = 4 * 56;
-                                                    maye = 0;
-                                                    break;
-                                                case 5:
-                                                    maex = 0;
-                                                    maye = 56;
-                                                    break;
-                                                case 6:
-                                                    maex = 1 * 56;
-                                                    maye = 56;
-                                                    break;
-                                                case 7:
-                                                    maex = 2 * 56;
-                                                    maye = 56;
-                                                    break;
-                                                case 8:
-                                                    maex = 3 * 56;
-                                                    maye = 56;
-                                                    break;
-                                                case 9:
-                                                    maex = 4 * 56;
-                                                    maye = 56;
-                                                    break;
-
-                                            }
-                                        }
-                                    }
-
-                                    if (maex != -1) {
-                                        drawer tempdrawer2 = new drawer();
-                                        int widthy = 56;
-                                        tempdrawer2.setdrawer(0, xpos - (Tz / 12f), ypos - (Tz / 12f), maex, maye,
-                                                widthy, widthy, 1f, 1f, 0f, maex, maye, 55, 55, false, false);
-                                        drawers3.add(tempdrawer2);
-                                    }
-
-                                } // if
-
-                                ///////////////////
-                                if (layers.get(jo).getName().equalsIgnoreCase("Items")) {
-
-                                    mm = layers.get(jo).getStr().get(position);
-                                    int mmo = layers.get(jo).getTset().get(position);
-                                    if (mmo == -1)
-                                        continue;
-                                    int xpos = position % Tw;
-                                    int ypos = position / Tw;
-                                    boolean isPool = false;
-                                    for (tile t : tilesets.get(mmo).getTiles()) {
-
-                                        if (t.getTileID() + tilesets.get(mmo).getFirstgid() == mm) {
-
-                                            for (property p : t.getProperties()) {
-                                                if (p.getName().equalsIgnoreCase("res_pool")) {
-                                                    isPool = true;
-                                                    // Gdx.app.log( "",isPool+"" );
-                                                }
-                                            }
-                                            if (!isPool)
-                                                continue;
-                                        }
-                                    }
-                                    if (isPool) {
-                                        drawer tempdrawer = new drawer();
-                                        int widthy = 32;
-                                        tempdrawer.setdrawer(0, xpos - (Tz / 20f), ypos - (Tz / 20f), 0, 0, widthy,
-                                                widthy, 1f, 1f, 0f, 0, 0, 32, 32, false, false);
-                                        drawers2.add(tempdrawer);
-                                        // tempdrawer.draw( batch, txresources );
-                                    }
-
-                                }
-
-                            } // for b
-                        } // for a
-
-                        java.util.Collections.sort(drawers);// fps hogger
-
-                        for (drawer drawer : drawers) {
-                            drawMapDrawerPixmap(drawer, pm2, Tsw, Tsh);
-                        }
-
-                        for (drawer drawer : drawers2) {
-                            drawer.draw(pm2, pp, (int) (Tz / 10f), (int) (Tz / 10f));
-                        }
-
-                        for (drawer drawer : drawers3) {
-                            drawer.draw(pm2, pn, (int) (Tz / 6f), (int) (Tz / 6f));
-                        }
-
-                    }
-                } // for jo
-
-            } // no tileswt
-
-            //
-            if (filenamenya != "XOXXO") {
-                FileHandle fh = Gdx.files.absolute(curdir + "/" + filenamenya + ".png");
-                PixmapIO.writePNG(fh, pm2);
-                backToMap();
-                status(z.exportfinished, 3);
+            Pixmap scaled = buildMapCoverPixmap(isRustedWarfareMap());
+            if (scaled == null)
                 return null;
-            } else {
-                return pm2;
+            repairOverlayTextures();
+            if (filenamenya != null && !filenamenya.isEmpty()) {
+                FileHandle fh = Gdx.files.absolute(curdir + "/" + filenamenya + ".png");
+                if (!fh.parent().exists())
+                    fh.parent().mkdirs();
+                PixmapIO.writePNG(fh, scaled);
+                scaled.dispose();
+                return null;
             }
+            return scaled;
         } catch (Exception e) {
             msgbox(z.error);
             ErrorBung(e, "errorlog.txt");
@@ -13409,8 +13728,65 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void reloadLanguage() {
         Json json = new Json();
-        FileHandle f = Gdx.files.internal("languages/" + language);
-        z = json.fromJson(language.class, f);
+        language english = loadLanguageFile(json, "English");
+        if (english == null)
+            english = new language();
+        language loaded = english;
+        try {
+            if (!"English".equalsIgnoreCase(language)) {
+                language selected = loadLanguageFile(json, language);
+                if (selected != null) {
+                    mergeMissingLanguageStrings(english, selected);
+                    loaded = selected;
+                }
+            }
+            z = loaded;
+        } catch (Exception e) {
+            ErrorBung(e, "langeror.txt");
+            language = "English";
+            prefs.putString("language", "English").flush();
+            z = english;
+        }
+        applyLanguageFallbacks();
+        try {
+            generateTutorials();
+            face.changelanguage("English");
+        } catch (Exception e) {
+            ErrorBung(e, "nyut.txt");
+        }
+
+    }
+
+    private language loadLanguageFile(Json json, String langName) {
+        FileHandle f = Gdx.files.internal("languages/" + langName);
+        if (!f.exists())
+            return null;
+        return json.fromJson(language.class, f);
+    }
+
+    private void mergeMissingLanguageStrings(language defaults, language target) {
+        if (defaults == null || target == null)
+            return;
+        Field[] fields = language.class.getDeclaredFields();
+        for (int i = 0; i < fields.length; i++) {
+            Field field = fields[i];
+            if (field.getType() != String.class)
+                continue;
+            field.setAccessible(true);
+            try {
+                String value = (String) field.get(target);
+                if (value == null || value.trim().isEmpty()) {
+                    String fallback = (String) field.get(defaults);
+                    if (fallback != null && !fallback.isEmpty())
+                        field.set(target, fallback);
+                }
+            } catch (Exception e) {
+                ErrorBung(e, "langeror.txt");
+            }
+        }
+    }
+
+    private void applyLanguageFallbacks() {
         if (z.filemanager == null)
             z.filemanager = "File Manager";
         if (z.screenorientation == null)
@@ -13509,24 +13885,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             z.tilecollision = "Tile Collision";
         if (z.mirror == null)
             z.mirror = "Mirror";
-        shapeName = z.rectangle;
-        toolName = z.tile;
-        viewModeName = z.stack;
-        objViewModeName = z.all;
-        magnetName = z.lock;
-        try {
-            /*
-             * json = new Json();
-             * f = Gdx.files.internal("tutorials/"+language);
-             * tutor = json.fromJson(Tutorials.class, f);
-             * face.changelanguage(language);
-             */
-            generateTutorials();
-            face.changelanguage("English");
-        } catch (Exception e) {
-            ErrorBung(e, "nyut.txt");
-        }
-
+        shapeName = z.rectangle != null ? z.rectangle : "Rectangle";
+        toolName = z.tile != null ? z.tile : "Tile";
+        viewModeName = z.stack != null ? z.stack : "Stack";
+        objViewModeName = z.all != null ? z.all : "All";
+        magnetName = z.lock != null ? z.lock : "Lock";
     }
 
     public void generateTutorials() {
@@ -13634,13 +13997,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         a.addStep(z.t335, "redo",
                 "Super! now you can go back to the layer selection and show all of the layers to see your masterpiece. Click redo when you are done.");
         a.addStep(z.t336, "redo",
-                "Okay, let's take a screenshot so that you map will have a thumbnail on Rusted Warfare. Just zoom out until you see the button.");
-        a.addStep(z.t337, "screenshot",
-                "Nice! Just one more step! Copy the file to the Rusted Warfare folder. You can do it manually, but it is easier just to send it from NotTiled. Zoom back in to show the controls and Click the menu.");
-        a.addStep(z.t338, "menu", "click on Links");
-        a.addStep(z.t339, "links", "click Copy to Rusted Warfare");
-        a.addStep(z.t340, "copytorw",
-                "Nicely done! now go to Rusted Warfare and enjoy your new map! I hope this tutorial helps you to understand the basic of RW mappping. Thank you and see you on another tutorial.");
+                "Let's create a map thumbnail for Rusted Warfare. Open the Map menu when you are ready.");
+        a.addStep(z.t337, "map", "Tap Screenshot to create the map thumbnail.");
+        a.addStep(z.t338, "screenshot", "Open the main menu.");
+        a.addStep(z.t339, "menu", "Tap Export.");
+        a.addStep(z.t340, "export", "Select Export as RW mod and tap Export.");
+        a.addStep("Nicely done! now go to Rusted Warfare and enjoy your new map! I hope this tutorial helps you to understand the basic of RW mappping. Thank you and see you on another tutorial.", "copytorw", "");
         a.addStep("end", "");
         tutor.getT().add(a);
 
@@ -15665,8 +16027,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     brushsize = s;
                     if (s < 1)
                         brushsize = 1;
-                    if (s > 10)
-                        brushsize = 10;
+                    if (s > 32)
+                        brushsize = 32;
 
                 } catch (Exception e) {
                 }
@@ -15677,35 +16039,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void cancel() {
             }
 
-        };
-
-        pScreenshotSize = new TextPromptListener() {
-            @Override
-            public void confirm(String input) {
-                int w = 400, h = 400;
-                if (input != null && !input.trim().isEmpty()) {
-                    String s = input.trim().toLowerCase().replace(" ", "");
-                    try {
-                        if (s.contains("x")) {
-                            String[] parts = s.split("x");
-                            if (parts.length >= 2) {
-                                w = Integer.parseInt(parts[0]);
-                                h = Integer.parseInt(parts[1]);
-                            }
-                        } else {
-                            w = h = Integer.parseInt(s);
-                        }
-                    } catch (Exception e) {
-                    }
-                }
-                w = Math.max(1, Math.min(w, 4096));
-                h = Math.max(1, Math.min(h, 4096));
-                exportMapScreenshot(w, h);
-            }
-
-            @Override
-            public void cancel() {
-            }
         };
 
         pNewLayerSC = new TextPromptListener() {
@@ -19986,7 +20319,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             fmTxFile = new Texture(Gdx.files.internal("images/file96.png"));
 
         if (dir == null) {
-            fileManagerDir = Gdx.files.absolute(basepath + "NotTiled");
+            fileManagerDir = resolveFileManagerStartDir();
         } else {
             fileManagerDir = dir;
         }
@@ -20124,6 +20457,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 public void clicked(InputEvent event, float x, float y) {
                     if (child.isDirectory()) {
                         showFileManager(child);
+                    } else if (isPreviewableImageFile(child)) {
+                        showImageFilePreview(child);
                     } else {
                         showOptionsDialog(child);
                     }
@@ -20161,6 +20496,178 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tFileManager.add(bottomBar).expandX().fillX().pad(10);
 
         gotoStage(tFileManager);
+    }
+
+    private FileHandle resolveFileManagerStartDir() {
+        if (curdir != null && !curdir.isEmpty()) {
+            FileHandle projectDir = Gdx.files.absolute(curdir);
+            if (projectDir.exists() && projectDir.isDirectory())
+                return projectDir;
+        }
+        return Gdx.files.absolute(basepath + "NotTiled");
+    }
+
+    private boolean isPreviewableImageFile(FileHandle file) {
+        if (file == null || file.isDirectory())
+            return false;
+        String ext = file.extension().toLowerCase();
+        return ext.equals("png") || ext.equals("jpg") || ext.equals("jpeg") || ext.equals("webp")
+                || ext.equals("gif");
+    }
+
+    private void showImageFilePreview(FileHandle imageFile) {
+        try {
+            Pixmap pm = new Pixmap(imageFile);
+            showPixmapPreviewDialog(pm, imageFile.name(), false, null);
+        } catch (Exception e) {
+            ErrorBung(e, "errorlog.txt");
+            msgbox(z.error);
+        }
+    }
+
+    private void showPixmapPreviewDialog(final Pixmap pixmap, String title, final boolean offerSave,
+            final Runnable onSave) {
+        if (pixmap == null)
+            return;
+        final Pixmap retainedPixmap = offerSave ? pixmap : null;
+        final Texture tex = new Texture(pixmap);
+        tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        if (!offerSave)
+            pixmap.dispose();
+
+        final Dialog previewDlg = new Dialog("", skin, "dialog") {
+            @Override
+            protected void result(Object object) {
+                tex.dispose();
+                boolean save = Boolean.TRUE.equals(object) && onSave != null;
+                if (save) {
+                    onSave.run();
+                } else if (retainedPixmap != null && !retainedPixmap.isDisposed()) {
+                    retainedPixmap.dispose();
+                }
+                backToMap();
+            }
+        };
+        Table content = previewDlg.getContentTable();
+        Label titleLabel = new Label(title != null ? title : "Preview", skin);
+        titleLabel.setAlignment(Align.center);
+        content.add(titleLabel).width(getDialogContentWidth()).pad(8).row();
+
+        Image img = new Image(new TextureRegionDrawable(new TextureRegion(tex)));
+        float maxW = stage.getWidth() * 0.92f;
+        float maxH = stage.getHeight() * 0.72f;
+        float scale = Math.min(maxW / tex.getWidth(), maxH / tex.getHeight());
+        if (scale > 1f)
+            scale = 1f;
+        float displayW = tex.getWidth() * scale;
+        float displayH = tex.getHeight() * scale;
+
+        Table imgHost = new Table();
+        imgHost.add(img).width(displayW).height(displayH);
+        if (displayW <= maxW && displayH <= maxH) {
+            content.add(imgHost).pad(8).row();
+        } else {
+            ScrollPane scrollPane = new ScrollPane(imgHost, skin);
+            scrollPane.setFadeScrollBars(false);
+            scrollPane.setForceScroll(false, false);
+            content.add(scrollPane).width(maxW).height(maxH).pad(8).row();
+        }
+
+        if (offerSave && onSave != null)
+            previewDlg.button(z.save, true);
+        previewDlg.button(z.back, false);
+        previewDlg.getButtonTable().defaults().height(btny).pad(4);
+        Gdx.input.setInputProcessor(stage);
+        previewDlg.show(stage);
+    }
+
+    private String resolveUniqueExportFilename(String preferredName, String ext) {
+        String lowerExt = ext.toLowerCase();
+        if (!lowerExt.startsWith("."))
+            lowerExt = "." + lowerExt;
+
+        String base = preferredName;
+        if (base == null || base.isEmpty()) {
+            if (curfile != null && !curfile.isEmpty()) {
+                int dot = curfile.lastIndexOf('.');
+                base = dot > 0 ? curfile.substring(0, dot) : curfile;
+            } else {
+                base = "export";
+            }
+        }
+        if (base.toLowerCase().endsWith(lowerExt))
+            base = base.substring(0, base.length() - lowerExt.length());
+        else {
+            int dot = base.lastIndexOf('.');
+            if (dot > 0)
+                base = base.substring(0, dot);
+        }
+
+        FileHandle dir = Gdx.files.absolute(curdir != null && !curdir.isEmpty() ? curdir : basepath + "NotTiled");
+        String first = base + lowerExt;
+        if (!dir.child(first).exists())
+            return first;
+        for (int n = 2; n < 10000; n++) {
+            String candidate = base + n + lowerExt;
+            if (!dir.child(candidate).exists())
+                return candidate;
+        }
+        return base + "_" + System.currentTimeMillis() + lowerExt;
+    }
+
+    private void previewMapCover() {
+        if (curfile == null || curfile.isEmpty()) {
+            msgbox(z.saveas != null ? z.saveas : "Save the map first.");
+            return;
+        }
+        Gdx.app.postRunnable(new Runnable() {
+            @Override
+            public void run() {
+                boolean batchWasDrawing = batch.isDrawing();
+                try {
+                    if (batchWasDrawing)
+                        batch.end();
+                    final Pixmap scaled = buildMapCoverPixmap(isRustedWarfareMap());
+                    if (scaled == null) {
+                        msgbox(z.error);
+                        return;
+                    }
+                    repairOverlayTextures();
+                    String previewTitle = mapCoverOutputBasename() + "_map.png";
+                    showPixmapPreviewDialog(scaled, previewTitle, true, new Runnable() {
+                        @Override
+                        public void run() {
+                            saveMapCoverPixmap(scaled);
+                        }
+                    });
+                } catch (Exception e) {
+                    msgbox(z.error);
+                    ErrorBung(e, "errorlog.txt");
+                } finally {
+                    if (batchWasDrawing && !batch.isDrawing())
+                        batch.begin();
+                }
+            }
+        });
+    }
+
+    private void saveMapCoverPixmap(Pixmap scaled) {
+        if (scaled == null)
+            return;
+        try {
+            FileHandle fh = Gdx.files.absolute(curdir + "/" + mapCoverOutputBasename() + "_map.png");
+            if (!fh.parent().exists())
+                fh.parent().mkdirs();
+            PixmapIO.writePNG(fh, scaled);
+            status(z.screenshotsaved != null ? z.screenshotsaved : "Screenshot saved", 2);
+            cue("screenshot");
+        } catch (Exception e) {
+            msgbox(z.error);
+            ErrorBung(e, "errorlog.txt");
+        } finally {
+            if (!scaled.isDisposed())
+                scaled.dispose();
+        }
     }
 
     private void showOptionsDialog(final FileHandle child) {
@@ -20226,6 +20733,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         optionsTable.add(btnCut).width(dialogBtnWidth).height(btny).pad(5).row();
 
         if (!child.isDirectory()) {
+            if (isPreviewableImageFile(child)) {
+                TextButton btnPreview = new TextButton("Preview", skin);
+                btnPreview.addListener(new ChangeListener() {
+                    @Override
+                    public void changed(ChangeEvent event, Actor actor) {
+                        optionsDlg.hide();
+                        showImageFilePreview(child);
+                    }
+                });
+                optionsTable.add(btnPreview).width(dialogBtnWidth).height(btny).pad(5).row();
+            }
+
             TextButton btnExport = new TextButton(z.export, skin);
             btnExport.addListener(new ChangeListener() {
                 @Override
@@ -22179,7 +22698,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     .attribute("", "tilewidth", Integer.toString(Tsw))
                     .attribute("", "tileheight", Integer.toString(Tsh))
                     .attribute("", "nextlayerid", Integer.toString(nextlayerid))
-                    .attribute("", "nextobjectid", Integer.toString(curid));
+                    .attribute("", "nextobjectid", Integer.toString(exportNextObjectId()));
 
             if (properties.size() > 0) {
                 srz.startTag(null, "properties");
@@ -23167,7 +23686,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             jsn.infinite = infinite;
             jsn.compressionlevel = compressionlevel;
             jsn.nextlayerid = nextlayerid;
-            jsn.nextobjectid = curid;
+            jsn.nextobjectid = exportNextObjectId();
             jsn.tiledversion = tiledversion != null ? tiledversion : "1.10.1";
             if (properties.size() > 0) {
                 List<jsonmap.property> props = new ArrayList<>();
@@ -23666,6 +24185,54 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
         }
+    }
+
+    private void collectUsedObjectIds(java.util.Set<Integer> used) {
+        for (int li = 0; li < layers.size(); li++) {
+            layer lay = layers.get(li);
+            if (lay.getType() == layer.Type.OBJECT) {
+                for (obj o : lay.getObjects()) {
+                    if (o.getId() > 0)
+                        used.add(o.getId());
+                }
+            }
+        }
+        for (int ti = 0; ti < tilesets.size(); ti++) {
+            tileset ts = tilesets.get(ti);
+            for (tile t : ts.getTiles()) {
+                for (obj o : t.getObjects()) {
+                    if (o.getId() > 0)
+                        used.add(o.getId());
+                }
+            }
+        }
+    }
+
+    /** Smallest positive ID not used by any map or tile collision object. */
+    private int allocateObjectId() {
+        java.util.Set<Integer> used = new java.util.HashSet<Integer>();
+        collectUsedObjectIds(used);
+        return takeNextObjectId(used);
+    }
+
+    private int takeNextObjectId(java.util.Set<Integer> used) {
+        int id = 1;
+        while (used.contains(id))
+            id++;
+        used.add(id);
+        return id;
+    }
+
+    /** Tiled-compatible nextobjectid: one greater than the highest used ID. */
+    private int exportNextObjectId() {
+        java.util.Set<Integer> used = new java.util.HashSet<Integer>();
+        collectUsedObjectIds(used);
+        int max = 0;
+        for (int id : used) {
+            if (id > max)
+                max = id;
+        }
+        return max + 1;
     }
 
     public boolean setRPDmap() {
@@ -25777,36 +26344,420 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return -1;
     }
 
-    private void stampBrushAt(int num) {
+    private boolean isBrushCell(int bx, int by, int size, BrushShape shape) {
+        float cx = (size - 1) / 2f;
+        float cy = (size - 1) / 2f;
+        float dx = bx - cx;
+        float dy = by - cy;
+        switch (shape) {
+            case SQUARE:
+                return true;
+            case CIRCLE:
+                float r = size / 2f;
+                return dx * dx + dy * dy <= r * r + 0.25f;
+            case DIAMOND:
+                return Math.abs(dx) + Math.abs(dy) <= cx + 0.01f;
+            default:
+                return true;
+        }
+    }
+
+    private boolean isBrushTerrainAnchor(int bx, int by, int size) {
+        if (bx == 0 && by == 0)
+            return true;
+        if (bx == size - 1 && by == 0)
+            return true;
+        if (bx == size - 1 && by == size - 1)
+            return true;
+        if (by == size - 1 && bx == 0)
+            return true;
+        if (bx == 0 && by % 2 == 0)
+            return true;
+        if (by == 0 && bx % 2 == 0)
+            return true;
+        if (bx == size - 1 && by % 2 == 0)
+            return true;
+        if (by == size - 1 && bx % 2 == 0)
+            return true;
+        return false;
+    }
+
+    private void forEachBrushCell(int centerNum, BrushCellHandler handler) {
+        int curx = centerNum % Tw;
+        int cury = centerNum / Tw;
         for (int bx = 0; bx < brushsize; bx++) {
             for (int by = 0; by < brushsize; by++) {
-                int curx = num % Tw;
-                int cury = num / Tw;
-                final int locx = curx - brushsize / 2 + bx;
-                final int locy = cury - brushsize / 2 + by;
+                if (!isBrushCell(bx, by, brushsize, brushShape))
+                    continue;
+                int locx = curx - brushsize / 2 + bx;
+                int locy = cury - brushsize / 2 + by;
                 if (locx < 0 || locy < 0 || locx >= Tw || locy >= Th)
                     continue;
-                boolean terrar = false;
-                if (bx == 0 && by == 0)
-                    terrar = true;
-                if (bx == brushsize - 1 && by == 0)
-                    terrar = true;
-                if (bx == brushsize - 1 && by == brushsize - 1)
-                    terrar = true;
-                if (by == brushsize - 1 && bx == 0)
-                    terrar = true;
-                if (bx == 0 && by % 2 == 0)
-                    terrar = true;
-                if (by == 0 && bx % 2 == 0)
-                    terrar = true;
-                if (bx == brushsize - 1 && by % 2 == 0)
-                    terrar = true;
-                if (by == brushsize - 1 && bx % 2 == 0)
-                    terrar = true;
-                tapTile(locy * Tw + locx, true, terrar, false, curspr);
+                handler.onCell(locy * Tw + locx, bx, by);
             }
         }
     }
+
+    private interface BrushCellHandler {
+        void onCell(int tileIndex, int bx, int by);
+    }
+
+    private long computeBrushOutputGid() {
+        if (eraser)
+            return 0;
+        int drawGid = curspr;
+        String hex = Long.toHexString(drawGid);
+        String trailer = "00000000" + hex;
+        hex = trailer.substring(trailer.length() - 8);
+        String spc;
+        switch (rotate) {
+            case 1:
+                spc = "A0";
+                break;
+            case 2:
+                spc = "C0";
+                break;
+            case 3:
+                spc = "60";
+                break;
+            case 4:
+                spc = "80";
+                break;
+            case 5:
+                spc = "E0";
+                break;
+            case 6:
+                spc = "40";
+                break;
+            case 7:
+                spc = "20";
+                break;
+            default:
+                spc = "00";
+                break;
+        }
+        return Long.decode("#" + spc + hex.substring(2));
+    }
+
+    private void runTerrainifyFromCenter(int num, tile t) {
+        if (t == null || !t.isTerrainForEditor() || !t.isCenter())
+            return;
+        Terrainify(num, t, new int[] { 8, 0, 1, 2, 3, 4, 5, 6, 7 }, false);
+        while (!numanuma.isEmpty()) {
+            int[] dir = new int[] {};
+            switch ((int) numanuma.get(0).dir) {
+                case 0:
+                    dir = new int[] { 0, 1, 3 };
+                    break;
+                case 1:
+                    dir = new int[] { 1 };
+                    break;
+                case 2:
+                    dir = new int[] { 2, 1, 4 };
+                    break;
+                case 3:
+                    dir = new int[] { 3 };
+                    break;
+                case 4:
+                    dir = new int[] { 4 };
+                    break;
+                case 5:
+                    dir = new int[] { 5, 3, 6 };
+                    break;
+                case 6:
+                    dir = new int[] { 6 };
+                    break;
+                case 7:
+                    dir = new int[] { 7, 6, 4 };
+                    break;
+                case 8:
+                    dir = new int[] { 8 };
+                    break;
+            }
+            Terrainify((int) numanuma.get(0).num, numanuma.get(0).t, dir, false);
+            try {
+                numanuma.remove(0);
+            } catch (Exception e) {
+            }
+        }
+    }
+
+    private void applyBrushCell(int num, long oi, long bareLocalGid, boolean terra) {
+        if (!curpickAuto && !isMacroTerrainPaintMode()) {
+            updateTileData(selLayer, num, oi, curtset);
+            return;
+        }
+        tile t;
+        if (isMacroTerrainPaintMode()) {
+            refreshAutotileGraph();
+            int gid = (int) stripTileGidFlags(curspr);
+            t = resolveMacroTerrainAutotileCenter(gid, macroTerrain.getTileMeta(gid));
+            if (t == null)
+                t = ensureMacroTerrainCenterTile(macroTerrain.getSelTerrain());
+            if (t != null)
+                gid = t.getTileID();
+            int tsetIdx = resolveTilesetIndexForGid(gid, curtset);
+            updateTileData(selLayer, num, gid, tsetIdx);
+        } else {
+            t = tilesets.get(curtset).getTileMeta((int) bareLocalGid);
+            t = resolveTerrainAutotileCenter(tilesets.get(curtset), t);
+            updateTileData(selLayer, num, oi, curtset);
+        }
+        if (!isMacroTerrainPaintMode() && oi == 0)
+            return;
+        if (t == null || !terra)
+            return;
+        runTerrainifyFromCenter(num, t);
+    }
+
+    private void stampBrushAt(int num) {
+        if (layers.size() == 0)
+            return;
+        if (!eraser && !prepareBrushForDraw()) {
+            status("Pick a tile in the tileset first", 2);
+            return;
+        }
+        if (isPixelArtSwatchActive())
+            return;
+
+        final java.util.ArrayList<Integer> cells = new java.util.ArrayList<Integer>();
+        final java.util.ArrayList<Boolean> terraAnchors = new java.util.ArrayList<Boolean>();
+        forEachBrushCell(num, new BrushCellHandler() {
+            @Override
+            public void onCell(int tileIndex, int bx, int by) {
+                cells.add(tileIndex);
+                terraAnchors.add(isBrushTerrainAnchor(bx, by, brushsize));
+            }
+        });
+        if (cells.isEmpty())
+            return;
+
+        long oi = computeBrushOutputGid();
+        String hex = Long.toHexString(curspr);
+        String trailer = "00000000" + hex;
+        hex = trailer.substring(trailer.length() - 8);
+        long bareLocalGid = Long.decode("#00" + hex.substring(2)) - tilesets.get(curtset).getFirstgid();
+        cue("tileclick");
+        follower = false;
+        for (int i = 0; i < cells.size(); i++) {
+            if (i > 0)
+                follower = true;
+            applyBrushCell(cells.get(i), oi, bareLocalGid, terraAnchors.get(i));
+        }
+        pushUpdateIfCollaborating();
+    }
+
+    private String brushShapeLabel(BrushShape shape) {
+        switch (shape) {
+            case CIRCLE:
+                return z.brushshapecircle != null ? z.brushshapecircle : "Circle brush";
+            case DIAMOND:
+                return z.brushshapediamond != null ? z.brushshapediamond : "Diamond brush";
+            default:
+                return z.brushshapesquare != null ? z.brushshapesquare : "Square brush";
+        }
+    }
+
+    private void updateRotationNameFromRotate() {
+        switch (rotate) {
+            case 0:
+                rotationName = "0";
+                break;
+            case 1:
+                rotationName = "90";
+                break;
+            case 2:
+                rotationName = "180";
+                break;
+            case 3:
+                rotationName = "270";
+                break;
+            case 4:
+                rotationName = "0*";
+                break;
+            case 5:
+                rotationName = "90*";
+                break;
+            case 6:
+                rotationName = "180*";
+                break;
+            case 7:
+                rotationName = "270*";
+                break;
+            default:
+                rotationName = "0";
+                break;
+        }
+    }
+
+    private void fillEntireLayer(int layerIdx, long gid) {
+        if (layerIdx < 0 || layerIdx >= layers.size())
+            return;
+        if (layers.get(layerIdx).getType() != layer.Type.TILE)
+            return;
+        snapWholeMapPhase1(layerIdx);
+        follower = false;
+        for (int i = 0; i < Tw * Th; i++) {
+            if (i > 0)
+                follower = true;
+            updateTileData(layerIdx, i, gid, curtset);
+        }
+        snapWholeMapPhase2(layerIdx);
+        pushUpdateIfCollaborating();
+    }
+
+    private void restoreWorldInput() {
+        if (im != null)
+            Gdx.input.setInputProcessor(im);
+    }
+
+    private interface ToolMenuCallback {
+        void onSelect(int index);
+    }
+
+    private void showDrawingToolMenu(String title, String[] labels, int selectedIndex,
+            final ToolMenuCallback onSelect) {
+        final Dialog dlg = new Dialog("", skin, "dialog") {
+            @Override
+            public void hide() {
+                super.hide();
+                restoreWorldInput();
+            }
+        };
+        Table content = dlg.getContentTable();
+        float dialogBtnWidth = btnx > 0 ? btnx : getDialogContentWidth();
+        if (title != null && !title.isEmpty()) {
+            Label titleLabel = new Label(title, skin);
+            titleLabel.setAlignment(Align.center);
+            titleLabel.setWrap(true);
+            content.add(titleLabel).width(dialogBtnWidth).pad(8).row();
+        }
+        for (int i = 0; i < labels.length; i++) {
+            final int idx = i;
+            String label = labels[i];
+            if (i == selectedIndex)
+                label = "> " + label;
+            TextButton btn = new TextButton(label, skin);
+            btn.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    dlg.hide();
+                    onSelect.onSelect(idx);
+                }
+            });
+            content.add(btn).width(dialogBtnWidth).height(btny).pad(3).row();
+        }
+        TextButton cancelBtn = new TextButton(z.cancel != null ? z.cancel : "Cancel", skin);
+        cancelBtn.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                dlg.hide();
+            }
+        });
+        content.add(cancelBtn).width(dialogBtnWidth).height(btny).pad(6).row();
+        dlg.setWidth(dialogBtnWidth);
+        Gdx.input.setInputProcessor(stage);
+        dlg.show(stage);
+    }
+
+    private void showBrushToolMenu() {
+        activetool = 4;
+        String title = (z.brush != null ? z.brush : "Brush") + " (" + brushsize + ")";
+        String[] labels = new String[] {
+                brushShapeLabel(BrushShape.SQUARE),
+                brushShapeLabel(BrushShape.CIRCLE),
+                brushShapeLabel(BrushShape.DIAMOND),
+                z.brushsizeoption != null ? z.brushsizeoption : "Brush size..."
+        };
+        int selected = brushShape.ordinal();
+        showDrawingToolMenu(title, labels, selected, new ToolMenuCallback() {
+            @Override
+            public void onSelect(int idx) {
+                if (idx == 0)
+                    brushShape = BrushShape.SQUARE;
+                else if (idx == 1)
+                    brushShape = BrushShape.CIRCLE;
+                else if (idx == 2)
+                    brushShape = BrushShape.DIAMOND;
+                else if (idx == 3)
+                    getNewTextInput(pBrushSize, z.tilesize + " [" + brushsize + "]", "",
+                            "1-32");
+            }
+        });
+    }
+
+    private void showSelectToolMenu() {
+        activetool = 3;
+        String[] labels = new String[] { z.picker, z.copy, z.move, z.flip, z.clone };
+        showDrawingToolMenu(z.select != null ? z.select : "Select", labels, movetool.ordinal(),
+                new ToolMenuCallback() {
+                    @Override
+                    public void onSelect(int idx) {
+                        switch (idx) {
+                            case 0:
+                                movetool = selectTool.PICKER;
+                                break;
+                            case 1:
+                                movetool = selectTool.COPY;
+                                break;
+                            case 2:
+                                movetool = selectTool.MOVE;
+                                break;
+                            case 3:
+                                movetool = selectTool.FLIP;
+                                break;
+                            case 4:
+                                movetool = selectTool.CLONE;
+                                break;
+                        }
+                    }
+                });
+    }
+
+    private void showShapeToolMenu() {
+        activetool = 0;
+        String[] labels = new String[] { z.rectangle, z.circle, z.line };
+        showDrawingToolMenu(z.rectangle, labels, currentShape.ordinal(),
+                new ToolMenuCallback() {
+                    @Override
+                    public void onSelect(int idx) {
+                        if (idx == 0)
+                            currentShape = ShapeTool.RECTANGLE;
+                        else if (idx == 1)
+                            currentShape = ShapeTool.CIRCLE;
+                        else if (idx == 2)
+                            currentShape = ShapeTool.LINE;
+                    }
+                });
+    }
+
+    private void showFillToolMenu() {
+        activetool = 2;
+        String[] labels = new String[] {
+                z.fill,
+                z.floodmap != null ? z.floodmap : "Flood map"
+        };
+        int selected = fillMode == FillMode.ENTIRE_MAP ? 1 : 0;
+        showDrawingToolMenu(z.fill, labels, selected, new ToolMenuCallback() {
+            @Override
+            public void onSelect(int idx) {
+                fillMode = idx == 1 ? FillMode.ENTIRE_MAP : FillMode.CONNECTED;
+            }
+        });
+    }
+
+    private void showRotationToolMenu() {
+        String[] labels = new String[] { "0", "90", "180", "270", "0*", "90*", "180*", "270*" };
+        showDrawingToolMenu(z.rotate != null ? z.rotate : "Rotate", labels, rotate,
+                new ToolMenuCallback() {
+                    @Override
+                    public void onSelect(int idx) {
+                        rotate = idx;
+                        updateRotationNameFromRotate();
+                    }
+                });
+    }
+
 
     private void stampBrushBetween(int fromNum, int toNum) {
         if (fromNum < 0 || toNum < 0)
@@ -26039,6 +26990,769 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             nyot.add(idx);
         }
         return nyot;
+    }
+
+    private boolean tilesetFirstgidsNeedRenumber() {
+        int next = 1;
+        for (int i = 0; i < tilesets.size(); i++) {
+            if (tilesets.get(i).getFirstgid() != next)
+                return true;
+            next += Math.max(1, tilesets.get(i).getTilecount());
+        }
+        return false;
+    }
+
+    private java.util.List<Integer> listObjectLayerIndices() {
+        java.util.List<Integer> indices = new ArrayList<Integer>();
+        for (int i = 0; i < layers.size(); i++) {
+            if (layers.get(i).getType() == layer.Type.OBJECT)
+                indices.add(i);
+        }
+        return indices;
+    }
+
+    private String objectLayerLabel(int layerIdx) {
+        layer lay = layers.get(layerIdx);
+        String name = lay.getName();
+        if (name == null || name.isEmpty())
+            name = z.objectgroup != null ? z.objectgroup : "Object Layer";
+        return name + "  [" + (layerIdx + 1) + "]";
+    }
+
+    private int countAllMapObjects() {
+        int count = 0;
+        for (int i = 0; i < layers.size(); i++) {
+            if (layers.get(i).getType() == layer.Type.OBJECT)
+                count += layers.get(i).getObjects().size();
+        }
+        return count;
+    }
+
+    private void ensureObjectListShell() {
+        if (objectListShellReady)
+            return;
+        objectListShellReady = true;
+
+        tObjectList = new Table();
+        tObjectList.setFillParent(true);
+        tObjectList.top();
+        tObjectList.defaults().padBottom(2);
+
+        String title = z.objectlist != null ? z.objectlist : "Object List";
+        tObjectList.add(new Label(title, skin)).padBottom(6).row();
+
+        fObjectListSearch = new TextField("", skin);
+        fObjectListSearch.setMessageText(
+                z.objectlistsearch != null ? z.objectlistsearch : "Search id, name, type, layer, properties...");
+        fObjectListSearch.setTextFieldListener(new TextField.TextFieldListener() {
+            @Override
+            public void keyTyped(TextField textField, char c) {
+                objectListSearchDebounce = 0.2f;
+            }
+        });
+        tObjectList.add(fObjectListSearch).width(btnx).height(btny).padBottom(4).row();
+
+        cbObjectListScopeActive = new CheckBox(
+                z.objectlistscopeactive != null ? z.objectlistscopeactive : "Active layer only", skin);
+        cbObjectListScopeActive.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                rebuildObjectListFilter();
+                rebuildObjectListRows();
+            }
+        });
+        tObjectList.add(cbObjectListScopeActive).left().padBottom(2).row();
+
+        sbObjectListTypeFilter = new SelectBox<String>(skin);
+        sbObjectListTypeFilter.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                rebuildObjectListFilter();
+                rebuildObjectListRows();
+            }
+        });
+        tObjectList.add(sbObjectListTypeFilter).width(btnx).height(btny).padBottom(4).row();
+
+        objectListRowTable = new Table();
+        objectListRowTable.top().left();
+        objectListScrollPane = new ScrollPane(objectListRowTable, skin);
+        objectListScrollPane.setFadeScrollBars(false);
+        objectListScrollPane.setScrollingDisabled(true, false);
+        tObjectList.add(objectListScrollPane).width(btnx).expandY().fillY().height(btny * 12).padBottom(4).row();
+
+        lObjectListTruncated = new Label("", skin);
+        lObjectListTruncated.setWrap(true);
+        lObjectListTruncated.setColor(1f, 0.85f, 0.3f, 1f);
+        tObjectList.add(lObjectListTruncated).width(btnx).left().padBottom(2).row();
+
+        lObjectListCount = new Label("", skin);
+        tObjectList.add(lObjectListCount).width(btnx).left().padBottom(4).row();
+
+        Table selRow = new Table();
+        TextButton btnSelAll = new TextButton(
+                z.objectlistselectall != null ? z.objectlistselectall : "Select All", skin);
+        TextButton btnSelNone = new TextButton(
+                z.objectlistselectnone != null ? z.objectlistselectnone : "Select None", skin);
+        btnSelAll.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                int limit = Math.min(objectListFilteredRefs.size(), OBJECT_LIST_MAX_ROWS);
+                for (int i = 0; i < limit; i++)
+                    objectListSelection.add(objectListFilteredRefs.get(i).object);
+                syncSelobjsFromObjectListSelection();
+                rebuildObjectListRows();
+            }
+        });
+        btnSelNone.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                objectListSelection.clear();
+                syncSelobjsFromObjectListSelection();
+                rebuildObjectListRows();
+            }
+        });
+        selRow.add(btnSelAll).width(btnx * 0.48f).height(btny).padRight(4);
+        selRow.add(btnSelNone).width(btnx * 0.48f).height(btny);
+        tObjectList.add(selRow).padBottom(4).row();
+
+        TextButton btnBulk = new TextButton(
+                z.objectlistbulkedit != null ? z.objectlistbulkedit : "Bulk Edit Properties", skin);
+        btnBulk.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                showObjectListBulkPropertyDialog();
+            }
+        });
+        tObjectList.add(btnBulk).width(btnx).height(btny).padBottom(2).row();
+
+        TextButton btnDelete = new TextButton(
+                z.objectlistdelete != null ? z.objectlistdelete : "Delete Selected", skin);
+        btnDelete.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                deleteObjectListSelection();
+            }
+        });
+        tObjectList.add(btnDelete).width(btnx).height(btny).padBottom(2).row();
+
+        TextButton btnBack = new TextButton(z.back, skin);
+        btnBack.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                syncSelobjsFromObjectListSelection();
+                backToMap();
+            }
+        });
+        tObjectList.add(btnBack).width(btnx).height(btny).row();
+    }
+
+    private void showObjectList() {
+        if (listObjectLayerIndices().isEmpty()) {
+            msgbox(z.objectlistnone != null ? z.objectlistnone : "No object layers on this map.");
+            return;
+        }
+        ensureObjectListShell();
+        initObjectListDefaults();
+        rebuildObjectListIndex();
+        rebuildObjectListTypeFilter();
+        rebuildObjectListFilter();
+        rebuildObjectListRows();
+        gotoStage(tObjectList);
+    }
+
+    private void initObjectListDefaults() {
+        int total = countAllMapObjects();
+        boolean activeIsObject = selLayer >= 0 && selLayer < layers.size()
+                && layers.get(selLayer).getType() == layer.Type.OBJECT;
+        cbObjectListScopeActive.setChecked(activeIsObject && total > OBJECT_LIST_ACTIVE_SCOPE_THRESHOLD);
+        fObjectListSearch.setText("");
+        objectListSelection.clear();
+        objectListSelection.addAll(selobjs);
+        objectListIconCache.clear();
+        objectListSearchDebounce = -1f;
+    }
+
+    private void rebuildObjectListIndex() {
+        objectListAllRefs.clear();
+        for (int li = 0; li < layers.size(); li++) {
+            layer lay = layers.get(li);
+            if (lay.getType() != layer.Type.OBJECT)
+                continue;
+            java.util.List<obj> objs = lay.getObjects();
+            for (int oi = 0; oi < objs.size(); oi++)
+                objectListAllRefs.add(new ObjectListRef(li, oi, objs.get(oi)));
+        }
+    }
+
+    private void rebuildObjectListTypeFilter() {
+        java.util.LinkedHashSet<String> types = new java.util.LinkedHashSet<String>();
+        String allLabel = z.objectlisttypeall != null ? z.objectlisttypeall : "All types";
+        types.add(allLabel);
+        for (int i = 0; i < objectListAllRefs.size(); i++) {
+            obj o = objectListAllRefs.get(i).object;
+            String t = o.getType();
+            if (t != null && !t.isEmpty())
+                types.add(t);
+        }
+        sbObjectListTypeFilter.setItems(types.toArray(new String[types.size()]));
+        sbObjectListTypeFilter.setSelectedIndex(0);
+    }
+
+    private boolean objectListRefMatchesSearch(ObjectListRef ref, String query) {
+        if (query == null || query.isEmpty())
+            return true;
+        String q = query.toLowerCase();
+        obj o = ref.object;
+        layer lay = layers.get(ref.layerIdx);
+        String layerName = lay.getName() != null ? lay.getName() : "";
+        if (Integer.toString(o.getId()).contains(q))
+            return true;
+        if (o.getName() != null && o.getName().toLowerCase().contains(q))
+            return true;
+        if (o.getType() != null && o.getType().toLowerCase().contains(q))
+            return true;
+        if (layerName.toLowerCase().contains(q))
+            return true;
+        if (o.getText() != null && o.getText().toLowerCase().contains(q))
+            return true;
+        for (int i = 0; i < o.getProperties().size(); i++) {
+            property p = o.getProperties().get(i);
+            if (p.getName() != null && p.getName().toLowerCase().contains(q))
+                return true;
+            if (p.getValue() != null && p.getValue().toLowerCase().contains(q))
+                return true;
+        }
+        return false;
+    }
+
+    private void rebuildObjectListFilter() {
+        objectListFilteredRefs.clear();
+        String query = fObjectListSearch.getText();
+        boolean activeOnly = cbObjectListScopeActive.isChecked();
+        String typeFilter = sbObjectListTypeFilter.getSelected();
+        String allTypes = z.objectlisttypeall != null ? z.objectlisttypeall : "All types";
+        for (int i = 0; i < objectListAllRefs.size(); i++) {
+            ObjectListRef ref = objectListAllRefs.get(i);
+            if (activeOnly && ref.layerIdx != selLayer)
+                continue;
+            if (typeFilter != null && !typeFilter.equals(allTypes)) {
+                String ot = ref.object.getType();
+                if (ot == null || !ot.equalsIgnoreCase(typeFilter))
+                    continue;
+            }
+            if (!objectListRefMatchesSearch(ref, query))
+                continue;
+            objectListFilteredRefs.add(ref);
+        }
+        updateObjectListCountLabel();
+    }
+
+    private void updateObjectListCountLabel() {
+        int shown = Math.min(objectListFilteredRefs.size(), OBJECT_LIST_MAX_ROWS);
+        String fmt = z.objectlistcount != null ? z.objectlistcount : "Showing %d / %d";
+        lObjectListCount.setText(String.format(fmt, shown, objectListFilteredRefs.size()));
+        if (objectListFilteredRefs.size() > OBJECT_LIST_MAX_ROWS) {
+            lObjectListTruncated.setText(z.objectlisttruncated != null ? z.objectlisttruncated
+                    : "Showing first 500 matches — refine search or narrow scope.");
+        } else {
+            lObjectListTruncated.setText("");
+        }
+    }
+
+    private TextureRegion getObjectListIcon(obj o) {
+        if (o.getGid() == 0)
+            return null;
+        long bare = stripTileGidFlags(o.getGid());
+        TextureRegion cached = objectListIconCache.get(bare);
+        if (cached != null)
+            return cached;
+        int kyut = resolveTilesetIndexForGid(o.getGid(), -1);
+        if (kyut < 0)
+            return null;
+        int localOx = (int) (bare - tilesets.get(kyut).getFirstgid());
+        int srcX = tilesets.get(kyut).getSrcX(localOx);
+        int srcY = tilesets.get(kyut).getSrcY(localOx);
+        int tw = tilesets.get(kyut).getTilewidth();
+        int th = tilesets.get(kyut).getTileheight();
+        TextureRegion region = new TextureRegion(tilesets.get(kyut).getTexture(), srcX, srcY, tw, th);
+        objectListIconCache.put(bare, region);
+        return region;
+    }
+
+    private String objectListPrimaryLabel(obj o) {
+        String name = o.getName();
+        if (name == null || name.isEmpty())
+            name = "(unnamed)";
+        return "[" + o.getId() + "] " + name;
+    }
+
+    private String objectListSecondaryLabel(ObjectListRef ref) {
+        layer lay = layers.get(ref.layerIdx);
+        String layerName = lay.getName();
+        if (layerName == null || layerName.isEmpty())
+            layerName = z.objectgroup != null ? z.objectgroup : "Object Layer";
+        String type = ref.object.getType();
+        if (type == null || type.isEmpty())
+            type = "-";
+        StringBuilder sb = new StringBuilder(layerName);
+        sb.append(" · ").append(type);
+        if (ref.object.getProperties().size() > 0) {
+            property p = ref.object.getProperties().get(0);
+            sb.append(" · ").append(p.getName()).append("=").append(p.getValue());
+        }
+        return sb.toString();
+    }
+
+    private void syncSelobjsFromObjectListSelection() {
+        selobjs.clear();
+        for (int i = 0; i < objectListAllRefs.size(); i++) {
+            obj o = objectListAllRefs.get(i).object;
+            if (objectListSelection.contains(o))
+                selobjs.add(o);
+        }
+        requestupdatemarker = true;
+    }
+
+    private void rebuildObjectListRows() {
+        updateObjectListCountLabel();
+        objectListRowTable.clear();
+        float rowH = btny * 1.6f;
+        float iconSz = Math.max(32f, btny * 1.2f);
+        int limit = Math.min(objectListFilteredRefs.size(), OBJECT_LIST_MAX_ROWS);
+        for (int i = 0; i < limit; i++) {
+            final ObjectListRef ref = objectListFilteredRefs.get(i);
+            final obj o = ref.object;
+            Table row = new Table();
+            row.left();
+
+            CheckBox cb = new CheckBox("", skin);
+            cb.setChecked(objectListSelection.contains(o));
+            cb.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    if (cb.isChecked())
+                        objectListSelection.add(o);
+                    else
+                        objectListSelection.remove(o);
+                    syncSelobjsFromObjectListSelection();
+                }
+            });
+            row.add(cb).width(btny).padRight(4);
+
+            TextureRegion iconRegion = getObjectListIcon(o);
+            Image icon = new Image();
+            if (iconRegion != null)
+                icon.setDrawable(new SpriteDrawable(new Sprite(iconRegion)));
+            else if (txTypeObject != null)
+                icon.setDrawable(new SpriteDrawable(new Sprite(txTypeObject)));
+            row.add(icon).size(iconSz, iconSz).padRight(6);
+
+            Table textCell = new Table();
+            textCell.left();
+            Label primary = new Label(objectListPrimaryLabel(o), skin);
+            primary.setAlignment(Align.left);
+            Label secondary = new Label(objectListSecondaryLabel(ref), skin);
+            secondary.setAlignment(Align.left);
+            secondary.setColor(0.75f, 0.75f, 0.75f, 1f);
+            textCell.add(primary).left().row();
+            textCell.add(secondary).left().width(btnx - iconSz - btny - 20);
+            row.add(textCell).expandX().fillX().left();
+
+            textCell.addListener(new ClickListener() {
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    boolean additive = sMultiSelect || Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)
+                            || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT)
+                            || Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT)
+                            || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT);
+                    jumpToObjectFromList(ref, additive);
+                }
+            });
+
+            objectListRowTable.add(row).width(btnx).height(rowH).left().padBottom(1).row();
+        }
+        objectListRowTable.layout();
+    }
+
+    private void jumpToObjectFromList(ObjectListRef ref, boolean additive) {
+        obj o = ref.object;
+        selLayer = ref.layerIdx;
+        if (llayerlist != null)
+            llayerlist.setSelectedIndex(selLayer);
+        if (!additive)
+            objectListSelection.clear();
+        objectListSelection.add(o);
+        syncSelobjsFromObjectListSelection();
+        float cx = o.getX() + Math.max(o.getW(), 1f) / 2f;
+        float cy = o.getYantingelag(Tsh) + Math.max(o.getH(), 1f) / 2f;
+        backToMap();
+        panTo(cx, cy, cam.zoom, 0.5f);
+        updateObjectCollision();
+    }
+
+    private void deleteObjectListSelection() {
+        if (objectListSelection.isEmpty())
+            return;
+        java.util.List<obj> toDelete = new ArrayList<obj>(objectListSelection);
+        for (obj o : toDelete) {
+            o.destroyBody(world);
+            for (int li = 0; li < layers.size(); li++) {
+                if (layers.get(li).getType() == layer.Type.OBJECT)
+                    layers.get(li).getObjects().remove(o);
+            }
+        }
+        objectListSelection.clear();
+        selobjs.clear();
+        oldobjdata.clear();
+        rebuildObjectListIndex();
+        rebuildObjectListTypeFilter();
+        rebuildObjectListFilter();
+        rebuildObjectListRows();
+        updateObjectCollision();
+        pushUpdateIfCollaborating();
+    }
+
+    private java.util.List<obj> getObjectListSelectedObjects() {
+        java.util.List<obj> out = new ArrayList<obj>();
+        for (obj o : objectListSelection)
+            out.add(o);
+        return out;
+    }
+
+    private void applyBulkObjectProperty(java.util.List<obj> targets, String propName, int action, String propType,
+            String propValue, boolean addIfMissing) {
+        if (propName == null || propName.trim().isEmpty())
+            return;
+        String name = propName.trim();
+        for (int ti = 0; ti < targets.size(); ti++) {
+            obj o = targets.get(ti);
+            java.util.List<property> props = o.getProperties();
+            property existing = null;
+            for (int pi = 0; pi < props.size(); pi++) {
+                if (props.get(pi).getName().equalsIgnoreCase(name)) {
+                    existing = props.get(pi);
+                    break;
+                }
+            }
+            if (action == 2) {
+                if (existing != null)
+                    props.remove(existing);
+                continue;
+            }
+            if (existing != null) {
+                existing.setValue(propValue);
+                if (propType != null && !propType.isEmpty())
+                    existing.setType(propType);
+            } else if (action == 0 || (action == 1 && addIfMissing)) {
+                String type = propType != null && !propType.isEmpty() ? propType : "String";
+                props.add(new property(name, type, propValue));
+            }
+        }
+    }
+
+    private void showObjectListBulkPropertyDialog() {
+        final java.util.List<obj> targets = getObjectListSelectedObjects();
+        if (targets.isEmpty()) {
+            msgbox("Select at least one object.");
+            return;
+        }
+
+        Gdx.input.setInputProcessor(stage);
+        final Dialog dlg = new Dialog("", skin, "dialog");
+        Table content = dlg.getContentTable();
+        float dialogBtnWidth = getDialogContentWidth();
+
+        String title = z.objectlistbulkedit != null ? z.objectlistbulkedit : "Bulk Edit Properties";
+        Label titleLabel = new Label(title + " (" + targets.size() + ")", skin);
+        titleLabel.setAlignment(Align.center);
+        content.add(titleLabel).width(dialogBtnWidth).pad(8).row();
+
+        content.add(new Label(z.name != null ? z.name : "Name", skin)).left().padBottom(2).row();
+        final TextField fName = new TextField("", skin);
+        content.add(fName).width(dialogBtnWidth).height(btny).padBottom(6).row();
+
+        content.add(new Label(z.type != null ? z.type : "Type", skin)).left().padBottom(2).row();
+        final SelectBox<String> sbType = new SelectBox<String>(skin);
+        sbType.setItems(new String[] { "String", "Integer", "Float", "Color", "Boolean", "File" });
+        content.add(sbType).width(dialogBtnWidth).height(btny).padBottom(6).row();
+
+        final SelectBox<String> sbAction = new SelectBox<String>(skin);
+        String setLbl = z.objectlistbulkset != null ? z.objectlistbulkset : "Set value";
+        String repLbl = z.objectlistbulkreplace != null ? z.objectlistbulkreplace : "Replace value";
+        String remLbl = z.objectlistbulkremove != null ? z.objectlistbulkremove : "Remove property";
+        sbAction.setItems(new String[] { setLbl, repLbl, remLbl });
+        content.add(sbAction).width(dialogBtnWidth).height(btny).padBottom(6).row();
+
+        content.add(new Label(z.value != null ? z.value : "Value", skin)).left().padBottom(2).row();
+        final TextField fValue = new TextField("", skin);
+        content.add(fValue).width(dialogBtnWidth).height(btny).padBottom(4).row();
+
+        final CheckBox cbAddMissing = new CheckBox(
+                z.objectlistbulkaddifmissing != null ? z.objectlistbulkaddifmissing : "Add if missing", skin);
+        cbAddMissing.setChecked(false);
+        content.add(cbAddMissing).left().padBottom(8).row();
+
+        TextButton btnApply = new TextButton(z.apply != null ? z.apply : "Apply", skin);
+        btnApply.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                String propName = fName.getText();
+                if (propName == null || propName.trim().isEmpty())
+                    return;
+                int action = sbAction.getSelectedIndex();
+                if (action < 0)
+                    action = 0;
+                String propType = sbType.getSelected();
+                String propValue = fValue.getText();
+                if (propType != null && propType.equals("Boolean") && (propValue == null || propValue.isEmpty()))
+                    propValue = "false";
+                dlg.hide();
+                applyBulkObjectProperty(targets, propName, action, propType, propValue, cbAddMissing.isChecked());
+                rebuildObjectListRows();
+                pushUpdateIfCollaborating();
+                status(z.saved != null ? z.saved : "Done", 2);
+            }
+        });
+        content.add(btnApply).width(dialogBtnWidth).height(btny).padBottom(4).row();
+
+        TextButton btnCancel = new TextButton(z.cancel, skin);
+        btnCancel.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                dlg.hide();
+            }
+        });
+        content.add(btnCancel).width(dialogBtnWidth).height(btny).row();
+
+        dlg.show(stage);
+        dlg.setWidth(dialogBtnWidth);
+    }
+
+    private void showFlattenObjectLayersDialog() {
+        final java.util.List<Integer> objectLayerIdxs = listObjectLayerIndices();
+        if (objectLayerIdxs.isEmpty()) {
+            msgbox(z.flattenobjectlayersnone != null ? z.flattenobjectlayersnone
+                    : "No object layers on this map.");
+            return;
+        }
+
+        Gdx.input.setInputProcessor(stage);
+        final Dialog dlg = new Dialog("", skin, "dialog");
+        Table content = dlg.getContentTable();
+        float dialogBtnWidth = getDialogContentWidth();
+
+        String title = z.flattenobjectlayers != null ? z.flattenobjectlayers : "Flatten Object Layers";
+        Label titleLabel = new Label(title, skin);
+        titleLabel.setAlignment(Align.center);
+        content.add(titleLabel).width(dialogBtnWidth).pad(8).row();
+
+        String hint = z.flattenobjectlayershint != null ? z.flattenobjectlayershint
+                : "Move objects from the selected layers into the destination layer.";
+        Label hintLabel = new Label(hint, skin);
+        hintLabel.setWrap(true);
+        hintLabel.setAlignment(Align.left);
+        content.add(hintLabel).width(dialogBtnWidth).padBottom(6).row();
+
+        Table layerTable = new Table();
+        layerTable.top().left();
+        layerTable.padLeft(8);
+        layerTable.defaults().left().align(Align.left).padBottom(2);
+        final java.util.List<CheckBox> checks = new ArrayList<CheckBox>();
+        for (int i = 0; i < objectLayerIdxs.size(); i++) {
+            int layerIdx = objectLayerIdxs.get(i);
+            CheckBox cb = new CheckBox(objectLayerLabel(layerIdx), skin);
+            cb.setChecked(true);
+            cb.setUserObject(layerIdx);
+            cb.align(Align.left);
+            cb.getLabel().setAlignment(Align.left);
+            checks.add(cb);
+            layerTable.add(cb).left().align(Align.left).row();
+        }
+        layerTable.setWidth(dialogBtnWidth);
+        layerTable.layout();
+        ScrollPane scroll = new ScrollPane(layerTable, skin);
+        scroll.setFadeScrollBars(false);
+        scroll.setScrollingDisabled(true, false);
+        float listH = Math.min(ssy * 0.35f, Math.max(btny * 4, objectLayerIdxs.size() * btny * 0.85f));
+        content.add(scroll).width(dialogBtnWidth).height(listH).padBottom(6).row();
+
+        Table toggleRow = new Table();
+        TextButton btnAll = new TextButton(z.selectall, skin);
+        TextButton btnNone = new TextButton(z.deselectall != null ? z.deselectall : "Select None", skin);
+        btnAll.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                for (int i = 0; i < checks.size(); i++)
+                    checks.get(i).setChecked(true);
+            }
+        });
+        btnNone.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                for (int i = 0; i < checks.size(); i++)
+                    checks.get(i).setChecked(false);
+            }
+        });
+        toggleRow.add(btnAll).width(dialogBtnWidth * 0.48f).height(btny).padRight(4);
+        toggleRow.add(btnNone).width(dialogBtnWidth * 0.48f).height(btny);
+        content.add(toggleRow).padBottom(8).row();
+
+        String destLabel = z.flattendestination != null ? z.flattendestination : "Destination layer";
+        content.add(new Label(destLabel, skin)).left().padBottom(4).row();
+
+        final SelectBox<String> sbDestination = new SelectBox<String>(skin);
+        String[] destItems = new String[objectLayerIdxs.size()];
+        int defaultDestPos = 0;
+        for (int i = 0; i < objectLayerIdxs.size(); i++) {
+            destItems[i] = objectLayerLabel(objectLayerIdxs.get(i));
+            if (objectLayerIdxs.get(i) == selLayer)
+                defaultDestPos = i;
+        }
+        sbDestination.setItems(destItems);
+        sbDestination.setSelectedIndex(defaultDestPos);
+        content.add(sbDestination).width(dialogBtnWidth).height(btny).padBottom(8).row();
+
+        final CheckBox cbDeleteSources = new CheckBox(
+                z.flattendeletesources != null ? z.flattendeletesources : "Delete flattened layers", skin);
+        cbDeleteSources.setChecked(false);
+        content.add(cbDeleteSources).left().padBottom(8).row();
+
+        TextButton btnFlatten = new TextButton(z.ok, skin);
+        btnFlatten.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                java.util.List<Integer> sourceLayerIdxs = new ArrayList<Integer>();
+                for (int i = 0; i < checks.size(); i++) {
+                    if (checks.get(i).isChecked())
+                        sourceLayerIdxs.add((Integer) checks.get(i).getUserObject());
+                }
+                if (sourceLayerIdxs.isEmpty()) {
+                    msgbox(z.flattenobjectlayersnonepicked != null ? z.flattenobjectlayersnonepicked
+                            : "Select at least one object layer to flatten.");
+                    return;
+                }
+                int destPos = sbDestination.getSelectedIndex();
+                if (destPos < 0 || destPos >= objectLayerIdxs.size())
+                    return;
+                int destLayerIdx = objectLayerIdxs.get(destPos);
+                dlg.hide();
+                runFlattenObjectLayers(destLayerIdx, sourceLayerIdxs, cbDeleteSources.isChecked());
+            }
+        });
+        content.add(btnFlatten).width(dialogBtnWidth).height(btny).padBottom(4).row();
+
+        TextButton btnCancel = new TextButton(z.cancel, skin);
+        btnCancel.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                dlg.hide();
+            }
+        });
+        content.add(btnCancel).width(dialogBtnWidth).height(btny).row();
+
+        dlg.show(stage);
+        dlg.setWidth(dialogBtnWidth);
+    }
+
+    private void runFlattenObjectLayers(int destLayerIdx, java.util.List<Integer> sourceLayerIdxs,
+            boolean deleteSources) {
+        if (destLayerIdx < 0 || destLayerIdx >= layers.size())
+            return;
+        if (layers.get(destLayerIdx).getType() != layer.Type.OBJECT)
+            return;
+
+        layer destLayer = layers.get(destLayerIdx);
+        java.util.Collections.sort(sourceLayerIdxs);
+
+        boolean movedAny = false;
+        for (int srcIdx : sourceLayerIdxs) {
+            if (srcIdx == destLayerIdx)
+                continue;
+            if (srcIdx < 0 || srcIdx >= layers.size())
+                continue;
+            layer srcLayer = layers.get(srcIdx);
+            if (srcLayer.getType() != layer.Type.OBJECT)
+                continue;
+            java.util.List<obj> srcObjects = srcLayer.getObjects();
+            if (!srcObjects.isEmpty()) {
+                destLayer.getObjects().addAll(srcObjects);
+                srcObjects.clear();
+                movedAny = true;
+            }
+        }
+
+        if (deleteSources) {
+            java.util.List<Integer> toRemove = new ArrayList<Integer>();
+            for (int srcIdx : sourceLayerIdxs) {
+                if (srcIdx != destLayerIdx)
+                    toRemove.add(srcIdx);
+            }
+            java.util.Collections.sort(toRemove, java.util.Collections.reverseOrder());
+            for (int idx : toRemove) {
+                if (idx >= 0 && idx < layers.size())
+                    layers.remove(idx);
+            }
+        }
+
+        selobjs.clear();
+        oldobjdata.clear();
+        selLayer = layers.indexOf(destLayer);
+        if (selLayer < 0)
+            clampSelLayerToSelectable();
+        ensureDefaultTileLayer();
+        clampSelLayerToSelectable();
+        refreshLayerList();
+        updateObjectCollision();
+        resetCaches();
+        pushUpdateIfCollaborating();
+        if (movedAny || deleteSources) {
+            status(z.flattenobjectlayersdone != null ? z.flattenobjectlayersdone : "Object layers flattened.", 2);
+        }
+        backToMap();
+    }
+
+    private void promptRenumberTilesetIds() {
+        if (tilesets.isEmpty()) {
+            msgbox("No tilesets on this map.");
+            return;
+        }
+        if (!tilesetFirstgidsNeedRenumber()) {
+            msgbox(z.renumbertilesetidsok != null ? z.renumbertilesetidsok : "Tileset IDs are already sequential.");
+            return;
+        }
+        Gdx.input.setInputProcessor(stage);
+        final Dialog confirmDlg = new Dialog(z.confirmation, skin, "dialog") {
+            @Override
+            protected void result(Object object) {
+                if (Boolean.TRUE.equals(object)) {
+                    runRenumberTilesetIds();
+                } else if (lastStage == ttools) {
+                    gotoStage(ttools);
+                }
+            }
+        };
+        float dialogW = getDialogContentWidth();
+        Label msgLabel = new Label(z.renumbertilesetidsconfirm != null ? z.renumbertilesetidsconfirm
+                : "Pack tileset firstgids sequentially (1, N+1, …) and remap layer tile GIDs to match.\n\n"
+                        + "Warning: Macro autotiles store fixed GID values and will not be updated — they may stop working.\n\n"
+                        + "Continue?", skin);
+        msgLabel.setWrap(true);
+        msgLabel.setAlignment(Align.center);
+        confirmDlg.getContentTable().add(msgLabel).width(dialogW).pad(12).row();
+        confirmDlg.button(z.yes, true);
+        confirmDlg.button(z.no, false);
+        confirmDlg.getButtonTable().defaults().height(btny).pad(4);
+        confirmDlg.show(stage);
+    }
+
+    private void runRenumberTilesetIds() {
+        renumberTilesetFirstgids();
+        refreshTsetList();
+        CacheAllTset();
+        resetCaches();
+        pushUpdateIfCollaborating();
+        status(z.saved != null ? z.saved : "Done", 2);
+        backToMap();
     }
 
     /** Pack tileset firstgids sequentially and remap layer GIDs when ranges shift. */
@@ -26763,11 +28477,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private boolean isMacroTerrainEditorMode() {
-        return tilePicker.equals("macroterraineditor");
+        return tilePicker.equals("macroterraineditor") || tilePicker.equals("newmacroterrain");
     }
 
     private boolean isMacroTerrainEditorPicker() {
         return kartu.equals("pickanim") && tilePicker.equals("macroterraineditor");
+    }
+
+    private boolean isMacroTerrainEditorOverlayVisible() {
+        return kartu.equals("pickanim") && isMacroTerrainEditorMode();
     }
 
     private boolean isActiveTerrainEditorPicker() {
@@ -26911,6 +28629,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         c.fromHsv(terrainEditorAnimPhase * 360f, 0.9f, 1f);
         c.a = 0.7f;
         return c;
+    }
+
+    private Color terrainEditorOtherTerrainColor() {
+        return new Color(0f, 0f, 0f, 0.5f);
     }
 
     private int gridIndexToGid(tileset ts, int gridIdx) {
@@ -27102,6 +28824,36 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
+    private void stampTerrainPattern(tileset ts, int anchorHcx, int anchorHcy, boolean[][] pattern, int terrainId) {
+        if (pattern == null || pattern.length == 0 || pattern[0].length == 0)
+            return;
+        int gridW = ts.getWidth() * 2;
+        int gridH = ts.getHeight() * 2;
+        int h = pattern.length;
+        int w = pattern[0].length;
+        int endHcx = anchorHcx + w - 1;
+        int endHcy = anchorHcy + h - 1;
+        if (anchorHcx < 0 || anchorHcy < 0 || endHcx >= gridW || endHcy >= gridH)
+            return;
+        java.util.ArrayList<Integer> cells = new java.util.ArrayList<Integer>();
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                if (pattern[y][x])
+                    cells.add((anchorHcy + y) * gridW + (anchorHcx + x));
+            }
+        }
+        if (cells.isEmpty())
+            return;
+        boolean erase = true;
+        for (int idx : cells) {
+            if (getTerrainHalfCellValue(ts, idx) != terrainId)
+                erase = false;
+        }
+        int setId = erase ? -1 : terrainId;
+        for (int idx : cells)
+            setTerrainHalfCell(ts, idx, setId);
+    }
+
     private String terrainShapeLabel() {
         switch (terrainBrushShape) {
             case TE_SHAPE_2X2:
@@ -27116,6 +28868,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 return z.teshape4x4cornerrev != null ? z.teshape4x4cornerrev : "4x4 !C";
             case TE_SHAPE_6X6:
                 return z.teshape6x6 != null ? z.teshape6x6 : "6x6";
+            case TE_SHAPE_6X6_CORNER:
+                return z.teshape6x6corner != null ? z.teshape6x6corner : "6x6 C";
+            case TE_SHAPE_6X6_INNER_CORNER:
+                return z.teshape6x6innercorner != null ? z.teshape6x6innercorner : "6x6 iC";
             default:
                 return z.teshape1x1 != null ? z.teshape1x1 : "1x1";
         }
@@ -27137,6 +28893,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         addTerrainShapeRow(z.teshape4x4corner != null ? z.teshape4x4corner : "4x4 (corner)", TE_SHAPE_4X4_CORNER);
         addTerrainShapeRow(z.teshape4x4cornerrev != null ? z.teshape4x4cornerrev : "4x4 (corner rev)", TE_SHAPE_4X4_CORNER_REV);
         addTerrainShapeRow(z.teshape6x6 != null ? z.teshape6x6 : "6x6", TE_SHAPE_6X6);
+        addTerrainShapeRow(z.teshape6x6corner != null ? z.teshape6x6corner : "6x6 (corner)", TE_SHAPE_6X6_CORNER);
+        addTerrainShapeRow(z.teshape6x6innercorner != null ? z.teshape6x6innercorner : "6x6 (inner corner)",
+                TE_SHAPE_6X6_INNER_CORNER);
         TextButton back = new TextButton(z.back, skin);
         back.addListener(new ChangeListener() {
             @Override
@@ -27230,6 +28989,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (x == 0 || x == 5 || y == 0 || y == 5)
                             terrainIconCell(pm, cellPx, x, y);
                 break;
+            case TE_SHAPE_6X6_CORNER:
+                terrainIconCell(pm, cellPx, 0, 0);
+                terrainIconCell(pm, cellPx, 5, 0);
+                terrainIconCell(pm, cellPx, 0, 5);
+                terrainIconCell(pm, cellPx, 5, 5);
+                break;
+            case TE_SHAPE_6X6_INNER_CORNER:
+                for (int y = 0; y < 6; y++)
+                    for (int x = 0; x < 6; x++)
+                        if (TE_PATTERN_6X6_INNER_CORNER[y][x])
+                            terrainIconCell(pm, cellPx, x, y);
+                break;
             default:
                 terrainIconCell(pm, cellPx, 0, 0);
                 break;
@@ -27260,7 +29031,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void pushTerrainUndo(tileset ts) {
-        if (isMacroTerrainEditorPicker()) {
+        if (isMacroTerrainEditorMode()) {
             MacroTerrainStore snap = new MacroTerrainStore();
             snap.fromData(macroTerrain.toData());
             macroTerrainUndoStack.add(snap);
@@ -27446,10 +29217,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             case TE_SHAPE_6X6:
                 stampTerrainHollowCornerBox(ts, anchorHcx, anchorHcy, 6, terrainId);
                 break;
+            case TE_SHAPE_6X6_CORNER:
+                stampTerrainCornersOnlyBox(ts, anchorHcx, anchorHcy, 6, terrainId);
+                break;
+            case TE_SHAPE_6X6_INNER_CORNER:
+                stampTerrainPattern(ts, anchorHcx, anchorHcy, TE_PATTERN_6X6_INNER_CORNER, terrainId);
+                break;
             default:
                 toggleTerrainHalfCell(ts, halfIdx, terrainId);
                 break;
         }
+        if (isMacroTerrainEditorPicker())
+            saveMacroAutoTerrain();
     }
 
     private void beginTerrainPaintAt(float screenX, float screenY) {
@@ -27890,6 +29669,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "sw4":
                     case "sw5":
                     case "sw6":
+                    case "newmacroterrain":
                         if (tapped(touch2, gui.tilesetsright)) {
                             seltset += 1;
                             if (seltset >= tilesets.size()) {
@@ -27988,7 +29768,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (kartu == "tile" || tilePicker == "newimgobj" || tilePicker == "props" || tilePicker == "rnda"
                     || tilePicker == "rndb" || tilePicker == "repa" || tilePicker == "repb" || tilePicker == "gena"
                     || tilePicker == "genb" || tilePicker == "sw1" || tilePicker == "sw2" || tilePicker == "sw3"
-                    || tilePicker == "sw4" || tilePicker == "sw5" || tilePicker == "sw6") {
+                    || tilePicker == "sw4" || tilePicker == "sw5" || tilePicker == "sw6"
+                    || tilePicker == "newmacroterrain") {
                 seltset = this.seltset;
             } else {
                 seltset = this.selTsetID;
@@ -28355,8 +30136,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         Gdx.input.setInputProcessor(im);
                         return true;
                     case "newmacroterrain":
-                        newMacroTerrainGid = num;
-                        tilePicker = "macroterraineditor";
+                        newMacroTerrainGid = (int) stripTileGidFlags(num);
                         getNewTextInput(pNewMacroTerrain, "New Terrain Name", "", "");
                         kartu = "pickanim";
                         Gdx.input.setInputProcessor(im);
@@ -28894,6 +30674,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             }
 
+            java.util.Set<Integer> usedObjectIds = new java.util.HashSet<Integer>();
+            collectUsedObjectIds(usedObjectIds);
             for (obj o : copiedList) {
                 obj pasted = new obj();
                 pasted.setGid(o.getGid());
@@ -28906,8 +30688,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 pasted.setShape(o.getShape());
                 pasted.setType(o.getType());
                 pasted.setText(o.getText());
-                pasted.setId(curid);
-                curid += 1;
+                pasted.setId(takeNextObjectId(usedObjectIds));
 
                 float offsetX = o.getX() - originX;
                 float offsetY = o.getY() - originY;
@@ -28924,6 +30705,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         int targetW = defaultObjW > 0 ? defaultObjW : Tsw;
         int targetH = defaultObjH > 0 ? defaultObjH : Tsh;
+        int newObjectId = allocateObjectId();
 
         if (magnet == 1) {
             switch (activeobjtool) {
@@ -28948,7 +30730,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                             // create new obj.
                             if (activeobjtoolmode == 0) {
-                                nyok = new obj(curid, (int) (numa % Tw) * Tsh, (int) (numa / Tw) * Tsh, targetW, targetH, "",
+                                nyok = new obj(newObjectId, (int) (numa % Tw) * Tsh, (int) (numa / Tw) * Tsh, targetW, targetH, "",
                                         "", world);
                                 nyok.setShape(shapeNameX);
                                 nyok.updateVertices(world, Tsh);
@@ -28961,7 +30743,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             dd = targetH;
 
                         if (activeobjtoolmode == 0) {
-                            nyok = new obj(curid, (int) (ae / Tsw) * Tsw, (int) ((-ab + Tsh) / Tsh) * Tsh + dd, targetW,
+                            nyok = new obj(newObjectId, (int) (ae / Tsw) * Tsw, (int) ((-ab + Tsh) / Tsh) * Tsh + dd, targetW,
                                     targetH, "", "", world);
                             nyok.setShape(shapeNameX);
                             nyok.updateVertices(world, Tsh);
@@ -28970,7 +30752,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                     break;
                 case 2:
-                    nyok = new obj(curid, (int) (ae / Tsw) * Tsw + (Tsw / 2),
+                    nyok = new obj(newObjectId, (int) (ae / Tsw) * Tsw + (Tsw / 2),
                             (int) ((-ab + Tsh) / Tsh) * Tsh - Tsh / 2 + Tsh, Tsw, Tsh, "", "", world);
                     nyok.setShape(shapeNameX);
                     nyok.updateVertices(world, Tsh);
@@ -28978,7 +30760,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     break;
                 case 3:
                 case 4:
-                    nyok = new obj(curid, (int) (ae / Tsw) * Tsw, (int) ((-ab + Tsh) / Tsh) * Tsh, Tsw, Tsh, "", "",
+                    nyok = new obj(newObjectId, (int) (ae / Tsw) * Tsw, (int) ((-ab + Tsh) / Tsh) * Tsh, Tsw, Tsh, "", "",
                             world);
                     nyok.setShape(shapeNameX);
 
@@ -28992,14 +30774,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 case 1:
                 case 5:
                 case 6:
-                    nyok = new obj(curid, (int) (ae - targetW / 2f), (int) (-ab + targetH * 0.5f), targetW, targetH, "", "", world);
+                    nyok = new obj(newObjectId, (int) (ae - targetW / 2f), (int) (-ab + targetH * 0.5f), targetW, targetH, "", "", world);
                     nyok.setShape(shapeNameX);
                     nyok.updateVertices(world, Tsh);
                     break;
                 case 2:
                 case 3:
                 case 4:
-                    nyok = new obj(curid, (int) (ae), (int) (-ab + Tsh), Tsw, Tsh, "", "", world);
+                    nyok = new obj(newObjectId, (int) (ae), (int) (-ab + Tsh), Tsw, Tsh, "", "", world);
                     nyok.setShape(shapeNameX);
                     nyok.updateVertices(world, Tsh);
                     break;
@@ -29007,8 +30789,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         }
         layers.get(selLayer).getObjects().add(nyok);
-
-        curid += 1;
 
         switch (activeobjtool) {
 
@@ -29302,11 +31082,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     break;
 
                 case 2: // fill
-                    if (roll)
-                        activetool = 0;
-                    Long from = layers.get(selLayer).getStr().get(num);
-                    // updateTileData(selLayer,num,oi,curtset);
-                    fillthis(num, oi, from, 0);
+                    cue("tileclick");
+                    if (fillMode == FillMode.ENTIRE_MAP) {
+                        fillEntireLayer(selLayer, oi);
+                    } else {
+                        Long fillSource = layers.get(selLayer).getStr().get(num);
+                        fillthis(num, oi, fillSource, 0);
+                    }
                     break;
                 case 3: // paste, at last.
                     if (movetool == selectTool.PICKER) {
@@ -29344,7 +31126,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     int orinyum = mapstartSelect + xx + (yy * Tw);
 
                                     // the previous data for undo
-                                    from = layers.get(clipsource).getStr().get(orinyum);
+                                    long clipTile = layers.get(clipsource).getStr().get(orinyum);
                                     int tzet = layers.get(clipsource).getTset().get(orinyum);
 
                                     if (movetool == selectTool.MOVE) {
@@ -29357,7 +31139,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                             newmapstartselect = nyum;
                                         newmapendselect = nyum;
 
-                                        updateTileData(clipsource, nyum, from, tzet);
+                                        updateTileData(clipsource, nyum, clipTile, tzet);
                                         followe = true;
 
                                     }
@@ -32005,6 +33787,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     } else { // Info
                         showPropBox2D(selobjs.get(0));
                     }
+                } else if (activeobjtool != 7 && activeobjtool != 8) {
+                    showObjectList();
                 }
                 return true;
             }
@@ -33070,64 +34854,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void promptMapScreenshotExport() {
-        getNewTextInput(pScreenshotSize, z.screenshot, "400x400", "WxH (e.g. 400x400)");
-    }
-
-    private void fitCameraForMapScreenshot() {
-        int onset = 0;
-        if (orientation.equalsIgnoreCase("isometric")) {
-            onset = Tsw * Tw / 2;
-        }
-        cam.position.set(Tsw * Tw / 2f - onset, -Tsh * Th / 2f, 0);
-        float fitZoom = Math.max((Tw * Tsw) / cam.viewportWidth, (Th * Tsh) / cam.viewportHeight) * 1.05f;
-        cam.zoom = Math.min(fitZoom, maxWorldZoomOut());
-        cam.update();
-    }
-
-    private void exportMapScreenshot(final int exportW, final int exportH) {
-        if (curfile == null || curfile.isEmpty()) {
-            msgbox(z.saveas != null ? z.saveas : "Save the map first.");
-            return;
-        }
-        screenshotCamX = cam.position.x;
-        screenshotCamY = cam.position.y;
-        screenshotCamZoom = cam.zoom;
-        fitCameraForMapScreenshot();
-        takingss = true;
-        com.badlogic.gdx.utils.Timer.schedule(new com.badlogic.gdx.utils.Timer.Task() {
-            @Override
-            public void run() {
-                screenshot(exportW, exportH);
-                cam.position.set(screenshotCamX, screenshotCamY, 0);
-                cam.zoom = screenshotCamZoom;
-                cam.update();
-                takingss = false;
-            }
-        }, 0.2f);
-    }
-
-    private void screenshot(int exportW, int exportH) {
-        int ax = 1, ay = Tsh, az = 0;
-        int bx = Tw * Tsw, by = Th * Tsh + Tsh - 1, bz = 0;
-        Vector3 va = new Vector3(ax, ay, az);
-        Vector3 vb = new Vector3(bx, by, bz);
-        Vector3 upva = cam.project(va);
-        Vector3 upvb = cam.project(vb);
-
-        FileHandle fh = Gdx.files.absolute(curdir + "/" + curfile.substring(0, curfile.length() - 4) + "_map.png");
-        int capW = (int) (upvb.x - upva.x);
-        int capH = (int) (upvb.y - upva.y);
-        Pixmap data = getScreenshot((int) upva.x, (int) upva.y - capH, capW, capH, true);
-        Pixmap out = data;
-        if (exportW > 0 && exportH > 0
-                && (data.getWidth() != exportW || data.getHeight() != exportH)) {
-            out = resizepixmap(data, exportW, exportH);
-        }
-        PixmapIO.writePNG(fh, out);
-        if (out != data)
-            data.dispose();
-
-        status(z.screenshotsaved, 2);
+        previewMapCover();
     }
 
     public Pixmap resizepixmap(Pixmap pixmap200, int w, int h) {
@@ -34018,10 +35745,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     resetCaches();
                     return true;
                 }
-                if (tapped(touch2, gui.tool2) || tapped(touch2, gui.tool3)) {
-                    // getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1),
-                    // "");
-                    // do nothing, just to prevent longpressing.
+                if (tapped(touch2, gui.tool2)) {
+                    // eraser: no long-press menu
                     return true;
                 }
                 if (tapped(touch2, gui.mode)) { // actually add new layer...
@@ -34068,91 +35793,28 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 int ae = (int) touch.x;
                 int ab = (int) touch.y;
                 if (tapped(touch2, gui.tool5)) {
-                    // kucrut
-                    getNewTextInput(pBrushSize, z.tilesize + " [" + brushsize + "]", "", "1-10");
-
-                    activetool = 4;
+                    showBrushToolMenu();
                     return true;
                 }
 
-                // switch between copy tool and move tool
                 if (tapped(touch2, gui.tool4)) {
-                    switch (movetool) {
-                        case PICKER:
-                            movetool = selectTool.COPY;
-                            break;
-                        case COPY:
-                            movetool = selectTool.MOVE;
-                            break;
-                        case MOVE:
-                            movetool = selectTool.FLIP;
-                            break;
-                        case FLIP:
-                            movetool = selectTool.CLONE;
-                            break;
-                        case CLONE:
-                            movetool = selectTool.PICKER;
-                            break;
-                    }
-                    activetool = 3;
+                    showSelectToolMenu();
                     return true;
                 }
 
-                // switch between tool shape
+                if (tapped(touch2, gui.tool3)) {
+                    showFillToolMenu();
+                    return true;
+                }
+
                 if (tapped(touch2, gui.tool1)) {
-                    switch (currentShape) {
-                        case RECTANGLE:
-                            currentShape = ShapeTool.CIRCLE;
-                            break;
-                        case CIRCLE:
-                            currentShape = ShapeTool.LINE;
-                            break;
-                        case LINE:
-                            currentShape = ShapeTool.RECTANGLE;
-                            break;
-                    }
-                    activetool = 0;
+                    showShapeToolMenu();
                     return true;
                 }
 
                 if (tapped(touch2, gui.rotation)) {
-                    if (mode == "tile") {
-
-                        rotate -= 1;
-                        if (rotate == -1) {
-                            rotate = 7;
-                        }
-                        String nfo = "0";
-                        switch (rotate) {
-                            case 0:
-                                nfo = "0";
-                                break;
-                            case 1:
-                                nfo = "90";
-                                break;
-                            case 2:
-                                nfo = "180";
-                                break;
-                            case 3:
-                                nfo = "270";
-                                break;
-                            case 4:
-                                nfo = "0*";
-                                break;
-                            case 5:
-                                nfo = "90*";
-                                break;
-                            case 6:
-                                nfo = "180*";
-                                break;
-                            case 7:
-                                nfo = "270*";
-                                break;
-                        }
-                        rotationName = nfo;
-                        return true;
-                    }
-
+                    showRotationToolMenu();
+                    return true;
                 }
 
                 if (tapped(touch2, gui.picker)) {
@@ -34165,10 +35827,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (tilesets.size() == 0 && !replaceRangePicking)
                     return true;
 
-                // active tool 0-4 (rectangle 0 , eraser 1, ..... 2, copy paste 3, brush 4
-                // longpressing fill makes no sense, that is why just change it to brush.
                 if (!replaceRangePicking && activetool == 2)
-                    activetool = 4;
+                    return true;
 
                 // the main idea of longpressing is just this line.
                 roll = true;
@@ -34221,53 +35881,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     return true;
                 }
 
-                // code for brush, so basically draw around
                 if (activetool == 4) {
-                    tapTile(mapstartSelect, false, false, false, curspr);
-                    int num = mapstartSelect;
-                    for (int bx = 0; bx < brushsize; bx++) {
-                        for (int by = 0; by < brushsize; by++) {
-                            // celor2
-                            int curx = num % Tw;
-                            int cury = num / Tw;
-                            int locx = curx - brushsize / 2 + bx;
-                            int locy = cury - brushsize / 2 + by;
-                            // Gdx.app.log( "", cury + "/" + curx + "/" + locy + "/" + locx );
-                            if (locx < 0)
-                                continue;
-                            if (locy < 0)
-                                continue;
-                            if (locx >= Tw)
-                                continue;
-                            if (locy >= Th)
-                                continue;
-                            boolean terrar = false;
-
-                            // this code halves the needed taptile with terrain true.
-                            if (bx == 0 && by == 0)
-                                terrar = true;
-                            if (bx == brushsize - 1 && by == 0)
-                                terrar = true;
-                            if (bx == brushsize - 1 && by == brushsize - 1)
-                                terrar = true;
-                            if (by == brushsize - 1 && bx == 0)
-                                terrar = true;
-                            if (bx == 0 && by % 2 == 0)
-                                terrar = true;
-                            if (by == 0 && bx % 2 == 0)
-                                terrar = true;
-                            if (bx == brushsize - 1 && by % 2 == 0)
-                                terrar = true;
-                            if (by == brushsize - 1 && bx % 2 == 0)
-                                terrar = true;
-
-                            final boolean ft = terrar;
-                            // log(ft+"");
-                            // if (!ft) continue;
-
-                            tapTile(locy * Tw + locx, true, terrar, false, curspr);
-                        }
-                    }
+                    stampBrushAt(mapstartSelect);
                 }
 
                 // code for the rest, so basically longpressing is just flagging "roll"
@@ -35532,6 +37147,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (terrainPainting && isActiveTerrainEditorPicker()) {
             terrainPainting = false;
             lastTerrainPaintCell = -1;
+            if (isMacroTerrainEditorPicker())
+                saveMacroAutoTerrain();
         }
         terrainHoldPending = false;
 
