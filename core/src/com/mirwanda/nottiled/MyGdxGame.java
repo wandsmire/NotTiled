@@ -651,7 +651,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     enum FillMode {
-        CONNECTED, ENTIRE_MAP
+        CONNECTED, ENTIRE_MAP, EDGES
     }
 
     ShapeTool currentShape = ShapeTool.RECTANGLE;
@@ -718,6 +718,40 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         int fromTile;
         int toTile;
     }
+
+    private static final class EdgeFillPaintPlan {
+        int num;
+        long gid;
+        int tset;
+        int label;
+        int role = -1;
+    }
+
+    private static final class EdgeFillJob {
+        enum Phase {
+            IDLE, PREVIEW, PAINT, REVERSE
+        }
+
+        Phase phase = Phase.IDLE;
+        java.util.HashSet<Integer> region;
+        java.util.HashSet<Integer> inside;
+        java.util.HashMap<Integer, Integer> labels;
+        EdgePackRect currentRect;
+        java.util.HashSet<Integer> previewShell;
+        java.util.HashSet<Integer> previewSources;
+        java.util.ArrayList<EdgeFillPaintPlan> paintQueue;
+        int paintIndex;
+        int shellIndex;
+        float phaseTimer;
+        int fillTset = -1;
+        int[] fillTerrain = null;
+        boolean fillUsesMacroTerrain = false;
+        tile fillCenter = null;
+    }
+
+    private EdgeFillJob edgeFillJob = null;
+    private static final float EDGE_FILL_PREVIEW_SEC = 0.25f;
+    private static final int EDGE_FILL_PAINT_BATCH = 200;
     private String language;
     private boolean landscape;
     private int redux;
@@ -1706,6 +1740,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         }
 
+        tickEdgeFillJob(delta);
+
         if (movepointer > 0)
             movepointer -= delta;
         if (movepointer <= 0 && movepointer != -1) {
@@ -2575,7 +2611,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     backToMap();
                     break;
                 case "pickanim":
-                    if (tilePicker == "newterrain") {
+                    if (tilePicker == "newterrain" || tilePicker == "newmacroterrain") {
                         resumeTerrainEditor();
                     } else if (tilePicker == "terraineditor") {
                         lastStage = null;
@@ -3741,6 +3777,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             if (activetool == 4)
                 drawBrushPreview();
+
+            if (activetool == 2 && fillMode == FillMode.EDGES)
+                drawEdgeFillPreview();
 
             Gdx.gl20.glLineWidth(1);// average
             sr.setColor(0, 0, 0, gridOpacity / 10f);
@@ -7217,7 +7256,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     uidrawbutton(txeraser, z.eraser, gui.tool2, 3);
                     uidrawbutton(txfill, fillMode == FillMode.ENTIRE_MAP
                             ? (z.floodmap != null ? z.floodmap : "Flood map")
-                            : z.fill, gui.tool3, 3);
+                            : fillMode == FillMode.EDGES
+                                    ? (z.filledge != null ? z.filledge : "Edges")
+                                    : z.fill, gui.tool3, 3);
                     switch (movetool) {
                         case PICKER:
                             uidrawbutton(txpicker, z.picker, gui.tool4, 3);
@@ -11421,18 +11462,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (pm == null || Tw <= 0 || Th <= 0)
             return;
         float cellPx = (float) pm.getWidth() / Tw;
-        int tz = Math.max(Tw, Th);
         int teamDraw = Math.max(12, Math.round(pm.getWidth() / 6f * 0.9f));
         int poolDraw = Math.max(7, Math.round(pm.getWidth() / 12f * 0.9f));
-        float teamOffPx = (tz / 12f) * cellPx;
-        float poolOffPx = (tz / 20f) * cellPx;
 
         ensureMapCoverBadgesPixmap();
         java.util.List<MapCoverPoint> pools = collectRWResPools();
         for (int i = 0; i < pools.size(); i++) {
             MapCoverPoint pt = pools.get(i);
-            int cx = Math.round((pt.tileX + 0.5f) * cellPx - poolOffPx);
-            int cy = Math.round((pt.tileY + 0.5f) * cellPx - poolOffPx);
+            int cx = Math.round((pt.tileX + 0.5f) * cellPx);
+            int cy = Math.round((pt.tileY + 0.5f) * cellPx);
             int destX = cx - poolDraw / 2;
             int destY = cy - poolDraw / 2;
             int[] spr = mapCoverBadgeSpriteCoords(MAP_COVER_BADGE_POOL_INDEX);
@@ -11444,8 +11482,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         java.util.List<MapCoverTeamMarker> teams = collectRWCommandCenters();
         for (int i = 0; i < teams.size(); i++) {
             MapCoverTeamMarker m = teams.get(i);
-            int cx = Math.round((m.tileX + 0.5f) * cellPx - teamOffPx);
-            int cy = Math.round((m.tileY + 0.5f) * cellPx - teamOffPx);
+            int cx = Math.round((m.tileX + 0.5f) * cellPx);
+            int cy = Math.round((m.tileY + 0.5f) * cellPx);
             int destX = cx - teamDraw / 2;
             int destY = cy - teamDraw / 2;
             if (m.team >= 0 && m.team <= MAP_COVER_BADGE_MAX_TEAM) {
@@ -19488,7 +19526,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         stage.clear();
         Gdx.input.setInputProcessor(im);
         kartu = "pickanim";
-        if (isMacroTerrainEditorPicker())
+        if (isMacroTerrainEditorMode())
             tilePicker = "macroterraineditor";
         else
             tilePicker = "terraineditor";
@@ -26729,6 +26767,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return -1;
     }
 
+    private boolean isTerrainBrushPaintMode() {
+        return curpickAuto || pickAuto || isMacroTerrainPaintMode();
+    }
+
     private void paintBrushUnpaintedAt(int centerNum, long oi, long bareLocalGid, int brushTileIdx) {
         forEachBrushCell(centerNum, new BrushCellHandler() {
             @Override
@@ -26742,7 +26784,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void applyBrushCell(int num, long oi, long bareLocalGid, boolean terra, int brushTileIdx) {
         trackBrushPreviewCell(num);
-        if (!curpickAuto && !isMacroTerrainPaintMode()) {
+        if (!isTerrainBrushPaintMode()) {
             updateTileData(selLayer, num, oi, curtset, brushTileIdx);
             return;
         }
@@ -26859,6 +26901,1089 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         pushUpdateIfCollaborating();
     }
 
+    private java.util.HashSet<Integer> collectConnectedRegion(int seed, long matchGid) {
+        java.util.HashSet<Integer> region = new java.util.HashSet<Integer>();
+        if (seed < 0 || seed >= Tw * Th)
+            return region;
+        if (layers.get(selLayer).getStr().get(seed) != matchGid)
+            return region;
+        java.util.ArrayDeque<Integer> queue = new java.util.ArrayDeque<Integer>();
+        queue.add(seed);
+        region.add(seed);
+        while (!queue.isEmpty()) {
+            int num = queue.removeFirst();
+            int[] neighbors = new int[] { num - Tw, num + Tw, num - 1, num + 1 };
+            for (int n = 0; n < neighbors.length; n++) {
+                int next = neighbors[n];
+                if (next < 0 || next >= Tw * Th)
+                    continue;
+                if (n == 2 && num % Tw == 0)
+                    continue;
+                if (n == 3 && num % Tw == Tw - 1)
+                    continue;
+                if (region.contains(next))
+                    continue;
+                if (layers.get(selLayer).getStr().get(next) != matchGid)
+                    continue;
+                region.add(next);
+                queue.add(next);
+            }
+        }
+        return region;
+    }
+
+    private static final int PACK_CORNER = 0;
+    private static final int PACK_EDGE = 1;
+    private static final int PACK_REVERSE = 2;
+    private static final int PACK_MIN_RECT = 2;
+    private static final int BF_CORNER_TL = 0;
+    private static final int BF_CORNER_TR = 1;
+    private static final int BF_CORNER_BL = 2;
+    private static final int BF_CORNER_BR = 3;
+    private static final int BF_EDGE_TOP = 4;
+    private static final int BF_EDGE_BOTTOM = 5;
+    private static final int BF_EDGE_LEFT = 6;
+    private static final int BF_EDGE_RIGHT = 7;
+
+    private static final class EdgePackRect {
+        int y;
+        int x;
+        int w;
+        int h;
+
+        int area() {
+            return w * h;
+        }
+    }
+
+    private static final class EdgeFillSample {
+        long gid;
+        int tset;
+    }
+
+    private boolean isValidOrthoNeighbor(int num, int dir, int next) {
+        if (next < 0 || next >= Tw * Th)
+            return false;
+        if (dir == 2 && num % Tw == 0)
+            return false;
+        if (dir == 3 && num % Tw == Tw - 1)
+            return false;
+        return true;
+    }
+
+    private EdgeFillSample edgeFillSampleAt(int num) {
+        EdgeFillSample src = new EdgeFillSample();
+        src.gid = layers.get(selLayer).getStr().get(num);
+        src.tset = layers.get(selLayer).getTset().get(num);
+        return src;
+    }
+
+    private int[] diagonalNeighbors(int num) {
+        int x = num % Tw;
+        java.util.ArrayList<Integer> diags = new java.util.ArrayList<Integer>(4);
+        if (num >= Tw && x > 0)
+            diags.add(num - Tw - 1);
+        if (num >= Tw && x < Tw - 1)
+            diags.add(num - Tw + 1);
+        if (num < Tw * (Th - 1) && x > 0)
+            diags.add(num + Tw - 1);
+        if (num < Tw * (Th - 1) && x < Tw - 1)
+            diags.add(num + Tw + 1);
+        int[] out = new int[diags.size()];
+        for (int i = 0; i < diags.size(); i++)
+            out[i] = diags.get(i);
+        return out;
+    }
+
+    private boolean isOutsideRegion(int num, java.util.HashSet<Integer> region) {
+        if (num < 0 || num >= Tw * Th)
+            return true;
+        return !region.contains(num);
+    }
+
+    private EdgePackRect largestRectInHistogram(int[] heights, int bottomRow) {
+        java.util.ArrayDeque<Integer> stack = new java.util.ArrayDeque<Integer>();
+        int bestArea = 0;
+        EdgePackRect best = null;
+        for (int i = 0; i <= heights.length; i++) {
+            int h = i < heights.length ? heights[i] : 0;
+            while (!stack.isEmpty() && h < heights[stack.peekLast()]) {
+                int height = heights[stack.removeLast()];
+                int width = stack.isEmpty() ? i : i - stack.peekLast() - 1;
+                int area = height * width;
+                if (area > bestArea) {
+                    bestArea = area;
+                    best = new EdgePackRect();
+                    best.y = bottomRow - height + 1;
+                    best.x = stack.isEmpty() ? 0 : stack.peekLast() + 1;
+                    best.w = width;
+                    best.h = height;
+                }
+            }
+            stack.addLast(i);
+        }
+        return best;
+    }
+
+    private EdgePackRect findMaximalInsideRectangle(java.util.HashSet<Integer> inside) {
+        if (inside.isEmpty())
+            return null;
+        int minRow = Th, maxRow = 0, minCol = Tw, maxCol = 0;
+        for (int num : inside) {
+            int row = num / Tw;
+            int col = num % Tw;
+            if (row < minRow)
+                minRow = row;
+            if (row > maxRow)
+                maxRow = row;
+            if (col < minCol)
+                minCol = col;
+            if (col > maxCol)
+                maxCol = col;
+        }
+        int bboxW = maxCol - minCol + 1;
+        int[] heights = new int[bboxW];
+        int bestArea = 0;
+        EdgePackRect best = null;
+        for (int row = minRow; row <= maxRow; row++) {
+            for (int col = minCol; col <= maxCol; col++) {
+                int num = row * Tw + col;
+                int idx = col - minCol;
+                heights[idx] = inside.contains(num) ? heights[idx] + 1 : 0;
+            }
+            EdgePackRect rowBest = largestRectInHistogram(heights, row);
+            if (rowBest != null && rowBest.area() > bestArea) {
+                bestArea = rowBest.area();
+                best = rowBest;
+                best.x += minCol;
+            }
+        }
+        return best;
+    }
+
+    private boolean isPackRectValidSize(EdgePackRect rect) {
+        return rect != null && rect.w >= PACK_MIN_RECT && rect.h >= PACK_MIN_RECT;
+    }
+
+    private boolean isPackRectCorner(int row, int col, EdgePackRect rect) {
+        int endY = rect.y + rect.h - 1;
+        int endX = rect.x + rect.w - 1;
+        return (row == rect.y && col == rect.x) || (row == rect.y && col == endX)
+                || (row == endY && col == rect.x) || (row == endY && col == endX);
+    }
+
+    private boolean isPackRectPerimeter(int row, int col, EdgePackRect rect) {
+        if (row < rect.y || row >= rect.y + rect.h || col < rect.x || col >= rect.x + rect.w)
+            return false;
+        if (isPackRectCorner(row, col, rect))
+            return true;
+        return row == rect.y || row == rect.y + rect.h - 1 || col == rect.x || col == rect.x + rect.w - 1;
+    }
+
+    private int classifyInsideBoundaryTile(int num, java.util.HashSet<Integer> blob) {
+        boolean nIn = num >= Tw && blob.contains(num - Tw);
+        boolean sIn = num + Tw < Tw * Th && blob.contains(num + Tw);
+        boolean wIn = (num % Tw != 0) && blob.contains(num - 1);
+        boolean eIn = (num % Tw != Tw - 1) && blob.contains(num + 1);
+        // Corners: two adjacent sides open, two adjacent sides still in the fill blob.
+        if (!nIn && !wIn && sIn && eIn)
+            return BF_CORNER_TL;
+        if (!nIn && !eIn && wIn && sIn)
+            return BF_CORNER_TR;
+        if (!sIn && !wIn && nIn && eIn)
+            return BF_CORNER_BL;
+        if (!sIn && !eIn && wIn && nIn)
+            return BF_CORNER_BR;
+        if (!nIn && wIn && eIn)
+            return BF_EDGE_TOP;
+        if (!sIn && wIn && eIn)
+            return BF_EDGE_BOTTOM;
+        if (!wIn && nIn && sIn)
+            return BF_EDGE_LEFT;
+        if (!eIn && nIn && sIn)
+            return BF_EDGE_RIGHT;
+        return -1;
+    }
+
+    private int sourceNumForBoundaryRole(int num, int role) {
+        switch (role) {
+            case BF_CORNER_TL:
+                return num - Tw - 1;
+            case BF_CORNER_TR:
+                return num - Tw + 1;
+            case BF_CORNER_BL:
+                return num + Tw - 1;
+            case BF_CORNER_BR:
+                return num + Tw + 1;
+            case BF_EDGE_TOP:
+                return num - Tw;
+            case BF_EDGE_BOTTOM:
+                return num + Tw;
+            case BF_EDGE_LEFT:
+                return num - 1;
+            case BF_EDGE_RIGHT:
+                return num + 1;
+            default:
+                return -1;
+        }
+    }
+
+    private boolean isBoundaryCornerRole(int role) {
+        return role >= BF_CORNER_TL && role <= BF_CORNER_BR;
+    }
+
+    private int boundaryRoleToPackLabel(int role) {
+        return isBoundaryCornerRole(role) ? PACK_CORNER : PACK_EDGE;
+    }
+
+    private int resolveInsideBoundarySourceNum(int num, java.util.HashSet<Integer> classifyBlob,
+            java.util.HashSet<Integer> region, boolean requireOutsideRegion) {
+        int role = classifyInsideBoundaryTile(num, classifyBlob);
+        if (role < 0)
+            return -1;
+        int primary = sourceNumForBoundaryRole(num, role);
+        if (primary >= 0 && primary < Tw * Th) {
+            if (!requireOutsideRegion || !region.contains(primary))
+                return primary;
+        }
+        if (!isBoundaryCornerRole(role) && primary >= 0 && primary < Tw * Th)
+            return primary;
+        return -1;
+    }
+
+    private int boundaryRoleToTerrainDirection(int role) {
+        switch (role) {
+            case BF_CORNER_TL:
+                return 0;
+            case BF_EDGE_TOP:
+                return 1;
+            case BF_CORNER_TR:
+                return 2;
+            case BF_EDGE_LEFT:
+                return 3;
+            case BF_EDGE_RIGHT:
+                return 4;
+            case BF_CORNER_BL:
+                return 5;
+            case BF_EDGE_BOTTOM:
+                return 6;
+            case BF_CORNER_BR:
+                return 7;
+            default:
+                return -1;
+        }
+    }
+
+    private boolean fillGidUsesMacroTerrain(long matchGid) {
+        if (macroTerrain.getTerrains().isEmpty())
+            return false;
+        int gid = (int) stripTileGidFlags(matchGid);
+        tile mt = macroTerrain.getTileMeta(gid);
+        if (mt != null && mt.isTerrainForEditor())
+            return true;
+        for (int i = 0; i < macroTerrain.getTerrains().size(); i++) {
+            if (macroTerrain.getTerrains().get(i).getTile() == gid)
+                return true;
+        }
+        return false;
+    }
+
+    private tile getMacroOrLayerTileMeta(int layerIdx, int cellIdx) {
+        if (layerIdx < 0 || layerIdx >= layers.size())
+            return null;
+        layer lay = layers.get(layerIdx);
+        if (cellIdx < 0 || cellIdx >= lay.getStr().size())
+            return null;
+        long gid = stripTileGidFlags(lay.getStr().get(cellIdx));
+        if (gid == 0)
+            return null;
+        tile t = macroTerrain.getTileMeta((int) gid);
+        if (t != null)
+            return t;
+        return getLayerTileMeta(layerIdx, cellIdx);
+    }
+
+    private int[] edgeFillOutsideTerrain(int num, int role, java.util.HashSet<Integer> classifyBlob,
+            java.util.HashSet<Integer> region, boolean requireOutsideRegion) {
+        int[] empty = new int[] { -1, -1, -1, -1 };
+        int srcNum = resolveInsideBoundarySourceNum(num, classifyBlob, region, requireOutsideRegion);
+        if (srcNum < 0)
+            return empty;
+        tile t = getMacroOrLayerTileMeta(selLayer, srcNum);
+        if (t != null && t.isTerrainForEditor())
+            return t.getTerrain().clone();
+        return empty;
+    }
+
+    private EdgeFillSample macroEdgeFillSampleFromGids(java.util.List<Integer> gids) {
+        if (gids == null || gids.isEmpty())
+            return null;
+        int pickGid = gids.get(0);
+        int tsetIdx = resolveTilesetIndexForGid(pickGid, -1);
+        if (tsetIdx < 0)
+            return null;
+        EdgeFillSample src = new EdgeFillSample();
+        src.gid = pickGid;
+        src.tset = tsetIdx;
+        return src;
+    }
+
+    private EdgeFillSample macroSampleForTerrainPattern(int direction, int[] aa, int[] bb) {
+        int[] cc = terrainInt(direction, aa, bb);
+        String ccStr = cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3];
+        return macroEdgeFillSampleFromGids(macroTerrain.getGidsByTerrain(ccStr));
+    }
+
+    /** Read-only lookup matching placeMacroAutotileWithFallback. */
+    private EdgeFillSample resolveMacroAutotileSample(int direction, int[] aa, int[] bb) {
+        int[] empty = new int[] { -1, -1, -1, -1 };
+        EdgeFillSample sample = macroSampleForTerrainPattern(direction, aa, bb);
+        if (sample != null)
+            return sample;
+        if (bb[0] == -1 && bb[1] == -1 && bb[2] == -1 && bb[3] == -1)
+            return null;
+        int against = bb[0];
+        if (bb[0] == aa[0])
+            against = bb[1];
+        if (bb[1] == aa[0])
+            against = bb[2];
+        if (bb[2] == aa[0])
+            against = bb[3];
+        findBestTile(aa[0], against);
+        if (ATPath == null || ATPath.getCount() <= 1) {
+            if (direction != 8)
+                return macroSampleForTerrainPattern(direction, aa, empty);
+            return null;
+        }
+        int ATid = ATPath.get(1).name;
+        if (!(bb[0] == ATid && bb[1] == ATid && bb[2] == ATid && bb[3] == ATid)) {
+            String centerStr = ATid + "," + ATid + "," + ATid + "," + ATid;
+            sample = macroEdgeFillSampleFromGids(macroTerrain.getGidsByTerrain(centerStr));
+            if (sample != null)
+                return sample;
+        }
+        if (direction != 8)
+            return macroSampleForTerrainPattern(direction, aa, empty);
+        return null;
+    }
+
+    private EdgeFillSample tilesetSampleForTerrainPattern(int fillTset, int direction, int[] aa, int[] bb) {
+        if (fillTset < 0 || fillTset >= tilesets.size())
+            return null;
+        int[] cc = terrainInt(direction, aa, bb);
+        String ccStr = cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3];
+        java.util.List<Integer> lint = new java.util.ArrayList<Integer>(
+                tilesets.get(fillTset).getTilesByTerrain(ccStr));
+        if (lint.isEmpty())
+            return null;
+        int tileindex = lint.get(0);
+        tile y = tilesets.get(fillTset).getTiles().get(tileindex);
+        EdgeFillSample src = new EdgeFillSample();
+        src.gid = (long) y.getTileID() + tilesets.get(fillTset).getFirstgid();
+        src.tset = fillTset;
+        return src;
+    }
+
+    private tile resolveEdgeFillCenterTile(long matchGid, int seedNum) {
+        int gid = (int) stripTileGidFlags(matchGid);
+        if (fillGidUsesMacroTerrain(matchGid)) {
+            tile center = resolveMacroTerrainAutotileCenter(gid, macroTerrain.getTileMeta(gid));
+            if (center != null && center.isTerrainForEditor())
+                return center;
+        }
+        int tsetIdx = layers.get(selLayer).getTset().get(seedNum);
+        if (tsetIdx < 0)
+            tsetIdx = resolveTilesetIndexForGid(matchGid, curtset);
+        if (tsetIdx < 0 || tsetIdx >= tilesets.size())
+            return null;
+        long bare = stripTileGidFlags(matchGid);
+        int localId = (int) (bare - tilesets.get(tsetIdx).getFirstgid());
+        if (localId < 0)
+            return null;
+        tile t = tilesets.get(tsetIdx).getTileMeta(localId);
+        return resolveTerrainAutotileCenter(tilesets.get(tsetIdx), t);
+    }
+
+    private int interiorCenterForBoundaryRole(int num, int role) {
+        switch (role) {
+            case BF_CORNER_TL:
+                return num + Tw + 1;
+            case BF_CORNER_TR:
+                return num + Tw - 1;
+            case BF_CORNER_BL:
+                return num - Tw + 1;
+            case BF_CORNER_BR:
+                return num - Tw - 1;
+            case BF_EDGE_TOP:
+                return num + Tw;
+            case BF_EDGE_BOTTOM:
+                return num - Tw;
+            case BF_EDGE_LEFT:
+                return num + 1;
+            case BF_EDGE_RIGHT:
+                return num - 1;
+            default:
+                return -1;
+        }
+    }
+
+    private int[] outsideMacroBbForBoundary(int num, int role) {
+        int[] empty = new int[] { -1, -1, -1, -1 };
+        int outside = sourceNumForBoundaryRole(num, role);
+        if (outside < 0 || outside >= Tw * Th)
+            return empty;
+        tile t = getAutotileLayerTileMeta(selLayer, outside);
+        if (t != null && t.isTerrainForEditor())
+            return t.getTerrain().clone();
+        return empty;
+    }
+
+    private EdgeFillSample sampleForTerrainPatternString(String ccStr, int fillTset) {
+        if (!macroTerrain.getTerrains().isEmpty()) {
+            EdgeFillSample sample = macroEdgeFillSampleFromGids(macroTerrain.getGidsByTerrain(ccStr));
+            if (sample != null)
+                return sample;
+        }
+        return tilesetSampleForTerrainString(fillTset, ccStr);
+    }
+
+    /** Same ccStr / direction path as manual macro terrain painting (Terrainify). */
+    private EdgeFillSample resolveEdgeFillViaMacroPaint(int targetNum, int role, tile fillCenter, int fillTset) {
+        if (fillCenter == null || !fillCenter.isTerrainForEditor())
+            return null;
+        int direction = boundaryRoleToTerrainDirection(role);
+        if (direction < 0)
+            return null;
+        int center = interiorCenterForBoundaryRole(targetNum, role);
+        if (center < 0 || center >= Tw * Th)
+            return null;
+        if (neighborCellForDirection(center, direction) != targetNum)
+            return null;
+        int[] aa = fillCenter.getTerrain();
+        int[] empty = new int[] { -1, -1, -1, -1 };
+        int[] cc = terrainInt(direction, aa, empty);
+        String ccStr = cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3];
+        EdgeFillSample sample = sampleForTerrainPatternString(ccStr, fillTset);
+        if (sample != null)
+            return sample;
+        int[] outsideBb = outsideMacroBbForBoundary(targetNum, role);
+        cc = terrainInt(direction, aa, outsideBb);
+        ccStr = cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3];
+        return sampleForTerrainPatternString(ccStr, fillTset);
+    }
+
+    private void applyEdgeFillBoundaryTile(int targetNum, int role, tile fillCenter, int fillTset) {
+        EdgeFillSample sample = resolveEdgeFillViaMacroPaint(targetNum, role, fillCenter, fillTset);
+        if (sample == null)
+            return;
+        follower = true;
+        updateTileData(selLayer, targetNum, sample.gid, sample.tset);
+    }
+
+    private int terrainIdAtCell(int cellIdx) {
+        if (cellIdx < 0 || cellIdx >= Tw * Th)
+            return -1;
+        tile t = getMacroOrLayerTileMeta(selLayer, cellIdx);
+        if (t == null || !t.isTerrainForEditor())
+            return -1;
+        int[] tr = t.getTerrain();
+        if (tr == null)
+            return -1;
+        return tr[0];
+    }
+
+    private int cornerWangTerrain(boolean sideAIn, boolean sideBIn, int fill, int cellA, int cellB,
+            boolean useOutsideTerrains) {
+        if (sideAIn && sideBIn)
+            return fill;
+        if (!useOutsideTerrains)
+            return -1;
+        if (!sideAIn) {
+            int t = terrainIdAtCell(cellA);
+            if (t >= 0)
+                return t;
+        }
+        if (!sideBIn) {
+            int t = terrainIdAtCell(cellB);
+            if (t >= 0)
+                return t;
+        }
+        return -1;
+    }
+
+    /** Build the 4 wang corner terrain ids (TL,TR,BL,BR) from fill blob membership. */
+    private int[] wangCornersFromBlob(int num, int[] fillTerrain, java.util.HashSet<Integer> blob,
+            boolean useOutsideTerrains) {
+        int fill = fillTerrain[0];
+        int[] c = new int[4];
+        boolean nIn = num >= Tw && blob.contains(num - Tw);
+        boolean sIn = num + Tw < Tw * Th && blob.contains(num + Tw);
+        boolean wIn = (num % Tw != 0) && blob.contains(num - 1);
+        boolean eIn = (num % Tw != Tw - 1) && blob.contains(num + 1);
+        c[0] = cornerWangTerrain(nIn, wIn, fill, num - Tw, num - 1, useOutsideTerrains);
+        c[1] = cornerWangTerrain(nIn, eIn, fill, num - Tw, num + 1, useOutsideTerrains);
+        c[2] = cornerWangTerrain(sIn, wIn, fill, num + Tw, num - 1, useOutsideTerrains);
+        c[3] = cornerWangTerrain(sIn, eIn, fill, num + Tw, num + 1, useOutsideTerrains);
+        return c;
+    }
+
+    private EdgeFillSample tilesetSampleForTerrainString(int fillTset, String ccStr) {
+        if (fillTset >= 0 && fillTset < tilesets.size()) {
+            EdgeFillSample sample = tilesetSampleForTerrainStringInSet(fillTset, ccStr);
+            if (sample != null)
+                return sample;
+        }
+        for (int i = 0; i < tilesets.size(); i++) {
+            if (i == fillTset)
+                continue;
+            EdgeFillSample sample = tilesetSampleForTerrainStringInSet(i, ccStr);
+            if (sample != null)
+                return sample;
+        }
+        return null;
+    }
+
+    private EdgeFillSample tilesetSampleForTerrainStringInSet(int fillTset, String ccStr) {
+        if (fillTset < 0 || fillTset >= tilesets.size())
+            return null;
+        java.util.List<Integer> lint = new java.util.ArrayList<Integer>(
+                tilesets.get(fillTset).getTilesByTerrain(ccStr));
+        if (lint.isEmpty())
+            return null;
+        int tileindex = lint.get(0);
+        tile y = tilesets.get(fillTset).getTiles().get(tileindex);
+        EdgeFillSample src = new EdgeFillSample();
+        src.gid = (long) y.getTileID() + tilesets.get(fillTset).getFirstgid();
+        src.tset = fillTset;
+        return src;
+    }
+
+    private EdgeFillSample sampleForWangPattern(int[] corners, boolean tryMacro, int fillTset) {
+        String ccStr = corners[0] + "," + corners[1] + "," + corners[2] + "," + corners[3];
+        if (tryMacro && !macroTerrain.getTerrains().isEmpty()) {
+            EdgeFillSample sample = macroEdgeFillSampleFromGids(macroTerrain.getGidsByTerrain(ccStr));
+            if (sample != null)
+                return sample;
+        }
+        return tilesetSampleForTerrainString(fillTset, ccStr);
+    }
+
+    private EdgeFillSample resolveEdgeFillPatternSample(boolean useMacro, int fillTset, int direction, int[] aa,
+            int[] bb) {
+        if (useMacro && !macroTerrain.getTerrains().isEmpty()) {
+            EdgeFillSample sample = resolveMacroAutotileSample(direction, aa, bb);
+            if (sample != null)
+                return sample;
+        }
+        return tilesetSampleForTerrainPattern(fillTset, direction, aa, bb);
+    }
+
+    private EdgeFillSample resolveEdgeFillTerrainSample(int num, int role, int fillTset, int[] fillTerrain,
+            boolean fillUsesMacroTerrain, tile fillCenter, java.util.HashSet<Integer> classifyBlob,
+            java.util.HashSet<Integer> region, boolean requireOutsideRegion) {
+        if (fillCenter != null && fillCenter.isTerrainForEditor()) {
+            EdgeFillSample sample = resolveEdgeFillViaMacroPaint(num, role, fillCenter, fillTset);
+            if (sample != null)
+                return sample;
+        }
+        if (fillTerrain == null)
+            return resolveInsideBoundarySource(num, classifyBlob, region, requireOutsideRegion);
+        return null;
+    }
+
+    private int previewSourceNumForBoundaryRole(int num, int role) {
+        int srcNum = sourceNumForBoundaryRole(num, role);
+        if (srcNum >= 0 && srcNum < Tw * Th)
+            return srcNum;
+        return -1;
+    }
+
+    private EdgeFillSample resolveInsideBoundarySource(int num, java.util.HashSet<Integer> classifyBlob,
+            java.util.HashSet<Integer> region, boolean requireOutsideRegion) {
+        int srcNum = resolveInsideBoundarySourceNum(num, classifyBlob, region, requireOutsideRegion);
+        if (srcNum < 0)
+            return null;
+        return edgeFillSampleAt(srcNum);
+    }
+
+    private EdgeFillSample resolveShellTileSample(int num, java.util.HashSet<Integer> classifyBlob,
+            java.util.HashSet<Integer> region, boolean requireOutsideRegion, int fillTset, int[] fillTerrain,
+            boolean fillUsesMacroTerrain, tile fillCenter) {
+        int role = classifyInsideBoundaryTile(num, classifyBlob);
+        if (role < 0)
+            return null;
+        return resolveEdgeFillTerrainSample(num, role, fillTset, fillTerrain, fillUsesMacroTerrain, fillCenter,
+                classifyBlob, region, requireOutsideRegion);
+    }
+
+    private EdgeFillSample resolvePackCornerSource(int num, java.util.HashSet<Integer> region) {
+        int role = classifyInsideBoundaryTile(num, region);
+        if (!isBoundaryCornerRole(role))
+            return null;
+        if (edgeFillJob != null && edgeFillJob.fillTerrain != null)
+            return resolveEdgeFillTerrainSample(num, role, edgeFillJob.fillTset, edgeFillJob.fillTerrain,
+                    edgeFillJob.fillUsesMacroTerrain, edgeFillJob.fillCenter, region, region, true);
+        int srcNum = sourceNumForBoundaryRole(num, role);
+        if (srcNum < 0 || srcNum >= Tw * Th)
+            return null;
+        return edgeFillSampleAt(srcNum);
+    }
+
+    private boolean hasPackEdgeBridge(int num, int diag, java.util.HashMap<Integer, Integer> labels) {
+        int dx = (diag % Tw) - (num % Tw);
+        int dy = (diag / Tw) - (num / Tw);
+        int sideA;
+        int sideB;
+        if (dx < 0 && dy < 0) {
+            sideA = num - Tw;
+            sideB = num - 1;
+        } else if (dx > 0 && dy < 0) {
+            sideA = num - Tw;
+            sideB = num + 1;
+        } else if (dx < 0 && dy > 0) {
+            sideA = num + Tw;
+            sideB = num - 1;
+        } else {
+            sideA = num + Tw;
+            sideB = num + 1;
+        }
+        Integer labelA = labels.get(sideA);
+        Integer labelB = labels.get(sideB);
+        return labelA != null && labelA == PACK_EDGE && labelB != null && labelB == PACK_EDGE;
+    }
+
+    private boolean isConcaveRegionVertex(int num, java.util.HashSet<Integer> region) {
+        int n = isOutsideRegion(num - Tw, region) ? 1 : 0;
+        int s = isOutsideRegion(num + Tw, region) ? 1 : 0;
+        int w = (num % Tw == 0) || isOutsideRegion(num - 1, region) ? 1 : 0;
+        int e = (num % Tw == Tw - 1) || isOutsideRegion(num + 1, region) ? 1 : 0;
+        if (n == 1 && w == 1 && isOutsideRegion(num - Tw - 1, region))
+            return true;
+        if (n == 1 && e == 1 && isOutsideRegion(num - Tw + 1, region))
+            return true;
+        if (s == 1 && w == 1 && isOutsideRegion(num + Tw - 1, region))
+            return true;
+        if (s == 1 && e == 1 && isOutsideRegion(num + Tw + 1, region))
+            return true;
+        return false;
+    }
+
+    private boolean checkPackIrregularAdjacency(int num, int label, java.util.HashMap<Integer, Integer> labels,
+            java.util.HashSet<Integer> region) {
+        if (label != PACK_CORNER && label != PACK_EDGE)
+            return false;
+        if (isConcaveRegionVertex(num, region))
+            return true;
+        int[] diags = diagonalNeighbors(num);
+        for (int i = 0; i < diags.length; i++) {
+            int d = diags[i];
+            Integer diagLabel = labels.get(d);
+            if (diagLabel != null && diagLabel == PACK_CORNER && !hasPackEdgeBridge(num, d, labels))
+                return true;
+        }
+        return false;
+    }
+
+    private EdgeFillSample resolvePackReverseSource(int num, java.util.HashSet<Integer> region,
+            java.util.HashMap<Integer, Integer> labels) {
+        int[] diags = diagonalNeighbors(num);
+        for (int i = 0; i < diags.length; i++) {
+            int d = diags[i];
+            if (!region.contains(d))
+                return edgeFillSampleAt(d);
+        }
+        int[] neighbors = new int[] { num - Tw, num + Tw, num - 1, num + 1 };
+        EdgeFillSample firstOutside = null;
+        for (int n = 0; n < neighbors.length; n++) {
+            int next = neighbors[n];
+            if (!isValidOrthoNeighbor(num, n, next))
+                continue;
+            if (!region.contains(next))
+                firstOutside = edgeFillSampleAt(next);
+            else {
+                Integer lbl = labels.get(next);
+                if (lbl != null && (lbl == PACK_CORNER || lbl == PACK_EDGE || lbl == PACK_REVERSE))
+                    return edgeFillSampleAt(next);
+            }
+        }
+        if (firstOutside != null)
+            return firstOutside;
+        return resolvePackCornerSource(num, region);
+    }
+
+    private void resolvePackReverseCorners(java.util.HashMap<Integer, Integer> labels,
+            java.util.HashSet<Integer> region) {
+        java.util.ArrayList<Integer> cells = new java.util.ArrayList<Integer>(labels.keySet());
+        for (int i = 0; i < cells.size(); i++) {
+            int num = cells.get(i);
+            Integer label = labels.get(num);
+            if (label == null || (label != PACK_CORNER && label != PACK_EDGE))
+                continue;
+            if (!checkPackIrregularAdjacency(num, label, labels, region))
+                continue;
+            EdgeFillSample src = resolvePackReverseSource(num, region, labels);
+            if (src == null)
+                continue;
+            follower = true;
+            updateTileData(selLayer, num, src.gid, src.tset);
+            labels.put(num, PACK_REVERSE);
+        }
+    }
+
+    private java.util.HashSet<Integer> collectPackRectShellSelection(EdgePackRect rect,
+            java.util.HashSet<Integer> inside) {
+        java.util.HashSet<Integer> sel = new java.util.HashSet<Integer>();
+        for (int row = rect.y; row < rect.y + rect.h; row++) {
+            for (int col = rect.x; col < rect.x + rect.w; col++) {
+                int num = row * Tw + col;
+                if (!inside.contains(num))
+                    continue;
+                if (isPackRectPerimeter(row, col, rect))
+                    sel.add(num);
+            }
+        }
+        return sel;
+    }
+
+    private java.util.HashSet<Integer> collectRegionBoundaryShell(java.util.HashSet<Integer> region,
+            java.util.HashSet<Integer> inside) {
+        java.util.HashSet<Integer> shell = new java.util.HashSet<Integer>();
+        for (int num : inside) {
+            if (!region.contains(num))
+                continue;
+            if (classifyInsideBoundaryTile(num, region) >= 0)
+                shell.add(num);
+        }
+        return shell;
+    }
+
+    private java.util.HashSet<Integer> collectShellSources(java.util.HashSet<Integer> shell,
+            java.util.HashSet<Integer> classifyBlob, java.util.HashSet<Integer> region,
+            boolean requireOutsideRegion) {
+        java.util.HashSet<Integer> sources = new java.util.HashSet<Integer>();
+        for (int num : shell) {
+            int role = classifyInsideBoundaryTile(num, classifyBlob);
+            if (role < 0)
+                continue;
+            int srcNum = previewSourceNumForBoundaryRole(num, role);
+            if (srcNum >= 0)
+                sources.add(srcNum);
+        }
+        return sources;
+    }
+
+    private boolean isInteriorCoreRemaining(java.util.HashSet<Integer> inside,
+            java.util.HashMap<Integer, Integer> labels, java.util.HashSet<Integer> region) {
+        if (inside.isEmpty())
+            return false;
+        for (int num : inside) {
+            int[] neighbors = new int[] { num - Tw, num + Tw, num - 1, num + 1 };
+            for (int n = 0; n < neighbors.length; n++) {
+                int next = neighbors[n];
+                if (!isValidOrthoNeighbor(num, n, next))
+                    continue;
+                if (inside.contains(next))
+                    continue;
+                if (!region.contains(next))
+                    continue;
+                if (!labels.containsKey(next))
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isShellFullyEnclosedByLabels(java.util.HashSet<Integer> shell,
+            java.util.HashSet<Integer> inside, java.util.HashMap<Integer, Integer> labels,
+            java.util.HashSet<Integer> region) {
+        if (shell.isEmpty())
+            return true;
+        for (int num : shell) {
+            int[] neighbors = new int[] { num - Tw, num + Tw, num - 1, num + 1 };
+            for (int n = 0; n < neighbors.length; n++) {
+                int next = neighbors[n];
+                if (!isValidOrthoNeighbor(num, n, next))
+                    continue;
+                if (inside.contains(next))
+                    continue;
+                if (!region.contains(next))
+                    return false;
+                if (!labels.containsKey(next))
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    private java.util.ArrayList<EdgeFillPaintPlan> planRegionBoundaryShell(java.util.HashSet<Integer> inside,
+            java.util.HashSet<Integer> region, int fillTset, int[] fillTerrain, boolean fillUsesMacroTerrain,
+            tile fillCenter) {
+        java.util.ArrayList<EdgeFillPaintPlan> plans = new java.util.ArrayList<EdgeFillPaintPlan>();
+        java.util.HashSet<Integer> shell = collectRegionBoundaryShell(region, inside);
+        for (int num : shell) {
+            int role = classifyInsideBoundaryTile(num, inside);
+            if (role < 0)
+                continue;
+            EdgeFillSample src = resolveEdgeFillTerrainSample(num, role, fillTset, fillTerrain, fillUsesMacroTerrain,
+                    fillCenter, inside, region, true);
+            if (src == null && fillCenter == null)
+                continue;
+            EdgeFillPaintPlan plan = new EdgeFillPaintPlan();
+            plan.num = num;
+            plan.role = role;
+            if (src != null) {
+                plan.gid = src.gid;
+                plan.tset = src.tset;
+            }
+            plan.label = boundaryRoleToPackLabel(role);
+            plans.add(plan);
+        }
+        return plans;
+    }
+
+    private void setEdgeFillShellPreview() {
+        if (edgeFillJob.shellIndex == 0) {
+            edgeFillJob.previewShell = collectRegionBoundaryShell(edgeFillJob.region, edgeFillJob.inside);
+            edgeFillJob.previewSources = collectShellSources(edgeFillJob.previewShell, edgeFillJob.region,
+                    edgeFillJob.region, true);
+        } else {
+            edgeFillJob.previewShell = collectPackRectShellSelection(edgeFillJob.currentRect, edgeFillJob.inside);
+            edgeFillJob.previewSources = collectShellSources(edgeFillJob.previewShell, edgeFillJob.inside,
+                    edgeFillJob.region, false);
+        }
+    }
+
+    private java.util.ArrayList<EdgeFillPaintPlan> planCurrentShell() {
+        if (edgeFillJob.shellIndex == 0)
+            return planRegionBoundaryShell(edgeFillJob.inside, edgeFillJob.region, edgeFillJob.fillTset,
+                    edgeFillJob.fillTerrain, edgeFillJob.fillUsesMacroTerrain, edgeFillJob.fillCenter);
+        return planPackRectShell(edgeFillJob.currentRect, edgeFillJob.inside, edgeFillJob.region,
+                edgeFillJob.fillTset, edgeFillJob.fillTerrain, edgeFillJob.fillUsesMacroTerrain,
+                edgeFillJob.fillCenter);
+    }
+
+    private java.util.ArrayList<EdgeFillPaintPlan> planPackRectShell(EdgePackRect rect,
+            java.util.HashSet<Integer> inside, java.util.HashSet<Integer> region, int fillTset, int[] fillTerrain,
+            boolean fillUsesMacroTerrain, tile fillCenter) {
+        java.util.ArrayList<EdgeFillPaintPlan> plans = new java.util.ArrayList<EdgeFillPaintPlan>();
+        java.util.HashSet<Integer> shell = collectPackRectShellSelection(rect, inside);
+        for (int num : shell) {
+            int role = classifyInsideBoundaryTile(num, inside);
+            if (role < 0)
+                continue;
+            EdgeFillSample src = resolveEdgeFillTerrainSample(num, role, fillTset, fillTerrain, fillUsesMacroTerrain,
+                    fillCenter, inside, region, false);
+            if (src == null && fillCenter == null)
+                continue;
+            EdgeFillPaintPlan plan = new EdgeFillPaintPlan();
+            plan.num = num;
+            plan.role = role;
+            if (src != null) {
+                plan.gid = src.gid;
+                plan.tset = src.tset;
+            }
+            plan.label = boundaryRoleToPackLabel(role);
+            plans.add(plan);
+        }
+        return plans;
+    }
+
+    private java.util.ArrayList<EdgeFillPaintPlan> planPackReverseCorners(java.util.HashMap<Integer, Integer> labels,
+            java.util.HashSet<Integer> region) {
+        java.util.ArrayList<EdgeFillPaintPlan> plans = new java.util.ArrayList<EdgeFillPaintPlan>();
+        java.util.ArrayList<Integer> cells = new java.util.ArrayList<Integer>(labels.keySet());
+        for (int i = 0; i < cells.size(); i++) {
+            int num = cells.get(i);
+            Integer label = labels.get(num);
+            if (label == null || (label != PACK_CORNER && label != PACK_EDGE))
+                continue;
+            if (!checkPackIrregularAdjacency(num, label, labels, region))
+                continue;
+            EdgeFillSample src = resolvePackReverseSource(num, region, labels);
+            if (src == null)
+                continue;
+            EdgeFillPaintPlan plan = new EdgeFillPaintPlan();
+            plan.num = num;
+            plan.gid = src.gid;
+            plan.tset = src.tset;
+            plan.label = PACK_REVERSE;
+            plans.add(plan);
+        }
+        return plans;
+    }
+
+    private void cancelEdgeFillJob() {
+        if (edgeFillJob == null)
+            return;
+        if (brushStrokeActive)
+            endBrushStroke();
+        edgeFillJob = null;
+    }
+
+    private void finishEdgeFillJob() {
+        if (edgeFillJob != null && brushStrokeActive)
+            endBrushStroke();
+        edgeFillJob = null;
+    }
+
+    private void startEdgeFillReversePhase() {
+        edgeFillJob.paintQueue = planPackReverseCorners(edgeFillJob.labels, edgeFillJob.region);
+        edgeFillJob.paintIndex = 0;
+        edgeFillJob.previewShell = null;
+        edgeFillJob.previewSources = null;
+        if (edgeFillJob.paintQueue.isEmpty()) {
+            finishEdgeFillJob();
+            return;
+        }
+        if (!brushStrokeActive) {
+            beginBrushStroke();
+            follower = false;
+        }
+        edgeFillJob.phase = EdgeFillJob.Phase.REVERSE;
+    }
+
+    private void advanceEdgeFillToNextShell() {
+        if (isInteriorCoreRemaining(edgeFillJob.inside, edgeFillJob.labels, edgeFillJob.region)) {
+            startEdgeFillReversePhase();
+            return;
+        }
+        EdgePackRect rect = findMaximalInsideRectangle(edgeFillJob.inside);
+        if (!isPackRectValidSize(rect)) {
+            startEdgeFillReversePhase();
+            return;
+        }
+        java.util.HashSet<Integer> shell = collectPackRectShellSelection(rect, edgeFillJob.inside);
+        if (shell.isEmpty() || isShellFullyEnclosedByLabels(shell, edgeFillJob.inside, edgeFillJob.labels,
+                edgeFillJob.region)) {
+            startEdgeFillReversePhase();
+            return;
+        }
+        edgeFillJob.currentRect = rect;
+        setEdgeFillShellPreview();
+        if (edgeFillJob.previewShell.isEmpty()) {
+            startEdgeFillReversePhase();
+            return;
+        }
+        edgeFillJob.paintQueue = null;
+        edgeFillJob.paintIndex = 0;
+        edgeFillJob.phase = EdgeFillJob.Phase.PREVIEW;
+        edgeFillJob.phaseTimer = EDGE_FILL_PREVIEW_SEC;
+    }
+
+    private void startEdgeFillJob(int seed, long matchGid) {
+        cancelEdgeFillJob();
+        java.util.HashSet<Integer> region = collectConnectedRegion(seed, matchGid);
+        if (region.isEmpty())
+            return;
+
+        edgeFillJob = new EdgeFillJob();
+        edgeFillJob.region = region;
+        edgeFillJob.inside = new java.util.HashSet<Integer>(region);
+        edgeFillJob.labels = new java.util.HashMap<Integer, Integer>();
+        edgeFillJob.shellIndex = 0;
+        tile fillCenter = resolveEdgeFillCenterTile(matchGid, seed);
+        if (fillCenter == null && !macroTerrain.getTerrains().isEmpty())
+            fillCenter = ensureMacroTerrainCenterTile(macroTerrain.getSelTerrain());
+        edgeFillJob.fillUsesMacroTerrain = fillGidUsesMacroTerrain(matchGid)
+                || !macroTerrain.getTerrains().isEmpty();
+        if (fillCenter != null && fillCenter.isTerrainForEditor()) {
+            edgeFillJob.fillCenter = fillCenter;
+            edgeFillJob.fillTerrain = fillCenter.getTerrain().clone();
+            edgeFillJob.fillTset = layers.get(selLayer).getTset().get(seed);
+            if (edgeFillJob.fillTset < 0)
+                edgeFillJob.fillTset = resolveTilesetIndexForGid(matchGid, curtset);
+            if (!macroTerrain.getTerrains().isEmpty())
+                updateMacroAT();
+        }
+
+        edgeFillJob.previewShell = collectRegionBoundaryShell(region, edgeFillJob.inside);
+        if (edgeFillJob.previewShell.isEmpty()) {
+            edgeFillJob = null;
+            return;
+        }
+        setEdgeFillShellPreview();
+        edgeFillJob.phase = EdgeFillJob.Phase.PREVIEW;
+        edgeFillJob.phaseTimer = EDGE_FILL_PREVIEW_SEC;
+    }
+
+    private void tickEdgeFillJob(float delta) {
+        if (edgeFillJob == null || edgeFillJob.phase == EdgeFillJob.Phase.IDLE)
+            return;
+
+        if (edgeFillJob.phase == EdgeFillJob.Phase.PREVIEW) {
+            edgeFillJob.phaseTimer -= delta;
+            if (edgeFillJob.phaseTimer > 0f)
+                return;
+            edgeFillJob.paintQueue = planCurrentShell();
+            edgeFillJob.paintIndex = 0;
+            if (edgeFillJob.paintQueue.isEmpty()) {
+                startEdgeFillReversePhase();
+                return;
+            }
+            if (!brushStrokeActive) {
+                beginBrushStroke();
+                follower = false;
+            }
+            edgeFillJob.phase = EdgeFillJob.Phase.PAINT;
+            return;
+        }
+
+        if (edgeFillJob.phase == EdgeFillJob.Phase.PAINT || edgeFillJob.phase == EdgeFillJob.Phase.REVERSE) {
+            java.util.ArrayList<EdgeFillPaintPlan> queue = edgeFillJob.paintQueue;
+            if (queue == null || queue.isEmpty()) {
+                if (edgeFillJob.phase == EdgeFillJob.Phase.PAINT)
+                    advanceEdgeFillToNextShell();
+                else
+                    finishEdgeFillJob();
+                return;
+            }
+            int batch = EDGE_FILL_PAINT_BATCH;
+            while (batch-- > 0 && edgeFillJob.paintIndex < queue.size()) {
+                EdgeFillPaintPlan plan = queue.get(edgeFillJob.paintIndex++);
+                if (edgeFillJob.phase == EdgeFillJob.Phase.PAINT && edgeFillJob.fillCenter != null
+                        && plan.role >= 0) {
+                    applyEdgeFillBoundaryTile(plan.num, plan.role, edgeFillJob.fillCenter, edgeFillJob.fillTset);
+                } else {
+                    follower = true;
+                    updateTileData(selLayer, plan.num, plan.gid, plan.tset);
+                }
+                if (edgeFillJob.phase == EdgeFillJob.Phase.PAINT) {
+                    edgeFillJob.inside.remove(plan.num);
+                    edgeFillJob.labels.put(plan.num, plan.label);
+                } else {
+                    edgeFillJob.labels.put(plan.num, PACK_REVERSE);
+                }
+            }
+            if (edgeFillJob.paintIndex < queue.size())
+                return;
+            if (edgeFillJob.phase == EdgeFillJob.Phase.PAINT) {
+                edgeFillJob.shellIndex++;
+                advanceEdgeFillToNextShell();
+            } else {
+                finishEdgeFillJob();
+            }
+        }
+    }
+
+    private void drawEdgeFillPreview() {
+        if (edgeFillJob == null || edgeFillJob.phase != EdgeFillJob.Phase.PREVIEW)
+            return;
+        if (edgeFillJob.previewSources != null && !edgeFillJob.previewSources.isEmpty()) {
+            sr.setColor(0f, 0.85f, 1f, 0.35f);
+            for (int num : edgeFillJob.previewSources)
+                drawBrushTileHighlight(num);
+        }
+        if (edgeFillJob.previewShell != null && !edgeFillJob.previewShell.isEmpty()) {
+            sr.setColor(1f, 0f, 0f, 0.35f);
+            for (int num : edgeFillJob.previewShell)
+                drawBrushTileHighlight(num);
+        }
+    }
+
+    private void fillEdgesRegion(int seed, long matchGid) {
+        startEdgeFillJob(seed, matchGid);
+    }
+
     private void restoreWorldInput() {
         if (im != null)
             Gdx.input.setInputProcessor(im);
@@ -26915,7 +28040,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void showBrushToolMenu() {
         activetool = 4;
+        final Dialog dlg = new Dialog("", skin, "dialog") {
+            @Override
+            public void hide() {
+                super.hide();
+                restoreWorldInput();
+            }
+        };
+        Table content = dlg.getContentTable();
+        float dialogBtnWidth = btnx > 0 ? btnx : getDialogContentWidth();
         String title = (z.brush != null ? z.brush : "Brush") + " (" + brushsize + ")";
+        Label titleLabel = new Label(title, skin);
+        titleLabel.setAlignment(Align.center);
+        titleLabel.setWrap(true);
+        content.add(titleLabel).width(dialogBtnWidth).pad(8).row();
+
         String[] labels = new String[] {
                 brushShapeLabel(BrushShape.SQUARE),
                 brushShapeLabel(BrushShape.CIRCLE),
@@ -26923,20 +28062,41 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 z.brushsizeoption != null ? z.brushsizeoption : "Brush size..."
         };
         int selected = brushShape.ordinal();
-        showDrawingToolMenu(title, labels, selected, new ToolMenuCallback() {
+        for (int i = 0; i < labels.length; i++) {
+            final int idx = i;
+            String label = labels[i];
+            if (i == selected)
+                label = "> " + label;
+            TextButton btn = new TextButton(label, skin);
+            btn.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    dlg.hide();
+                    if (idx == 0)
+                        brushShape = BrushShape.SQUARE;
+                    else if (idx == 1)
+                        brushShape = BrushShape.CIRCLE;
+                    else if (idx == 2)
+                        brushShape = BrushShape.DIAMOND;
+                    else if (idx == 3)
+                        getNewTextInput(pBrushSize, z.tilesize + " [" + brushsize + "]", "",
+                                "1-32");
+                }
+            });
+            content.add(btn).width(dialogBtnWidth).height(btny).pad(3).row();
+        }
+
+        TextButton cancelBtn = new TextButton(z.cancel != null ? z.cancel : "Cancel", skin);
+        cancelBtn.addListener(new ChangeListener() {
             @Override
-            public void onSelect(int idx) {
-                if (idx == 0)
-                    brushShape = BrushShape.SQUARE;
-                else if (idx == 1)
-                    brushShape = BrushShape.CIRCLE;
-                else if (idx == 2)
-                    brushShape = BrushShape.DIAMOND;
-                else if (idx == 3)
-                    getNewTextInput(pBrushSize, z.tilesize + " [" + brushsize + "]", "",
-                            "1-32");
+            public void changed(ChangeEvent event, Actor actor) {
+                dlg.hide();
             }
         });
+        content.add(cancelBtn).width(dialogBtnWidth).height(btny).pad(6).row();
+        dlg.setWidth(dialogBtnWidth);
+        Gdx.input.setInputProcessor(stage);
+        dlg.show(stage);
     }
 
     private void showSelectToolMenu() {
@@ -26988,13 +28148,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         activetool = 2;
         String[] labels = new String[] {
                 z.fill,
-                z.floodmap != null ? z.floodmap : "Flood map"
+                z.floodmap != null ? z.floodmap : "Flood map",
+                z.filledge != null ? z.filledge : "Edges"
         };
-        int selected = fillMode == FillMode.ENTIRE_MAP ? 1 : 0;
+        int selected = fillMode == FillMode.ENTIRE_MAP ? 1 : fillMode == FillMode.EDGES ? 2 : 0;
         showDrawingToolMenu(z.fill, labels, selected, new ToolMenuCallback() {
             @Override
             public void onSelect(int idx) {
-                fillMode = idx == 1 ? FillMode.ENTIRE_MAP : FillMode.CONNECTED;
+                if (idx == 1)
+                    fillMode = FillMode.ENTIRE_MAP;
+                else if (idx == 2)
+                    fillMode = FillMode.EDGES;
+                else
+                    fillMode = FillMode.CONNECTED;
             }
         });
     }
@@ -31197,7 +32363,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         } else {
 
             // first, work with rotation.
-            if (!eraser && !prepareBrushForDraw()) {
+            if (!eraser && !(activetool == 2 && fillMode == FillMode.EDGES) && !prepareBrushForDraw()) {
                 status("Pick a tile in the tileset first", 2);
                 return;
             }
@@ -31347,6 +32513,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     cue("tileclick");
                     if (fillMode == FillMode.ENTIRE_MAP) {
                         fillEntireLayer(selLayer, oi);
+                    } else if (fillMode == FillMode.EDGES) {
+                        Long fillSource = layers.get(selLayer).getStr().get(num);
+                        fillEdgesRegion(num, fillSource);
                     } else {
                         Long fillSource = layers.get(selLayer).getStr().get(num);
                         fillthis(num, oi, fillSource, 0);

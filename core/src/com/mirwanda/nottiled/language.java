@@ -239,7 +239,7 @@ public class language
 	String embedtileset;
 	String importtileset;
 	String grid, recenter, brush, pencil, copy, fill, undo, redo;
-	String brushshapesquare, brushshapecircle, brushshapediamond, brushsizeoption, floodmap;
+	String brushshapesquare, brushshapecircle, brushshapediamond, brushsizeoption, floodmap, filledge;
 	String export;
 	String minimap,outline,clone,deleter,eraser2;
 	String exportastileset;
