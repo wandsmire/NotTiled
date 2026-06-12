@@ -7542,6 +7542,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             uisrect(gui.lock, mouse, null);// tool switch
             uisrect(gui.undo, mouse, vis("undo"));// undo
             uisrect(gui.redo, mouse, vis("redo"));// redo
+
+            if (is3DMode || isFull3DMode) {
+                uisrect(gui.fps, mouse, null);
+            }
             Color c1 = null, c2 = null, c3 = null;
 
             switch (activeobjtoolmode) {
@@ -8127,6 +8131,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             uidrawbutton(txundo, z.undo, gui.undo, 3.1f);
             uidrawbutton(txredo, z.redo, gui.redo, 3.1f);
         } else if (mode == "object") {
+            if (is3DMode || isFull3DMode) {
+                if (is3DMoveMode) {
+                    uidrawbutton(txmove, z.move != null ? z.move : "Move", gui.fps, 3);
+                } else {
+                    uidrawbutton(txcircle, z.rotate != null ? z.rotate : "Rotate", gui.fps, 3);
+                }
+            }
             uidrawbutton(txundo, z.undo, gui.undo, 3.1f);
             uidrawbutton(txredo, z.redo, gui.redo, 3.1f);
             uidrawbutton(txClone, z.multiselect, gui.objtool1, 3);
