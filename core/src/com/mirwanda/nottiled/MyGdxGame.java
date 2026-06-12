@@ -718,6 +718,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private com.badlogic.gdx.graphics.Camera lastDecalCam;
     private Decal tempDecal;
     private java.util.List<Decal> lastDecalsBuilt = new java.util.ArrayList<Decal>();
+    private java.util.List<TileCache.AnimatedTileRef> lastAnimatedTilesBuilt = new java.util.ArrayList<TileCache.AnimatedTileRef>();
     private com.badlogic.gdx.graphics.g3d.ModelInstance lastModelInstanceBuilt = null;
     private com.badlogic.gdx.graphics.g3d.Model lastShadowModelBuilt = null;
     private com.badlogic.gdx.graphics.g3d.ModelInstance lastShadowModelInstanceBuilt = null;
@@ -3916,7 +3917,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         com.badlogic.gdx.math.Matrix4 gridProj;
         if (isFull3DMode || is3DMode) {
             gridProj = new com.badlogic.gdx.math.Matrix4(isFull3DMode ? camFull3D.combined : cam3d.combined);
-            gridProj.translate(0, 0, selLayer * Tsh * 0.75f);
         } else {
             gridProj = cam.combined;
         }
@@ -5148,6 +5148,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         int[] cids = cacheTilesOnLayered(cache, x, y);
                         tcache = new TileCache(cache, cids, x, y);
                         tcache.getDecals().addAll(lastDecalsBuilt);
+                        tcache.getAnimatedTiles().addAll(lastAnimatedTilesBuilt);
                         tcache.setModelInstance(lastModelInstanceBuilt);
                         tcache.setShadowModel(lastShadowModelBuilt);
                         tcache.setShadowModelInstance(lastShadowModelInstanceBuilt);
@@ -5207,6 +5208,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     tc.setCacheIDs(cids);
                     tc.getDecals().clear();
                     tc.getDecals().addAll(lastDecalsBuilt);
+                    tc.getAnimatedTiles().clear();
+                    tc.getAnimatedTiles().addAll(lastAnimatedTilesBuilt);
+                    tc.disposeModel(); // free old GPU model mesh before replacing
                     tc.setModelInstance(lastModelInstanceBuilt);
                     tc.disposeShadowModel(); // free old GPU shadow mesh before replacing
                     tc.setShadowModel(lastShadowModelBuilt);
@@ -5412,8 +5416,77 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return id;
     }
 
+    private enum Render3DType {
+        CUBE, PLANE, SPRITE
+    }
+
+    private Render3DType getTile3DType(int jo, int initset, int localId) {
+        layer lay = layers.get(jo);
+        boolean layerHasSprite = false;
+        boolean layerHasPlane = false;
+        boolean layerHasCube = false;
+        for (property p : lay.getProperties()) {
+            if (p.getName().equalsIgnoreCase("sprite")) layerHasSprite = true;
+            if (p.getName().equalsIgnoreCase("plane")) layerHasPlane = true;
+            if (p.getName().equalsIgnoreCase("cube")) layerHasCube = true;
+        }
+
+        boolean tileHasSprite = false;
+        boolean tileHasPlane = false;
+        boolean tileHasCube = false;
+        if (initset >= 0 && initset < tilesets.size()) {
+            tileset ts = tilesets.get(initset);
+            tile t = ts.getTileMeta(localId);
+            if (t != null) {
+                for (property p : t.getProperties()) {
+                    if (p.getName().equalsIgnoreCase("sprite")) tileHasSprite = true;
+                    if (p.getName().equalsIgnoreCase("plane")) tileHasPlane = true;
+                    if (p.getName().equalsIgnoreCase("cube")) tileHasCube = true;
+                }
+            }
+        }
+
+        if (tileHasSprite || layerHasSprite) {
+            return Render3DType.SPRITE;
+        }
+
+        if (jo == 0) {
+            if (tileHasCube || layerHasCube) {
+                return Render3DType.CUBE;
+            }
+            return Render3DType.PLANE;
+        } else {
+            if (tileHasPlane || layerHasPlane) {
+                return Render3DType.PLANE;
+            }
+            return Render3DType.CUBE;
+        }
+    }
+
+    private boolean isFloating(int jo, int initset, int localId) {
+        layer lay = layers.get(jo);
+        for (property p : lay.getProperties()) {
+            if (p.getName().equalsIgnoreCase("float")) {
+                return true;
+            }
+        }
+        if (initset >= 0 && initset < tilesets.size()) {
+            tileset ts = tilesets.get(initset);
+            tile t = ts.getTileMeta(localId);
+            if (t != null) {
+                for (property p : t.getProperties()) {
+                    if (p.getName().equalsIgnoreCase("float")) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     private int[] cacheTilesOnLayered(SpriteCache cache, int intex, int intey) {
         lastDecalsBuilt.clear();
+        lastAnimatedTilesBuilt.clear();
         lastModelInstanceBuilt = null;
 
         com.badlogic.gdx.graphics.g3d.utils.ModelBuilder modelBuilder = null;
@@ -5498,7 +5571,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 long stripped = stripTileGidFlags(gid);
                 int localId = (int)(stripped - tilesets.get(tidx).getFirstgid());
                 if (localId < 0) continue;
-                opaqueGrid[lg][pos] = tilesets.get(tidx).isTileOpaque(localId);
+                opaqueGrid[lg][pos] = (getTile3DType(lg, tidx, localId) == Render3DType.CUBE);
             }
         }
 
@@ -5556,6 +5629,53 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         // Fix #2: O(1) animated check via pre-built HashSet
                         if (animatedGids.contains(mm_check)) {
+                            int tilesetTileIndex = -1;
+                            if (initset >= 0) {
+                                tiles = tilesets.get(initset).getTiles();
+                                tilesize = tiles.size();
+                                for (int n = 0; n < tilesize; n++) {
+                                    if (mm_check == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
+                                        tilesetTileIndex = n;
+                                        break;
+                                    }
+                                }
+                            }
+                            String tempFlag = "00";
+                            if (ini > total) {
+                                String tempHex = Long.toHexString(ini);
+                                String tempTrailer = "00000000" + tempHex;
+                                tempHex = tempTrailer.substring(tempTrailer.length() - 8);
+                                tempFlag = tempHex.substring(0, 2);
+                            }
+                            float animatedTileZ = 0;
+                            if (initset >= 0) {
+                                long strippedCheck = mm_check;
+                                int localIdCheck = (int) (strippedCheck - tilesets.get(initset).getFirstgid());
+                                if (localIdCheck >= 0 && isFloating(jo, initset, localIdCheck)) {
+                                    animatedTileZ = jo * Tsh * 0.75f;
+                                } else {
+                                    for (int k = 0; k < jo; k++) {
+                                        if (layers.get(k).getType() == layer.Type.TILE) {
+                                            long kGid = layers.get(k).getStr().get(position);
+                                            if (kGid != 0) {
+                                                int kPref = layers.get(k).getTset().get(position);
+                                                int kTidx = resolveTilesetIndexForGid(kGid, kPref);
+                                                if (kTidx >= 0) {
+                                                    long stripped = stripTileGidFlags(kGid);
+                                                    int localIdK = (int) (stripped - tilesets.get(kTidx).getFirstgid());
+                                                    if (localIdK >= 0 && !isFloating(k, kTidx, localIdK)) {
+                                                        Render3DType kT3dType = getTile3DType(k, kTidx, localIdK);
+                                                        if (kT3dType == Render3DType.CUBE) {
+                                                            animatedTileZ += Tsh * 0.75f;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            lastAnimatedTilesBuilt.add(new TileCache.AnimatedTileRef(jo, position, ini, initset, tempFlag, tilesetTileIndex, animatedTileZ));
                             continue;
                         }
 
@@ -5630,24 +5750,33 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
                         int localId = (int) (mm - tilesets.get(initset).getFirstgid());
                         float tileZ = 0;
-                        for (int k = 0; k < jo; k++) {
-                            if (layers.get(k).getType() == layer.Type.TILE) {
-                                long kGid = layers.get(k).getStr().get(position);
-                                if (kGid != 0) {
-                                    int kPref = layers.get(k).getTset().get(position);
-                                    int kTidx = resolveTilesetIndexForGid(kGid, kPref);
-                                    if (kTidx >= 0) {
-                                        long stripped = stripTileGidFlags(kGid);
-                                        int localIdK = (int) (stripped - tilesets.get(kTidx).getFirstgid());
-                                        if (localIdK >= 0 && tilesets.get(kTidx).isTileOpaque(localIdK)) {
-                                            tileZ += Tsh * 0.75f;
+                        if (isFloating(jo, initset, localId)) {
+                            tileZ = jo * Tsh * 0.75f;
+                        } else {
+                            for (int k = 0; k < jo; k++) {
+                                if (layers.get(k).getType() == layer.Type.TILE) {
+                                    long kGid = layers.get(k).getStr().get(position);
+                                    if (kGid != 0) {
+                                        int kPref = layers.get(k).getTset().get(position);
+                                        int kTidx = resolveTilesetIndexForGid(kGid, kPref);
+                                        if (kTidx >= 0) {
+                                            long stripped = stripTileGidFlags(kGid);
+                                            int localIdK = (int) (stripped - tilesets.get(kTidx).getFirstgid());
+                                            if (localIdK >= 0 && !isFloating(k, kTidx, localIdK)) {
+                                                Render3DType kT3dType = getTile3DType(k, kTidx, localIdK);
+                                                if (kT3dType == Render3DType.CUBE) {
+                                                    tileZ += Tsh * 0.75f;
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                         tempdrawer.tileZ = tileZ;
-                        if (tilesets.get(initset).isBillboardSprite(localId)) {
+
+                        Render3DType tile3dType = getTile3DType(jo, initset, localId);
+                        if (tile3dType == Render3DType.SPRITE) {
                             drawersBillboard.add(tempdrawer);
                             com.badlogic.gdx.graphics.g2d.TextureRegion tr = new com.badlogic.gdx.graphics.g2d.TextureRegion(
                                     tilesets.get(initset).getTexture(), sprX, sprY, Tswa, Tsha);
@@ -5657,7 +5786,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             float dz = tileZ + Tshad / 2f;
                             d.setPosition(dx, dy, dz);
                             lastDecalsBuilt.add(d);
-                        } else if (tilesets.get(initset).isTileOpaque(localId)) {
+                        } else if (tile3dType == Render3DType.CUBE) {
                             drawersOpaque.add(tempdrawer);
                         } else {
                             drawersTrans.add(tempdrawer);
@@ -5983,49 +6112,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void drawAnimatedTilesForChunkAndLayer(TileCache tc, int jo) {
-        int intex = tc.getIntex();
-        int intey = tc.getIntey();
-        int offsetx = 0, offsety = 0;
-        long ini;
-        int total = Tw * Th;
+        if (!sShowAnimations) return;
+        List<TileCache.AnimatedTileRef> refs = tc.getAnimatedTiles();
+        if (refs == null || refs.isEmpty()) return;
 
-        int startx = intex * widd, stopx = intex * widd + widd;
-        if (stopx > Tw)
-            stopx = intex * widd + (Tw % widd);
-        int starty = intey * heii, stopy = intey * heii + heii;
-        if (stopy > Th)
-            stopy = intey * heii + (Th % heii);
-        int aa = 0, bb = 0, cc = 0, dd = 0;
-        switch (renderorder) {
-            case "right-down":
-                aa = starty;
-                bb = stopy;
-                cc = startx;
-                dd = stopx;
-                break;
-            case "left-down":
-                aa = starty;
-                bb = stopy;
-                cc = -stopx + 1;
-                dd = -startx + 1;
-                break;
-            case "right-up":
-                aa = -stopy + 1;
-                bb = -starty + 1;
-                cc = startx;
-                dd = stopx;
-                break;
-            case "left-up":
-                aa = -stopy + 1;
-                bb = -starty + 1;
-                cc = -stopx + 1;
-                dd = -startx + 1;
-                break;
+        List<TileCache.AnimatedTileRef> layerRefs = new ArrayList<TileCache.AnimatedTileRef>();
+        for (TileCache.AnimatedTileRef r : refs) {
+            if (r.layer == jo) {
+                layerRefs.add(r);
+            }
         }
-
-        String flag;
-        Long mm = null;
-        flag = "00";
+        if (layerRefs.isEmpty()) return;
 
         boolean blendEnabled = false;
         if (layers.get(jo).getOpacity() != 0 && sEnableBlending) {
@@ -6039,158 +6136,97 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
         applyLayerDrawColor(jo);
 
-        String hex, trailer;
-        int sprX, sprY, margin, spacing, Tswa, Tsha;
-        java.util.List<tile> tiles;
-        int tilesize;
-        drawer tempdrawer;
+        List<drawer> drawers = new ArrayList<drawer>();
+        for (TileCache.AnimatedTileRef ref : layerRefs) {
+            int initset = ref.initset;
+            if (initset == -1) continue;
 
-        java.util.List<drawer> drawers = new ArrayList<drawer>();
-        drawers.clear();
-        for (int a = aa; a < bb; a++) {
-            for (int b = cc; b < dd; b++) {
-                int position = (abs(a) * Tw) + abs(b);
-                ini = layers.get(jo).getStr().get(position);
-                int initset = -1;
-                if (tilesets.size() > 0)
-                    initset = resolveTilesetIndexForGid(ini, layers.get(jo).getTset().get(position));
-                if (initset == -1)
-                    continue;
-                if (ini == 0)
-                    continue;
-
-                boolean isAnimated = false;
-                long mm_check = ini;
-                if (ini > total) {
-                    hex = Long.toHexString(ini);
-                    trailer = "00000000" + hex;
-                    hex = trailer.substring(trailer.length() - 8);
-                    mm_check = Long.decode("#00" + hex.substring(2, 8));
-                }
-
-                tiles = tilesets.get(initset).getTiles();
-                tilesize = tiles.size();
-                if (tilesize > 0) {
-                    for (int n = 0; n < tilesize; n++) {
-                        if (tiles.get(n).getAnimation().size() > 0) {
-                            if (mm_check == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
-                                isAnimated = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (!isAnimated) {
-                    continue;
-                }
-
-                int xpos = position % Tw;
-                int ypos = position / Tw;
-                if (orientation.equalsIgnoreCase("isometric")) {
-                    offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
-                    offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
-                }
-
-                mm = ini;
-                flag = "00";
-                if (ini > total) {
-                    hex = Long.toHexString(ini);
-                    trailer = "00000000" + hex;
-                    hex = trailer.substring(trailer.length() - 8);
-                    flag = hex.substring(0, 2);
-                    mm = Long.decode("#00" + hex.substring(2, 8));
-                }
-
-                if (tilesize > 0) {
-                    for (int n = 0; n < tilesize; n++) {
-                        if (tiles.get(n).getAnimation().size() > 0) {
-                            if (mm == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
-                                mm = (long) tiles.get(n).getActiveFrameID()
-                                        + tilesets.get(initset).getFirstgid();
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                {
-                    int localTile = (int) (mm - tilesets.get(initset).getFirstgid());
-                    sprX = tilesets.get(initset).getSrcX(localTile);
-                    sprY = tilesets.get(initset).getSrcY(localTile);
-                }
-                margin = tilesets.get(initset).getMargin();
-                spacing = tilesets.get(initset).getSpacing();
-                Tswa = tilesets.get(initset).getTilewidth();
-                Tsha = tilesets.get(initset).getTileheight();
-                int Tswad = 0;
-                int Tshad = 0;
-                if (sResizeTiles) {
-                    Tswad = Tsw;
-                    Tshad = Tsh;
-                } else {
-                    Tswad = Tswa;
-                    Tshad = Tsha;
-                }
-                tempdrawer = new drawer();
-                switch (flag) {
-                    case "20":
-                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, sprX,
-                                sprY, Tswa, Tsha, true, false);
-                        break;
-                    case "40":
-                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, sprX,
-                                sprY, Tswa, Tsha, false, true);
-                        break;
-                    case "60":
-                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, sprX,
-                                sprY, Tswa, Tsha, false, false);
-                        break;
-                    case "80":
-                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, sprX,
-                                sprY, Tswa, Tsha, true, false);
-                        break;
-                    case "a0":
-                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, sprX,
-                                sprY, Tswa, Tsha, false, false);
-                        break;
-                    case "c0":
-                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, sprX,
-                                sprY, Tswa, Tsha, false, false);
-                        break;
-                    case "e0":
-                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, sprX,
-                                sprY, Tswa, Tsha, true, false);
-                        break;
-                    case "00":
-                        tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
-                                Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, sprX,
-                                sprY, Tswa, Tsha, false, false);
-                        break;
-                }
-                drawers.add(tempdrawer);
+            int xpos = ref.position % Tw;
+            int ypos = ref.position / Tw;
+            int offsetx = 0, offsety = 0;
+            if (orientation.equalsIgnoreCase("isometric")) {
+                offsetx = (xpos * Tsw / 2) + (ypos * Tsw / 2);
+                offsety = (xpos * Tsh / 2) - (ypos * Tsh / 2);
             }
+
+            long mm = ref.ini;
+            if (initset >= 0 && ref.tilesetTileIndex >= 0) {
+                long activeFrame = tilesets.get(initset).getTiles().get(ref.tilesetTileIndex).getActiveFrameID();
+                mm = activeFrame + tilesets.get(initset).getFirstgid();
+            }
+
+            int localTile = (int) (mm - tilesets.get(initset).getFirstgid());
+            int sprX = tilesets.get(initset).getSrcX(localTile);
+            int sprY = tilesets.get(initset).getSrcY(localTile);
+            int Tswa = tilesets.get(initset).getTilewidth();
+            int Tsha = tilesets.get(initset).getTileheight();
+            int Tswad = sResizeTiles ? Tsw : Tswa;
+            int Tshad = sResizeTiles ? Tsh : Tsha;
+
+            drawer tempdrawer = new drawer();
+            switch (ref.flag) {
+                case "20":
+                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                            Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, sprX,
+                            sprY, Tswa, Tsha, true, false);
+                    break;
+                case "40":
+                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                            Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, sprX,
+                            sprY, Tswa, Tsha, false, true);
+                    break;
+                case "60":
+                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                            Tsh / 2, Tswad, Tshad, 1f, 1f, 90f, sprX,
+                            sprY, Tswa, Tsha, false, false);
+                    break;
+                case "80":
+                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                            Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, sprX,
+                            sprY, Tswa, Tsha, true, false);
+                    break;
+                case "a0":
+                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                            Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, sprX,
+                            sprY, Tswa, Tsha, false, false);
+                    break;
+                case "c0":
+                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                            Tsh / 2, Tswad, Tshad, 1f, 1f, 180f, sprX,
+                            sprY, Tswa, Tsha, false, false);
+                    break;
+                case "e0":
+                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                            Tsh / 2, Tswad, Tshad, 1f, 1f, 270f, sprX,
+                            sprY, Tswa, Tsha, true, false);
+                    break;
+                case "00":
+                    tempdrawer.setdrawer(initset, xpos * Tsw - offsetx, -ypos * Tsh - offsety, Tsw / 2,
+                            Tsh / 2, Tswad, Tshad, 1f, 1f, 0f, sprX,
+                            sprY, Tswa, Tsha, false, false);
+                    break;
+            }
+            tempdrawer.tileZ = ref.tileZ;
+            drawers.add(tempdrawer);
         }
 
         if (!drawers.isEmpty()) {
-            batch.setProjectionMatrix(is3DMode ? cam3d.combined : cam.combined);
-            com.badlogic.gdx.math.Matrix4 oldTransform = batch.getTransformMatrix().cpy();
-            if (is3DMode) {
-                com.badlogic.gdx.math.Matrix4 transform = oldTransform.cpy().translate(0, 0, jo * Tsh * 0.75f);
-                batch.setTransformMatrix(transform);
+            if (isFull3DMode) {
+                batch.setProjectionMatrix(camFull3D.combined);
+            } else {
+                batch.setProjectionMatrix(is3DMode ? cam3d.combined : cam.combined);
             }
+            com.badlogic.gdx.math.Matrix4 oldTransform = batch.getTransformMatrix().cpy();
             batch.begin();
             for (drawer drawer : drawers) {
+                if (is3DMode || isFull3DMode) {
+                    com.badlogic.gdx.math.Matrix4 transform = oldTransform.cpy().translate(0, 0, drawer.tileZ);
+                    batch.setTransformMatrix(transform);
+                }
                 drawMapDrawer(batch, drawer);
             }
             batch.end();
-            if (is3DMode) {
+            if (is3DMode || isFull3DMode) {
                 batch.setTransformMatrix(oldTransform);
             }
         }

@@ -102,6 +102,43 @@ public class TileCache {
         }
     }
 
+    public void disposeModel() {
+        if (modelInstance != null && modelInstance.model != null) {
+            modelInstance.model.dispose();
+            modelInstance = null;
+        }
+    }
+
+    public static class AnimatedTileRef {
+        public final int layer;
+        public final int position;
+        public final long ini;
+        public final int initset;
+        public final String flag;
+        public final int tilesetTileIndex;
+        public final float tileZ;
+
+        public AnimatedTileRef(int layer, int position, long ini, int initset, String flag, int tilesetTileIndex, float tileZ) {
+            this.layer = layer;
+            this.position = position;
+            this.ini = ini;
+            this.initset = initset;
+            this.flag = flag;
+            this.tilesetTileIndex = tilesetTileIndex;
+            this.tileZ = tileZ;
+        }
+    }
+
+    private List<AnimatedTileRef> animatedTiles = new ArrayList<AnimatedTileRef>();
+
+    public List<AnimatedTileRef> getAnimatedTiles() {
+        return animatedTiles;
+    }
+
+    public void setAnimatedTiles(List<AnimatedTileRef> animatedTiles) {
+        this.animatedTiles = animatedTiles;
+    }
+
     private List<Decal> decals = new ArrayList<Decal>();
 
     public List<Decal> getDecals() {

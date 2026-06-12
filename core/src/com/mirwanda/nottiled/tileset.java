@@ -45,6 +45,10 @@ public class tileset
 	private int[] gridIndexToTileId = new int[0];
 	private java.util.HashMap<Integer, Boolean> opaqueCache = new java.util.HashMap<Integer, Boolean>();
 
+	public void clearOpaqueCache() {
+		opaqueCache.clear();
+	}
+
 	public boolean isBillboardSprite(int localTileId) {
 		tile t = getTileMeta(localTileId);
 		if (t != null) {
@@ -61,32 +65,16 @@ public class tileset
 		Boolean cached = opaqueCache.get(localTileId);
 		if (cached != null) return cached;
 
-		if (getPixmap() == null) {
-			opaqueCache.put(localTileId, false);
-			return false;
-		}
-		
-		if (isCollection()) {
-			opaqueCache.put(localTileId, false);
-			return false;
-		}
-
-		int x = getSprX(localTileId);
-		int y = getSprY(localTileId);
-		int tw = getTilewidth();
-		int th = getTileheight();
-		
-		boolean opaque = true;
-		for (int i = 0; i < tw; i++) {
-			for (int j = 0; j < th; j++) {
-				int pixel = getPixmap().getPixel(x + i, y + j);
-				if ((pixel & 0x000000ff) == 0) { // any fully transparent pixel means not opaque
-					opaque = false;
-					break;
+		tile t = getTileMeta(localTileId);
+		boolean hasSpriteOrPlane = false;
+		if (t != null) {
+			for (property p : t.getProperties()) {
+				if (p.getName().equalsIgnoreCase("sprite") || p.getName().equalsIgnoreCase("plane")) {
+					hasSpriteOrPlane = true;
 				}
 			}
-			if (!opaque) break;
 		}
+		boolean opaque = !hasSpriteOrPlane;
 		opaqueCache.put(localTileId, opaque);
 		return opaque;
 	}
@@ -397,6 +385,7 @@ public class tileset
 
 	public void clearTerrainCache() {
 		terrainTileMap = null;
+		opaqueCache.clear();
 	}
 
 	public boolean isCollection() {
