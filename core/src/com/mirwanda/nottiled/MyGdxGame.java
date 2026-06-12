@@ -6537,11 +6537,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void drawObjects() {
-        sr.setProjectionMatrix(is3DMode ? cam3d.combined : cam.combined);
+        sr.setProjectionMatrix(isFull3DMode ? camFull3D.combined : (is3DMode ? cam3d.combined : cam.combined));
 
         // Part one of 2, filled.
         sr.begin(ShapeRenderer.ShapeType.Filled); // Edit it with filled to make it looks gorgeous.
         Gdx.gl.glEnable(GL20.GL_BLEND);
+        if (isFull3DMode) {
+            Gdx.gl.glDepthMask(false);
+        }
 
         Gdx.gl20.glLineWidth(5);// average
         sr.setColor(0.5f, 0.5f, 0.5f, 0.5f); // blink
@@ -6560,6 +6563,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 boolean isShown = layerShownInViewMode(i);
 
                 if (layers.get(i).getType() == layer.Type.OBJECT && isShown && layers.get(i).getObjects().size() > 0) {
+                    float layerZ = i * Tsh * 0.75f + 0.1f;
+                    if (isFull3DMode) {
+                        sr.setTransformMatrix(new com.badlogic.gdx.math.Matrix4().setToTranslation(0, 0, layerZ));
+                    } else {
+                        sr.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
+                    }
 
                     updateMarkers();
                     for (int j = 0; j < layers.get(i).getObjects().size(); j++) {
@@ -6670,12 +6679,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             }
         }
-
+        if (isFull3DMode) {
+            sr.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
+        }
         sr.end();
 
         // part 2 of 2, outline.
         sr.begin(ShapeRenderer.ShapeType.Line); //
         Gdx.gl.glEnable(GL20.GL_BLEND);
+        if (isFull3DMode) {
+            Gdx.gl.glDepthMask(false);
+        }
 
         Gdx.gl20.glLineWidth(5);// average
         // sr.setColor(0.8f, 0.8f, 0.8f, 0.5f); //blink
@@ -6694,6 +6708,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 boolean isShown = layerShownInViewMode(i);
 
                 if (layers.get(i).getType() == layer.Type.OBJECT && isShown && layers.get(i).getObjects().size() > 0) {
+                    float layerZ = i * Tsh * 0.75f + 0.1f;
+                    if (isFull3DMode) {
+                        sr.setTransformMatrix(new com.badlogic.gdx.math.Matrix4().setToTranslation(0, 0, layerZ));
+                    } else {
+                        sr.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
+                    }
 
                     for (int j = 0; j < layers.get(i).getObjects().size(); j++) {
 
@@ -6803,20 +6823,32 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             }
         }
-
+        if (isFull3DMode) {
+            sr.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
+            Gdx.gl.glDepthMask(true);
+        }
         sr.end();
 
     }
 
     public void drawObjectsInfo() {
 
-        batch.setProjectionMatrix(is3DMode ? cam3d.combined : cam.combined);
+        batch.setProjectionMatrix(isFull3DMode ? camFull3D.combined : (is3DMode ? cam3d.combined : cam.combined));
         batch.begin();
+        if (isFull3DMode) {
+            Gdx.gl.glDepthMask(false);
+        }
         str1.getData().setScale(Tsw / 200f);
         if (layers.size() > 0) {
             for (int i = 0; i < layers.size(); i++) {
                 if (layers.get(i).getType() == layer.Type.OBJECT && layers.get(i).isVisible()
                         && layers.get(i).getObjects().size() > 0) {
+                    float layerZ = i * Tsh * 0.75f + 0.1f;
+                    if (isFull3DMode) {
+                        batch.setTransformMatrix(new com.badlogic.gdx.math.Matrix4().setToTranslation(0, 0, layerZ));
+                    } else {
+                        batch.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
+                    }
 
                     for (int j = 0; j < layers.get(i).getObjects().size(); j++) {
 
@@ -6898,6 +6930,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         }
         str1.getData().setScale(1f);
+        if (isFull3DMode) {
+            batch.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
+            Gdx.gl.glDepthMask(true);
+        }
         batch.end();
     }
 
