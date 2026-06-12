@@ -1068,6 +1068,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         nullTable = new Table();
         vers = face.getVersione();
         prefs = Gdx.app.getPreferences("My Preferences");
+        isFull3DMode = prefs.getBoolean("isFull3DMode", false);
         int shutdowns = prefs.getInteger("abnormal_shutdowns", 0);
         prefs.putInteger("abnormal_shutdowns", shutdowns + 1).flush();
         language = prefs.getString("language", "English");
@@ -4542,6 +4543,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                 }
                 sr.end();
+            }
+
+            if (isFull3DMode && !caching) {
+                if (!orientation.equalsIgnoreCase("orthogonal")) {
+                    isFull3DMode = false;
+                    prefs.putBoolean("isFull3DMode", false).flush();
+                    if (bToggleFull3D != null) {
+                        bToggleFull3D.setText("3D Mode");
+                    }
+                } else {
+                    if (camFull3D == null)
+                        updateCam3d();
+                }
             }
 
             if (isFull3DMode && !caching) {
@@ -11108,7 +11122,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         });
 
-        bToggleFull3D = new TextButton("3D Mode", skin);
+        bToggleFull3D = new TextButton(isFull3DMode ? "2D Mode" : "3D Mode", skin);
         bToggleFull3D.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -11117,6 +11131,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     return;
                 }
                 isFull3DMode = !isFull3DMode;
+                prefs.putBoolean("isFull3DMode", isFull3DMode).flush();
                 resetCaches();
                 if (isFull3DMode) {
                     cam3dTargetX = cam.position.x;
