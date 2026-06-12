@@ -1,6 +1,7 @@
 package com.mirwanda.nottiled;
 
 import com.badlogic.gdx.graphics.g2d.SpriteCache;
+import com.badlogic.gdx.graphics.g3d.Model;
 
 import java.util.ArrayList;
 import com.badlogic.gdx.graphics.g3d.decals.Decal;
@@ -64,6 +65,9 @@ public class TileCache {
     }
 
     private com.badlogic.gdx.graphics.g3d.ModelInstance modelInstance;
+    private com.badlogic.gdx.graphics.g3d.ModelInstance shadowModelInstance;
+    /** The raw Model backing shadowModelInstance — must be disposed when the chunk is rebuilt. */
+    private Model shadowModel;
 
     public com.badlogic.gdx.graphics.g3d.ModelInstance getModelInstance() {
         return modelInstance;
@@ -71,6 +75,31 @@ public class TileCache {
 
     public void setModelInstance(com.badlogic.gdx.graphics.g3d.ModelInstance modelInstance) {
         this.modelInstance = modelInstance;
+    }
+
+    public com.badlogic.gdx.graphics.g3d.ModelInstance getShadowModelInstance() {
+        return shadowModelInstance;
+    }
+
+    public void setShadowModelInstance(com.badlogic.gdx.graphics.g3d.ModelInstance shadowModelInstance) {
+        this.shadowModelInstance = shadowModelInstance;
+    }
+
+    public Model getShadowModel() {
+        return shadowModel;
+    }
+
+    public void setShadowModel(Model shadowModel) {
+        this.shadowModel = shadowModel;
+    }
+
+    /** Dispose the shadow model to free GPU memory before rebuilding or destroying this chunk. */
+    public void disposeShadowModel() {
+        if (shadowModel != null) {
+            shadowModel.dispose();
+            shadowModel = null;
+            shadowModelInstance = null;
+        }
     }
 
     private List<Decal> decals = new ArrayList<Decal>();

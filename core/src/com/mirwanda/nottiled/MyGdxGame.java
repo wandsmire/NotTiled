@@ -719,6 +719,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private Decal tempDecal;
     private java.util.List<Decal> lastDecalsBuilt = new java.util.ArrayList<Decal>();
     private com.badlogic.gdx.graphics.g3d.ModelInstance lastModelInstanceBuilt = null;
+    private com.badlogic.gdx.graphics.g3d.Model lastShadowModelBuilt = null;
+    private com.badlogic.gdx.graphics.g3d.ModelInstance lastShadowModelInstanceBuilt = null;
     private Model cubeModel;
     private OrthographicCamera cam3d;
     private com.badlogic.gdx.graphics.PerspectiveCamera camFull3D;
@@ -4581,61 +4583,31 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
                 modelBatch.end();
 
-                // Draw clean, fake drop shadows directly underneath floating objects
+                // Render baked drop-shadow quads (baked at cache-build time â zero per-frame CPU cost)
                 Gdx.gl.glEnable(GL20.GL_BLEND);
                 Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
                 Gdx.gl.glDepthMask(false);
-                sr.setProjectionMatrix(camFull3D.combined);
-                sr.begin(com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType.Filled);
-                sr.setColor(0f, 0f, 0f, 0.15f); // 15% black drop shadow
-                
-                for (int i = 0; i < tcaches.size(); i++) {
-                    TileCache tc = tcaches.get(i);
-                    int startX = tc.getIntex() * widd;
-                    int startY = tc.getIntey() * heii;
-                    int endX = Math.min(startX + widd, Tw);
-                    int endY = Math.min(startY + heii, Th);
-                    float chunkX = tc.getIntex() * widd * Tsw;
-                    float chunkY = tc.getIntey() * heii * -Tsh + Tsh;
-                    float chunkW = widd * Tsw;
-                    float chunkH = heii * Tsh;
-                    float centerZ = (layers.size() * Tsh * 0.75f) / 2.0f;
-                    float extentZ = (layers.size() * Tsh * 0.75f) / 2.0f;
-                    if (camFull3D.frustum.boundsInFrustum(chunkX + chunkW / 2f, chunkY - chunkH / 2f, centerZ,
-                            chunkW / 2f, chunkH / 2f, extentZ)) {
-                        for (int jo = 1; jo < layers.size(); jo++) {
-                            if (layers.get(jo).getType() == layer.Type.TILE && layerShownInViewMode(jo)) {
-                                for (int ty = startY; ty < endY; ty++) {
-                                    for (int tx = startX; tx < endX; tx++) {
-                                        int tileIdx = ty * Tw + tx;
-                                        if (layers.get(jo).getTset().get(tileIdx) != -1) {
-                                            // Find highest block below
-                                            int highestBelow = -1;
-                                            for (int k = jo - 1; k >= 0; k--) {
-                                                if (layers.get(k).getType() == layer.Type.TILE && layerShownInViewMode(k)) {
-                                                    if (layers.get(k).getTset().get(tileIdx) != -1) {
-                                                        highestBelow = k;
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                            // Only draw shadow if there is a gap
-                                            if (highestBelow < jo - 1) {
-                                                float shadowZ = (highestBelow + 1) * Tsh * 0.75f + 0.05f;
-                                                float tX = tx * Tsw;
-                                                float tY = ty * -Tsh + Tsh;
-                                                sr.box(tX, tY - Tsh, shadowZ, Tsw, Tsh, 0.05f);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                modelBatch.begin(camFull3D);
+                for (int si = 0; si < tcaches.size(); si++) {
+                    TileCache tcS = tcaches.get(si);
+                    float sChunkX = tcS.getIntex() * widd * Tsw;
+                    float sChunkY = tcS.getIntey() * heii * -Tsh + Tsh;
+                    float sChunkW = widd * Tsw;
+                    float sChunkH = heii * Tsh;
+                    float sCenterZ = (layers.size() * Tsh * 0.75f) / 2.0f;
+                    float sExtentZ = (layers.size() * Tsh * 0.75f) / 2.0f;
+                    if (camFull3D.frustum.boundsInFrustum(sChunkX + sChunkW / 2f, sChunkY - sChunkH / 2f, sCenterZ,
+                            sChunkW / 2f, sChunkH / 2f, sExtentZ)) {
+                        com.badlogic.gdx.graphics.g3d.ModelInstance shadowMi = tcS.getShadowModelInstance();
+                        if (shadowMi != null) {
+                            modelBatch.render(shadowMi);
                         }
                     }
                 }
-                sr.end();
+                modelBatch.end();
                 Gdx.gl.glDepthMask(true);
             }
+
             if (!caching) {
                 for (int i = 0; i < tcaches.size(); i++) {
                     TileCache tc = tcaches.get(i);
@@ -5134,6 +5106,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         tcache = new TileCache(cache, cids, x, y);
                         tcache.getDecals().addAll(lastDecalsBuilt);
                         tcache.setModelInstance(lastModelInstanceBuilt);
+                        tcache.setShadowModel(lastShadowModelBuilt);
+                        tcache.setShadowModelInstance(lastShadowModelInstanceBuilt);
                         tcaches.add(tcache);
                     } else {
                         int cid = cacheTilesOn(cache, x, y);
@@ -5191,6 +5165,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     tc.getDecals().clear();
                     tc.getDecals().addAll(lastDecalsBuilt);
                     tc.setModelInstance(lastModelInstanceBuilt);
+                    tc.disposeShadowModel(); // free old GPU shadow mesh before replacing
+                    tc.setShadowModel(lastShadowModelBuilt);
+                    tc.setShadowModelInstance(lastShadowModelInstanceBuilt);
                     tc.setChanged(false);
                 } else {
                     int cid = cacheTilesOn(cache, tc.getIntex(), tc.getIntey());
@@ -5447,6 +5424,41 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Long mm = null;
         flag = "00";
 
+        // ── Fix #2: Build HashSet of animated GIDs for O(1) lookup ─────────
+        java.util.Set<Long> animatedGids = new java.util.HashSet<Long>();
+        for (int ts = 0; ts < tilesets.size(); ts++) {
+            tileset t = tilesets.get(ts);
+            java.util.List<tile> tTiles = t.getTiles();
+            for (int ti = 0; ti < tTiles.size(); ti++) {
+                if (tTiles.get(ti).getAnimation().size() > 0) {
+                    animatedGids.add((long) tTiles.get(ti).getTileID() + t.getFirstgid());
+                }
+            }
+        }
+
+        // ── Fix #3: Pre-build per-layer tile-opaqueness grid ────────────────
+        // opaqueGrid[layerIndex][tilePos] = true if tile is opaque
+        int numLayers = layers.size();
+        int mapSize = Tw * Th;
+        boolean[][] opaqueGrid = new boolean[numLayers][mapSize];
+        for (int lg = 0; lg < numLayers; lg++) {
+            if (layers.get(lg).getType() != layer.Type.TILE) continue;
+            java.util.List<Long> lgStr = layers.get(lg).getStr();
+            java.util.List<Integer> lgTset = layers.get(lg).getTset();
+            int lgSize = lgStr.size();
+            for (int pos = 0; pos < lgSize && pos < mapSize; pos++) {
+                long gid = lgStr.get(pos);
+                if (gid == 0) continue;
+                int pref = lgTset.get(pos);
+                int tidx = resolveTilesetIndexForGid(gid, pref);
+                if (tidx < 0) continue;
+                long stripped = stripTileGidFlags(gid);
+                int localId = (int)(stripped - tilesets.get(tidx).getFirstgid());
+                if (localId < 0) continue;
+                opaqueGrid[lg][pos] = tilesets.get(tidx).isTileOpaque(localId);
+            }
+        }
+
         for (int jo = 0; jo < layers.size(); jo++) {
             boolean vis = layerShownInViewMode(jo);
             if (layers.get(jo).getType() == layer.Type.TILE && vis) {
@@ -5499,19 +5511,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             mm_check = Long.decode("#00" + hex.substring(2, 8));
                         }
 
-                        tiles = tilesets.get(initset).getTiles();
-                        tilesize = tiles.size();
-                        if (tilesize > 0) {
-                            for (int n = 0; n < tilesize; n++) {
-                                if (tiles.get(n).getAnimation().size() > 0) {
-                                    if (mm_check == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
-                                        isAnimated = true;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        if (isAnimated) {
+                        // Fix #2: O(1) animated check via pre-built HashSet
+                        if (animatedGids.contains(mm_check)) {
                             continue;
                         }
 
@@ -5663,98 +5664,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 int gx = Math.round(x0 / Tsw);
                                 int gy = -Math.round(y0 / Tsh); // y0 is negative, tile row = -y0/Tsh
 
-                                boolean hasLeft = false, hasRight = false;
-                                boolean hasFront = false, hasBack = false;
-                                boolean hasTop = false; // covered by layer above
+                                // Fix #3: O(1) neighbor opaqueness via pre-built grid
+                                int posLeft  = (gx - 1 >= 0)   ? gy * Tw + (gx - 1)       : -1;
+                                int posRight = (gx + 1 < Tw)   ? gy * Tw + (gx + 1)       : -1;
+                                int posFront = (gy + 1 < Th)   ? (gy + 1) * Tw + gx       : -1;
+                                int posBack  = (gy - 1 >= 0)   ? (gy - 1) * Tw + gx       : -1;
+                                int posTop   = (jo + 1 < numLayers) ? Math.abs(gy) * Tw + gx : -1;
 
-                                int layerSize = layers.get(jo).getStr().size();
-
-                                // Left: gx - 1, gy
-                                if (gx - 1 >= 0) {
-                                    int pos = gy * Tw + (gx - 1);
-                                    if (pos >= 0 && pos < layerSize) {
-                                        long nIni = layers.get(jo).getStr().get(pos);
-                                        if (nIni != 0) {
-                                            int nTset = resolveTilesetIndexForGid(nIni,
-                                                    layers.get(jo).getTset().get(pos));
-                                            if (nTset != -1) {
-                                                int nLocal = (int) (stripTileGidFlags(nIni)
-                                                        - tilesets.get(nTset).getFirstgid());
-                                                if (tilesets.get(nTset).isTileOpaque(nLocal))
-                                                    hasLeft = true;
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // Right: gx + 1, gy
-                                if (gx + 1 < Tw) {
-                                    int pos = gy * Tw + (gx + 1);
-                                    if (pos >= 0 && pos < layerSize) {
-                                        long nIni = layers.get(jo).getStr().get(pos);
-                                        if (nIni != 0) {
-                                            int nTset = resolveTilesetIndexForGid(nIni,
-                                                    layers.get(jo).getTset().get(pos));
-                                            if (nTset != -1) {
-                                                int nLocal = (int) (stripTileGidFlags(nIni)
-                                                        - tilesets.get(nTset).getFirstgid());
-                                                if (tilesets.get(nTset).isTileOpaque(nLocal))
-                                                    hasRight = true;
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // Front: gx, gy + 1
-                                if (gy + 1 < Th) {
-                                    int pos = (gy + 1) * Tw + gx;
-                                    if (pos >= 0 && pos < layerSize) {
-                                        long nIni = layers.get(jo).getStr().get(pos);
-                                        if (nIni != 0) {
-                                            int nTset = resolveTilesetIndexForGid(nIni,
-                                                    layers.get(jo).getTset().get(pos));
-                                            if (nTset != -1) {
-                                                int nLocal = (int) (stripTileGidFlags(nIni)
-                                                        - tilesets.get(nTset).getFirstgid());
-                                                if (tilesets.get(nTset).isTileOpaque(nLocal))
-                                                    hasFront = true;
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // Back: gx, gy - 1
-                                if (gy - 1 >= 0) {
-                                    int pos = (gy - 1) * Tw + gx;
-                                    if (pos >= 0 && pos < layerSize) {
-                                        long nIni = layers.get(jo).getStr().get(pos);
-                                        if (nIni != 0) {
-                                            int nTset = resolveTilesetIndexForGid(nIni,
-                                                    layers.get(jo).getTset().get(pos));
-                                            if (nTset != -1) {
-                                                int nLocal = (int) (stripTileGidFlags(nIni)
-                                                        - tilesets.get(nTset).getFirstgid());
-                                                if (tilesets.get(nTset).isTileOpaque(nLocal))
-                                                    hasBack = true;
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // Top face is hidden if the layer directly above has an opaque tile here
-                                if (jo + 1 < layers.size()) {
-                                    int pos = Math.abs(gy) * Tw + gx;
-                                    if (pos >= 0 && pos < layers.get(jo + 1).getStr().size()) {
-                                        long aboveIni = layers.get(jo + 1).getStr().get(pos);
-                                        if (aboveIni != 0) {
-                                            int aboveTset = resolveTilesetIndexForGid(aboveIni,
-                                                    layers.get(jo + 1).getTset().get(pos));
-                                            int aboveLocal = (int) (aboveIni - tilesets.get(aboveTset).getFirstgid());
-                                            if (tilesets.get(aboveTset).isTileOpaque(aboveLocal))
-                                                hasTop = true;
-                                        }
-                                    }
-                                }
+                                boolean hasLeft  = posLeft  >= 0 && posLeft  < mapSize && opaqueGrid[jo][posLeft];
+                                boolean hasRight = posRight >= 0 && posRight < mapSize && opaqueGrid[jo][posRight];
+                                boolean hasFront = posFront >= 0 && posFront < mapSize && opaqueGrid[jo][posFront];
+                                boolean hasBack  = posBack  >= 0 && posBack  < mapSize && opaqueGrid[jo][posBack];
+                                boolean hasTop   = posTop   >= 0 && posTop   < mapSize && (jo + 1 < numLayers) && opaqueGrid[jo + 1][posTop];
 
                                 // Top face
                                 if (!hasTop) {
@@ -5849,6 +5770,82 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             com.badlogic.gdx.graphics.g3d.Model chunkModel = modelBuilder.end();
             if (chunkModel != null && chunkModel.meshes.size > 0) {
                 lastModelInstanceBuilt = new com.badlogic.gdx.graphics.g3d.ModelInstance(chunkModel);
+            }
+
+            // ── Fix #1: Bake drop-shadow geometry into a GPU mesh ────────────
+            // Iterate every tile in this chunk on every layer; if there is a
+            // vertical gap below it, emit a thin quad at the surface of the
+            // highest filled layer below — exactly matching the old ShapeRenderer
+            // logic but baked once instead of being re-evaluated every frame.
+            lastShadowModelBuilt = null;
+            lastShadowModelInstanceBuilt = null;
+            try {
+                com.badlogic.gdx.graphics.g3d.utils.ModelBuilder shadowBuilder =
+                        new com.badlogic.gdx.graphics.g3d.utils.ModelBuilder();
+                shadowBuilder.begin();
+
+                // Shadow material: flat dark semi-transparent color, no texture
+                com.badlogic.gdx.graphics.g3d.Material shadowMat =
+                        new com.badlogic.gdx.graphics.g3d.Material(
+                                com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute.createDiffuse(0f, 0f, 0f, 0.15f),
+                                new com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute(
+                                        com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA,
+                                        com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA));
+
+                com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder shadowMesh = shadowBuilder.part(
+                        "shadow",
+                        com.badlogic.gdx.graphics.GL20.GL_TRIANGLES,
+                        com.badlogic.gdx.graphics.VertexAttributes.Usage.Position
+                                | com.badlogic.gdx.graphics.VertexAttributes.Usage.Normal,
+                        shadowMat);
+
+                int shadowQuads = 0;
+                for (int jo = 1; jo < layers.size(); jo++) {
+                    if (layers.get(jo).getType() != layer.Type.TILE || !layerShownInViewMode(jo)) continue;
+                    for (int ty = starty; ty < stopy; ty++) {
+                        for (int tx = startx; tx < stopx; tx++) {
+                            int tileIdx = ty * Tw + tx;
+                            if (tileIdx < 0 || tileIdx >= mapSize) continue;
+                            if (layers.get(jo).getTset().get(tileIdx) == -1) continue;
+                            // Find highest filled layer below
+                            int highestBelow = -1;
+                            for (int k = jo - 1; k >= 0; k--) {
+                                if (layers.get(k).getType() == layer.Type.TILE && layerShownInViewMode(k)) {
+                                    if (tileIdx < layers.get(k).getTset().size()
+                                            && layers.get(k).getTset().get(tileIdx) != -1) {
+                                        highestBelow = k;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (highestBelow < jo - 1) {
+                                float shadowZ = (highestBelow + 1) * Tsh * 0.75f + 0.01f;
+                                float sX0 = tx * Tsw;
+                                float sX1 = sX0 + Tsw;
+                                float sY0 = ty * -Tsh + Tsh - Tsh; // = ty * -Tsh
+                                float sY1 = sY0 + Tsh;
+                                com.badlogic.gdx.math.Vector3 norm = new com.badlogic.gdx.math.Vector3(0, 0, 1);
+                                shadowMesh.rect(
+                                        new com.badlogic.gdx.math.Vector3(sX0, sY0, shadowZ),
+                                        new com.badlogic.gdx.math.Vector3(sX1, sY0, shadowZ),
+                                        new com.badlogic.gdx.math.Vector3(sX1, sY1, shadowZ),
+                                        new com.badlogic.gdx.math.Vector3(sX0, sY1, shadowZ),
+                                        norm);
+                                shadowQuads++;
+                            }
+                        }
+                    }
+                }
+
+                if (shadowQuads > 0) {
+                    lastShadowModelBuilt = shadowBuilder.end();
+                    lastShadowModelInstanceBuilt =
+                            new com.badlogic.gdx.graphics.g3d.ModelInstance(lastShadowModelBuilt);
+                } else {
+                    shadowBuilder.end(); // must always call end()
+                }
+            } catch (Exception eShadow) {
+                // non-fatal — shadows are cosmetic only
             }
         }
 
