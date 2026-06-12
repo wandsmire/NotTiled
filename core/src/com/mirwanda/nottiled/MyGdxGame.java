@@ -2516,10 +2516,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     && (Gdx.input.isKeyJustPressed(Input.Keys.DEL) || Gdx.input.isKeyJustPressed(Input.Keys.FORWARD_DEL)
                             || Gdx.input.isKeyJustPressed(Input.Keys.BACKSPACE))) {
                 if (stage.getKeyboardFocus() == null && selobjs.size() > 0) {
+                    boolean first = true;
                     for (obj o : selobjs) {
                         o.destroyBody(world);
                         layers.get(selLayer).getObjects().remove(o);
+                        
+                        layerobjecthistory loh = new layerobjecthistory();
+                        loh.setRelatedobj(o);
+                        loh.setLayer(selLayer);
+                        loh.setAction("delete");
+                        loh.follower = !first;
+                        first = false;
+                        loh.setData(serializeObject(o));
+                        undolayerobject.add(loh);
                     }
+                    redolayerobject.clear();
                     selobjs.clear();
                     oldobjdata.clear();
                     pushUpdateIfCollaborating();
@@ -4640,64 +4651,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
                     }
 
-                    SpriteCache cache = tc.getCache();
                     if (isFull3DMode) {
-                        cache.setProjectionMatrix(camFull3D.combined);
-                    } else {
-                        cache.setProjectionMatrix(is3DMode ? cam3d.combined : cam.combined);
-                    }
-                    Gdx.gl.glEnable(GL20.GL_BLEND);
-                    Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-                    cache.setColor(1f, 1f, 1f, 1f);
-
-                    if (sShowAnimations || is3DMode || isFull3DMode) {
-                        int[] cids = tc.getCacheIDs();
-                        if (cids != null) {
-                            com.badlogic.gdx.math.Matrix4 transform = new com.badlogic.gdx.math.Matrix4();
+                        // In Full 3D Mode, 3D meshes are rendered via modelBatch.
+                        // We only need to draw decals or animated tiles.
+                        if (tc.getCacheIDs() != null) {
+                            com.badlogic.gdx.graphics.Camera billCam = camFull3D;
                             for (int jo = 0; jo < layers.size(); jo++) {
                                 boolean isShown = layerShownInViewMode(jo);
                                 if (layers.get(jo).getType() == layer.Type.TILE && isShown) {
-                                    int myOpaqueId = cids[jo * 3];
-                                    int myTransId = cids[jo * 3 + 1];
-                                    int myBillboardId = cids[jo * 3 + 2];
-
-                                    if (myOpaqueId != -1 && !isFull3DMode) {
-                                        if (is3DMode) {
-                                            Gdx.gl.glDepthMask(true);
-                                            transform.setToTranslation(0, 0, jo * Tsh * 0.75f);
-                                            cache.setTransformMatrix(transform);
-                                        } else {
-                                            cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
-                                        }
-                                        cache.begin();
-                                        cache.draw(myOpaqueId);
-                                        cache.end();
-                                    }
-
-                                    if (myTransId != -1) {
-                                        if (is3DMode || isFull3DMode) {
-                                            Gdx.gl.glDepthMask(false);
-                                            float transElev = jo * Tsh * 0.75f;
-                                            transform.setToTranslation(0, 0, transElev);
-                                            cache.setTransformMatrix(transform);
-                                        } else {
-                                            cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
-                                        }
-                                        cache.begin();
-                                        cache.draw(myTransId);
-                                        cache.end();
-                                    }
-
-                                    if (myBillboardId != -1 && !is3DMode && !isFull3DMode) {
-                                        cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
-                                        cache.begin();
-                                        cache.draw(myBillboardId);
-                                        cache.end();
-                                    }
-
-                                    if ((is3DMode || isFull3DMode) && tc.getDecals() != null
-                                            && tc.getDecals().size() > 0) {
-                                        com.badlogic.gdx.graphics.Camera billCam = isFull3DMode ? camFull3D : cam3d;
+                                    if (tc.getDecals() != null && tc.getDecals().size() > 0) {
                                         if (decalBatch == null || lastDecalCam != billCam) {
                                             if (decalBatch != null) {
                                                 decalBatch.dispose();
@@ -4715,16 +4677,97 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     drawAnimatedTilesForChunkAndLayer(tc, jo);
                                 }
                             }
-                            if ((is3DMode || isFull3DMode) && decalBatch != null) {
+                            if (decalBatch != null) {
                                 decalBatch.flush();
                             }
                         }
                     } else {
-                        int myid = tc.getCacheID();
-                        cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
-                        cache.begin();
-                        cache.draw(myid); // call our cache with cache ID and draw it
-                        cache.end();
+                        SpriteCache cache = tc.getCache();
+                        if (isFull3DMode) {
+                            cache.setProjectionMatrix(camFull3D.combined);
+                        } else {
+                            cache.setProjectionMatrix(is3DMode ? cam3d.combined : cam.combined);
+                        }
+                        Gdx.gl.glEnable(GL20.GL_BLEND);
+                        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+                        cache.setColor(1f, 1f, 1f, 1f);
+
+                        if (sShowAnimations || is3DMode || isFull3DMode) {
+                            int[] cids = tc.getCacheIDs();
+                            if (cids != null) {
+                                com.badlogic.gdx.math.Matrix4 transform = new com.badlogic.gdx.math.Matrix4();
+                                for (int jo = 0; jo < layers.size(); jo++) {
+                                    boolean isShown = layerShownInViewMode(jo);
+                                    if (layers.get(jo).getType() == layer.Type.TILE && isShown) {
+                                        int myOpaqueId = cids[jo * 3];
+                                        int myTransId = cids[jo * 3 + 1];
+                                        int myBillboardId = cids[jo * 3 + 2];
+
+                                        if (myOpaqueId != -1 && !isFull3DMode) {
+                                            if (is3DMode) {
+                                                Gdx.gl.glDepthMask(true);
+                                                transform.setToTranslation(0, 0, jo * Tsh * 0.75f);
+                                                cache.setTransformMatrix(transform);
+                                            } else {
+                                                cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
+                                            }
+                                            cache.begin();
+                                            cache.draw(myOpaqueId);
+                                            cache.end();
+                                        }
+
+                                        if (myTransId != -1) {
+                                            if (is3DMode || isFull3DMode) {
+                                                Gdx.gl.glDepthMask(false);
+                                                float transElev = jo * Tsh * 0.75f;
+                                                transform.setToTranslation(0, 0, transElev);
+                                                cache.setTransformMatrix(transform);
+                                            } else {
+                                                cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
+                                            }
+                                            cache.begin();
+                                            cache.draw(myTransId);
+                                            cache.end();
+                                        }
+
+                                        if (myBillboardId != -1 && !is3DMode && !isFull3DMode) {
+                                            cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
+                                            cache.begin();
+                                            cache.draw(myBillboardId);
+                                            cache.end();
+                                        }
+
+                                        if ((is3DMode || isFull3DMode) && tc.getDecals() != null
+                                                && tc.getDecals().size() > 0) {
+                                            com.badlogic.gdx.graphics.Camera billCam = isFull3DMode ? camFull3D : cam3d;
+                                            if (decalBatch == null || lastDecalCam != billCam) {
+                                                if (decalBatch != null) {
+                                                    decalBatch.dispose();
+                                                }
+                                                decalBatch = new DecalBatch(
+                                                        new com.badlogic.gdx.graphics.g3d.decals.CameraGroupStrategy(
+                                                                billCam));
+                                                lastDecalCam = billCam;
+                                            }
+                                            for (Decal d : tc.getDecals()) {
+                                                d.lookAt(billCam.position, billCam.up);
+                                                decalBatch.add(d);
+                                            }
+                                        }
+                                        drawAnimatedTilesForChunkAndLayer(tc, jo);
+                                    }
+                                }
+                                if ((is3DMode || isFull3DMode) && decalBatch != null) {
+                                    decalBatch.flush();
+                                }
+                            }
+                        } else {
+                            int myid = tc.getCacheID();
+                            cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
+                            cache.begin();
+                            cache.draw(myid); // call our cache with cache ID and draw it
+                            cache.end();
+                        }
                     }
 
                     //////////
@@ -5604,81 +5647,194 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                 }
 
-                if (isFull3DMode && drawersOpaque.size() > 0) {
+                if (isFull3DMode && (drawersOpaque.size() > 0 || drawersTrans.size() > 0)) {
                     float layerZ = jo * Tsh * 0.75f;
                     float heightZ = Tsh * 0.75f;
 
-                    for (int initset = 0; initset < tilesets.size(); initset++) {
-                        boolean used = false;
-                        for (drawer d : drawersOpaque) {
-                            if (d.getInitset() == initset) {
-                                used = true;
-                                break;
+                    // 1. Process opaque drawers
+                    if (drawersOpaque.size() > 0) {
+                        for (int initset = 0; initset < tilesets.size(); initset++) {
+                            boolean used = false;
+                            for (drawer d : drawersOpaque) {
+                                if (d.getInitset() == initset) {
+                                    used = true;
+                                    break;
+                                }
+                            }
+                            if (!used)
+                                continue;
+
+                            com.badlogic.gdx.graphics.Texture tsetTexture = tilesets.get(initset).getTexture();
+                            com.badlogic.gdx.graphics.g3d.Material mat = new com.badlogic.gdx.graphics.g3d.Material(
+                                    com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute.createDiffuse(tsetTexture));
+
+                            int tileCount = 0;
+                            com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder meshBuilder = modelBuilder.part(
+                                    "layer_" + jo + "_tset_" + initset + "_" + tileCount,
+                                    com.badlogic.gdx.graphics.GL20.GL_TRIANGLES,
+                                    com.badlogic.gdx.graphics.VertexAttributes.Usage.Position
+                                            | com.badlogic.gdx.graphics.VertexAttributes.Usage.Normal
+                                            | com.badlogic.gdx.graphics.VertexAttributes.Usage.TextureCoordinates,
+                                    mat);
+
+                            float uScale = 1f / tsetTexture.getWidth();
+                            float vScale = 1f / tsetTexture.getHeight();
+
+                            for (drawer d : drawersOpaque) {
+                                if (d.getInitset() == initset) {
+                                    if (tileCount > 1000) {
+                                        tileCount = 0;
+                                        meshBuilder = modelBuilder.part("layer_" + jo + "_tset_" + initset + "_p",
+                                                com.badlogic.gdx.graphics.GL20.GL_TRIANGLES,
+                                                com.badlogic.gdx.graphics.VertexAttributes.Usage.Position
+                                                        | com.badlogic.gdx.graphics.VertexAttributes.Usage.Normal
+                                                        | com.badlogic.gdx.graphics.VertexAttributes.Usage.TextureCoordinates,
+                                                mat);
+                                    }
+                                    tileCount++;
+
+                                    float u1 = d.srcX * uScale;
+                                    float v1 = d.srcY * vScale;
+                                    float u2 = (d.srcX + d.srcWidth) * uScale;
+                                    float v2 = (d.srcY + d.srcHeight) * vScale;
+
+                                    float x0 = d.x;
+                                    float y0 = d.y;
+                                    float x1 = d.x + d.width;
+                                    float y1 = d.y + d.height;
+                                    float z0 = layerZ;
+                                    float z1 = layerZ + heightZ;
+
+                                    // Determine grid coords of this tile
+                                    int gx = Math.round(x0 / Tsw);
+                                    int gy = Math.abs(Math.round(y0 / Tsh)); // Ensure y coordinate is positive
+
+                                    // Fix #3: O(1) neighbor opaqueness via pre-built grid
+                                    int posLeft  = (gx - 1 >= 0)   ? gy * Tw + (gx - 1)       : -1;
+                                    int posRight = (gx + 1 < Tw)   ? gy * Tw + (gx + 1)       : -1;
+                                    int posFront = (gy + 1 < Th)   ? (gy + 1) * Tw + gx       : -1;
+                                    int posBack  = (gy - 1 >= 0)   ? (gy - 1) * Tw + gx       : -1;
+                                    int posTop   = (jo + 1 < numLayers) ? gy * Tw + gx : -1;
+
+                                    boolean hasLeft  = posLeft  >= 0 && posLeft  < mapSize && opaqueGrid[jo][posLeft];
+                                    boolean hasRight = posRight >= 0 && posRight < mapSize && opaqueGrid[jo][posRight];
+                                    boolean hasFront = posFront >= 0 && posFront < mapSize && opaqueGrid[jo][posFront];
+                                    boolean hasBack  = posBack  >= 0 && posBack  < mapSize && opaqueGrid[jo][posBack];
+                                    boolean hasTop   = posTop   >= 0 && posTop   < mapSize && (jo + 1 < numLayers) && opaqueGrid[jo + 1][posTop];
+
+                                    // Top face
+                                    if (!hasTop) {
+                                        meshBuilder.setUVRange(u1, v1, u2, v2);
+                                        meshBuilder.rect(
+                                                new com.badlogic.gdx.math.Vector3(x0, y0, z1),
+                                                new com.badlogic.gdx.math.Vector3(x1, y0, z1),
+                                                new com.badlogic.gdx.math.Vector3(x1, y1, z1),
+                                                new com.badlogic.gdx.math.Vector3(x0, y1, z1),
+                                                new com.badlogic.gdx.math.Vector3(0, 0, 1));
+                                    }
+
+                                    // Front face (y-)
+                                    if (!hasFront) {
+                                        meshBuilder.setUVRange(u1, v1, u2, v2);
+                                        meshBuilder.rect(
+                                                new com.badlogic.gdx.math.Vector3(x0, y0, z0),
+                                                new com.badlogic.gdx.math.Vector3(x1, y0, z0),
+                                                new com.badlogic.gdx.math.Vector3(x1, y0, z1),
+                                                new com.badlogic.gdx.math.Vector3(x0, y0, z1),
+                                                new com.badlogic.gdx.math.Vector3(0, -1, 0));
+                                    }
+
+                                    // Back face (y+)
+                                    if (!hasBack) {
+                                        meshBuilder.setUVRange(u1, v1, u2, v2);
+                                        meshBuilder.rect(
+                                                new com.badlogic.gdx.math.Vector3(x1, y1, z0),
+                                                new com.badlogic.gdx.math.Vector3(x0, y1, z0),
+                                                new com.badlogic.gdx.math.Vector3(x0, y1, z1),
+                                                new com.badlogic.gdx.math.Vector3(x1, y1, z1),
+                                                new com.badlogic.gdx.math.Vector3(0, 1, 0));
+                                    }
+
+                                    // Left face (x-)
+                                    if (!hasLeft) {
+                                        meshBuilder.setUVRange(u1, v1, u2, v2);
+                                        meshBuilder.rect(
+                                                new com.badlogic.gdx.math.Vector3(x0, y1, z0),
+                                                new com.badlogic.gdx.math.Vector3(x0, y0, z0),
+                                                new com.badlogic.gdx.math.Vector3(x0, y0, z1),
+                                                new com.badlogic.gdx.math.Vector3(x0, y1, z1),
+                                                new com.badlogic.gdx.math.Vector3(-1, 0, 0));
+                                    }
+
+                                    // Right face (x+)
+                                    if (!hasRight) {
+                                        meshBuilder.setUVRange(u1, v1, u2, v2);
+                                        meshBuilder.rect(
+                                                new com.badlogic.gdx.math.Vector3(x1, y0, z0),
+                                                new com.badlogic.gdx.math.Vector3(x1, y1, z0),
+                                                new com.badlogic.gdx.math.Vector3(x1, y1, z1),
+                                                new com.badlogic.gdx.math.Vector3(x1, y0, z1),
+                                                new com.badlogic.gdx.math.Vector3(1, 0, 0));
+                                    }
+                                }
                             }
                         }
-                        if (!used)
-                            continue;
+                    }
 
-                        com.badlogic.gdx.graphics.Texture tsetTexture = tilesets.get(initset).getTexture();
-                        com.badlogic.gdx.graphics.g3d.Material mat = new com.badlogic.gdx.graphics.g3d.Material(
-                                com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute.createDiffuse(tsetTexture));
-
-                        int tileCount = 0;
-                        com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder meshBuilder = modelBuilder.part(
-                                "layer_" + jo + "_tset_" + initset + "_" + tileCount,
-                                com.badlogic.gdx.graphics.GL20.GL_TRIANGLES,
-                                com.badlogic.gdx.graphics.VertexAttributes.Usage.Position
-                                        | com.badlogic.gdx.graphics.VertexAttributes.Usage.Normal
-                                        | com.badlogic.gdx.graphics.VertexAttributes.Usage.TextureCoordinates,
-                                mat);
-
-                        float uScale = 1f / tsetTexture.getWidth();
-                        float vScale = 1f / tsetTexture.getHeight();
-
-                        for (drawer d : drawersOpaque) {
-                            if (d.getInitset() == initset) {
-                                if (tileCount > 1000) {
-                                    tileCount = 0;
-                                    meshBuilder = modelBuilder.part("layer_" + jo + "_tset_" + initset + "_p",
-                                            com.badlogic.gdx.graphics.GL20.GL_TRIANGLES,
-                                            com.badlogic.gdx.graphics.VertexAttributes.Usage.Position
-                                                    | com.badlogic.gdx.graphics.VertexAttributes.Usage.Normal
-                                                    | com.badlogic.gdx.graphics.VertexAttributes.Usage.TextureCoordinates,
-                                            mat);
+                    // 2. Process transparent / plane drawers
+                    if (drawersTrans.size() > 0) {
+                        for (int initset = 0; initset < tilesets.size(); initset++) {
+                            boolean used = false;
+                            for (drawer d : drawersTrans) {
+                                if (d.getInitset() == initset) {
+                                    used = true;
+                                    break;
                                 }
-                                tileCount++;
+                            }
+                            if (!used)
+                                continue;
 
-                                float u1 = d.srcX * uScale;
-                                float v1 = d.srcY * vScale;
-                                float u2 = (d.srcX + d.srcWidth) * uScale;
-                                float v2 = (d.srcY + d.srcHeight) * vScale;
+                            com.badlogic.gdx.graphics.Texture tsetTexture = tilesets.get(initset).getTexture();
+                            com.badlogic.gdx.graphics.g3d.Material mat = new com.badlogic.gdx.graphics.g3d.Material(
+                                    com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute.createDiffuse(tsetTexture),
+                                    new com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA));
 
-                                float x0 = d.x;
-                                float y0 = d.y;
-                                float x1 = d.x + d.width;
-                                float y1 = d.y + d.height;
-                                float z0 = layerZ;
-                                float z1 = layerZ + heightZ;
+                            int tileCount = 0;
+                            com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder meshBuilder = modelBuilder.part(
+                                    "layer_" + jo + "_tset_trans_" + initset + "_" + tileCount,
+                                    com.badlogic.gdx.graphics.GL20.GL_TRIANGLES,
+                                    com.badlogic.gdx.graphics.VertexAttributes.Usage.Position
+                                            | com.badlogic.gdx.graphics.VertexAttributes.Usage.Normal
+                                            | com.badlogic.gdx.graphics.VertexAttributes.Usage.TextureCoordinates,
+                                    mat);
 
-                                // Determine grid coords of this tile
-                                int gx = Math.round(x0 / Tsw);
-                                int gy = -Math.round(y0 / Tsh); // y0 is negative, tile row = -y0/Tsh
+                            float uScale = 1f / tsetTexture.getWidth();
+                            float vScale = 1f / tsetTexture.getHeight();
 
-                                // Fix #3: O(1) neighbor opaqueness via pre-built grid
-                                int posLeft  = (gx - 1 >= 0)   ? gy * Tw + (gx - 1)       : -1;
-                                int posRight = (gx + 1 < Tw)   ? gy * Tw + (gx + 1)       : -1;
-                                int posFront = (gy + 1 < Th)   ? (gy + 1) * Tw + gx       : -1;
-                                int posBack  = (gy - 1 >= 0)   ? (gy - 1) * Tw + gx       : -1;
-                                int posTop   = (jo + 1 < numLayers) ? Math.abs(gy) * Tw + gx : -1;
+                            for (drawer d : drawersTrans) {
+                                if (d.getInitset() == initset) {
+                                    if (tileCount > 1000) {
+                                        tileCount = 0;
+                                        meshBuilder = modelBuilder.part("layer_" + jo + "_tset_trans_" + initset + "_p",
+                                                com.badlogic.gdx.graphics.GL20.GL_TRIANGLES,
+                                                com.badlogic.gdx.graphics.VertexAttributes.Usage.Position
+                                                        | com.badlogic.gdx.graphics.VertexAttributes.Usage.Normal
+                                                        | com.badlogic.gdx.graphics.VertexAttributes.Usage.TextureCoordinates,
+                                                mat);
+                                    }
+                                    tileCount++;
 
-                                boolean hasLeft  = posLeft  >= 0 && posLeft  < mapSize && opaqueGrid[jo][posLeft];
-                                boolean hasRight = posRight >= 0 && posRight < mapSize && opaqueGrid[jo][posRight];
-                                boolean hasFront = posFront >= 0 && posFront < mapSize && opaqueGrid[jo][posFront];
-                                boolean hasBack  = posBack  >= 0 && posBack  < mapSize && opaqueGrid[jo][posBack];
-                                boolean hasTop   = posTop   >= 0 && posTop   < mapSize && (jo + 1 < numLayers) && opaqueGrid[jo + 1][posTop];
+                                    float u1 = d.srcX * uScale;
+                                    float v1 = d.srcY * vScale;
+                                    float u2 = (d.srcX + d.srcWidth) * uScale;
+                                    float v2 = (d.srcY + d.srcHeight) * vScale;
 
-                                // Top face
-                                if (!hasTop) {
+                                    float x0 = d.x;
+                                    float y0 = d.y;
+                                    float x1 = d.x + d.width;
+                                    float y1 = d.y + d.height;
+                                    float z1 = layerZ; // Place transparent plane flat at the base level of the current layer
+
                                     meshBuilder.setUVRange(u1, v1, u2, v2);
                                     meshBuilder.rect(
                                             new com.badlogic.gdx.math.Vector3(x0, y0, z1),
@@ -5686,50 +5842,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                             new com.badlogic.gdx.math.Vector3(x1, y1, z1),
                                             new com.badlogic.gdx.math.Vector3(x0, y1, z1),
                                             new com.badlogic.gdx.math.Vector3(0, 0, 1));
-                                }
-
-                                // Front face (y-)
-                                if (!hasFront) {
-                                    meshBuilder.setUVRange(u1, v1, u2, v2);
-                                    meshBuilder.rect(
-                                            new com.badlogic.gdx.math.Vector3(x0, y0, z0),
-                                            new com.badlogic.gdx.math.Vector3(x1, y0, z0),
-                                            new com.badlogic.gdx.math.Vector3(x1, y0, z1),
-                                            new com.badlogic.gdx.math.Vector3(x0, y0, z1),
-                                            new com.badlogic.gdx.math.Vector3(0, -1, 0));
-                                }
-
-                                // Back face (y+)
-                                if (!hasBack) {
-                                    meshBuilder.setUVRange(u1, v1, u2, v2);
-                                    meshBuilder.rect(
-                                            new com.badlogic.gdx.math.Vector3(x1, y1, z0),
-                                            new com.badlogic.gdx.math.Vector3(x0, y1, z0),
-                                            new com.badlogic.gdx.math.Vector3(x0, y1, z1),
-                                            new com.badlogic.gdx.math.Vector3(x1, y1, z1),
-                                            new com.badlogic.gdx.math.Vector3(0, 1, 0));
-                                }
-
-                                // Left face (x-)
-                                if (!hasLeft) {
-                                    meshBuilder.setUVRange(u1, v1, u2, v2);
-                                    meshBuilder.rect(
-                                            new com.badlogic.gdx.math.Vector3(x0, y1, z0),
-                                            new com.badlogic.gdx.math.Vector3(x0, y0, z0),
-                                            new com.badlogic.gdx.math.Vector3(x0, y0, z1),
-                                            new com.badlogic.gdx.math.Vector3(x0, y1, z1),
-                                            new com.badlogic.gdx.math.Vector3(-1, 0, 0));
-                                }
-
-                                // Right face (x+)
-                                if (!hasRight) {
-                                    meshBuilder.setUVRange(u1, v1, u2, v2);
-                                    meshBuilder.rect(
-                                            new com.badlogic.gdx.math.Vector3(x1, y0, z0),
-                                            new com.badlogic.gdx.math.Vector3(x1, y1, z0),
-                                            new com.badlogic.gdx.math.Vector3(x1, y1, z1),
-                                            new com.badlogic.gdx.math.Vector3(x1, y0, z1),
-                                            new com.badlogic.gdx.math.Vector3(1, 0, 0));
                                 }
                             }
                         }
@@ -13696,10 +13808,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bRemove.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                boolean first = true;
                 for (obj o : selobjs) {
                     o.destroyBody(world);
                     layers.get(selLayer).getObjects().remove(o);
+                    
+                    layerobjecthistory loh = new layerobjecthistory();
+                    loh.setRelatedobj(o);
+                    loh.setLayer(selLayer);
+                    loh.setAction("delete");
+                    loh.follower = !first;
+                    first = false;
+                    loh.setData(serializeObject(o));
+                    undolayerobject.add(loh);
                 }
+                redolayerobject.clear();
                 selobjs.clear();
                 oldobjdata.clear();
 
@@ -15092,18 +15215,29 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         elha.clear();
         boolean follower = false;
         for (int i = 0; i < Tw * Th; i++) {
-            layerhistory lh = new layerhistory(follower, zeLayer, i, 0, layers.get(zeLayer).getStr().get(i), -1,
-                    layers.get(zeLayer).getTset().get(i), -1, layers.get(zeLayer).getTile().get(i));
+            layerhistory lh = new layerhistory(follower, zeLayer, i,
+                    layers.get(zeLayer).getStr().get(i), 0,
+                    layers.get(zeLayer).getTset().get(i), -1,
+                    layers.get(zeLayer).getTile().get(i), -1);
             elha.add(lh);
             follower = true;
         }
     }
 
     public void snapWholeMapPhase2(int zeLayer) {
+        boolean first = true;
         for (int i = 0; i < Tw * Th; i++) {
-            elha.get(i).setTo(layers.get(zeLayer).getStr().get(i));
-            elha.get(i).setNewtset(layers.get(zeLayer).getTset().get(i));
-            undolayer.add(elha.get(i));
+            layerhistory lh = elha.get(i);
+            long toStr = layers.get(zeLayer).getStr().get(i);
+            if (lh.getFrom() != toStr) {
+                lh.setTo(toStr);
+                lh.setNewtset(layers.get(zeLayer).getTset().get(i));
+                lh.setNewtile(layers.get(zeLayer).getTile().get(i));
+                lh.setFollower(!first);
+                first = false;
+                undolayer.add(lh);
+                redolayer.clear();
+            }
         }
         resetCaches();
     }
@@ -30001,8 +30135,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private void jumpToObjectFromList(ObjectListRef ref, boolean additive) {
         obj o = ref.object;
         selLayer = ref.layerIdx;
-        if (llayerlist != null)
-            llayerlist.setSelectedIndex(selLayer);
+        if (llayerlist != null) {
+            refreshLayerList();
+            if (selLayer >= 0 && selLayer < llayerlist.getItems().size) {
+                llayerlist.setSelectedIndex(selLayer);
+            }
+        }
         if (!additive)
             objectListSelection.clear();
         objectListSelection.add(o);
@@ -30014,17 +30152,77 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         updateObjectCollision();
     }
 
+    private String serializeObject(obj o) {
+        if (o == null) return "";
+        obj oc = new obj();
+        oc.setGid(o.getGid());
+        
+        java.util.List<property> copiedProps = new java.util.ArrayList<property>();
+        if (o.getProperties() != null) {
+            for (property p : o.getProperties()) {
+                copiedProps.add(new property(p.getName(), p.getType(), p.getValue()));
+            }
+        }
+        oc.setProperties(copiedProps);
+
+        java.util.List<com.badlogic.gdx.math.Vector2> copiedPoints = new java.util.ArrayList<com.badlogic.gdx.math.Vector2>();
+        if (o.getPoints() != null) {
+            for (com.badlogic.gdx.math.Vector2 pt : o.getPoints()) {
+                copiedPoints.add(new com.badlogic.gdx.math.Vector2(pt.x, pt.y));
+            }
+        }
+        oc.setPoints(copiedPoints);
+        
+        oc.setW(o.getW());
+        oc.setH(o.getH());
+        oc.setX(o.getX());
+        oc.setY(o.getY());
+        oc.setId(o.getId());
+        oc.setName(o.getName());
+        oc.setRotation(o.getRotation());
+        oc.setShape(o.getShape());
+        oc.setType(o.getType());
+        oc.setText(o.getText());
+        oc.setWrap(o.isWrap());
+        
+        Json json = new Json();
+        return json.toJson(oc);
+    }
+
+    private void recordObjectHistory(obj o, String action) {
+        layerobjecthistory loh = new layerobjecthistory();
+        loh.setRelatedobj(o);
+        loh.setLayer(selLayer);
+        loh.setAction(action);
+        loh.follower = false;
+        loh.setData(serializeObject(o));
+        undolayerobject.add(loh);
+        redolayerobject.clear();
+    }
+
     private void deleteObjectListSelection() {
         if (objectListSelection.isEmpty())
             return;
         java.util.List<obj> toDelete = new ArrayList<obj>(objectListSelection);
+        boolean first = true;
         for (obj o : toDelete) {
             o.destroyBody(world);
             for (int li = 0; li < layers.size(); li++) {
-                if (layers.get(li).getType() == layer.Type.OBJECT)
-                    layers.get(li).getObjects().remove(o);
+                if (layers.get(li).getType() == layer.Type.OBJECT) {
+                    if (layers.get(li).getObjects().remove(o)) {
+                        layerobjecthistory loh = new layerobjecthistory();
+                        loh.setRelatedobj(o);
+                        loh.setLayer(li);
+                        loh.setAction("delete");
+                        loh.follower = !first;
+                        first = false;
+                        loh.setData(serializeObject(o));
+                        undolayerobject.add(loh);
+                    }
+                }
             }
         }
+        redolayerobject.clear();
         objectListSelection.clear();
         selobjs.clear();
         oldobjdata.clear();
@@ -32976,6 +33174,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         } else if (activeobjtool == 8) {
             ox.destroyBody(world);
             layers.get(selLayer).getObjects().remove(ox);
+            recordObjectHistory(ox, "delete");
             backToMap();
             pushUpdateIfCollaborating();
             return;
@@ -33325,6 +33524,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             java.util.Set<Integer> usedObjectIds = new java.util.HashSet<Integer>();
             collectUsedObjectIds(usedObjectIds);
+            boolean firstPaste = true;
             for (obj o : copiedList) {
                 obj pasted = new obj();
                 pasted.setGid(o.getGid());
@@ -33345,7 +33545,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 pasted.setY(basePasteY + offsetY);
 
                 layers.get(selLayer).getObjects().add(pasted);
+                
+                layerobjecthistory loh = new layerobjecthistory();
+                loh.setRelatedobj(pasted);
+                loh.setLayer(selLayer);
+                loh.setAction("create");
+                loh.follower = !firstPaste;
+                firstPaste = false;
+                loh.setData(serializeObject(pasted));
+                undolayerobject.add(loh);
             }
+            redolayerobject.clear();
 
             updateObjectCollision();
             pushUpdateIfCollaborating();
@@ -33442,6 +33652,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         }
         layers.get(selLayer).getObjects().add(nyok);
+        recordObjectHistory(nyok, "create");
 
         switch (activeobjtool) {
 
@@ -33511,7 +33722,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         l.getTile().set(num, tileID);
 
         //////////////////// RECORD HISTORY//////////////////////////
-        if (brushDeferSideEffects) {
+        if (disableHistoryRecording) {
+            // Skip recording history for individual tile updates
+        } else if (brushDeferSideEffects) {
             trackBrushUndoCell(lay, num, oldStr, oldTset, oldTile, str, tsetID, tileID);
         } else if (oldStr != str) {
             layerhistory lh2 = new layerhistory(follower, lay, num, oldStr, str, oldTset, tsetID, oldTile, tileID);
@@ -33530,6 +33743,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     boolean follower = false;
+    boolean disableHistoryRecording = false;
 
     public void tapTile(int num, boolean follower, boolean terra, boolean smartStamp, int curspr) {
         this.follower = follower;
@@ -33746,8 +33960,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         Long fillSource = layers.get(selLayer).getStr().get(num);
                         fillEdgesRegion(num, fillSource);
                     } else {
+                        snapWholeMapPhase1(selLayer);
+                        disableHistoryRecording = true;
                         Long fillSource = layers.get(selLayer).getStr().get(num);
                         fillthis(num, oi, fillSource, 0);
+                        disableHistoryRecording = false;
+                        snapWholeMapPhase2(selLayer);
+                        pushUpdateIfCollaborating();
                     }
                     break;
                 case 3: // paste, at last.
@@ -36588,39 +36807,51 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             break;
                         }
                     }
-                    if (currentObj != null) {
-                        obj oc = new obj();
-                        oc.setGid(currentObj.getGid());
-                        oc.setProperties(currentObj.getProperties());
-                        oc.setPoints(currentObj.getPoints());
-                        oc.setW(currentObj.getW());
-                        oc.setH(currentObj.getH());
-                        oc.setX(currentObj.getX());
-                        oc.setY(currentObj.getY());
-                        oc.setId(currentObj.getId());
-                        oc.setName(currentObj.getName());
-                        oc.setRotation(currentObj.getRotation());
-                        oc.setShape(currentObj.getShape());
-                        oc.setType(currentObj.getType());
-                        oc.setText(currentObj.getText());
+                    if ("create".equalsIgnoreCase(loh.getAction())) {
+                        if (currentObj != null) {
+                            currentObj.destroyBody(world);
+                            layers.get(loh.getLayer()).getObjects().remove(currentObj);
+                            selobjs.remove(currentObj);
+                        }
+                    } else if ("delete".equalsIgnoreCase(loh.getAction())) {
+                        obj restored = json.fromJson(obj.class, loh.getData());
+                        layers.get(loh.getLayer()).getObjects().add(restored);
+                        restored.updateVertices(world, Tsh);
+                    } else {
+                        if (currentObj != null) {
+                            obj oc = new obj();
+                            oc.setGid(currentObj.getGid());
+                            oc.setProperties(currentObj.getProperties());
+                            oc.setPoints(currentObj.getPoints());
+                            oc.setW(currentObj.getW());
+                            oc.setH(currentObj.getH());
+                            oc.setX(currentObj.getX());
+                            oc.setY(currentObj.getY());
+                            oc.setId(currentObj.getId());
+                            oc.setName(currentObj.getName());
+                            oc.setRotation(currentObj.getRotation());
+                            oc.setShape(currentObj.getShape());
+                            oc.setType(currentObj.getType());
+                            oc.setText(currentObj.getText());
 
-                        obj oldo = json.fromJson(obj.class, loh.getData());
-                        currentObj.setGid(oldo.getGid());
-                        currentObj.setProperties(oldo.getProperties());
-                        currentObj.setPoints(oldo.getPoints());
-                        currentObj.setW(oldo.getW());
-                        currentObj.setH(oldo.getH());
-                        currentObj.setX(oldo.getX());
-                        currentObj.setY(oldo.getY());
-                        currentObj.setName(oldo.getName());
-                        currentObj.setRotation(oldo.getRotation());
-                        currentObj.setShape(oldo.getShape());
-                        currentObj.setType(oldo.getType());
-                        currentObj.setText(oldo.getText());
-                        currentObj.destroyBody(world);
-                        currentObj.updateVertices(world, Tsh);
+                            obj oldo = json.fromJson(obj.class, loh.getData());
+                            currentObj.setGid(oldo.getGid());
+                            currentObj.setProperties(oldo.getProperties());
+                            currentObj.setPoints(oldo.getPoints());
+                            currentObj.setW(oldo.getW());
+                            currentObj.setH(oldo.getH());
+                            currentObj.setX(oldo.getX());
+                            currentObj.setY(oldo.getY());
+                            currentObj.setName(oldo.getName());
+                            currentObj.setRotation(oldo.getRotation());
+                            currentObj.setShape(oldo.getShape());
+                            currentObj.setType(oldo.getType());
+                            currentObj.setText(oldo.getText());
+                            currentObj.destroyBody(world);
+                            currentObj.updateVertices(world, Tsh);
 
-                        loh.setData(json.toJson(oc));
+                            loh.setData(json.toJson(oc));
+                        }
                     }
 
                     redolayerobject.add(loh);
@@ -36698,39 +36929,51 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 break;
                             }
                         }
-                        if (currentObj != null) {
-                            obj oc = new obj();
-                            oc.setGid(currentObj.getGid());
-                            oc.setProperties(currentObj.getProperties());
-                            oc.setPoints(currentObj.getPoints());
-                            oc.setW(currentObj.getW());
-                            oc.setH(currentObj.getH());
-                            oc.setX(currentObj.getX());
-                            oc.setY(currentObj.getY());
-                            oc.setId(currentObj.getId());
-                            oc.setName(currentObj.getName());
-                            oc.setRotation(currentObj.getRotation());
-                            oc.setShape(currentObj.getShape());
-                            oc.setType(currentObj.getType());
-                            oc.setText(currentObj.getText());
+                        if ("create".equalsIgnoreCase(loh.getAction())) {
+                            obj restored = json.fromJson(obj.class, loh.getData());
+                            layers.get(loh.getLayer()).getObjects().add(restored);
+                            restored.updateVertices(world, Tsh);
+                        } else if ("delete".equalsIgnoreCase(loh.getAction())) {
+                            if (currentObj != null) {
+                                currentObj.destroyBody(world);
+                                layers.get(loh.getLayer()).getObjects().remove(currentObj);
+                                selobjs.remove(currentObj);
+                            }
+                        } else {
+                            if (currentObj != null) {
+                                obj oc = new obj();
+                                oc.setGid(currentObj.getGid());
+                                oc.setProperties(currentObj.getProperties());
+                                oc.setPoints(currentObj.getPoints());
+                                oc.setW(currentObj.getW());
+                                oc.setH(currentObj.getH());
+                                oc.setX(currentObj.getX());
+                                oc.setY(currentObj.getY());
+                                oc.setId(currentObj.getId());
+                                oc.setName(currentObj.getName());
+                                oc.setRotation(currentObj.getRotation());
+                                oc.setShape(currentObj.getShape());
+                                oc.setType(currentObj.getType());
+                                oc.setText(currentObj.getText());
 
-                            obj oldo = json.fromJson(obj.class, loh.getData());
-                            currentObj.setGid(oldo.getGid());
-                            currentObj.setProperties(oldo.getProperties());
-                            currentObj.setPoints(oldo.getPoints());
-                            currentObj.setW(oldo.getW());
-                            currentObj.setH(oldo.getH());
-                            currentObj.setX(oldo.getX());
-                            currentObj.setY(oldo.getY());
-                            currentObj.setName(oldo.getName());
-                            currentObj.setRotation(oldo.getRotation());
-                            currentObj.setShape(oldo.getShape());
-                            currentObj.setType(oldo.getType());
-                            currentObj.setText(oldo.getText());
-                            currentObj.destroyBody(world);
-                            currentObj.updateVertices(world, Tsh);
+                                obj oldo = json.fromJson(obj.class, loh.getData());
+                                currentObj.setGid(oldo.getGid());
+                                currentObj.setProperties(oldo.getProperties());
+                                currentObj.setPoints(oldo.getPoints());
+                                currentObj.setW(oldo.getW());
+                                currentObj.setH(oldo.getH());
+                                currentObj.setX(oldo.getX());
+                                currentObj.setY(oldo.getY());
+                                currentObj.setName(oldo.getName());
+                                currentObj.setRotation(oldo.getRotation());
+                                currentObj.setShape(oldo.getShape());
+                                currentObj.setType(oldo.getType());
+                                currentObj.setText(oldo.getText());
+                                currentObj.destroyBody(world);
+                                currentObj.updateVertices(world, Tsh);
 
-                            loh.setData(json.toJson(oc));
+                                loh.setData(json.toJson(oc));
+                            }
                         }
 
                         undolayerobject.add(loh);

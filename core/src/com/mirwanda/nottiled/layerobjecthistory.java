@@ -36,9 +36,18 @@ public class layerobjecthistory {
         this.follower = follower;
     }
 
+    public String getAction() {
+        return action;
+    }
+
+    public void setAction(String action) {
+        this.action = action;
+    }
+
     obj relatedobj;
-     int layer;
-     String data;
-     boolean follower;
+    int layer;
+    String data;
+    boolean follower;
+    String action = "edit";
 
 }
