@@ -3,6 +3,8 @@ package com.mirwanda.nottiled;
 import com.badlogic.gdx.graphics.g2d.SpriteCache;
 
 import java.util.ArrayList;
+import com.badlogic.gdx.graphics.g3d.decals.Decal;
+import java.util.List;
 
 public class TileCache {
     private SpriteCache cache;
@@ -59,6 +61,26 @@ public class TileCache {
 
     public void setCacheIDs(int[] cacheIDs) {
         this.cacheIDs = cacheIDs;
+    }
+
+    private com.badlogic.gdx.graphics.g3d.ModelInstance modelInstance;
+
+    public com.badlogic.gdx.graphics.g3d.ModelInstance getModelInstance() {
+        return modelInstance;
+    }
+
+    public void setModelInstance(com.badlogic.gdx.graphics.g3d.ModelInstance modelInstance) {
+        this.modelInstance = modelInstance;
+    }
+
+    private List<Decal> decals = new ArrayList<Decal>();
+
+    public List<Decal> getDecals() {
+        return decals;
+    }
+
+    public void setDecals(List<Decal> decals) {
+        this.decals = decals;
     }
 
     public TileCache(SpriteCache cache, int cacheID, int intex, int intey){

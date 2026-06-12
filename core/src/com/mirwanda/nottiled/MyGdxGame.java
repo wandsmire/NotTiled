@@ -19,6 +19,20 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g3d.ModelBatch;
+import com.badlogic.gdx.graphics.g3d.Model;
+import com.badlogic.gdx.graphics.g3d.ModelInstance;
+import com.badlogic.gdx.graphics.g3d.Environment;
+import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
+import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
+import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
+import com.badlogic.gdx.graphics.g3d.decals.Decal;
+import com.badlogic.gdx.graphics.g3d.decals.DecalBatch;
+import com.badlogic.gdx.graphics.g3d.decals.CameraGroupStrategy;
+import com.badlogic.gdx.graphics.PerspectiveCamera;
+import com.badlogic.gdx.graphics.VertexAttributes.Usage;
+import com.badlogic.gdx.graphics.g3d.Material;
+import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.PixmapIO;
 import com.badlogic.gdx.graphics.Texture;
@@ -643,7 +657,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     boolean startup = false;
 
     enum ShapeTool {
-        RECTANGLE, CIRCLE, LINE
+        RECTANGLE, ELLIPSE, LINE, DIAMOND, OCTAGON, PLUS
     }
 
     enum BrushShape {
@@ -689,6 +703,110 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private boolean sEnableBlending;
     private CheckBox cbEnableBlending;
     private TextButton bScreenshot;
+    // --- 3D Mode State ---
+    private boolean is3DMode = false;
+    private boolean isFull3DMode = false;
+    private TextButton bToggle3D;
+    private TextButton bToggleFull3D;
+    private ModelBatch modelBatch;
+    private com.badlogic.gdx.graphics.g3d.ModelBatch shadowBatch;
+    private com.badlogic.gdx.graphics.g3d.environment.DirectionalShadowLight shadowLight;
+    private DecalBatch decalBatch;
+    private com.badlogic.gdx.graphics.Camera lastDecalCam;
+    private Decal tempDecal;
+    private java.util.List<Decal> lastDecalsBuilt = new java.util.ArrayList<Decal>();
+    private com.badlogic.gdx.graphics.g3d.ModelInstance lastModelInstanceBuilt = null;
+    private Model cubeModel;
+     private OrthographicCamera cam3d;
+     private com.badlogic.gdx.graphics.PerspectiveCamera camFull3D;
+     private Environment env3d;
+     private float cam3dYaw = 225f;
+     private float cam3dPitch = 45f;
+     private float cam3dZoom = 1.0f;
+     private float cam3dTargetX = 0f;
+     private float cam3dTargetY = 0f;
+
+     private void updateCam3d() {
+         if (cam3d == null) {
+             if (landscape) {
+                 cam3d = new OrthographicCamera(ssy, ssx);
+             } else {
+                 cam3d = new OrthographicCamera(ssx, ssy);
+             }
+         }
+         cam3d.viewportWidth = landscape ? ssy : ssx;
+         cam3d.viewportHeight = landscape ? ssx : ssy;
+         cam3d.zoom = cam3dZoom;
+
+         float yawRad = (float) Math.toRadians(cam3dYaw);
+         float pitchRad = (float) Math.toRadians(cam3dPitch);
+
+         float distance = 2000f;
+         float x = cam3dTargetX + distance * (float) Math.cos(pitchRad) * (float) Math.cos(yawRad);
+         float y = cam3dTargetY + distance * (float) Math.cos(pitchRad) * (float) Math.sin(yawRad);
+         float z = distance * (float) Math.sin(pitchRad);
+
+         cam3d.position.set(x, y, z);
+         cam3d.up.set(0, 0, 1);
+         cam3d.lookAt(cam3dTargetX, cam3dTargetY, 0);
+         cam3d.near = 0.1f;
+         cam3d.far = 10000f;
+         cam3d.update();
+         
+         if (camFull3D == null) {
+             camFull3D = new com.badlogic.gdx.graphics.PerspectiveCamera(67, ssx, ssy);
+              env3d = new com.badlogic.gdx.graphics.g3d.Environment();
+              env3d.set(new com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute(com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute.AmbientLight, 0.6f, 0.6f, 0.6f, 1f));
+              shadowLight = new com.badlogic.gdx.graphics.g3d.environment.DirectionalShadowLight(2048, 2048, 4000f, 4000f, 1f, 4000f);
+              shadowLight.set(0.8f, 0.8f, 0.8f, -0.4f, -0.4f, -1.0f);
+              env3d.add(shadowLight);
+              env3d.shadowMap = shadowLight;
+              shadowBatch = new com.badlogic.gdx.graphics.g3d.ModelBatch(new com.badlogic.gdx.graphics.g3d.utils.DepthShaderProvider());
+              modelBatch = new com.badlogic.gdx.graphics.g3d.ModelBatch();
+         }
+         camFull3D.viewportWidth = landscape ? ssy : ssx;
+         camFull3D.viewportHeight = landscape ? ssx : ssy;
+         float full3dDistance = 500f * cam3dZoom;
+         float xf = cam3dTargetX + full3dDistance * (float) Math.cos(pitchRad) * (float) Math.cos(yawRad);
+         float yf = cam3dTargetY + full3dDistance * (float) Math.cos(pitchRad) * (float) Math.sin(yawRad);
+         float zf = full3dDistance * (float) Math.sin(pitchRad);
+         camFull3D.position.set(xf, yf, zf);
+         camFull3D.up.set(0, 0, 1);
+         camFull3D.lookAt(cam3dTargetX, cam3dTargetY, 0);
+         camFull3D.near = 0.1f;
+         camFull3D.far = 10000f;
+         camFull3D.update();
+     }
+
+     public Vector3 unprojectMain(Vector3 touch) {
+         if (is3DMode && kartu.equalsIgnoreCase("world")) {
+             if (cam3d == null) {
+                 updateCam3d();
+             }
+             com.badlogic.gdx.math.collision.Ray ray = cam3d.getPickRay(touch.x, touch.y);
+             float distance = -ray.origin.z / ray.direction.z;
+             touch.x = ray.origin.x + ray.direction.x * distance;
+             touch.y = ray.origin.y + ray.direction.y * distance;
+             touch.z = 0;
+             return touch;
+         } else if (isFull3DMode && kartu.equalsIgnoreCase("world")) {
+             if (camFull3D == null) {
+                 updateCam3d();
+             }
+             com.badlogic.gdx.math.collision.Ray ray = camFull3D.getPickRay(touch.x, touch.y);
+             // Ray-plane intersection at Z = 0 (ground plane)
+             if (Math.abs(ray.direction.z) > 0.0001f) {
+                 float distance = -ray.origin.z / ray.direction.z;
+                 touch.x = ray.origin.x + ray.direction.x * distance;
+                 touch.y = ray.origin.y + ray.direction.y * distance;
+                 touch.z = 0;
+             }
+             return touch;
+         } else {
+             return cam.unproject(touch);
+         }
+     }
+    private java.util.HashMap<Long, Boolean> tileTransparencyCache = new java.util.HashMap<Long, Boolean>();
     private java.util.List<Boolean> massprops = new ArrayList<Boolean>();
     private int mapstartSelect;
     private int mapendSelect;
@@ -986,7 +1104,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     // move
                     if (activeobjtoolmode == 2) {
                         Vector3 touch = new Vector3();
-                        cam.unproject(touch.set(new Vector3(screenX, screenY, 0)));
+                        unprojectMain(touch.set(new Vector3(screenX, screenY, 0)));
                         float ae = touch.x;
                         float ab = touch.y;
                         updatePointer(ae, -ab);
@@ -1072,7 +1190,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 if (layers.size() > 0 && layers.get(selLayer).getType() == layer.Type.OBJECT) {
                     Vector3 touch = new Vector3();
-                    cam.unproject(touch.set(new Vector3(screenX, screenY, 0)));
+                    unprojectMain(touch.set(new Vector3(screenX, screenY, 0)));
                     float ae = touch.x;
                     float ab = touch.y;
                     // body.setTransform( 9999, 9999,0 );
@@ -1091,6 +1209,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             @Override
             public boolean scrolled(float amountX, float amountY) {
+                if (is3DMode && kartu.equalsIgnoreCase("world")) {
+                    if (amountY > 0) {
+                        cam3dZoom = cam3dZoom * 1.2f;
+                    } else {
+                        cam3dZoom = cam3dZoom * 0.8f;
+                    }
+                    if (cam3dZoom > 10.0f) cam3dZoom = 10.0f;
+                    if (cam3dZoom < 0.1f) cam3dZoom = 0.1f;
+                    return true;
+                }
                 OrthographicCamera ocam;
                 if (kartu.equalsIgnoreCase("world")) {
                     ocam = cam;
@@ -2379,24 +2507,49 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     pushUpdateIfCollaborating();
                 }
             }
-            if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) {
-                cam.position.add(0, 40f, 0);
+            if (is3DMode && kartu == "world") {
+                float yawRad = (float) Math.toRadians(cam3dYaw);
+                float cosYaw = (float) Math.cos(yawRad);
+                float sinYaw = (float) Math.sin(yawRad);
+                float speed = 15f * cam3dZoom;
+                if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) {
+                    cam3dTargetX += cosYaw * speed;
+                    cam3dTargetY += sinYaw * speed;
+                }
+                if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+                    cam3dTargetX -= cosYaw * speed;
+                    cam3dTargetY -= sinYaw * speed;
+                }
+                if (Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+                    cam3dTargetX -= -sinYaw * speed;
+                    cam3dTargetY -= cosYaw * speed;
+                }
+                if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+                    cam3dTargetX += -sinYaw * speed;
+                    cam3dTargetY += cosYaw * speed;
+                }
+            } else {
+                if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) {
+                    cam.position.add(0, 40f, 0);
+                }
+                if (Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+                    cam.position.add(-40f, 0, 0);
+                }
+                if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+                    cam.position.add(0, -40f, 0);
+                }
+                if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+                    cam.position.add(40f, 0, 0);
+                }
+                cam.update();
             }
-            if (Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-                cam.position.add(-40f, 0, 0);
-            }
-            if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-                cam.position.add(0, -40f, 0);
-            }
-            if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-                cam.position.add(40f, 0, 0);
-            }
-            cam.update();
         }
 
         if (Gdx.input.isKeyPressed(Input.Keys.X)) {
             if (kartu == "world") {
-                if (cam.zoom < maxWorldZoomOut()) {
+                if (is3DMode) {
+                    cam3dZoom = Math.min(cam3dZoom * 1.05f, 10.0f);
+                } else if (cam.zoom < maxWorldZoomOut()) {
                     cam.zoom = Math.min(cam.zoom * 1.1f, maxWorldZoomOut());
                     cam.update();
                 }
@@ -2409,7 +2562,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
         if (Gdx.input.isKeyPressed(Input.Keys.C)) {
             if (kartu == "world") {
-                if (cam.zoom > Tsw / 320f) {
+                if (is3DMode) {
+                    cam3dZoom = Math.max(cam3dZoom / 1.05f, 0.1f);
+                } else if (cam.zoom > Tsw / 320f) {
                     cam.zoom = cam.zoom / 1.1f;
                     if (cam.zoom < Tsw / 320f)
                         cam.zoom = Tsw / 320f;
@@ -2441,7 +2596,23 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (vely <= 10 && vely >= -10)
             vely = 0;
         if (!(velx == 0 && vely == 0)) {
-            pan(0, 0, velx / 50, vely / 50);
+            if ((is3DMode || isFull3DMode) && kartu.equalsIgnoreCase("world")) {
+                // In 3D mode, fling momentum moves the camera target, not orbits
+                com.badlogic.gdx.graphics.Camera activeCam = isFull3DMode ? camFull3D : cam3d;
+                com.badlogic.gdx.math.Vector3 dir = activeCam.direction.cpy();
+                dir.z = 0;
+                dir.nor();
+                com.badlogic.gdx.math.Vector3 right = dir.cpy().crs(activeCam.up);
+                right.z = 0;
+                right.nor();
+                float speed = cam3dZoom * 0.5f;
+                float dx = velx / 50f;
+                float dy = vely / 50f;
+                cam3dTargetX -= (right.x * dx + dir.x * dy) * speed;
+                cam3dTargetY -= (right.y * dx + dir.y * dy) * speed;
+            } else {
+                pan(0, 0, velx / 50, vely / 50);
+            }
         } else {
             drag = false;
         }
@@ -3684,7 +3855,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 
             }
-            sr.setProjectionMatrix(cam.combined);
+            com.badlogic.gdx.math.Matrix4 gridProj;
+            if (isFull3DMode || is3DMode) {
+                gridProj = new com.badlogic.gdx.math.Matrix4(isFull3DMode ? camFull3D.combined : cam3d.combined);
+                gridProj.translate(0, 0, selLayer * Tsh * 0.75f);
+            } else {
+                gridProj = cam.combined;
+            }
+            sr.setProjectionMatrix(gridProj);
             sr.begin(ShapeRenderer.ShapeType.Filled);
 
             // red box
@@ -3722,7 +3900,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (activetool == 0) {
                         switch (currentShape) {
                             case RECTANGLE:
-                            case CIRCLE:
+                            case ELLIPSE:
+                            case DIAMOND:
+                            case OCTAGON:
+                            case PLUS:
                                 sr.rect((mapstartSelect % SprW) * Tsw, -(mapstartSelect / SprW) * Tsh + Tsh,
                                         ((mapendSelect % SprW) * Tsw + Tsw) - (mapstartSelect % SprW) * Tsw,
                                         -(mapendSelect / SprW) * Tsh + (mapstartSelect / SprW) * Tsh - Tsh);
@@ -3783,7 +3964,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             Gdx.gl20.glLineWidth(1);// average
             sr.setColor(0, 0, 0, gridOpacity / 10f);
-            boolean showTileGrid = sShowGrid && cam.zoom <= 2f;
+            boolean showTileGrid = sShowGrid && (is3DMode || isFull3DMode || cam.zoom <= 2f);
 
             int offsetx = 0, offsety = 0;
             if (orientation.equalsIgnoreCase("isometric")) {
@@ -3801,7 +3982,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     // sr.rectLine(Tsw / 2 + i * Tsw / 2, -i * Tsh / 2 + Tsh, Tsw / 2 + i * Tsw / 2
                     // - Tsw * Tw / 2, -i * Tsh / 2 - Tsh * Th / 2 + Tsh, Tsw / 16f);
                 } else {
-                    if (!landscape) {
+                    if (!landscape && !is3DMode && !isFull3DMode) {
                         if (i * Tsw + Tsw < cam.position.x - redux * cam.zoom)
                             continue;
                         if (i * Tsw > cam.position.x + redux * cam.zoom)
@@ -3823,10 +4004,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 Tsh / 2 - (Tsh * j / 2) - Tsh * Tw / 2, Tsw / 32f);
                 } else {
 
-                    if (-Tsh * j + Tsh < cam.position.y - reduy * cam.zoom)
-                        continue;
-                    if ((-Tsh * j) - 2 * Tsh > cam.position.y + (reduy + Tsh) * cam.zoom)
-                        continue;
+                    if (!is3DMode && !isFull3DMode) {
+                        if (-Tsh * j + Tsh < cam.position.y - reduy * cam.zoom)
+                            continue;
+                        if ((-Tsh * j) - 2 * Tsh > cam.position.y + (reduy + Tsh) * cam.zoom)
+                            continue;
+                    }
 
                     if (showTileGrid || j == -1 || j == Th - 1) {
                         sr.rectLine(0, -(Tsh * j), Tsw * Tw, -(j * Tsh), Tsw / 16f);
@@ -3861,10 +4044,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             sr.rectLine(Tsw / 2 + i * Tsw / 2, -i * Tsh / 2 + Tsh, Tsw / 2 + i * Tsw / 2 - Tsw * Th / 2,
                                     -i * Tsh / 2 - Tsh * Th / 2 + Tsh, Tsw / 16f);
                         } else {
-                            if (i * Tsw + Tsw < cam.position.x - ssx * cam.zoom)
-                                continue;
-                            if (i * Tsw > cam.position.x + ssx * cam.zoom)
-                                continue;
+                            if (!is3DMode && !isFull3DMode) {
+                                if (i * Tsw + Tsw < cam.position.x - ssx * cam.zoom)
+                                    continue;
+                                if (i * Tsw > cam.position.x + ssx * cam.zoom)
+                                    continue;
+                            }
 
                             sr.rectLine((Tsw * i), Tsh, (i * Tsw), -Tsh * Th + Tsh, Tsw / 8f);
 
@@ -3880,10 +4065,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             sr.rectLine(0 - j * Tsw / 2, Tsh / 2 - (Tsh * j / 2), (0 - j * Tsw / 2) + Tsw * Tw / 2,
                                     Tsh / 2 - (Tsh * j / 2) - Tsh * Tw / 2, Tsw / 16f);
                         } else {
-                            if (-Tsh * j + Tsh < cam.position.y - ssy * cam.zoom)
-                                continue;
-                            if (-Tsh * j > cam.position.y + ssy * cam.zoom)
-                                continue;
+                            if (!is3DMode && !isFull3DMode) {
+                                if (-Tsh * j + Tsh < cam.position.y - ssy * cam.zoom)
+                                    continue;
+                                if (-Tsh * j > cam.position.y + ssy * cam.zoom)
+                                    continue;
+                            }
 
                             sr.rectLine(0, -(Tsh * j), Tsw * Tw, -(j * Tsh), Tsw / 8f);
                         }
@@ -3949,6 +4136,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void drawTiles() {
+        if (is3DMode || isFull3DMode) {
+            updateCam3d();
+        }
         if (landscape) {
             redux = ssy / 2;
             reduy = ssx / 2;
@@ -3960,7 +4150,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (orientation.equalsIgnoreCase("isometric")) {
             // Gdx.gl.glDisable(GL20.GL_BLEND);
             batch.setColor(1, 1, 1, 1);
-            batch.setProjectionMatrix(cam.combined);
+            batch.setProjectionMatrix(is3DMode ? cam3d.combined : cam.combined);
             batch.begin();
             try {
                 batch.draw(background, 0, -Tsh * Th + Tsh, Tsw * Tw, Tsh * Th, 0, 0, background.getWidth(),
@@ -4242,49 +4432,212 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             } catch (Exception e) {
             }
             batch.end();
+
+            // 3D Mode: enable depth testing and draw cube/slab side faces
+            if (is3DMode || isFull3DMode) {
+                Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
+                Gdx.gl.glDepthFunc(GL20.GL_LEQUAL);
+                Gdx.gl.glDepthMask(true);
+                Gdx.gl.glClear(GL20.GL_DEPTH_BUFFER_BIT);
+            }
+            if (is3DMode && !caching) {
+                Gdx.gl.glEnable(GL20.GL_BLEND);
+                Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+                sr.setProjectionMatrix(cam3d.combined);
+                sr.begin(ShapeRenderer.ShapeType.Filled);
+                for (int bi = 0; bi < tcaches.size(); bi++) {
+                    TileCache btc = tcaches.get(bi);
+                    float bchunkX = btc.getIntex() * widd * Tsw;
+                    float bchunkY = btc.getIntey() * heii * -Tsh + Tsh;
+                    float bchunkW = Math.min(widd, Tw - btc.getIntex() * widd) * Tsw;
+                    float bchunkH = Math.min(heii, Th - btc.getIntey() * heii) * Tsh;
+                    float bmaxZ = layers.size() * Tsh * 0.75f;
+                    float bcenterZ = bmaxZ / 2.0f;
+                    if (!cam3d.frustum.boundsInFrustum(bchunkX + bchunkW / 2f, bchunkY - bchunkH / 2f, bcenterZ, bchunkW / 2f, bchunkH / 2f, bcenterZ)) {
+                        continue;
+                    }
+                    int[] bcids = btc.getCacheIDs();
+                    if (bcids == null) continue;
+                    for (int bjo = 0; bjo < layers.size(); bjo++) {
+                        if (layers.get(bjo).getType() == layer.Type.TILE && layerShownInViewMode(bjo)) {
+                            if (bcids[bjo * 3] == -1 && bcids[bjo * 3 + 1] == -1 && bcids[bjo * 3 + 2] == -1) continue;
+                            float layerZ = bjo * Tsh * 0.75f;
+                            float thickness = Tsh * 0.75f;
+                            float shade = 0.35f + 0.08f * bjo;
+                            if (shade > 0.75f) shade = 0.75f;
+                            sr.setColor(shade, shade * 0.95f, shade * 0.9f, 1f);
+                            
+                            int startX = btc.getIntex() * widd;
+                            int startY = btc.getIntey() * heii;
+                            int endX = Math.min(startX + widd, Tw);
+                            int endY = Math.min(startY + heii, Th);
+                            for (int ty = startY; ty < endY; ty++) {
+                                for (int tx = startX; tx < endX; tx++) {
+                                    int tileIdx = ty * Tw + tx;
+                                    if (layers.get(bjo).getTset().get(tileIdx) != -1) {
+                                        long ini = layers.get(bjo).getStr().get(tileIdx);
+                                        int preferredTset = layers.get(bjo).getTset().get(tileIdx);
+                                        int initset = resolveTilesetIndexForGid(ini, preferredTset);
+                                        if (initset != -1) {
+                                            tileset ts = tilesets.get(initset);
+                                            int localId = (int) (stripTileGidFlags(ini) - ts.getFirstgid());
+                                            if (ts.isTileOpaque(localId)) {
+                                                float tX = tx * Tsw;
+                                                float tY = ty * -Tsh + Tsh;
+                                                sr.box(tX, tY - Tsh, layerZ, Tsw, Tsh, thickness);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                sr.end();
+            }
+
+            if (isFull3DMode && !caching) {
+                if (camFull3D == null) updateCam3d();
+                shadowLight.begin(new com.badlogic.gdx.math.Vector3(cam3dTargetX, cam3dTargetY, 0f), shadowLight.direction);
+                shadowBatch.begin(shadowLight.getCamera());
+                for (int i = 0; i < tcaches.size(); i++) {
+                    TileCache tc = tcaches.get(i);
+                    com.badlogic.gdx.graphics.g3d.ModelInstance mi = tc.getModelInstance();
+                    if (mi != null) {
+                        shadowBatch.render(mi);
+                    }
+                }
+                shadowBatch.end();
+                shadowLight.end();
+
+                modelBatch.begin(camFull3D);
+                for (int i = 0; i < tcaches.size(); i++) {
+                    TileCache tc = tcaches.get(i);
+                    float chunkX = tc.getIntex() * widd * Tsw;
+                    float chunkY = tc.getIntey() * heii * -Tsh + Tsh;
+                    float chunkW = widd * Tsw;
+                    float chunkH = heii * Tsh;
+                    float centerZ = (layers.size() * Tsh * 0.75f) / 2.0f;
+                    float extentZ = (layers.size() * Tsh * 0.75f) / 2.0f;
+                    if (camFull3D.frustum.boundsInFrustum(chunkX + chunkW / 2f, chunkY - chunkH / 2f, centerZ, chunkW / 2f, chunkH / 2f, extentZ)) {
+                        com.badlogic.gdx.graphics.g3d.ModelInstance mi = tc.getModelInstance();
+                        if (mi != null) {
+                            modelBatch.render(mi, env3d);
+                        }
+                    }
+                }
+                modelBatch.end();
+            }
             if (!caching) {
                 for (int i = 0; i < tcaches.size(); i++) {
                     TileCache tc = tcaches.get(i);
 
                     if (!orientation.equalsIgnoreCase("isometric")) {
+                        if (!is3DMode && !isFull3DMode) {
+                            if ((tc.getIntex()) * widd * Tsw < cam.position.x - redux * cam.zoom - widd * Tsw)
+                                continue;
 
-                        if ((tc.getIntex()) * widd * Tsw < cam.position.x - redux * cam.zoom - widd * Tsw)
-                            continue;
+                            if ((tc.getIntex()) * widd * Tsw > cam.position.x + redux * cam.zoom + widd * Tsw)
+                                continue;
 
-                        if ((tc.getIntex()) * widd * Tsw > cam.position.x + redux * cam.zoom + widd * Tsw)
-                            continue;
+                            if ((tc.getIntey()) * heii * -Tsh + Tsh < cam.position.y - reduy * cam.zoom - heii * Tsh)
+                                continue;
 
-                        if ((tc.getIntey()) * heii * -Tsh + Tsh < cam.position.y - reduy * cam.zoom - heii * Tsh)
-                            continue;
-
-                        if ((tc.getIntey()) * heii * -Tsh + Tsh > cam.position.y + reduy * cam.zoom + heii * Tsh)
-                            continue;
+                            if ((tc.getIntey()) * heii * -Tsh + Tsh > cam.position.y + reduy * cam.zoom + heii * Tsh)
+                                continue;
+                        } else {
+                            com.badlogic.gdx.graphics.Camera curCam = isFull3DMode ? camFull3D : cam3d;
+                            float chunkX = tc.getIntex() * widd * Tsw;
+                            float chunkY = tc.getIntey() * heii * -Tsh + Tsh;
+                            float chunkW = widd * Tsw;
+                            float chunkH = heii * Tsh;
+                            float centerZ = (layers.size() * Tsh * 0.75f) / 2.0f;
+                            float extentZ = (layers.size() * Tsh * 0.75f) / 2.0f;
+                            if (!curCam.frustum.boundsInFrustum(chunkX + chunkW / 2f, chunkY - chunkH / 2f, centerZ, chunkW / 2f, chunkH / 2f, extentZ)) {
+                                continue;
+                            }
+                        }
                     }
 
                     SpriteCache cache = tc.getCache();
-                    cache.setProjectionMatrix(cam.combined);
+                    if (isFull3DMode) {
+                        cache.setProjectionMatrix(camFull3D.combined);
+                    } else {
+                        cache.setProjectionMatrix(is3DMode ? cam3d.combined : cam.combined);
+                    }
                     Gdx.gl.glEnable(GL20.GL_BLEND);
                     Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
                     cache.setColor(1f, 1f, 1f, 1f);
 
-                    if (sShowAnimations) {
+                    if (sShowAnimations || is3DMode || isFull3DMode) {
                         int[] cids = tc.getCacheIDs();
                         if (cids != null) {
+                            com.badlogic.gdx.math.Matrix4 transform = new com.badlogic.gdx.math.Matrix4();
                             for (int jo = 0; jo < layers.size(); jo++) {
                                 boolean isShown = layerShownInViewMode(jo);
                                 if (layers.get(jo).getType() == layer.Type.TILE && isShown) {
-                                    int myid = cids[jo];
-                                    if (myid != -1) {
+                                    int myOpaqueId = cids[jo * 3];
+                                    int myTransId = cids[jo * 3 + 1];
+                                    int myBillboardId = cids[jo * 3 + 2];
+                                    
+                                    if (myOpaqueId != -1 && !isFull3DMode) {
+                                        if (is3DMode) {
+                                            Gdx.gl.glDepthMask(true);
+                                            transform.setToTranslation(0, 0, jo * Tsh * 0.75f);
+                                            cache.setTransformMatrix(transform);
+                                        } else {
+                                            cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
+                                        }
                                         cache.begin();
-                                        cache.draw(myid);
+                                        cache.draw(myOpaqueId);
                                         cache.end();
+                                    }
+                                    
+                                    if (myTransId != -1) {
+                                        if (is3DMode || isFull3DMode) {
+                                            Gdx.gl.glDepthMask(false);
+                                            float transElev = jo * Tsh * 0.75f;
+                                            transform.setToTranslation(0, 0, transElev);
+                                            cache.setTransformMatrix(transform);
+                                        } else {
+                                            cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
+                                        }
+                                        cache.begin();
+                                        cache.draw(myTransId);
+                                        cache.end();
+                                    }
+                                    
+                                    if (myBillboardId != -1 && !is3DMode && !isFull3DMode) {
+                                        cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
+                                        cache.begin();
+                                        cache.draw(myBillboardId);
+                                        cache.end();
+                                    }
+                                    
+                                    if ((is3DMode || isFull3DMode) && tc.getDecals() != null && tc.getDecals().size() > 0) {
+                                        com.badlogic.gdx.graphics.Camera billCam = isFull3DMode ? camFull3D : cam3d;
+                                        if (decalBatch == null || lastDecalCam != billCam) {
+                                            if (decalBatch != null) {
+                                                decalBatch.dispose();
+                                            }
+                                            decalBatch = new DecalBatch(new com.badlogic.gdx.graphics.g3d.decals.CameraGroupStrategy(billCam));
+                                            lastDecalCam = billCam;
+                                        }
+                                        for (Decal d : tc.getDecals()) {
+                                            d.lookAt(billCam.position, billCam.up);
+                                            decalBatch.add(d);
+                                        }
                                     }
                                     drawAnimatedTilesForChunkAndLayer(tc, jo);
                                 }
                             }
+                            if ((is3DMode || isFull3DMode) && decalBatch != null) {
+                                decalBatch.flush();
+                            }
                         }
                     } else {
                         int myid = tc.getCacheID();
+                        cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
                         cache.begin();
                         cache.draw(myid); // call our cache with cache ID and draw it
                         cache.end();
@@ -4472,8 +4825,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             // Drawing of RW thingy, but it cause a noticable lag, so no.
-            if (cam.zoom > zoomTreshold) {
-                batch.setProjectionMatrix(cam.combined);
+            if (!is3DMode && cam.zoom > zoomTreshold) {
+                batch.setProjectionMatrix(is3DMode ? cam3d.combined : cam.combined);
                 batch.begin();
 
                 drawCoordinates();
@@ -4613,6 +4966,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 batch.end();
             }
 
+            if (is3DMode || isFull3DMode) {
+                Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
+                Gdx.gl.glDepthMask(true);
+            }
         }
     }
 
@@ -4660,15 +5017,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             for (int y = 0; y < maxy; y++) {
                 for (int x = 0; x < maxx; x++) {
                     cache = new SpriteCache(buffersz, true);// 8191max
-                    if (sShowAnimations) {
+                    if (sShowAnimations || is3DMode || isFull3DMode) {
                         int[] cids = cacheTilesOnLayered(cache, x, y);
                         tcache = new TileCache(cache, cids, x, y);
+                        tcache.getDecals().addAll(lastDecalsBuilt);
+                        tcache.setModelInstance(lastModelInstanceBuilt);
+                        tcaches.add(tcache);
                     } else {
                         int cid = cacheTilesOn(cache, x, y);
                         tcache = new TileCache(cache, cid, x, y);
+                        tcaches.add(tcache);
                     }
-                    tcaches.add(tcache);
-
                 }
             }
             isupdatingcache = true;
@@ -4713,10 +5072,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 TileCache tc = tcaches.get(i);
                 tc.getCache().dispose();
                 cache = new SpriteCache(buffersz, true);// max8191indice
-                if (sShowAnimations) {
+                if (sShowAnimations || is3DMode || isFull3DMode) {
                     int[] cids = cacheTilesOnLayered(cache, tc.getIntex(), tc.getIntey());
                     tc.setCache(cache);
                     tc.setCacheIDs(cids);
+                    tc.getDecals().clear();
+                    tc.getDecals().addAll(lastDecalsBuilt);
+                    tc.setModelInstance(lastModelInstanceBuilt);
+                    tc.setChanged(false);
                 } else {
                     int cid = cacheTilesOn(cache, tc.getIntex(), tc.getIntey());
                     tc.setCache(cache);
@@ -4918,7 +5281,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private int[] cacheTilesOnLayered(SpriteCache cache, int intex, int intey) {
-        int[] cids = new int[layers.size()];
+        lastDecalsBuilt.clear();
+        lastModelInstanceBuilt = null;
+        
+        com.badlogic.gdx.graphics.g3d.utils.ModelBuilder modelBuilder = null;
+        if (isFull3DMode) {
+            modelBuilder = new com.badlogic.gdx.graphics.g3d.utils.ModelBuilder();
+            modelBuilder.begin();
+        }
+        
+        int[] cids = new int[layers.size() * 3];
         tilesetsize = tilesets.size();
         int offsetx = 0, offsety = 0;
         int jon = 0, joni = 0;
@@ -4966,7 +5338,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         for (int jo = 0; jo < layers.size(); jo++) {
             boolean vis = layerShownInViewMode(jo);
             if (layers.get(jo).getType() == layer.Type.TILE && vis) {
-                cache.beginCache();
                 if (layers.get(jo).getOpacity() != 0 && sEnableBlending) {
                     Gdx.gl.glEnable(GL20.GL_BLEND);
                     Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
@@ -4979,8 +5350,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     applyLayerDrawColor(cache, jo);
                 }
                 
-                java.util.List<drawer> drawers = new ArrayList<drawer>();
-                drawers.clear();
+                java.util.List<drawer> drawersOpaque = new ArrayList<drawer>();
+                java.util.List<drawer> drawersTrans = new ArrayList<drawer>();
+                java.util.List<drawer> drawersBillboard = new ArrayList<drawer>();
+                drawersOpaque.clear();
+                drawersTrans.clear();
+                drawersBillboard.clear();
                 for (int a = aa; a < bb; a++) {
                     for (int b = cc; b < dd; b++) {
                         int position = (abs(a) * Tw) + abs(b);
@@ -5097,15 +5472,226 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                         sprY, Tswa, Tsha, false, false);
                                 break;
                         }
-                        drawers.add(tempdrawer);
+                        int localId = (int) (mm - tilesets.get(initset).getFirstgid());
+                        if (tilesets.get(initset).isBillboardSprite(localId)) {
+                            drawersBillboard.add(tempdrawer);
+                            com.badlogic.gdx.graphics.g2d.TextureRegion tr = new com.badlogic.gdx.graphics.g2d.TextureRegion(tilesets.get(initset).getTexture(), sprX, sprY, Tswa, Tsha);
+                            Decal d = Decal.newDecal(Tswad, Tshad, tr, true);
+                            float dx = (xpos * Tsw - offsetx) + Tsw / 2f;
+                            float dy = (-ypos * Tsh - offsety) + Tsh / 2f;
+                            float dz = jo * Tsh * 0.75f + Tshad / 2f;
+                            d.setPosition(dx, dy, dz);
+                            lastDecalsBuilt.add(d);
+                        } else if (tilesets.get(initset).isTileOpaque(localId)) {
+                            drawersOpaque.add(tempdrawer);
+                        } else {
+                            drawersTrans.add(tempdrawer);
+                        }
+                    }
+                }
+                
+                if (isFull3DMode && drawersOpaque.size() > 0) {
+                    float layerZ = jo * Tsh * 0.75f;
+                    float heightZ = Tsh * 0.75f;
+                    
+                    for (int initset = 0; initset < tilesets.size(); initset++) {
+                        boolean used = false;
+                        for (drawer d : drawersOpaque) { if (d.getInitset() == initset) { used = true; break; } }
+                        if (!used) continue;
+                        
+                        com.badlogic.gdx.graphics.Texture tsetTexture = tilesets.get(initset).getTexture();
+                        com.badlogic.gdx.graphics.g3d.Material mat = new com.badlogic.gdx.graphics.g3d.Material(com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute.createDiffuse(tsetTexture));
+                        
+                        int tileCount = 0;
+                        com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder meshBuilder = modelBuilder.part("layer_" + jo + "_tset_" + initset + "_" + tileCount, com.badlogic.gdx.graphics.GL20.GL_TRIANGLES, com.badlogic.gdx.graphics.VertexAttributes.Usage.Position | com.badlogic.gdx.graphics.VertexAttributes.Usage.Normal | com.badlogic.gdx.graphics.VertexAttributes.Usage.TextureCoordinates, mat);
+                        
+                        float uScale = 1f / tsetTexture.getWidth();
+                        float vScale = 1f / tsetTexture.getHeight();
+                        
+                        for (drawer d : drawersOpaque) {
+                            if (d.getInitset() == initset) {
+                                if (tileCount > 1000) {
+                                    tileCount = 0;
+                                    meshBuilder = modelBuilder.part("layer_" + jo + "_tset_" + initset + "_p", com.badlogic.gdx.graphics.GL20.GL_TRIANGLES, com.badlogic.gdx.graphics.VertexAttributes.Usage.Position | com.badlogic.gdx.graphics.VertexAttributes.Usage.Normal | com.badlogic.gdx.graphics.VertexAttributes.Usage.TextureCoordinates, mat);
+                                }
+                                tileCount++;
+
+                                float u1 = d.srcX * uScale;
+                                float v1 = d.srcY * vScale;
+                                float u2 = (d.srcX + d.srcWidth) * uScale;
+                                float v2 = (d.srcY + d.srcHeight) * vScale;
+
+                                float x0 = d.x;
+                                float y0 = d.y;
+                                float x1 = d.x + d.width;
+                                float y1 = d.y + d.height;
+                                float z0 = layerZ;
+                                float z1 = layerZ + heightZ;
+
+                                // Determine grid coords of this tile
+                                int gx = Math.round(x0 / Tsw);
+                                int gy = -Math.round(y0 / Tsh); // y0 is negative, tile row = -y0/Tsh
+
+                                boolean hasLeft  = false, hasRight  = false;
+                                boolean hasFront = false, hasBack   = false;
+                                boolean hasTop   = false; // covered by layer above
+
+                                int layerSize = layers.get(jo).getStr().size();
+
+                                // Left: gx - 1, gy
+                                if (gx - 1 >= 0) {
+                                    int pos = gy * Tw + (gx - 1);
+                                    if (pos >= 0 && pos < layerSize) {
+                                        long nIni = layers.get(jo).getStr().get(pos);
+                                        if (nIni != 0) {
+                                            int nTset = resolveTilesetIndexForGid(nIni, layers.get(jo).getTset().get(pos));
+                                            if (nTset != -1) {
+                                                int nLocal = (int)(stripTileGidFlags(nIni) - tilesets.get(nTset).getFirstgid());
+                                                if (tilesets.get(nTset).isTileOpaque(nLocal)) hasLeft = true;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Right: gx + 1, gy
+                                if (gx + 1 < Tw) {
+                                    int pos = gy * Tw + (gx + 1);
+                                    if (pos >= 0 && pos < layerSize) {
+                                        long nIni = layers.get(jo).getStr().get(pos);
+                                        if (nIni != 0) {
+                                            int nTset = resolveTilesetIndexForGid(nIni, layers.get(jo).getTset().get(pos));
+                                            if (nTset != -1) {
+                                                int nLocal = (int)(stripTileGidFlags(nIni) - tilesets.get(nTset).getFirstgid());
+                                                if (tilesets.get(nTset).isTileOpaque(nLocal)) hasRight = true;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Front: gx, gy + 1
+                                if (gy + 1 < Th) {
+                                    int pos = (gy + 1) * Tw + gx;
+                                    if (pos >= 0 && pos < layerSize) {
+                                        long nIni = layers.get(jo).getStr().get(pos);
+                                        if (nIni != 0) {
+                                            int nTset = resolveTilesetIndexForGid(nIni, layers.get(jo).getTset().get(pos));
+                                            if (nTset != -1) {
+                                                int nLocal = (int)(stripTileGidFlags(nIni) - tilesets.get(nTset).getFirstgid());
+                                                if (tilesets.get(nTset).isTileOpaque(nLocal)) hasFront = true;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Back: gx, gy - 1
+                                if (gy - 1 >= 0) {
+                                    int pos = (gy - 1) * Tw + gx;
+                                    if (pos >= 0 && pos < layerSize) {
+                                        long nIni = layers.get(jo).getStr().get(pos);
+                                        if (nIni != 0) {
+                                            int nTset = resolveTilesetIndexForGid(nIni, layers.get(jo).getTset().get(pos));
+                                            if (nTset != -1) {
+                                                int nLocal = (int)(stripTileGidFlags(nIni) - tilesets.get(nTset).getFirstgid());
+                                                if (tilesets.get(nTset).isTileOpaque(nLocal)) hasBack = true;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Top face is hidden if the layer directly above has an opaque tile here
+                                if (jo + 1 < layers.size()) {
+                                    int pos = Math.abs(gy) * Tw + gx;
+                                    if (pos >= 0 && pos < layers.get(jo + 1).getStr().size()) {
+                                        long aboveIni = layers.get(jo + 1).getStr().get(pos);
+                                        if (aboveIni != 0) {
+                                            int aboveTset = resolveTilesetIndexForGid(aboveIni, layers.get(jo + 1).getTset().get(pos));
+                                            int aboveLocal = (int)(aboveIni - tilesets.get(aboveTset).getFirstgid());
+                                            if (tilesets.get(aboveTset).isTileOpaque(aboveLocal)) hasTop = true;
+                                        }
+                                    }
+                                }
+
+                                // Top face
+                                if (!hasTop) {
+                                    meshBuilder.setUVRange(u1, v1, u2, v2);
+                                    meshBuilder.rect(
+                                        new com.badlogic.gdx.math.Vector3(x0, y0, z1),
+                                        new com.badlogic.gdx.math.Vector3(x1, y0, z1),
+                                        new com.badlogic.gdx.math.Vector3(x1, y1, z1),
+                                        new com.badlogic.gdx.math.Vector3(x0, y1, z1),
+                                        new com.badlogic.gdx.math.Vector3(0, 0, 1)
+                                    );
+                                }
+
+                                // Front face (y-)
+                                if (!hasFront) {
+                                    meshBuilder.setUVRange(u1, v1, u2, v2);
+                                    meshBuilder.rect(
+                                        new com.badlogic.gdx.math.Vector3(x0, y0, z0),
+                                        new com.badlogic.gdx.math.Vector3(x1, y0, z0),
+                                        new com.badlogic.gdx.math.Vector3(x1, y0, z1),
+                                        new com.badlogic.gdx.math.Vector3(x0, y0, z1),
+                                        new com.badlogic.gdx.math.Vector3(0, -1, 0)
+                                    );
+                                }
+
+                                // Back face (y+)
+                                if (!hasBack) {
+                                    meshBuilder.setUVRange(u1, v1, u2, v2);
+                                    meshBuilder.rect(
+                                        new com.badlogic.gdx.math.Vector3(x1, y1, z0),
+                                        new com.badlogic.gdx.math.Vector3(x0, y1, z0),
+                                        new com.badlogic.gdx.math.Vector3(x0, y1, z1),
+                                        new com.badlogic.gdx.math.Vector3(x1, y1, z1),
+                                        new com.badlogic.gdx.math.Vector3(0, 1, 0)
+                                    );
+                                }
+
+                                // Left face (x-)
+                                if (!hasLeft) {
+                                    meshBuilder.setUVRange(u1, v1, u2, v2);
+                                    meshBuilder.rect(
+                                        new com.badlogic.gdx.math.Vector3(x0, y1, z0),
+                                        new com.badlogic.gdx.math.Vector3(x0, y0, z0),
+                                        new com.badlogic.gdx.math.Vector3(x0, y0, z1),
+                                        new com.badlogic.gdx.math.Vector3(x0, y1, z1),
+                                        new com.badlogic.gdx.math.Vector3(-1, 0, 0)
+                                    );
+                                }
+
+                                // Right face (x+)
+                                if (!hasRight) {
+                                    meshBuilder.setUVRange(u1, v1, u2, v2);
+                                    meshBuilder.rect(
+                                        new com.badlogic.gdx.math.Vector3(x1, y0, z0),
+                                        new com.badlogic.gdx.math.Vector3(x1, y1, z0),
+                                        new com.badlogic.gdx.math.Vector3(x1, y1, z1),
+                                        new com.badlogic.gdx.math.Vector3(x1, y0, z1),
+                                        new com.badlogic.gdx.math.Vector3(1, 0, 0)
+                                    );
+                                }
+                            }
+                        }
                     }
                 }
 
-                for (drawer drawer : drawers) {
+                cache.beginCache();
+                for (drawer drawer : drawersOpaque) {
                     addMapDrawer(cache, drawer);
                 }
+                cids[jo * 3] = cache.endCache();
 
-                cids[jo] = cache.endCache();
+                cache.beginCache();
+                for (drawer drawer : drawersTrans) {
+                    addMapDrawer(cache, drawer);
+                }
+                cids[jo * 3 + 1] = cache.endCache();
+                
+                cache.beginCache();
+                for (drawer drawer : drawersBillboard) {
+                    addMapDrawer(cache, drawer);
+                }
+                cids[jo * 3 + 2] = cache.endCache();
 
                 if (layers.get(jo).getOpacity() != 0 && sEnableBlending) {
                     Gdx.gl.glDisable(GL20.GL_BLEND);
@@ -5113,9 +5699,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     Gdx.gl.glDisable(GL20.GL_BLEND);
                 }
             } else {
-                cids[jo] = -1;
+                cids[jo * 3] = -1;
+                cids[jo * 3 + 1] = -1;
+                cids[jo * 3 + 2] = -1;
             }
         }
+        
+        if (isFull3DMode) {
+            com.badlogic.gdx.graphics.g3d.Model chunkModel = modelBuilder.end();
+            if (chunkModel != null && chunkModel.meshes.size > 0) {
+                lastModelInstanceBuilt = new com.badlogic.gdx.graphics.g3d.ModelInstance(chunkModel);
+            }
+        }
+        
         return cids;
     }
 
@@ -5316,12 +5912,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         if (!drawers.isEmpty()) {
-            batch.setProjectionMatrix(cam.combined);
+            batch.setProjectionMatrix(is3DMode ? cam3d.combined : cam.combined);
+            com.badlogic.gdx.math.Matrix4 oldTransform = batch.getTransformMatrix().cpy();
+            if (is3DMode) {
+                com.badlogic.gdx.math.Matrix4 transform = oldTransform.cpy().translate(0, 0, jo * Tsh * 0.75f);
+                batch.setTransformMatrix(transform);
+            }
             batch.begin();
             for (drawer drawer : drawers) {
                 drawMapDrawer(batch, drawer);
             }
             batch.end();
+            if (is3DMode) {
+                batch.setTransformMatrix(oldTransform);
+            }
         }
 
         if (blendEnabled) {
@@ -5793,7 +6397,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void drawObjects() {
-        sr.setProjectionMatrix(cam.combined);
+        sr.setProjectionMatrix(is3DMode ? cam3d.combined : cam.combined);
 
         // Part one of 2, filled.
         sr.begin(ShapeRenderer.ShapeType.Filled); // Edit it with filled to make it looks gorgeous.
@@ -6066,7 +6670,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void drawObjectsInfo() {
 
-        batch.setProjectionMatrix(cam.combined);
+        batch.setProjectionMatrix(is3DMode ? cam3d.combined : cam.combined);
         batch.begin();
         str1.getData().setScale(Tsw / 200f);
         if (layers.size() > 0) {
@@ -6164,6 +6768,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             mapSaveExecutor.shutdown();
         if (mygame != null)
             mygame.dispose();
+        if (decalBatch != null)
+            decalBatch.dispose();
     }
 
     @Override
@@ -6643,7 +7249,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 uisrect(gui.mode, mouse, vis("addlayer"));// tile/obj switch
                 uisrect(gui.layer, mouse, vis("layerlist"));// layer switch
                 uisrect(gui.viewmode, mouse, vis("viewmode"));// viewmode switch
-                if (sNoScrollBoundary && isFarAwayFromMap()) {
+                if ((sNoScrollBoundary && isFarAwayFromMap()) || isFull3DMode) {
                     uisrect(gui.center, mouse, vis("center"));
                 }
                 uisrect(gui.menu, mouse, vis("menu"));// main menu button
@@ -7132,7 +7738,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     } else {
                         uidrawbutton(txsave, z.save, gui.save, 2);
                     }
-                    if (sNoScrollBoundary && isFarAwayFromMap()) {
+                    if ((sNoScrollBoundary && isFarAwayFromMap()) || isFull3DMode) {
                         uidrawbutton(txcenter, z.recenter, gui.center, 2);
                     }
 
@@ -7204,11 +7810,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     case RECTANGLE:
                                         str1draw(ui, z.rectangle, gui.info);
                                         break;
-                                    case CIRCLE:
+                                    case ELLIPSE:
                                         str1draw(ui, z.circle, gui.info);
                                         break;
                                     case LINE:
                                         str1draw(ui, z.line, gui.info);
+                                        break;
+                                    case DIAMOND:
+                                        str1draw(ui, "Diamond", gui.info);
+                                        break;
+                                    case OCTAGON:
+                                        str1draw(ui, "Octagon", gui.info);
+                                        break;
+                                    case PLUS:
+                                        str1draw(ui, "Plus", gui.info);
                                         break;
                                 }
 
@@ -7245,11 +7860,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         case RECTANGLE:
                             uidrawbutton(txrectangle, z.rectangle, gui.tool1, 3);
                             break;
-                        case CIRCLE:
+                        case ELLIPSE:
                             uidrawbutton(txcircle, z.circle, gui.tool1, 3);
                             break;
                         case LINE:
                             uidrawbutton(txline, z.line, gui.tool1, 3);
+                            break;
+                        case DIAMOND:
+                            uidrawbutton(txrectangle, "Diamond", gui.tool1, 3);
+                            break;
+                        case OCTAGON:
+                            uidrawbutton(txrectangle, "Octagon", gui.tool1, 3);
+                            break;
+                        case PLUS:
+                            uidrawbutton(txrectangle, "Plus", gui.tool1, 3);
                             break;
                     }
 
@@ -10196,6 +10820,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tTools1.add(tracebackground).row();
             tTools1.add(randomize).row();
             tTools1.add(bScreenshot).row();
+            tTools1.add(bToggleFull3D).row();
             tTools1.add(bAutoMgmt).row();
             tTools1.add(renumberTilesetIds).row();
             tTools1.add(bFlattenObjectLayers).row();
@@ -10216,6 +10841,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             content.add(tracebackground).row();
             content.add(randomize).row();
             content.add(bScreenshot).row();
+            content.add(bToggleFull3D).row();
             content.add(generateterrain).row();
             content.add(bAutoMgmt).row();
             content.add(renumberTilesetIds).row();
@@ -10284,6 +10910,30 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 promptMapScreenshotExport();
+            }
+        });
+
+        bToggleFull3D = new TextButton("3D Mode", skin);
+        bToggleFull3D.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (!orientation.equalsIgnoreCase("orthogonal")) {
+                    msgbox("3D Mode only works on maps with orthogonal orientation.");
+                    return;
+                }
+                isFull3DMode = !isFull3DMode;
+                resetCaches();
+                if (isFull3DMode) {
+                    cam3dTargetX = cam.position.x;
+                    cam3dTargetY = cam.position.y;
+                    bToggleFull3D.setText("2D Mode");
+                } else {
+                    cam.position.x = cam3dTargetX;
+                    cam.position.y = cam3dTargetY;
+                    cam.update();
+                    bToggleFull3D.setText("3D Mode");
+                }
+                backToMap();
             }
         });
 
@@ -10781,7 +11431,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private int mapTileAtScreen(float screenX, float screenY) {
         Vector3 touch = new Vector3();
-        cam.unproject(touch.set(screenX, screenY, 0));
+        unprojectMain(touch.set(screenX, screenY, 0));
         return mapTileAtWorld(touch.x, touch.y);
     }
 
@@ -26404,6 +27054,25 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return -1;
     }
 
+    /** Clamp world coordinates to the nearest valid map tile. Used when dragging a shape past the map edge. */
+    private int clampToEdgeTile(float wx, float wy) {
+        if (orientation.equalsIgnoreCase("orthogonal")) {
+            int col = (int) Math.floor(wx / Tsw);
+            int row = (int) Math.floor(-wy / Tsh);
+            col = Math.max(0, Math.min(col, Tw - 1));
+            row = Math.max(0, Math.min(row, Th - 1));
+            return row * Tw + col;
+        } else if (orientation.equalsIgnoreCase("isometric")) {
+            int ae = (int) wx;
+            int ab = (int) wy;
+            int newae = ae - ((Tsw / Tsh) * ab) + Tsw / 2;
+            int newab = (ae / (Tsw / Tsh)) + ab - Tsh / 2;
+            int num = (Tw * ((-newab + Tsh) / Tsh) + (newae / Tsw));
+            return Math.max(0, Math.min(num, Tw * Th - 1));
+        }
+        return 0;
+    }
+
     private boolean isBrushCell(int bx, int by, int size, BrushShape shape) {
         float cx = (size - 1) / 2f;
         float cy = (size - 1) / 2f;
@@ -26479,6 +27148,52 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private interface BrushCellHandler {
         void onCell(int tileIndex, int bx, int by);
+    }
+
+    /**
+     * Fast tile application for shape tools (rectangle, circle, line).
+     * Like applyBrushCell but for single-tile shapes, bypassing tapTile() overhead.
+     */
+    private void applyShapeTile(int num, int gid, boolean terra) {
+        trackBrushPreviewCell(num);
+        if (!isTerrainBrushPaintMode()) {
+            // Non-terrain mode: just compute rotated Gid and update
+            long oi = computeBrushOutputGid(gid);
+            int brushTileIdx = resolveBrushTileListIndex(oi, curtset);
+            updateTileData(selLayer, num, oi, curtset, brushTileIdx);
+            return;
+        }
+        // Terrain mode
+        long oi = computeBrushOutputGid(gid);
+        updateTileData(selLayer, num, oi, curtset);
+        if (oi == 0)
+            return;
+        if (!terra)
+            return;
+        // Defer terrain handling like the brush does
+        if (brushDeferredTerrainAnchors == null)
+            brushDeferredTerrainAnchors = new java.util.LinkedHashSet<Integer>();
+        brushDeferredTerrainAnchors.add(num);
+    }
+
+    private long computeBrushOutputGid(int gid) {
+        if (eraser)
+            return 0;
+        String hex = Long.toHexString(gid);
+        String trailer = "00000000" + hex;
+        hex = trailer.substring(trailer.length() - 8);
+        String spc;
+        switch (rotate) {
+            case 1: spc = "A0"; break;
+            case 2: spc = "C0"; break;
+            case 3: spc = "60"; break;
+            case 4: spc = "80"; break;
+            case 5: spc = "E0"; break;
+            case 6: spc = "40"; break;
+            case 7: spc = "20"; break;
+            default: spc = "00"; break;
+        }
+        return Long.decode("#" + spc + hex.substring(2));
     }
 
     private long computeBrushOutputGid() {
@@ -27327,17 +28042,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
-    private int[] outsideMacroBbForBoundary(int num, int role) {
-        int[] empty = new int[] { -1, -1, -1, -1 };
-        int outside = sourceNumForBoundaryRole(num, role);
-        if (outside < 0 || outside >= Tw * Th)
-            return empty;
-        tile t = getAutotileLayerTileMeta(selLayer, outside);
-        if (t != null && t.isTerrainForEditor())
-            return t.getTerrain().clone();
-        return empty;
-    }
-
     private EdgeFillSample sampleForTerrainPatternString(String ccStr, int fillTset) {
         if (!macroTerrain.getTerrains().isEmpty()) {
             EdgeFillSample sample = macroEdgeFillSampleFromGids(macroTerrain.getGidsByTerrain(ccStr));
@@ -27360,16 +28064,37 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (neighborCellForDirection(center, direction) != targetNum)
             return null;
         int[] aa = fillCenter.getTerrain();
-        int[] empty = new int[] { -1, -1, -1, -1 };
-        int[] cc = terrainInt(direction, aa, empty);
+        // Use the actual terrain at each diagonal neighbor as the outside values,
+        // so the pattern matches the real macro terrain tile (which also includes
+        // those outside terrain types). This mirrors how the regular Terrainify
+        // loop builds its bb from actual neighbor tiles.
+        int[] actualBb = edgeFillCornerOutsideBb(targetNum);
+        int[] cc = terrainInt(direction, aa, actualBb);
         String ccStr = cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3];
         EdgeFillSample sample = sampleForTerrainPatternString(ccStr, fillTset);
         if (sample != null)
             return sample;
-        int[] outsideBb = outsideMacroBbForBoundary(targetNum, role);
-        cc = terrainInt(direction, aa, outsideBb);
+        // Fallback: try pure pattern (all -1 for outside corners).
+        int[] empty = new int[] { -1, -1, -1, -1 };
+        cc = terrainInt(direction, aa, empty);
         ccStr = cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3];
         return sampleForTerrainPatternString(ccStr, fillTset);
+    }
+
+    /** Build an outside bb array from the actual terrain ID at each of the four
+     *  diagonal positions around {@code num}. Each entry is the first terrain
+     *  value (tr[0]) of the tile at that diagonal, or -1 if out of bounds. */
+    private int[] edgeFillCornerOutsideBb(int num) {
+        int[] bb = new int[] { -1, -1, -1, -1 };
+        if (num >= Tw && num % Tw > 0)
+            bb[0] = terrainIdAtCell(num - Tw - 1);
+        if (num >= Tw && num % Tw < Tw - 1)
+            bb[1] = terrainIdAtCell(num - Tw + 1);
+        if (num < Tw * (Th - 1) && num % Tw > 0)
+            bb[2] = terrainIdAtCell(num + Tw - 1);
+        if (num < Tw * (Th - 1) && num % Tw < Tw - 1)
+            bb[3] = terrainIdAtCell(num + Tw + 1);
+        return bb;
     }
 
     private void applyEdgeFillBoundaryTile(int targetNum, int role, tile fillCenter, int fillTset) {
@@ -27481,14 +28206,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private EdgeFillSample resolveEdgeFillTerrainSample(int num, int role, int fillTset, int[] fillTerrain,
             boolean fillUsesMacroTerrain, tile fillCenter, java.util.HashSet<Integer> classifyBlob,
             java.util.HashSet<Integer> region, boolean requireOutsideRegion) {
-        if (fillCenter != null && fillCenter.isTerrainForEditor()) {
-            EdgeFillSample sample = resolveEdgeFillViaMacroPaint(num, role, fillCenter, fillTset);
-            if (sample != null)
-                return sample;
-        }
-        if (fillTerrain == null)
-            return resolveInsideBoundarySource(num, classifyBlob, region, requireOutsideRegion);
-        return null;
+        // Just copy from the neighbor outside the fill.
+        int srcNum = sourceNumForBoundaryRole(num, role);
+        if (srcNum < 0 || srcNum >= Tw * Th)
+            return null;
+        return edgeFillSampleAt(srcNum);
     }
 
     private int previewSourceNumForBoundaryRole(int num, int role) {
@@ -27568,17 +28290,71 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return false;
     }
 
+    /** Two edge tiles that are diagonal neighbors and both face the same tile
+     *  outside the region form a concave corner. */
+    private boolean isConcaveCornerEdgePair(int num, int diag, java.util.HashMap<Integer, Integer> labels,
+            java.util.HashSet<Integer> region) {
+        Integer numLabel = labels.get(num);
+        Integer diagLabel = labels.get(diag);
+        if (numLabel == null || numLabel != PACK_EDGE || diagLabel == null || diagLabel != PACK_EDGE)
+            return false;
+        int numRole = classifyInsideBoundaryTile(num, region);
+        int diagRole = classifyInsideBoundaryTile(diag, region);
+        if (isBoundaryCornerRole(numRole) || isBoundaryCornerRole(diagRole) || numRole < 0 || diagRole < 0)
+            return false;
+        int numSrc = sourceNumForBoundaryRole(num, numRole);
+        int diagSrc = sourceNumForBoundaryRole(diag, diagRole);
+        if (numSrc != diagSrc)
+            return false;
+        return numSrc < 0 || numSrc >= Tw * Th || !region.contains(numSrc);
+    }
+
+    /** Given two edge roles that form a concave corner, return the corner role
+     *  that connects them. E.g. BF_EDGE_TOP + BF_EDGE_RIGHT → BF_CORNER_TR. */
+    private int edgeRoleToConcaveCorner(int numRole, int diagRole) {
+        switch (numRole) {
+            case BF_EDGE_TOP:
+                if (diagRole == BF_EDGE_LEFT) return BF_CORNER_TL;
+                if (diagRole == BF_EDGE_RIGHT) return BF_CORNER_TR;
+                break;
+            case BF_EDGE_BOTTOM:
+                if (diagRole == BF_EDGE_LEFT) return BF_CORNER_BL;
+                if (diagRole == BF_EDGE_RIGHT) return BF_CORNER_BR;
+                break;
+            case BF_EDGE_LEFT:
+                if (diagRole == BF_EDGE_TOP) return BF_CORNER_TL;
+                if (diagRole == BF_EDGE_BOTTOM) return BF_CORNER_BL;
+                break;
+            case BF_EDGE_RIGHT:
+                if (diagRole == BF_EDGE_TOP) return BF_CORNER_TR;
+                if (diagRole == BF_EDGE_BOTTOM) return BF_CORNER_BR;
+                break;
+        }
+        return -1;
+    }
+
     private boolean checkPackIrregularAdjacency(int num, int label, java.util.HashMap<Integer, Integer> labels,
             java.util.HashSet<Integer> region) {
         if (label != PACK_CORNER && label != PACK_EDGE)
             return false;
-        if (isConcaveRegionVertex(num, region))
-            return true;
+        // NOTE: isConcaveRegionVertex is intentionally NOT called here because it
+        // cannot distinguish convex outer-boundary corners from true concave corners.
+        // Both have exactly 2 adjacent cardinal sides outside the region with the
+        // diagonal between them also outside, causing isConcaveRegionVertex to return
+        // true for both. But convex corners were already correctly painted in the
+        // first shell, and flagging them here causes them to be overwritten with edge
+        // tiles in resolvePackReverseSource (which copies from an adjacent labeled
+        // edge). Real concave corners (inner boundary around holes/indentations) are
+        // always classified as EDGES by classifyInsideBoundaryTile, so isConcaveRegionVertex
+        // doesn't catch them anyway — the diagonal-corner-adjacency check below handles
+        // those cases that truly need reverse-phase correction.
         int[] diags = diagonalNeighbors(num);
         for (int i = 0; i < diags.length; i++) {
             int d = diags[i];
             Integer diagLabel = labels.get(d);
             if (diagLabel != null && diagLabel == PACK_CORNER && !hasPackEdgeBridge(num, d, labels))
+                return true;
+            if (diagLabel != null && diagLabel == PACK_EDGE && isConcaveCornerEdgePair(num, d, labels, region))
                 return true;
         }
         return false;
@@ -27586,6 +28362,52 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private EdgeFillSample resolvePackReverseSource(int num, java.util.HashSet<Integer> region,
             java.util.HashMap<Integer, Integer> labels) {
+        // Concave corner: two orphaned edge tiles that share a diagonal and both
+        // face the same outside tile. The orphaned edges themselves use edge shapes
+        // (fall through to neighbor-copying below). Additionally, fill the corner
+        // tile that sits BETWEEN the two diagonal orphaned edges — that tile should
+        // use the shared outside corner tile (the "bridge" that connects the two
+        // separated edge lines).
+        {
+            Integer lbl = labels.get(num);
+            if (lbl != null && lbl == PACK_EDGE) {
+                int[] diags = diagonalNeighbors(num);
+                for (int i = 0; i < diags.length; i++) {
+                    int d = diags[i];
+                    if (isConcaveCornerEdgePair(num, d, labels, region)) {
+                        int numRole = classifyInsideBoundaryTile(num, region);
+                        int srcNum = sourceNumForBoundaryRole(num, numRole);
+                        if (srcNum >= 0 && srcNum < Tw * Th) {
+                            int nr = num / Tw;
+                            int nc = num % Tw;
+                            int dr = d / Tw;
+                            int dc = d % Tw;
+                            // The two orphaned edges and the shared source form a
+                            // 2x2 block. The corner tile opposite the source is
+                            // the missing bridge between the two edge lines.
+                            int cornerTilePos = -1;
+                            if (srcNum == dr * Tw + nc)
+                                cornerTilePos = nr * Tw + dc;
+                            else if (srcNum == nr * Tw + dc)
+                                cornerTilePos = dr * Tw + nc;
+                            if (cornerTilePos >= 0 && cornerTilePos < Tw * Th
+                                    && region.contains(cornerTilePos)
+                                    && !labels.containsKey(cornerTilePos)) {
+                                EdgeFillSample cornerSrc = edgeFillSampleAt(srcNum);
+                                follower = true;
+                                updateTileData(selLayer, cornerTilePos,
+                                        cornerSrc.gid, cornerSrc.tset);
+                                labels.put(cornerTilePos, PACK_REVERSE);
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Fall through to generic neighbor-copying for edge shapes on the
+        // current orphaned edge tile itself.
         int[] diags = diagonalNeighbors(num);
         for (int i = 0; i < diags.length; i++) {
             int d = diags[i];
@@ -27942,7 +28764,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 EdgeFillPaintPlan plan = queue.get(edgeFillJob.paintIndex++);
                 if (edgeFillJob.phase == EdgeFillJob.Phase.PAINT && edgeFillJob.fillCenter != null
                         && plan.role >= 0) {
-                    applyEdgeFillBoundaryTile(plan.num, plan.role, edgeFillJob.fillCenter, edgeFillJob.fillTset);
+                    if (plan.gid > 0) {
+                        // Prefer the pre-resolved tile from the plan (including fallback sources).
+                        follower = true;
+                        updateTileData(selLayer, plan.num, plan.gid, plan.tset);
+                    } else {
+                        applyEdgeFillBoundaryTile(plan.num, plan.role, edgeFillJob.fillCenter, edgeFillJob.fillTset);
+                    }
                 } else {
                     follower = true;
                     updateTileData(selLayer, plan.num, plan.gid, plan.tset);
@@ -28129,7 +28957,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void showShapeToolMenu() {
         activetool = 0;
-        String[] labels = new String[] { z.rectangle, z.circle, z.line };
+        String[] labels = new String[] { z.rectangle, z.circle, z.line, "Diamond", "Octagon", "Plus" };
         showDrawingToolMenu(z.rectangle, labels, currentShape.ordinal(),
                 new ToolMenuCallback() {
                     @Override
@@ -28137,9 +28965,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (idx == 0)
                             currentShape = ShapeTool.RECTANGLE;
                         else if (idx == 1)
-                            currentShape = ShapeTool.CIRCLE;
+                            currentShape = ShapeTool.ELLIPSE;
                         else if (idx == 2)
                             currentShape = ShapeTool.LINE;
+                        else if (idx == 3)
+                            currentShape = ShapeTool.DIAMOND;
+                        else if (idx == 4)
+                            currentShape = ShapeTool.OCTAGON;
+                        else if (idx == 5)
+                            currentShape = ShapeTool.PLUS;
                     }
                 });
     }
@@ -28369,6 +29203,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
         float cx = Tsw * Tw / 2 - onset;
         float cy = -Tsh * Th / 2;
+        if (is3DMode || isFull3DMode) {
+            cam3dTargetX = cx;
+            cam3dTargetY = cy;
+            cam3dYaw = 225f;
+            cam3dPitch = 45f;
+            cam3dZoom = 1.0f;
+        }
         boolean pixelArt = isPixelArtMap();
         float mapZoom = pixelArt ? pixelArtMapZoom() : 0.5f;
         float mapZoomTarget = pixelArt ? mapZoom : Tsw / 64f;
@@ -29670,7 +30511,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         vely = 0;
         pinchZoomActive = false;
         if (kartu == "world") {
-            initialZoom = cam.zoom;
+            initialZoom = (is3DMode || isFull3DMode) ? cam3dZoom : cam.zoom;
             if (replaceRangePicking && beginReplaceRangeDrag(p1, p2))
                 return true;
         } else if (kartu == "tile" || kartu == "pickanim") {
@@ -29735,7 +30576,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
 
                     Vector3 touch = new Vector3();
-                    cam.unproject(touch.set(p1, p2, 0));
+                    unprojectMain(touch.set(p1, p2, 0));
 
                     int ae = (int) touch.x;
                     int ab = (int) touch.y;
@@ -29807,7 +30648,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     } else if (mode == "object") {
                         final java.util.List<obj> foundObjs = new ArrayList<obj>();
                         Vector3 touchObj = new Vector3();
-                        cam.unproject(touchObj.set(p1, p2, 0));
+                        unprojectMain(touchObj.set(p1, p2, 0));
                         float objX = touchObj.x;
                         float objY = touchObj.y;
                         world.QueryAABB(new com.badlogic.gdx.physics.box2d.QueryCallback() {
@@ -32033,7 +32874,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         Vector3 touch = new Vector3();
-        cam.unproject(touch.set(p1, p2, 0));
+        unprojectMain(touch.set(p1, p2, 0));
         int ae = (int) touch.x;
         int ab = (int) touch.y;
 
@@ -34991,7 +35832,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             return true;
         }
 
-        if (sNoScrollBoundary && isFarAwayFromMap() && tapped(touch2, gui.center)) {
+        if (((sNoScrollBoundary && isFarAwayFromMap()) || isFull3DMode) && tapped(touch2, gui.center)) {
             resetcam(true);
             return true;
         }
@@ -37071,7 +37912,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         // Gdx.input.vibrate(50);
         Vector3 touch = new Vector3();
-        cam.unproject(touch.set(p1, p2, 0));
+        unprojectMain(touch.set(p1, p2, 0));
         Vector3 touch2 = new Vector3();
         uicam.unproject(touch2.set(p1, p2, 0));
         Vector3 touch3 = new Vector3();
@@ -38235,7 +39076,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     @Override
     public boolean fling(float p1, float p2, int p3) {
-        if (loadingfile)
+        if (loadingfile || is3DMode || isFull3DMode)
             return true;
         if (nofling > 0)
             return true;
@@ -38262,9 +39103,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (loadingfile)
             return true;
 
+        if ((is3DMode || isFull3DMode) && kartu.equalsIgnoreCase("world") && !roll) {
+            cam3dYaw -= p3 * 0.25f;
+            cam3dPitch += p4 * 0.25f;
+            if (cam3dPitch > 85f) cam3dPitch = 85f;
+            if (cam3dPitch < 5f) cam3dPitch = 5f;
+            return true;
+        }
+
         if (markermode && activeobjtoolmode == 2) {
             Vector3 touch2 = new Vector3();
-            cam.unproject(touch2.set(p1, p2, 0));
+            unprojectMain(touch2.set(p1, p2, 0));
             resizeobject(touch2.x, touch2.y);
             return true;
         }
@@ -38365,15 +39214,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (roll) {
             usetool = true;
             Vector3 touch = new Vector3();
-            cam.unproject(touch.set(p1, p2, 0));
+            unprojectMain(touch.set(p1, p2, 0));
             int posx = 0;
             int posy = 0;
             int initx = 0;
             int inity = 0;
             Integer num = mapTileAtWorld(touch.x, touch.y);
 
-            if (num == -1)
-                return replaceRangePicking;
+            if (num == -1) {
+                // When dragging shape tool (activetool==0) to map edge, clamp to nearest edge tile instead of stopping
+                if (activetool == 0) {
+                    num = clampToEdgeTile(touch.x, touch.y);
+                } else {
+                    return replaceRangePicking;
+                }
+            }
 
             // brushing, basically other tools are not using pan,
             // remember that longpressing fill will turn it into brush?
@@ -38619,6 +39474,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             // no more activetool =1
             if (activetool == 0) {
+                beginBrushStroke();
 
                 int awidih = 0, aheih = 0;
                 int widih = mapendSelect % Tw - mapstartSelect % Tw;
@@ -38746,32 +39602,61 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                         final int yyy = yy;
                                         final int Ttw = Tw;
                                         final int newcurspr = curspr;
-                                        final boolean stampy = stamp;
 
-                                        if (stampy) {
-                                            tapTile(numa + xxx + (yyy * Ttw), !firstonex, ft, true, newcurspr);
-                                        } else {
-                                            tapTile(numa + xxx + (yyy * Ttw), !firstonex, ft, false, newcurspr);
-
-                                        }
+                                        applyShapeTile(numa + xxx + (yyy * Ttw), newcurspr, ft);
 
                                         if (firstone)
                                             firstone = false;
                                         break;
-                                    case CIRCLE:
-                                        float midx = widih / 2 + 0.5f;
-                                        float midy = heih / 2 + 0.5f;
-                                        float radx = Math.abs(midx - xx);
-                                        float rady = Math.abs(midy - yy);
-                                        double myrad = 0;
-                                        myrad = (midx > midy) ? midy : midx;
-                                        double skor = (radx * radx + rady * rady);
-                                        // double skor = Math.sqrt(Math.pow(radx,2)*Math.pow(rady,2));
-                                        // skor = Math.pow(radx+rady,2)/Math.pow(myrad,2); //DIAMOND
-                                        if (skor <= myrad * myrad) {
-                                            tapTile(num + xx + (yy * Tw), !firstone, true, false, curspr);
-                                            if (firstone)
-                                                firstone = false;
+                                    case ELLIPSE:
+                                        // Ellipse follows the red box size: dx²/rx² + dy²/ry² <= 1
+                                        float ex = xx - (widih / 2f + 0.5f);
+                                        float ey = yy - (heih / 2f + 0.5f);
+                                        float rx = (widih + 1) / 2f;
+                                        float ry = (heih + 1) / 2f;
+                                        if (rx > 0 && ry > 0 && (ex*ex)/(rx*rx) + (ey*ey)/(ry*ry) <= 1.0f) {
+                                            applyShapeTile(num + xx + (yy * Tw), curspr, true);
+                                        }
+                                        break;
+                                    case DIAMOND:
+                                        // Diamond: |dx|/rx + |dy|/ry <= 1
+                                        {
+                                            float dx = Math.abs(xx - (widih / 2f + 0.5f));
+                                            float dy = Math.abs(yy - (heih / 2f + 0.5f));
+                                            float rrx = (widih + 1) / 2f;
+                                            float rry = (heih + 1) / 2f;
+                                            if (rrx > 0 && rry > 0 && dx/rrx + dy/rry <= 1.0f) {
+                                                applyShapeTile(num + xx + (yy * Tw), curspr, true);
+                                            }
+                                        }
+                                        break;
+                                    case OCTAGON:
+                                        // Octagon: rectangle with 45° corner cuts
+                                        {
+                                            float dx = Math.abs(xx - (widih / 2f + 0.5f));
+                                            float dy = Math.abs(yy - (heih / 2f + 0.5f));
+                                            float rrx = (widih + 1) / 2f;
+                                            float rry = (heih + 1) / 2f;
+                                            if (dx > rrx || dy > rry) break;
+                                            float cut = Math.min(rrx, rry) * 0.2929f;
+                                            // Inside inner rectangle, or inside the octagon corner cuts
+                                            if (dx <= rrx - cut || dy <= rry - cut || dx + dy <= rrx + rry - cut) {
+                                                applyShapeTile(num + xx + (yy * Tw), curspr, true);
+                                            }
+                                        }
+                                        break;
+                                    case PLUS:
+                                        // Plus sign: horizontal or vertical arm
+                                        {
+                                            float dx = Math.abs(xx - (widih / 2f + 0.5f));
+                                            float dy = Math.abs(yy - (heih / 2f + 0.5f));
+                                            float rrx = (widih + 1) / 2f;
+                                            float rry = (heih + 1) / 2f;
+                                            float armW = rrx * 0.35f; // horizontal arm half-thickness
+                                            float armH = rry * 0.35f; // vertical arm half-thickness
+                                            if (dy <= armH || dx <= armW) {
+                                                applyShapeTile(num + xx + (yy * Tw), curspr, true);
+                                            }
                                         }
                                         break;
 
@@ -38790,43 +39675,34 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     boolean vert = heih > widih ? true : false;
 
                     if (vert) {
-                        firstone = true;
                         if (rising) {
                             for (int yy = 0; yy <= heih; yy++) {
                                 int xx = widih - Math.round((float) yy / (float) heih * (float) widih);
-                                tapTile(num + xx + (yy * Tw), !firstone, true, false, curspr);
-                                if (firstone)
-                                    firstone = false;
+                                applyShapeTile(num + xx + (yy * Tw), curspr, true);
                             }
                         } else {
                             for (int yy = 0; yy <= heih; yy++) {
                                 int xx = Math.round((float) yy / (float) heih * (float) widih);
-                                tapTile(num + xx + (yy * Tw), !firstone, true, false, curspr);
-                                if (firstone)
-                                    firstone = false;
+                                applyShapeTile(num + xx + (yy * Tw), curspr, true);
                             }
                         }
                     } else {
-                        firstone = true;
                         if (rising) {
                             for (int xx = 0; xx <= widih; xx++) {
                                 int yy = heih - Math.round((float) xx / (float) widih * (float) heih);
-                                tapTile(num + xx + (yy * Tw), !firstone, true, false, curspr);
-                                if (firstone)
-                                    firstone = false;
+                                applyShapeTile(num + xx + (yy * Tw), curspr, true);
                             }
                         } else {
                             for (int xx = 0; xx <= widih; xx++) {
                                 int yy = Math.round((float) xx / (float) widih * (float) heih);
-                                tapTile(num + xx + (yy * Tw), !firstone, true, false, curspr);
-                                if (firstone)
-                                    firstone = false;
+                                applyShapeTile(num + xx + (yy * Tw), curspr, true);
                             }
                         }
                     }
 
                 }
 
+                endBrushStroke();
             }
             roll = false;
             // updateMinimap();
@@ -38861,23 +39737,46 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         float pa2 = p3.dst(p4);
         float newx = (p3.x + p4.x) / 2;
         float newy = (p3.y + p4.y) / 2;
-        if (prevx != 0)
-            pan(newx, newy, newx - prevx, newy - prevy);
+        if (prevx != 0) {
+            if ((is3DMode || isFull3DMode) && kartu.equalsIgnoreCase("world")) {
+                // In 3D mode, two-finger drag moves camera target
+                float dx = newx - prevx;
+                float dy = newy - prevy;
+                com.badlogic.gdx.graphics.Camera activeCam = isFull3DMode ? camFull3D : cam3d;
+                com.badlogic.gdx.math.Vector3 dir = activeCam.direction.cpy();
+                dir.z = 0;
+                dir.nor();
+                com.badlogic.gdx.math.Vector3 right = dir.cpy().crs(activeCam.up);
+                right.z = 0;
+                right.nor();
+                float speed = cam3dZoom * (isFull3DMode ? 1.5f : 0.8f);
+                cam3dTargetX -= (right.x * dx + dir.x * dy) * speed;
+                cam3dTargetY -= (right.y * dx + dir.y * dy) * speed;
+            } else {
+                pan(newx, newy, newx - prevx, newy - prevy);
+            }
+        }
         prevx = (p3.x + p4.x) / 2;
         prevy = (p3.y + p4.y) / 2;
         // pan((p1.x+p2.x)/2,(p1.y+p2.y)/2,((p1.x+p2.x)/2)/((p3.x+p4.x)/2),((p1.y+p2.y)/2)/((p3.y+p4.y)/2));
         // zooming=true;
         if (kartu == "world") {
-            cam.zoom = initialZoom * pa1 / pa2;
+            if (is3DMode || isFull3DMode) {
+                cam3dZoom = initialZoom * pa1 / pa2;
+                if (cam3dZoom > 10.0f) cam3dZoom = 10.0f;
+                if (cam3dZoom < 0.1f) cam3dZoom = 0.1f;
+            } else {
+                cam.zoom = initialZoom * pa1 / pa2;
 
-            if (cam.zoom > maxWorldZoomOut()) {
-                cam.zoom = maxWorldZoomOut();
+                if (cam.zoom > maxWorldZoomOut()) {
+                    cam.zoom = maxWorldZoomOut();
+                }
+                if (cam.zoom < Tsw / 320f)// zoom in
+                {
+                    cam.zoom = Tsw / 320f;
+                }
+                cam.update();
             }
-            if (cam.zoom < Tsw / 320f)// zoom in
-            {
-                cam.zoom = Tsw / 320f;
-            }
-            cam.update();
         } else if (kartu == "tile" || kartu == "pickanim") {
             tilecam.zoom = initialZoom * pa1 / pa2;
             float minZoom = tilePickerMinZoom();
