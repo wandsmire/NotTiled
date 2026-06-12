@@ -5629,6 +5629,24 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 break;
                         }
                         int localId = (int) (mm - tilesets.get(initset).getFirstgid());
+                        float tileZ = 0;
+                        for (int k = 0; k < jo; k++) {
+                            if (layers.get(k).getType() == layer.Type.TILE) {
+                                long kGid = layers.get(k).getStr().get(position);
+                                if (kGid != 0) {
+                                    int kPref = layers.get(k).getTset().get(position);
+                                    int kTidx = resolveTilesetIndexForGid(kGid, kPref);
+                                    if (kTidx >= 0) {
+                                        long stripped = stripTileGidFlags(kGid);
+                                        int localIdK = (int) (stripped - tilesets.get(kTidx).getFirstgid());
+                                        if (localIdK >= 0 && tilesets.get(kTidx).isTileOpaque(localIdK)) {
+                                            tileZ += Tsh * 0.75f;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        tempdrawer.tileZ = tileZ;
                         if (tilesets.get(initset).isBillboardSprite(localId)) {
                             drawersBillboard.add(tempdrawer);
                             com.badlogic.gdx.graphics.g2d.TextureRegion tr = new com.badlogic.gdx.graphics.g2d.TextureRegion(
@@ -5636,7 +5654,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             Decal d = Decal.newDecal(Tswad, Tshad, tr, true);
                             float dx = (xpos * Tsw - offsetx) + Tsw / 2f;
                             float dy = (-ypos * Tsh - offsety) + Tsh / 2f;
-                            float dz = jo * Tsh * 0.75f + Tshad / 2f;
+                            float dz = tileZ + Tshad / 2f;
                             d.setPosition(dx, dy, dz);
                             lastDecalsBuilt.add(d);
                         } else if (tilesets.get(initset).isTileOpaque(localId)) {
@@ -5702,8 +5720,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     float y0 = d.y;
                                     float x1 = d.x + d.width;
                                     float y1 = d.y + d.height;
-                                    float z0 = layerZ;
-                                    float z1 = layerZ + heightZ;
+                                    float z0 = d.tileZ;
+                                    float z1 = d.tileZ + heightZ;
 
                                     // Determine grid coords of this tile
                                     int gx = Math.round(x0 / Tsw);
@@ -5833,7 +5851,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     float y0 = d.y;
                                     float x1 = d.x + d.width;
                                     float y1 = d.y + d.height;
-                                    float z1 = layerZ; // Place transparent plane flat at the base level of the current layer
+                                    float z1 = d.tileZ; // Place transparent plane flat at the base level of the current layer
 
                                     meshBuilder.setUVRange(u1, v1, u2, v2);
                                     meshBuilder.rect(

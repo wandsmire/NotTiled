@@ -56,6 +56,7 @@ public class drawer implements Comparable
 	boolean flagged;
 	boolean orphan;
 	long mm;
+	public float tileZ;
 
 	public void setOrphan(boolean orphan)
 	{
