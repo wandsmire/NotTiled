@@ -6172,6 +6172,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             int tileIdx = ty * Tw + tx;
                             if (tileIdx < 0 || tileIdx >= mapSize) continue;
                             if (layers.get(jo).getTset().get(tileIdx) == -1) continue;
+                            if (!opaqueGrid[jo][tileIdx]) continue;
                             // Find highest filled layer below
                             int highestBelow = -1;
                             for (int k = jo - 1; k >= 0; k--) {
