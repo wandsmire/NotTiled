@@ -503,4 +503,22 @@ public class language
 	String ungroup;
 	String options;
 	String tilecollision;
+	String gid1;
+	String gid2;
+	String visittiledwebsite;
+	String noneroot;
+	String parentgroup;
+	String coladdrect;
+	String coladdellipse;
+	String collisionshapes;
+	String notilesselected;
+	String nottiledlicense;
+	String nottiledbasedon;
+	String tilesetusedwarn;
+	String areyousure;
+	String setparentgroup;
+	String diamond;
+	String octagon;
+	String plus;
+	String layerlisthint;
 }

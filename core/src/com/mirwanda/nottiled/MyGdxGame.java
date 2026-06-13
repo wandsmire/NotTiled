@@ -8310,13 +8310,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 str1draw(ui, z.line, gui.info);
                                 break;
                             case DIAMOND:
-                                str1draw(ui, "Diamond", gui.info);
+                                str1draw(ui, z.diamond != null ? z.diamond : "Diamond", gui.info);
                                 break;
                             case OCTAGON:
-                                str1draw(ui, "Octagon", gui.info);
+                                str1draw(ui, z.octagon != null ? z.octagon : "Octagon", gui.info);
                                 break;
                             case PLUS:
-                                str1draw(ui, "Plus", gui.info);
+                                str1draw(ui, z.plus != null ? z.plus : "Plus", gui.info);
                                 break;
                         }
 
@@ -8360,13 +8360,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     uidrawbutton(txline, z.line, gui.tool1, 3);
                     break;
                 case DIAMOND:
-                    uidrawbutton(txrectangle, "Diamond", gui.tool1, 3);
+                    uidrawbutton(txrectangle, z.diamond != null ? z.diamond : "Diamond", gui.tool1, 3);
                     break;
                 case OCTAGON:
-                    uidrawbutton(txrectangle, "Octagon", gui.tool1, 3);
+                    uidrawbutton(txrectangle, z.octagon != null ? z.octagon : "Octagon", gui.tool1, 3);
                     break;
                 case PLUS:
-                    uidrawbutton(txrectangle, "Plus", gui.tool1, 3);
+                    uidrawbutton(txrectangle, z.plus != null ? z.plus : "Plus", gui.tool1, 3);
                     break;
             }
 
@@ -11684,11 +11684,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         trandomgen.add(new Label(z.balance, skin));
         trandomgen.add(slfirstgen).row();
 
-        trandomgen.add(new Label("GID 1", skin));
+        trandomgen.add(new Label(z.gid1 != null ? z.gid1 : "GID 1", skin));
         trandomgen.add(tRandomLive).row();
         trandomgen.add();
         trandomgen.add(pickrnda).row();
-        trandomgen.add(new Label("GID 2", skin));
+        trandomgen.add(new Label(z.gid2 != null ? z.gid2 : "GID 2", skin));
         trandomgen.add(tRandomDead).row();
         trandomgen.add();
         trandomgen.add(pickrndb).row();
@@ -11757,11 +11757,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         });
 
-        tgenerateterrain.add(new Label("GID 1", skin));
+        tgenerateterrain.add(new Label(z.gid1 != null ? z.gid1 : "GID 1", skin));
         tgenerateterrain.add(tGenTerrain1).row();
         tgenerateterrain.add();
         tgenerateterrain.add(pickgena).row();
-        tgenerateterrain.add(new Label("GID 2", skin));
+        tgenerateterrain.add(new Label(z.gid2 != null ? z.gid2 : "GID 2", skin));
         tgenerateterrain.add(tGenTerrain2).row();
         tgenerateterrain.add();
         tgenerateterrain.add(pickgenb).row();
@@ -13873,7 +13873,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void loadLicense() {
 
-        btiled = new TextButton("Visit Tiled Website", skin);
+        btiled = new TextButton(z.visittiledwebsite != null ? z.visittiledwebsite : "Visit Tiled Website", skin);
         btiled.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -13894,10 +13894,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         });
         // safe
-        Label title = new Label("NotTiled License", skin);
+        Label title = new Label(z.nottiledlicense != null ? z.nottiledlicense : "NotTiled License", skin);
         Label label = new Label(
                 "NotTiled is licensed under a Creative Commons Attribution-ShareAlike 3.0 Unported License.", skin);
-        Label label2 = new Label("NotTiled is based on Tiled by Thorbjorn Lindeijer.", skin);
+        Label label2 = new Label(z.nottiledbasedon != null ? z.nottiledbasedon : "NotTiled is based on Tiled by Thorbjorn Lindeijer.", skin);
         label.setWrap(true);
         label.setAlignment(com.badlogic.gdx.utils.Align.left);
         label2.setAlignment(com.badlogic.gdx.utils.Align.left);
@@ -15734,7 +15734,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tLayerMgrMain.add(new Label(z.layer, skin)).padBottom(4).row();
 
         Label hint = new Label(
-                "Tap to select  ·  Tap group again to fold/unfold  ·  Drag handle: top bar = root top, row top/bottom = reorder, group center = into group",
+                z.layerlisthint != null ? z.layerlisthint : "Tap to select  ·  Tap group again to fold/unfold  ·  Drag handle: top bar = root top, row top/bottom = reorder, group center = into group",
                 skin);
         hint.setWrap(true);
         hint.setColor(0.65f, 0.65f, 0.65f, 1f);
@@ -16482,8 +16482,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         };
         confirmDlg.getContentTable().clear();
-        confirmDlg.text("This tileset is used on " + usedFinal
-                + " tile(s) on the map.\n\nDelete it anyway? Map placements will be kept so you can restore the tileset later.");
+        confirmDlg.text(z.tilesetusedwarn != null ? z.tilesetusedwarn.replace("%d", usedFinal + "") : "This tileset is used on " + usedFinal + " tile(s) on the map.\n\nDelete it anyway? Map placements will be kept so you can restore the tileset later.");
         confirmDlg.button(z.yes, true);
         confirmDlg.button(z.no, false);
         confirmDlg.show(stage);
@@ -17192,7 +17191,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         }
 
-        Dialog dlg = new Dialog("Set Parent Group", skin, "dialog") {
+        Dialog dlg = new Dialog(z.setparentgroup != null ? z.setparentgroup : "Set Parent Group", skin, "dialog") {
             @Override
             protected void result(Object object) {
                 if (object instanceof Integer) {
@@ -17205,7 +17204,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         };
 
-        TextButton btnNone = new TextButton("None (Root)", skin);
+        TextButton btnNone = new TextButton(z.noneroot != null ? z.noneroot : "None (Root)", skin);
         dlg.button(btnNone, -1);
 
         for (layer g : groups) {
@@ -17225,7 +17224,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bEditLayer = new TextButton(z.rename, skin);
         bLayerDuplicate = new TextButton(z.duplicate, skin);
         bSetOpacity = new TextButton(z.setopacity, skin);
-        bSetParentGroup = new TextButton("Parent Group", skin); // kept for legacy; hidden from UI
+        bSetParentGroup = new TextButton(z.parentgroup != null ? z.parentgroup : "Parent Group", skin); // kept for legacy; hidden from UI
 
         llayerlist = new com.badlogic.gdx.scenes.scene2d.ui.List<String>(skin);
 
@@ -18729,7 +18728,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
                     }
                 };
-                dialog.text("Are you sure?");
+                dialog.text(z.areyousure != null ? z.areyousure : "Are you sure?");
                 dialog.button(z.yes, true); // sends "true" as the result
                 dialog.button(z.no, false); // sends "false" as the result
                 dialog.show(stage);
@@ -20034,7 +20033,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         };
         bAddTileLayer = new TextButton(z.addnew, skin);
         bMassAddProp = new TextButton(z.masstileproperties, skin);
-        bTileCollision = new TextButton("Tile collision", skin);
+        bTileCollision = new TextButton(z.tilecollision != null ? z.tilecollision : "Tile collision", skin);
 
         bRemoveTileLayer = new TextButton(z.remove, skin);
         bReplaceTileLayer = new TextButton(z.replace, skin);
@@ -20247,8 +20246,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         fColH = new TextField("", skin);
         fColH.setTextFieldFilter(tfffloat);
 
-        bColAddRect = new TextButton("Add Rect", skin);
-        bColAddEllipse = new TextButton("Add Ellipse", skin);
+        bColAddRect = new TextButton(z.coladdrect != null ? z.coladdrect : "Add Rect", skin);
+        bColAddEllipse = new TextButton(z.coladdellipse != null ? z.coladdellipse : "Add Ellipse", skin);
         bColRemove = new TextButton(z.remove != null ? z.remove : "Remove", skin);
         bColCustomProps = new TextButton(z.customproperties != null ? z.customproperties : "Custom Properties", skin);
 
@@ -20510,7 +20509,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         // Left Table
         Table leftTable = new Table();
-        leftTable.add(new Label("Collision Shapes:", skin)).left().padBottom(5).row();
+        leftTable.add(new Label(z.collisionshapes != null ? z.collisionshapes : "Collision Shapes:", skin)).left().padBottom(5).row();
         leftTable.add(scrollPaneCollision).width(leftWidth).height(listHeight).padBottom(10).row();
 
         Table buttonsTable = new Table();
@@ -20530,24 +20529,24 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         // Right Table
         Table rightTable = new Table();
         rightTable.defaults().padBottom(5);
-        rightTable.add(new Label("Properties:", skin)).colspan(2).left().padBottom(10).row();
+        rightTable.add(new Label(z.properties != null ? z.properties + ":" : "Properties:", skin)).colspan(2).left().padBottom(10).row();
 
-        rightTable.add(new Label("Name:", skin)).left();
+        rightTable.add(new Label(z.name != null ? z.name + ":" : "Name:", skin)).left();
         rightTable.add(fColName).width(fieldWidth).row();
 
-        rightTable.add(new Label("Type:", skin)).left();
+        rightTable.add(new Label(z.type != null ? z.type + ":" : "Type:", skin)).left();
         rightTable.add(fColType).width(fieldWidth).row();
 
-        rightTable.add(new Label("X:", skin)).left();
+        rightTable.add(new Label(z.x != null ? z.x + ":" : "X:", skin)).left();
         rightTable.add(fColX).width(fieldWidth).row();
 
-        rightTable.add(new Label("Y:", skin)).left();
+        rightTable.add(new Label(z.y != null ? z.y + ":" : "Y:", skin)).left();
         rightTable.add(fColY).width(fieldWidth).row();
 
-        rightTable.add(new Label("Width:", skin)).left();
+        rightTable.add(new Label(z.width != null ? z.width + ":" : "Width:", skin)).left();
         rightTable.add(fColW).width(fieldWidth).row();
 
-        rightTable.add(new Label("Height:", skin)).left();
+        rightTable.add(new Label(z.height != null ? z.height + ":" : "Height:", skin)).left();
         rightTable.add(fColH).width(fieldWidth).row();
 
         rightTable.add(bColCustomProps).colspan(2).width(customPropsWidth).height(btny).row();
@@ -20708,7 +20707,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             });
             tTileOptions.add(bBatchRemove).row();
         } else {
-            Label title = new Label("No tiles selected", skin);
+            Label title = new Label(z.notilesselected != null ? z.notilesselected : "No tiles selected", skin);
             tTileOptions.add(title).padBottom(5).row();
         }
 
@@ -29614,7 +29613,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void showShapeToolMenu() {
         activetool = 0;
-        String[] labels = new String[] { z.rectangle, z.circle, z.line, "Diamond", "Octagon", "Plus" };
+        String[] labels = new String[] { z.rectangle, z.circle, z.line, z.diamond != null ? z.diamond : "Diamond", z.octagon != null ? z.octagon : "Octagon", z.plus != null ? z.plus : "Plus" };
         showDrawingToolMenu(z.rectangle, labels, currentShape.ordinal(),
                 new ToolMenuCallback() {
                     @Override
