@@ -28297,6 +28297,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private static final int BF_EDGE_BOTTOM = 5;
     private static final int BF_EDGE_LEFT = 6;
     private static final int BF_EDGE_RIGHT = 7;
+    private static final int BF_INNER_TL = 8;
+    private static final int BF_INNER_TR = 9;
+    private static final int BF_INNER_BL = 10;
+    private static final int BF_INNER_BR = 11;
 
     private static final class EdgePackRect {
         int y;
@@ -28434,10 +28438,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private int classifyInsideBoundaryTile(int num, java.util.HashSet<Integer> blob) {
-        boolean nIn = num >= Tw && blob.contains(num - Tw);
-        boolean sIn = num + Tw < Tw * Th && blob.contains(num + Tw);
-        boolean wIn = (num % Tw != 0) && blob.contains(num - 1);
-        boolean eIn = (num % Tw != Tw - 1) && blob.contains(num + 1);
+        boolean nIn = num < Tw || blob.contains(num - Tw);
+        boolean sIn = num + Tw >= Tw * Th || blob.contains(num + Tw);
+        boolean wIn = (num % Tw == 0) || blob.contains(num - 1);
+        boolean eIn = (num % Tw == Tw - 1) || blob.contains(num + 1);
         // Corners: two adjacent sides open, two adjacent sides still in the fill blob.
         if (!nIn && !wIn && sIn && eIn)
             return BF_CORNER_TL;
@@ -28455,18 +28459,36 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             return BF_EDGE_LEFT;
         if (!eIn && nIn && sIn)
             return BF_EDGE_RIGHT;
+            
+        // Inner corners: all orthogonal neighbors are IN, but a diagonal neighbor is OUT.
+        if (nIn && sIn && wIn && eIn) {
+            boolean nwIn = (num < Tw || num % Tw == 0) || blob.contains(num - Tw - 1);
+            boolean neIn = (num < Tw || num % Tw == Tw - 1) || blob.contains(num - Tw + 1);
+            boolean swIn = (num + Tw >= Tw * Th || num % Tw == 0) || blob.contains(num + Tw - 1);
+            boolean seIn = (num + Tw >= Tw * Th || num % Tw == Tw - 1) || blob.contains(num + Tw + 1);
+            
+            if (!nwIn) return BF_INNER_TL;
+            if (!neIn) return BF_INNER_TR;
+            if (!swIn) return BF_INNER_BL;
+            if (!seIn) return BF_INNER_BR;
+        }
+            
         return -1;
     }
 
     private int sourceNumForBoundaryRole(int num, int role) {
         switch (role) {
             case BF_CORNER_TL:
+            case BF_INNER_TL:
                 return num - Tw - 1;
             case BF_CORNER_TR:
+            case BF_INNER_TR:
                 return num - Tw + 1;
             case BF_CORNER_BL:
+            case BF_INNER_BL:
                 return num + Tw - 1;
             case BF_CORNER_BR:
+            case BF_INNER_BR:
                 return num + Tw + 1;
             case BF_EDGE_TOP:
                 return num - Tw;
@@ -28482,7 +28504,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private boolean isBoundaryCornerRole(int role) {
-        return role >= BF_CORNER_TL && role <= BF_CORNER_BR;
+        return (role >= BF_CORNER_TL && role <= BF_CORNER_BR) || (role >= BF_INNER_TL && role <= BF_INNER_BR);
     }
 
     private int boundaryRoleToPackLabel(int role) {
@@ -28695,29 +28717,26 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private EdgeFillSample resolveEdgeFillViaMacroPaint(int targetNum, int role, tile fillCenter, int fillTset) {
         if (fillCenter == null || !fillCenter.isTerrainForEditor())
             return null;
-        int direction = boundaryRoleToTerrainDirection(role);
-        if (direction < 0)
-            return null;
-        int center = interiorCenterForBoundaryRole(targetNum, role);
-        if (center < 0 || center >= Tw * Th)
-            return null;
-        if (neighborCellForDirection(center, direction) != targetNum)
-            return null;
+            
         int[] aa = fillCenter.getTerrain();
-        // Use the actual terrain at each diagonal neighbor as the outside values,
-        // so the pattern matches the real macro terrain tile (which also includes
-        // those outside terrain types). This mirrors how the regular Terrainify
-        // loop builds its bb from actual neighbor tiles.
-        int[] actualBb = edgeFillCornerOutsideBb(targetNum);
-        int[] cc = terrainInt(direction, aa, actualBb);
-        String ccStr = cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3];
-        EdgeFillSample sample = sampleForTerrainPatternString(ccStr, fillTset);
-        if (sample != null)
-            return sample;
-        // Fallback: try pure pattern (all -1 for outside corners).
         int[] empty = new int[] { -1, -1, -1, -1 };
-        cc = terrainInt(direction, aa, empty);
-        ccStr = cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3];
+        int[] cc = null;
+        
+        // Construct the pure 12-variation pattern string by using -1 for the outside.
+        if (role >= BF_INNER_TL && role <= BF_INNER_BR) {
+            cc = new int[] { aa[0], aa[1], aa[2], aa[3] };
+            if (role == BF_INNER_TL) cc[0] = -1;
+            else if (role == BF_INNER_TR) cc[1] = -1;
+            else if (role == BF_INNER_BL) cc[2] = -1;
+            else if (role == BF_INNER_BR) cc[3] = -1;
+        } else {
+            int direction = boundaryRoleToTerrainDirection(role);
+            if (direction < 0)
+                return null;
+            cc = terrainInt(direction, aa, empty);
+        }
+        
+        String ccStr = cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3];
         return sampleForTerrainPatternString(ccStr, fillTset);
     }
 
