@@ -875,6 +875,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         float phaseTimer;
         int fillTset = -1;
         int[] fillTerrain = null;
+        int[] outsideTerrain = null;
         boolean fillUsesMacroTerrain = false;
         tile fillCenter = null;
     }
@@ -28711,59 +28712,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return tilesetSampleForTerrainString(fillTset, ccStr);
     }
 
-    /**
-     * Same ccStr / direction path as manual macro terrain painting (Terrainify).
-     */
-    private EdgeFillSample resolveEdgeFillViaMacroPaint(int targetNum, int role, tile fillCenter, int fillTset) {
-        if (fillCenter == null || !fillCenter.isTerrainForEditor())
-            return null;
-            
-        int[] aa = fillCenter.getTerrain();
-        int[] empty = new int[] { -1, -1, -1, -1 };
-        int[] cc = null;
-        
-        // Construct the pure 12-variation pattern string by using -1 for the outside.
-        if (role >= BF_INNER_TL && role <= BF_INNER_BR) {
-            cc = new int[] { aa[0], aa[1], aa[2], aa[3] };
-            if (role == BF_INNER_TL) cc[0] = -1;
-            else if (role == BF_INNER_TR) cc[1] = -1;
-            else if (role == BF_INNER_BL) cc[2] = -1;
-            else if (role == BF_INNER_BR) cc[3] = -1;
-        } else {
-            int direction = boundaryRoleToTerrainDirection(role);
-            if (direction < 0)
-                return null;
-            cc = terrainInt(direction, aa, empty);
-        }
-        
-        String ccStr = cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3];
+    private EdgeFillSample resolveEdgeFillSampleFromWang(int num, java.util.HashSet<Integer> blob,
+            int insideId, int outsideId, int fillTset) {
+        boolean nIn = num >= Tw && blob.contains(num - Tw);
+        boolean sIn = num + Tw < Tw * Th && blob.contains(num + Tw);
+        boolean wIn = (num % Tw != 0) && blob.contains(num - 1);
+        boolean eIn = (num % Tw != Tw - 1) && blob.contains(num + 1);
+
+        int c0 = (nIn && wIn && (num >= Tw && num % Tw != 0 && blob.contains(num - Tw - 1))) ? insideId : outsideId;
+        int c1 = (nIn && eIn && (num >= Tw && num % Tw != Tw - 1 && blob.contains(num - Tw + 1))) ? insideId : outsideId;
+        int c2 = (sIn && wIn && (num + Tw < Tw * Th && num % Tw != 0 && blob.contains(num + Tw - 1))) ? insideId : outsideId;
+        int c3 = (sIn && eIn && (num + Tw < Tw * Th && num % Tw != Tw - 1 && blob.contains(num + Tw + 1))) ? insideId : outsideId;
+
+        String ccStr = c0 + "," + c1 + "," + c2 + "," + c3;
         return sampleForTerrainPatternString(ccStr, fillTset);
-    }
-
-    /**
-     * Build an outside bb array from the actual terrain ID at each of the four
-     * diagonal positions around {@code num}. Each entry is the first terrain
-     * value (tr[0]) of the tile at that diagonal, or -1 if out of bounds.
-     */
-    private int[] edgeFillCornerOutsideBb(int num) {
-        int[] bb = new int[] { -1, -1, -1, -1 };
-        if (num >= Tw && num % Tw > 0)
-            bb[0] = terrainIdAtCell(num - Tw - 1);
-        if (num >= Tw && num % Tw < Tw - 1)
-            bb[1] = terrainIdAtCell(num - Tw + 1);
-        if (num < Tw * (Th - 1) && num % Tw > 0)
-            bb[2] = terrainIdAtCell(num + Tw - 1);
-        if (num < Tw * (Th - 1) && num % Tw < Tw - 1)
-            bb[3] = terrainIdAtCell(num + Tw + 1);
-        return bb;
-    }
-
-    private void applyEdgeFillBoundaryTile(int targetNum, int role, tile fillCenter, int fillTset) {
-        EdgeFillSample sample = resolveEdgeFillViaMacroPaint(targetNum, role, fillCenter, fillTset);
-        if (sample == null)
-            return;
-        follower = true;
-        updateTileData(selLayer, targetNum, sample.gid, sample.tset);
     }
 
     private int terrainIdAtCell(int cellIdx) {
@@ -29214,26 +29176,23 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private java.util.ArrayList<EdgeFillPaintPlan> planRegionBoundaryShell(java.util.HashSet<Integer> inside,
-            java.util.HashSet<Integer> region, int fillTset, int[] fillTerrain, boolean fillUsesMacroTerrain,
-            tile fillCenter) {
+            int fillTset, int[] fillTerrain, int[] outsideTerrain, tile fillCenter) {
         java.util.ArrayList<EdgeFillPaintPlan> plans = new java.util.ArrayList<EdgeFillPaintPlan>();
-        java.util.HashSet<Integer> shell = collectRegionBoundaryShell(region, inside);
-        for (int num : shell) {
-            int role = classifyInsideBoundaryTile(num, inside);
-            if (role < 0)
-                continue;
-            EdgeFillSample src = resolveEdgeFillTerrainSample(num, role, fillTset, fillTerrain, fillUsesMacroTerrain,
-                    fillCenter, inside, region, true);
-            if (src == null && fillCenter == null)
-                continue;
+        
+        int insideId = fillTerrain != null ? fillTerrain[0] : -1;
+        int outsideId = outsideTerrain != null ? outsideTerrain[0] : -1;
+        
+        for (int num : inside) {
+            EdgeFillSample src = resolveEdgeFillSampleFromWang(num, inside, insideId, outsideId, fillTset);
             EdgeFillPaintPlan plan = new EdgeFillPaintPlan();
             plan.num = num;
-            plan.role = role;
             if (src != null) {
                 plan.gid = src.gid;
                 plan.tset = src.tset;
+            } else {
+                continue;
             }
-            plan.label = boundaryRoleToPackLabel(role);
+            plan.label = PACK_EDGE; // Reuse label to just update tile
             plans.add(plan);
         }
         return plans;
@@ -29241,73 +29200,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void setEdgeFillShellPreview() {
         if (edgeFillJob.shellIndex == 0) {
-            edgeFillJob.previewShell = collectRegionBoundaryShell(edgeFillJob.region, edgeFillJob.inside);
-            edgeFillJob.previewSources = collectShellSources(edgeFillJob.previewShell, edgeFillJob.region,
-                    edgeFillJob.region, true);
-        } else {
-            edgeFillJob.previewShell = collectPackRectShellSelection(edgeFillJob.currentRect, edgeFillJob.inside);
-            edgeFillJob.previewSources = collectShellSources(edgeFillJob.previewShell, edgeFillJob.inside,
-                    edgeFillJob.region, false);
+            edgeFillJob.previewShell = edgeFillJob.inside;
         }
     }
 
     private java.util.ArrayList<EdgeFillPaintPlan> planCurrentShell() {
-        if (edgeFillJob.shellIndex == 0)
-            return planRegionBoundaryShell(edgeFillJob.inside, edgeFillJob.region, edgeFillJob.fillTset,
-                    edgeFillJob.fillTerrain, edgeFillJob.fillUsesMacroTerrain, edgeFillJob.fillCenter);
-        return planPackRectShell(edgeFillJob.currentRect, edgeFillJob.inside, edgeFillJob.region,
-                edgeFillJob.fillTset, edgeFillJob.fillTerrain, edgeFillJob.fillUsesMacroTerrain,
-                edgeFillJob.fillCenter);
-    }
-
-    private java.util.ArrayList<EdgeFillPaintPlan> planPackRectShell(EdgePackRect rect,
-            java.util.HashSet<Integer> inside, java.util.HashSet<Integer> region, int fillTset, int[] fillTerrain,
-            boolean fillUsesMacroTerrain, tile fillCenter) {
-        java.util.ArrayList<EdgeFillPaintPlan> plans = new java.util.ArrayList<EdgeFillPaintPlan>();
-        java.util.HashSet<Integer> shell = collectPackRectShellSelection(rect, inside);
-        for (int num : shell) {
-            int role = classifyInsideBoundaryTile(num, inside);
-            if (role < 0)
-                continue;
-            EdgeFillSample src = resolveEdgeFillTerrainSample(num, role, fillTset, fillTerrain, fillUsesMacroTerrain,
-                    fillCenter, inside, region, false);
-            if (src == null && fillCenter == null)
-                continue;
-            EdgeFillPaintPlan plan = new EdgeFillPaintPlan();
-            plan.num = num;
-            plan.role = role;
-            if (src != null) {
-                plan.gid = src.gid;
-                plan.tset = src.tset;
-            }
-            plan.label = boundaryRoleToPackLabel(role);
-            plans.add(plan);
-        }
-        return plans;
-    }
-
-    private java.util.ArrayList<EdgeFillPaintPlan> planPackReverseCorners(java.util.HashMap<Integer, Integer> labels,
-            java.util.HashSet<Integer> region) {
-        java.util.ArrayList<EdgeFillPaintPlan> plans = new java.util.ArrayList<EdgeFillPaintPlan>();
-        java.util.ArrayList<Integer> cells = new java.util.ArrayList<Integer>(labels.keySet());
-        for (int i = 0; i < cells.size(); i++) {
-            int num = cells.get(i);
-            Integer label = labels.get(num);
-            if (label == null || (label != PACK_CORNER && label != PACK_EDGE))
-                continue;
-            if (!checkPackIrregularAdjacency(num, label, labels, region))
-                continue;
-            EdgeFillSample src = resolvePackReverseSource(num, region, labels);
-            if (src == null)
-                continue;
-            EdgeFillPaintPlan plan = new EdgeFillPaintPlan();
-            plan.num = num;
-            plan.gid = src.gid;
-            plan.tset = src.tset;
-            plan.label = PACK_REVERSE;
-            plans.add(plan);
-        }
-        return plans;
+        return planRegionBoundaryShell(edgeFillJob.inside, edgeFillJob.fillTset,
+                edgeFillJob.fillTerrain, edgeFillJob.outsideTerrain, edgeFillJob.fillCenter);
     }
 
     private void cancelEdgeFillJob() {
@@ -29324,48 +29223,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         edgeFillJob = null;
     }
 
-    private void startEdgeFillReversePhase() {
-        edgeFillJob.paintQueue = planPackReverseCorners(edgeFillJob.labels, edgeFillJob.region);
-        edgeFillJob.paintIndex = 0;
-        edgeFillJob.previewShell = null;
-        edgeFillJob.previewSources = null;
-        if (edgeFillJob.paintQueue.isEmpty()) {
-            finishEdgeFillJob();
-            return;
-        }
-        if (!brushStrokeActive) {
-            beginBrushStroke();
-            follower = false;
-        }
-        edgeFillJob.phase = EdgeFillJob.Phase.REVERSE;
+    private void advanceEdgeFillToNextShell() {
+        finishEdgeFillJob();
     }
 
-    private void advanceEdgeFillToNextShell() {
-        if (isInteriorCoreRemaining(edgeFillJob.inside, edgeFillJob.labels, edgeFillJob.region)) {
-            startEdgeFillReversePhase();
-            return;
-        }
-        EdgePackRect rect = findMaximalInsideRectangle(edgeFillJob.inside);
-        if (!isPackRectValidSize(rect)) {
-            startEdgeFillReversePhase();
-            return;
-        }
-        java.util.HashSet<Integer> shell = collectPackRectShellSelection(rect, edgeFillJob.inside);
-        if (shell.isEmpty() || isShellFullyEnclosedByLabels(shell, edgeFillJob.inside, edgeFillJob.labels,
-                edgeFillJob.region)) {
-            startEdgeFillReversePhase();
-            return;
-        }
-        edgeFillJob.currentRect = rect;
-        setEdgeFillShellPreview();
-        if (edgeFillJob.previewShell.isEmpty()) {
-            startEdgeFillReversePhase();
-            return;
-        }
-        edgeFillJob.paintQueue = null;
-        edgeFillJob.paintIndex = 0;
-        edgeFillJob.phase = EdgeFillJob.Phase.PREVIEW;
-        edgeFillJob.phaseTimer = EDGE_FILL_PREVIEW_SEC;
+    private void startEdgeFillReversePhase() {
+        finishEdgeFillJob();
     }
 
     private void startEdgeFillJob(int seed, long matchGid) {
@@ -29379,14 +29242,40 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         edgeFillJob.inside = new java.util.HashSet<Integer>(region);
         edgeFillJob.labels = new java.util.HashMap<Integer, Integer>();
         edgeFillJob.shellIndex = 0;
-        tile fillCenter = resolveEdgeFillCenterTile(matchGid, seed);
-        if (fillCenter == null && !macroTerrain.getTerrains().isEmpty())
-            fillCenter = ensureMacroTerrainCenterTile(macroTerrain.getSelTerrain());
-        edgeFillJob.fillUsesMacroTerrain = fillGidUsesMacroTerrain(matchGid)
-                || !macroTerrain.getTerrains().isEmpty();
-        if (fillCenter != null && fillCenter.isTerrainForEditor()) {
-            edgeFillJob.fillCenter = fillCenter;
-            edgeFillJob.fillTerrain = fillCenter.getTerrain().clone();
+
+        // Map tile is the inside
+        tile mapTile = resolveEdgeFillCenterTile(matchGid, seed);
+        if (mapTile == null && !macroTerrain.getTerrains().isEmpty())
+            mapTile = ensureMacroTerrainCenterTile(macroTerrain.getSelTerrain());
+            
+        // Picked tile is the outside
+        long pickedBare = stripTileGidFlags(curspr);
+        tile pickedTile = null;
+        if (fillGidUsesMacroTerrain(curspr)) {
+            pickedTile = resolveMacroTerrainAutotileCenter((int) pickedBare, macroTerrain.getTileMeta((int) pickedBare));
+        } else {
+            int localPickedId = -1;
+            if (curtset >= 0 && curtset < tilesets.size()) {
+                localPickedId = (int) (pickedBare - tilesets.get(curtset).getFirstgid());
+            }
+            if (curtset >= 0 && localPickedId >= 0 && localPickedId < tilesets.get(curtset).getTilecount()) {
+                tile t = tilesets.get(curtset).getTileMeta(localPickedId);
+                pickedTile = resolveTerrainAutotileCenter(tilesets.get(curtset), t);
+            }
+        }
+        
+        if (mapTile != null && mapTile.isTerrainForEditor() && pickedTile != null && pickedTile.isTerrainForEditor()) {
+            edgeFillJob.fillCenter = mapTile;
+            edgeFillJob.fillTerrain = mapTile.getTerrain().clone(); // inside
+            edgeFillJob.outsideTerrain = pickedTile.getTerrain().clone(); // outside
+            edgeFillJob.fillTset = curtset;
+            if (!macroTerrain.getTerrains().isEmpty())
+                updateMacroAT();
+        } else if (mapTile != null && mapTile.isTerrainForEditor()) {
+            // Fallback if picked tile is not terrain
+            edgeFillJob.fillCenter = mapTile;
+            edgeFillJob.fillTerrain = mapTile.getTerrain().clone();
+            edgeFillJob.outsideTerrain = mapTile.getTerrain().clone();
             edgeFillJob.fillTset = layers.get(selLayer).getTset().get(seed);
             if (edgeFillJob.fillTset < 0)
                 edgeFillJob.fillTset = resolveTilesetIndexForGid(matchGid, curtset);
@@ -29394,12 +29283,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 updateMacroAT();
         }
 
-        edgeFillJob.previewShell = collectRegionBoundaryShell(region, edgeFillJob.inside);
-        if (edgeFillJob.previewShell.isEmpty()) {
+        setEdgeFillShellPreview();
+        if (edgeFillJob.previewShell == null || edgeFillJob.previewShell.isEmpty()) {
             edgeFillJob = null;
             return;
         }
-        setEdgeFillShellPreview();
         edgeFillJob.phase = EdgeFillJob.Phase.PREVIEW;
         edgeFillJob.phaseTimer = EDGE_FILL_PREVIEW_SEC;
     }
@@ -29438,24 +29326,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             int batch = EDGE_FILL_PAINT_BATCH;
             while (batch-- > 0 && edgeFillJob.paintIndex < queue.size()) {
                 EdgeFillPaintPlan plan = queue.get(edgeFillJob.paintIndex++);
-                if (edgeFillJob.phase == EdgeFillJob.Phase.PAINT && edgeFillJob.fillCenter != null
-                        && plan.role >= 0) {
-                    if (plan.gid > 0) {
-                        // Prefer the pre-resolved tile from the plan (including fallback sources).
-                        follower = true;
-                        updateTileData(selLayer, plan.num, plan.gid, plan.tset);
-                    } else {
-                        applyEdgeFillBoundaryTile(plan.num, plan.role, edgeFillJob.fillCenter, edgeFillJob.fillTset);
-                    }
-                } else {
+                if (plan.gid > 0) {
                     follower = true;
                     updateTileData(selLayer, plan.num, plan.gid, plan.tset);
                 }
                 if (edgeFillJob.phase == EdgeFillJob.Phase.PAINT) {
                     edgeFillJob.inside.remove(plan.num);
-                    edgeFillJob.labels.put(plan.num, plan.label);
-                } else {
-                    edgeFillJob.labels.put(plan.num, PACK_REVERSE);
                 }
             }
             if (edgeFillJob.paintIndex < queue.size())
