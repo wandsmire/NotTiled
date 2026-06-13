@@ -3277,9 +3277,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
                             }
                             cache.setColor(1f, 1f, 1f, 1f);
-                            cache.begin();
-                            cache.draw(pickerCacheIDs.get(chunk));
-                            cache.end();
+                            boolean begun = false;
+                            try {
+                                cache.begin();
+                                begun = true;
+                                cache.draw(pickerCacheIDs.get(chunk));
+                                cache.end();
+                                begun = false;
+                            } catch (Throwable t) {
+                                pickerCacheValid = false;
+                            } finally {
+                                if (begun) {
+                                    try {
+                                        cache.end();
+                                    } catch (Throwable t2) {}
+                                }
+                            }
                         }
                     }
                     if (sShowAnimations) {
@@ -4755,9 +4768,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                             } else {
                                                 cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
                                             }
-                                            cache.begin();
-                                            cache.draw(myOpaqueId);
-                                            cache.end();
+                                            boolean begun = false;
+                                            try {
+                                                cache.begin();
+                                                begun = true;
+                                                cache.draw(myOpaqueId);
+                                                cache.end();
+                                                begun = false;
+                                            } catch (Throwable t) {
+                                                tc.setChanged(true);
+                                            } finally {
+                                                if (begun) {
+                                                    try {
+                                                        cache.end();
+                                                    } catch (Throwable t2) {}
+                                                }
+                                            }
                                         }
 
                                         if (myTransId != -1) {
@@ -4769,16 +4795,42 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                             } else {
                                                 cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
                                             }
-                                            cache.begin();
-                                            cache.draw(myTransId);
-                                            cache.end();
+                                            boolean begun = false;
+                                            try {
+                                                cache.begin();
+                                                begun = true;
+                                                cache.draw(myTransId);
+                                                cache.end();
+                                                begun = false;
+                                            } catch (Throwable t) {
+                                                tc.setChanged(true);
+                                            } finally {
+                                                if (begun) {
+                                                    try {
+                                                        cache.end();
+                                                    } catch (Throwable t2) {}
+                                                }
+                                            }
                                         }
 
                                         if (myBillboardId != -1 && !is3DMode && !isFull3DMode) {
                                             cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
-                                            cache.begin();
-                                            cache.draw(myBillboardId);
-                                            cache.end();
+                                            boolean begun = false;
+                                            try {
+                                                cache.begin();
+                                                begun = true;
+                                                cache.draw(myBillboardId);
+                                                cache.end();
+                                                begun = false;
+                                            } catch (Throwable t) {
+                                                tc.setChanged(true);
+                                            } finally {
+                                                if (begun) {
+                                                    try {
+                                                        cache.end();
+                                                    } catch (Throwable t2) {}
+                                                }
+                                            }
                                         }
 
                                         if ((is3DMode || isFull3DMode) && tc.getDecals() != null
@@ -4809,9 +4861,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             int myid = tc.getCacheID();
                             if (myid != -1) {
                                 cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
-                                cache.begin();
-                                cache.draw(myid); // call our cache with cache ID and draw it
-                                cache.end();
+                                boolean begun = false;
+                                try {
+                                    cache.begin();
+                                    begun = true;
+                                    cache.draw(myid); // call our cache with cache ID and draw it
+                                    cache.end();
+                                    begun = false;
+                                } catch (Throwable t) {
+                                    tc.setChanged(true);
+                                } finally {
+                                    if (begun) {
+                                        try {
+                                            cache.end();
+                                        } catch (Throwable t2) {}
+                                    }
+                                }
                             }
                         }
                     }
@@ -5241,35 +5306,51 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         caching = true;
         long startTime = System.currentTimeMillis();
         boolean allCached = true;
-        SpriteCache cache;
         for (int i = 0; i < tcaches.size(); i++) {
             if (tcaches.get(i).isChanged()) {
-                // tcaches.get( i ).getCache().dispose();
                 TileCache tc = tcaches.get(i);
-                tc.getCache().dispose();
-                cache = new SpriteCache(buffersz, true);// max8191indice
-                if (sShowAnimations || is3DMode || isFull3DMode) {
-                    int[] cids = cacheTilesOnLayered(cache, tc.getIntex(), tc.getIntey());
-                    tc.setCache(cache);
-                    tc.setCacheIDs(cids);
-                    tc.getDecals().clear();
-                    tc.getDecals().addAll(lastDecalsBuilt);
-                    tc.getAnimatedTiles().clear();
-                    tc.getAnimatedTiles().addAll(lastAnimatedTilesBuilt);
-                    tc.disposeModel(); // free old GPU model mesh before replacing
-                    tc.setModelInstance(lastModelInstanceBuilt);
-                    tc.setLayerModelInstances(lastLayerModelInstancesBuilt);
-                    tc.setLayerDecals(lastLayerDecalsBuilt);
-                    tc.disposeShadowModel(); // free old GPU shadow mesh before replacing
-                    tc.setShadowModel(lastShadowModelBuilt);
-                    tc.setShadowModelInstance(lastShadowModelInstanceBuilt);
+                com.badlogic.gdx.graphics.g2d.SpriteCache oldCache = tc.getCache();
+                com.badlogic.gdx.graphics.g2d.SpriteCache cache = null;
+                try {
+                    cache = new com.badlogic.gdx.graphics.g2d.SpriteCache(buffersz, true); // max8191indice
+                    if (sShowAnimations || is3DMode || isFull3DMode) {
+                        int[] cids = cacheTilesOnLayered(cache, tc.getIntex(), tc.getIntey());
+                        tc.setCache(cache);
+                        tc.setCacheIDs(cids);
+                        tc.getDecals().clear();
+                        tc.getDecals().addAll(lastDecalsBuilt);
+                        tc.getAnimatedTiles().clear();
+                        tc.getAnimatedTiles().addAll(lastAnimatedTilesBuilt);
+                        tc.disposeModel(); // free old GPU model mesh before replacing
+                        tc.setModelInstance(lastModelInstanceBuilt);
+                        tc.setLayerModelInstances(lastLayerModelInstancesBuilt);
+                        tc.setLayerDecals(lastLayerDecalsBuilt);
+                        tc.disposeShadowModel(); // free old GPU shadow mesh before replacing
+                        tc.setShadowModel(lastShadowModelBuilt);
+                        tc.setShadowModelInstance(lastShadowModelInstanceBuilt);
+                    } else {
+                        int cid = cacheTilesOn(cache, tc.getIntex(), tc.getIntey());
+                        tc.setCache(cache);
+                        tc.setCacheID(cid);
+                    }
                     tc.setChanged(false);
-                } else {
-                    int cid = cacheTilesOn(cache, tc.getIntex(), tc.getIntey());
-                    tc.setCache(cache);
-                    tc.setCacheID(cid);
+                    if (oldCache != null) {
+                        try {
+                            oldCache.dispose();
+                        } catch (Throwable t) {
+                            // ignore
+                        }
+                    }
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                    if (cache != null) {
+                        try {
+                            cache.dispose();
+                        } catch (Throwable t2) {
+                            // ignore
+                        }
+                    }
                 }
-                tc.setChanged(false);
 
                 if (System.currentTimeMillis() - startTime > 15) {
                     allCached = false;
@@ -7934,19 +8015,45 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                     int[] cids = tc.getCacheIDs();
                     if (cids != null) {
-                        cache.begin();
-                        for (int cid : cids) {
-                            if (cid != -1) {
-                                cache.draw(cid);
+                        boolean begun = false;
+                        try {
+                            cache.begin();
+                            begun = true;
+                            for (int cid : cids) {
+                                if (cid != -1) {
+                                    cache.draw(cid);
+                                }
+                            }
+                            cache.end();
+                            begun = false;
+                        } catch (Throwable t) {
+                            tc.setChanged(true);
+                        } finally {
+                            if (begun) {
+                                try {
+                                    cache.end();
+                                } catch (Throwable t2) {}
                             }
                         }
-                        cache.end();
                     } else {
                         int myid = tc.getCacheID();
                         if (myid != -1) {
-                            cache.begin();
-                            cache.draw(myid);
-                            cache.end();
+                            boolean begun = false;
+                            try {
+                                cache.begin();
+                                begun = true;
+                                cache.draw(myid);
+                                cache.end();
+                                begun = false;
+                            } catch (Throwable t) {
+                                tc.setChanged(true);
+                            } finally {
+                                if (begun) {
+                                    try {
+                                        cache.end();
+                                    } catch (Throwable t2) {}
+                                }
+                            }
                         }
                     }
                 }
@@ -8507,12 +8614,27 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void ErrorBung(Throwable e, String filenya) {
         filenya = "errorlog.txt";
-        FileHandle file = Gdx.files.absolute(basepath + filenya);
+        FileHandle file;
+        try {
+            file = Gdx.files.absolute(face.getExternalStoragePath() + "NotTiled/" + filenya);
+            // Ensure parent directory exists
+            file.parent().mkdirs();
+        } catch (Throwable t) {
+            file = Gdx.files.absolute(basepath + filenya);
+        }
         StringWriter sw = new StringWriter();
         e.printStackTrace(new PrintWriter(sw));
         String exceptionAsString = sw.toString();
         System.out.println(exceptionAsString);
-        file.writeString("\n\n" + exceptionAsString, true);
+        try {
+            file.writeString("\n\n" + exceptionAsString, true);
+        } catch (Throwable t) {
+            // fallback if writing to public storage fails due to permissions
+            try {
+                FileHandle fallbackFile = Gdx.files.absolute(basepath + filenya);
+                fallbackFile.writeString("\n\n" + exceptionAsString, true);
+            } catch (Throwable t2) {}
+        }
 
         // do not save the map if error occurs!
         // saveMap( curdir + "/" + curfile );
@@ -32193,9 +32315,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
                     }
                     cache.setColor(1f, 1f, 1f, 1f);
-                    cache.begin();
-                    cache.draw(terrainPickerCacheIDs.get(chunk));
-                    cache.end();
+                    boolean begun = false;
+                    try {
+                        cache.begin();
+                        begun = true;
+                        cache.draw(terrainPickerCacheIDs.get(chunk));
+                        cache.end();
+                        begun = false;
+                    } catch (Throwable t) {
+                        terrainPickerCacheValid = false;
+                    } finally {
+                        if (begun) {
+                            try {
+                                cache.end();
+                            } catch (Throwable t2) {}
+                        }
+                    }
                 }
             }
         }
@@ -34198,7 +34333,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             updateMacroAT();
             return;
         }
-        if (tilesets.isEmpty())
+        if (tilesets.isEmpty() || curtset < 0 || curtset >= tilesets.size())
             return;
 
         ATGraph = new ATGraph();
