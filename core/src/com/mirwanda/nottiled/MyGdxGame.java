@@ -541,6 +541,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     TextPromptListener pAutoadd;
     TextPromptListener pAutorename;
     Table tLayerNew;
+    boolean addNewLayerFromMainMenu = false;
     TextButton bLayerGroup, blayerBack;
     Table tPropEditor;
     TextField fPropName;
@@ -4763,10 +4764,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             }
                         } else {
                             int myid = tc.getCacheID();
-                            cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
-                            cache.begin();
-                            cache.draw(myid); // call our cache with cache ID and draw it
-                            cache.end();
+                            if (myid != -1) {
+                                cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
+                                cache.begin();
+                                cache.draw(myid); // call our cache with cache ID and draw it
+                                cache.end();
+                            }
                         }
                     }
 
@@ -5145,21 +5148,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 for (int x = 0; x < maxx; x++) {
                     cache = new SpriteCache(buffersz, true);// 8191max
                     if (sShowAnimations || is3DMode || isFull3DMode) {
-                        int[] cids = cacheTilesOnLayered(cache, x, y);
+                        int[] cids = new int[layers.size() * 3];
+                        for(int i=0; i<cids.length; i++) cids[i] = -1;
                         tcache = new TileCache(cache, cids, x, y);
-                        tcache.getDecals().addAll(lastDecalsBuilt);
-                        tcache.getAnimatedTiles().addAll(lastAnimatedTilesBuilt);
-                        tcache.setModelInstance(lastModelInstanceBuilt);
-                        tcache.setShadowModel(lastShadowModelBuilt);
-                        tcache.setShadowModelInstance(lastShadowModelInstanceBuilt);
+                        tcache.setChanged(true);
                         tcaches.add(tcache);
                     } else {
-                        int cid = cacheTilesOn(cache, x, y);
-                        tcache = new TileCache(cache, cid, x, y);
+                        tcache = new TileCache(cache, -1, x, y);
+                        tcache.setChanged(true);
                         tcaches.add(tcache);
                     }
                 }
             }
+            redraw = 1f;
             isupdatingcache = true;
             log("resetting cache ok");
             log("updating AT");
@@ -5195,6 +5196,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private void cacheTiles() {
 
         caching = true;
+        long startTime = System.currentTimeMillis();
+        boolean allCached = true;
         SpriteCache cache;
         for (int i = 0; i < tcaches.size(); i++) {
             if (tcaches.get(i).isChanged()) {
@@ -5222,10 +5225,46 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     tc.setCacheID(cid);
                 }
                 tc.setChanged(false);
+
+                if (System.currentTimeMillis() - startTime > 15) {
+                    allCached = false;
+                    break;
+                }
             }
         }
 
         caching = false;
+        if (!allCached) {
+            redraw = 1f;
+        }
+    }
+
+    private void expandCachesForNewLayer(int insertAt) {
+        if (tcaches == null) return;
+        for (TileCache tc : tcaches) {
+            int[] oldCids = tc.getCacheIDs();
+            if (oldCids != null) {
+                int[] newCids = new int[layers.size() * 3];
+                for (int i = 0; i < newCids.length; i++) newCids[i] = -1;
+                
+                int oldLayers = layers.size() - 1;
+                for (int i = 0; i < insertAt; i++) {
+                    if (i * 3 + 2 < oldCids.length) {
+                        newCids[i * 3] = oldCids[i * 3];
+                        newCids[i * 3 + 1] = oldCids[i * 3 + 1];
+                        newCids[i * 3 + 2] = oldCids[i * 3 + 2];
+                    }
+                }
+                for (int i = insertAt; i < oldLayers; i++) {
+                    if (i * 3 + 2 < oldCids.length) {
+                        newCids[(i + 1) * 3] = oldCids[i * 3];
+                        newCids[(i + 1) * 3 + 1] = oldCids[i * 3 + 1];
+                        newCids[(i + 1) * 3 + 2] = oldCids[i * 3 + 2];
+                    }
+                }
+                tc.setCacheIDs(newCids);
+            }
+        }
     }
 
     private int cacheTilesOn(SpriteCache cache, int intex, int intey) {
@@ -7200,7 +7239,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tilecam.update();
         recenterUI();
         resetMinimap();
-        resetCaches();
 
     }
 
@@ -15293,8 +15331,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 redolayer.clear();
             }
         }
-        resetCaches();
-    }
+        }
 
     private TextureRegionDrawable tintedRowBg(Color color) {
         int key = Color.rgba8888(color);
@@ -15641,6 +15678,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         btnAdd.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                addNewLayerFromMainMenu = false;
                 gotoStage(tLayerNew);
             }
         });
@@ -16397,6 +16435,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
         tilesets.remove(dex);
         CacheAllTset();
+        resetCaches();
         if (seltset > dex)
             seltset -= 1;
         else if (seltset == dex)
@@ -17278,9 +17317,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 else
                     clampSelLayerToSelectable();
                 refreshLayerList();
-                resetCaches();
+                expandCachesForNewLayer(insertAt);
                 pushUpdateIfCollaborating();
-                showLayerManager();
+                if (addNewLayerFromMainMenu) {
+                    backToMap();
+                } else {
+                    showLayerManager();
+                }
             }
 
             @Override
@@ -17384,6 +17427,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bAddLayer.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                addNewLayerFromMainMenu = false;
                 gotoStage(tLayerNew);
             }
         });
@@ -21098,7 +21142,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 newLayerType = layer.Type.TILE;
                 getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
-                backToMap();
             }
         });
 
@@ -21107,7 +21150,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 newLayerType = layer.Type.OBJECT;
                 getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
-                backToMap();
             }
         });
 
@@ -21116,7 +21158,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 newLayerType = layer.Type.IMAGE;
                 getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
-                backToMap();
             }
         });
 
@@ -21125,7 +21166,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 newLayerType = layer.Type.GROUP;
                 getNewTextInput(pNewLayerSC, z.addnew, z.layer + " " + (layers.size() + 1), "");
-                backToMap();
             }
         });
 
@@ -36511,6 +36551,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         // tile/object selector (top left)
         if (tapped(touch2, gui.mode)) {
+            addNewLayerFromMainMenu = true;
             gotoStage(tLayerNew);
             return true;
         }
