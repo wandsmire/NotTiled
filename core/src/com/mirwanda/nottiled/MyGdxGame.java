@@ -721,6 +721,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private java.util.List<Decal> lastDecalsBuilt = new java.util.ArrayList<Decal>();
     private java.util.List<TileCache.AnimatedTileRef> lastAnimatedTilesBuilt = new java.util.ArrayList<TileCache.AnimatedTileRef>();
     private com.badlogic.gdx.graphics.g3d.ModelInstance lastModelInstanceBuilt = null;
+    private com.badlogic.gdx.graphics.g3d.ModelInstance[] lastLayerModelInstancesBuilt = null;
+    private List<com.badlogic.gdx.graphics.g3d.decals.Decal>[] lastLayerDecalsBuilt = null;
     private com.badlogic.gdx.graphics.g3d.Model lastShadowModelBuilt = null;
     private com.badlogic.gdx.graphics.g3d.ModelInstance lastShadowModelInstanceBuilt = null;
     private Model cubeModel;
@@ -4576,26 +4578,94 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (camFull3D == null)
                     updateCam3d();
 
-                modelBatch.begin(camFull3D);
-                for (int i = 0; i < tcaches.size(); i++) {
-                    TileCache tc = tcaches.get(i);
-                    float chunkX = tc.getIntex() * widd * Tsw;
-                    float chunkY = tc.getIntey() * heii * -Tsh + Tsh;
-                    float chunkW = widd * Tsw;
-                    float chunkH = heii * Tsh;
-                    float centerZ = (layers.size() * Tsh * 0.75f) / 2.0f;
-                    float extentZ = (layers.size() * Tsh * 0.75f) / 2.0f;
-                    if (camFull3D.frustum.boundsInFrustum(chunkX + chunkW / 2f, chunkY - chunkH / 2f, centerZ,
-                            chunkW / 2f, chunkH / 2f, extentZ)) {
-                        com.badlogic.gdx.graphics.g3d.ModelInstance mi = tc.getModelInstance();
-                        if (mi != null) {
-                            modelBatch.render(mi, env3d);
+                for (int jo = 0; jo < layers.size(); jo++) {
+                    boolean isShown = layerShownInViewMode(jo);
+                    if (!isShown || layers.get(jo).getType() != layer.Type.TILE) {
+                        continue;
+                    }
+
+                    // A. Render 3D Models for this layer
+                    modelBatch.begin(camFull3D);
+                    for (int i = 0; i < tcaches.size(); i++) {
+                        TileCache tc = tcaches.get(i);
+                        float chunkX = tc.getIntex() * widd * Tsw;
+                        float chunkY = tc.getIntey() * heii * -Tsh + Tsh;
+                        float chunkW = widd * Tsw;
+                        float chunkH = heii * Tsh;
+                        float centerZ = (layers.size() * Tsh * 0.75f) / 2.0f;
+                        float extentZ = (layers.size() * Tsh * 0.75f) / 2.0f;
+                        if (!camFull3D.frustum.boundsInFrustum(chunkX + chunkW / 2f, chunkY - chunkH / 2f, centerZ,
+                                chunkW / 2f, chunkH / 2f, extentZ)) {
+                            continue;
+                        }
+
+                        com.badlogic.gdx.graphics.g3d.ModelInstance[] lModels = tc.getLayerModelInstances();
+                        if (lModels != null && jo < lModels.length) {
+                            com.badlogic.gdx.graphics.g3d.ModelInstance mi = lModels[jo];
+                            if (mi != null) {
+                                modelBatch.render(mi, env3d);
+                            }
+                        }
+                    }
+                    modelBatch.end();
+
+                    // B. Render Decals for this layer
+                    if (tcaches.size() > 0) {
+                        com.badlogic.gdx.graphics.Camera billCam = camFull3D;
+                        if (decalBatch == null || lastDecalCam != billCam) {
+                            if (decalBatch != null) decalBatch.dispose();
+                            decalBatch = new DecalBatch(new com.badlogic.gdx.graphics.g3d.decals.CameraGroupStrategy(billCam));
+                            lastDecalCam = billCam;
+                        }
+                        boolean flushedDecals = false;
+                        for (int i = 0; i < tcaches.size(); i++) {
+                            TileCache tc = tcaches.get(i);
+                            float chunkX = tc.getIntex() * widd * Tsw;
+                            float chunkY = tc.getIntey() * heii * -Tsh + Tsh;
+                            float chunkW = widd * Tsw;
+                            float chunkH = heii * Tsh;
+                            float centerZ = (layers.size() * Tsh * 0.75f) / 2.0f;
+                            float extentZ = (layers.size() * Tsh * 0.75f) / 2.0f;
+                            if (!camFull3D.frustum.boundsInFrustum(chunkX + chunkW / 2f, chunkY - chunkH / 2f, centerZ,
+                                    chunkW / 2f, chunkH / 2f, extentZ)) {
+                                continue;
+                            }
+                            
+                            List<Decal>[] lDecals = tc.getLayerDecals();
+                            if (lDecals != null && jo < lDecals.length) {
+                                List<Decal> ds = lDecals[jo];
+                                if (ds != null && ds.size() > 0) {
+                                    for (Decal d : ds) {
+                                        d.lookAt(billCam.position, billCam.up);
+                                        decalBatch.add(d);
+                                    }
+                                    flushedDecals = true;
+                                }
+                            }
+                        }
+                        if (flushedDecals) {
+                            decalBatch.flush();
+                        }
+
+                        // C. Render Animated Tiles for this layer
+                        for (int i = 0; i < tcaches.size(); i++) {
+                            TileCache tc = tcaches.get(i);
+                            float chunkX = tc.getIntex() * widd * Tsw;
+                            float chunkY = tc.getIntey() * heii * -Tsh + Tsh;
+                            float chunkW = widd * Tsw;
+                            float chunkH = heii * Tsh;
+                            float centerZ = (layers.size() * Tsh * 0.75f) / 2.0f;
+                            float extentZ = (layers.size() * Tsh * 0.75f) / 2.0f;
+                            if (!camFull3D.frustum.boundsInFrustum(chunkX + chunkW / 2f, chunkY - chunkH / 2f, centerZ,
+                                    chunkW / 2f, chunkH / 2f, extentZ)) {
+                                continue;
+                            }
+                            drawAnimatedTilesForChunkAndLayer(tc, jo);
                         }
                     }
                 }
-                modelBatch.end();
 
-                // Render baked drop-shadow quads (baked at cache-build time â zero per-frame CPU cost)
+                // Render baked drop-shadow quads
                 Gdx.gl.glEnable(GL20.GL_BLEND);
                 Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
                 Gdx.gl.glDepthMask(false);
@@ -4653,35 +4723,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
 
                     if (isFull3DMode) {
-                        // In Full 3D Mode, 3D meshes are rendered via modelBatch.
-                        // We only need to draw decals or animated tiles.
-                        if (tc.getCacheIDs() != null) {
-                            com.badlogic.gdx.graphics.Camera billCam = camFull3D;
-                            for (int jo = 0; jo < layers.size(); jo++) {
-                                boolean isShown = layerShownInViewMode(jo);
-                                if (layers.get(jo).getType() == layer.Type.TILE && isShown) {
-                                    if (tc.getDecals() != null && tc.getDecals().size() > 0) {
-                                        if (decalBatch == null || lastDecalCam != billCam) {
-                                            if (decalBatch != null) {
-                                                decalBatch.dispose();
-                                            }
-                                            decalBatch = new DecalBatch(
-                                                    new com.badlogic.gdx.graphics.g3d.decals.CameraGroupStrategy(
-                                                            billCam));
-                                            lastDecalCam = billCam;
-                                        }
-                                        for (Decal d : tc.getDecals()) {
-                                            d.lookAt(billCam.position, billCam.up);
-                                            decalBatch.add(d);
-                                        }
-                                    }
-                                    drawAnimatedTilesForChunkAndLayer(tc, jo);
-                                }
-                            }
-                            if (decalBatch != null) {
-                                decalBatch.flush();
-                            }
-                        }
+                        // Already handled sequentially per-layer above.
                     } else {
                         SpriteCache cache = tc.getCache();
                         if (isFull3DMode) {
@@ -5215,6 +5257,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     tc.getAnimatedTiles().addAll(lastAnimatedTilesBuilt);
                     tc.disposeModel(); // free old GPU model mesh before replacing
                     tc.setModelInstance(lastModelInstanceBuilt);
+                    tc.setLayerModelInstances(lastLayerModelInstancesBuilt);
+                    tc.setLayerDecals(lastLayerDecalsBuilt);
                     tc.disposeShadowModel(); // free old GPU shadow mesh before replacing
                     tc.setShadowModel(lastShadowModelBuilt);
                     tc.setShadowModelInstance(lastShadowModelInstanceBuilt);
@@ -5488,18 +5532,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (tileHasSprite || layerHasSprite) {
             return Render3DType.SPRITE;
         }
-
-        if (jo == 0) {
-            if (tileHasCube || layerHasCube) {
-                return Render3DType.CUBE;
-            }
-            return Render3DType.PLANE;
-        } else {
-            if (tileHasPlane || layerHasPlane) {
-                return Render3DType.PLANE;
-            }
+        
+        if (tileHasCube || layerHasCube) {
             return Render3DType.CUBE;
         }
+        
+        return Render3DType.PLANE;
     }
 
     private boolean isFloating(int jo, int initset, int localId) {
@@ -5527,6 +5565,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         lastDecalsBuilt.clear();
         lastAnimatedTilesBuilt.clear();
         lastModelInstanceBuilt = null;
+        lastLayerModelInstancesBuilt = null;
+        lastLayerDecalsBuilt = new ArrayList[layers.size()];
+        for (int i = 0; i < layers.size(); i++) {
+            lastLayerDecalsBuilt[i] = new ArrayList<com.badlogic.gdx.graphics.g3d.decals.Decal>();
+        }
 
         com.badlogic.gdx.graphics.g3d.utils.ModelBuilder modelBuilder = null;
         if (isFull3DMode) {
@@ -5629,6 +5672,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     applyLayerDrawColor(cache, jo);
                 }
 
+                if (isFull3DMode && modelBuilder != null) {
+                    modelBuilder.node().id = "layer_" + jo;
+                }
+
                 java.util.List<drawer> drawersOpaque = new ArrayList<drawer>();
                 java.util.List<drawer> drawersTrans = new ArrayList<drawer>();
                 java.util.List<drawer> drawersBillboard = new ArrayList<drawer>();
@@ -5706,6 +5753,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                                         Render3DType kT3dType = getTile3DType(k, kTidx, localIdK);
                                                         if (kT3dType == Render3DType.CUBE) {
                                                             animatedTileZ += Tsh * 0.75f;
+                                                        } else {
+                                                            animatedTileZ += Tsh * 0.04f;
                                                         }
                                                     }
                                                 }
@@ -5805,6 +5854,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                                 Render3DType kT3dType = getTile3DType(k, kTidx, localIdK);
                                                 if (kT3dType == Render3DType.CUBE) {
                                                     tileZ += Tsh * 0.75f;
+                                                } else {
+                                                    tileZ += Tsh * 0.04f;
                                                 }
                                             }
                                         }
@@ -5822,9 +5873,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             Decal d = Decal.newDecal(Tswad, Tshad, tr, true);
                             float dx = (xpos * Tsw - offsetx) + Tsw / 2f;
                             float dy = (-ypos * Tsh - offsety) + Tsh / 2f;
-                            float dz = tileZ + Tshad / 2f;
+                            float dz = tileZ + Tshad / 2f + (Tsh * 0.02f);
                             d.setPosition(dx, dy, dz);
                             lastDecalsBuilt.add(d);
+                            lastLayerDecalsBuilt[jo].add(d);
                         } else if (tile3dType == Render3DType.CUBE) {
                             drawersOpaque.add(tempdrawer);
                         } else {
@@ -5852,7 +5904,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                             com.badlogic.gdx.graphics.Texture tsetTexture = tilesets.get(initset).getTexture();
                             com.badlogic.gdx.graphics.g3d.Material mat = new com.badlogic.gdx.graphics.g3d.Material(
-                                    com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute.createDiffuse(tsetTexture));
+                                    com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute.createDiffuse(tsetTexture),
+                                    new com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA),
+                                    new com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute(com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute.AlphaTest, 0.1f),
+                                    new com.badlogic.gdx.graphics.g3d.attributes.DepthTestAttribute(GL20.GL_LEQUAL, true));
 
                             int tileCount = 0;
                             com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder meshBuilder = modelBuilder.part(
@@ -5983,7 +6038,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             com.badlogic.gdx.graphics.Texture tsetTexture = tilesets.get(initset).getTexture();
                             com.badlogic.gdx.graphics.g3d.Material mat = new com.badlogic.gdx.graphics.g3d.Material(
                                     com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute.createDiffuse(tsetTexture),
-                                    new com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA));
+                                    new com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA),
+                                    new com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute(com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute.AlphaTest, 0.1f),
+                                    new com.badlogic.gdx.graphics.g3d.attributes.DepthTestAttribute(GL20.GL_LEQUAL, false),
+                                    new com.badlogic.gdx.graphics.g3d.attributes.IntAttribute(com.badlogic.gdx.graphics.g3d.attributes.IntAttribute.CullFace, 0));
 
                             int tileCount = 0;
                             com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder meshBuilder = modelBuilder.part(
@@ -6019,7 +6077,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     float y0 = d.y;
                                     float x1 = d.x + d.width;
                                     float y1 = d.y + d.height;
-                                    float z1 = d.tileZ; // Place transparent plane flat at the base level of the current layer
+                                    float z1 = d.tileZ + (Tsh * 0.02f); // Add a small offset to prevent coplanar Z-fighting!
 
                                     meshBuilder.setUVRange(u1, v1, u2, v2);
                                     meshBuilder.rect(
@@ -6068,6 +6126,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             com.badlogic.gdx.graphics.g3d.Model chunkModel = modelBuilder.end();
             if (chunkModel != null && chunkModel.meshes.size > 0) {
                 lastModelInstanceBuilt = new com.badlogic.gdx.graphics.g3d.ModelInstance(chunkModel);
+                
+                lastLayerModelInstancesBuilt = new com.badlogic.gdx.graphics.g3d.ModelInstance[layers.size()];
+                for (int lj = 0; lj < layers.size(); lj++) {
+                    com.badlogic.gdx.graphics.g3d.model.Node n = chunkModel.getNode("layer_" + lj);
+                    if (n != null && n.parts.size > 0) {
+                        lastLayerModelInstancesBuilt[lj] = new com.badlogic.gdx.graphics.g3d.ModelInstance(chunkModel, "layer_" + lj);
+                    }
+                }
             }
 
             // ── Fix #1: Bake drop-shadow geometry into a GPU mesh ────────────
@@ -6088,7 +6154,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute.createDiffuse(0f, 0f, 0f, 0.15f),
                                 new com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute(
                                         com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA,
-                                        com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA));
+                                        com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA),
+                                new com.badlogic.gdx.graphics.g3d.attributes.DepthTestAttribute(com.badlogic.gdx.graphics.GL20.GL_LEQUAL, false));
 
                 com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder shadowMesh = shadowBuilder.part(
                         "shadow",
@@ -6259,7 +6326,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             batch.begin();
             for (drawer drawer : drawers) {
                 if (is3DMode || isFull3DMode) {
-                    com.badlogic.gdx.math.Matrix4 transform = oldTransform.cpy().translate(0, 0, drawer.tileZ);
+                    com.badlogic.gdx.math.Matrix4 transform = oldTransform.cpy().translate(0, 0, drawer.tileZ + (Tsh * 0.02f));
                     batch.setTransformMatrix(transform);
                 }
                 drawMapDrawer(batch, drawer);

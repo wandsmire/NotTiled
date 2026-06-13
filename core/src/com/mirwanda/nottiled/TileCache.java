@@ -65,6 +65,7 @@ public class TileCache {
     }
 
     private com.badlogic.gdx.graphics.g3d.ModelInstance modelInstance;
+    private com.badlogic.gdx.graphics.g3d.ModelInstance[] layerModelInstances;
     private com.badlogic.gdx.graphics.g3d.ModelInstance shadowModelInstance;
     /** The raw Model backing shadowModelInstance — must be disposed when the chunk is rebuilt. */
     private Model shadowModel;
@@ -75,6 +76,14 @@ public class TileCache {
 
     public void setModelInstance(com.badlogic.gdx.graphics.g3d.ModelInstance modelInstance) {
         this.modelInstance = modelInstance;
+    }
+
+    public com.badlogic.gdx.graphics.g3d.ModelInstance[] getLayerModelInstances() {
+        return layerModelInstances;
+    }
+
+    public void setLayerModelInstances(com.badlogic.gdx.graphics.g3d.ModelInstance[] layerModelInstances) {
+        this.layerModelInstances = layerModelInstances;
     }
 
     public com.badlogic.gdx.graphics.g3d.ModelInstance getShadowModelInstance() {
@@ -106,6 +115,10 @@ public class TileCache {
         if (modelInstance != null && modelInstance.model != null) {
             modelInstance.model.dispose();
             modelInstance = null;
+        }
+        if (layerModelInstances != null) {
+            // Models are shared, already disposed above if it was part of modelInstance
+            layerModelInstances = null;
         }
     }
 
@@ -140,6 +153,7 @@ public class TileCache {
     }
 
     private List<Decal> decals = new ArrayList<Decal>();
+    private List<Decal>[] layerDecals;
 
     public List<Decal> getDecals() {
         return decals;
@@ -147,6 +161,14 @@ public class TileCache {
 
     public void setDecals(List<Decal> decals) {
         this.decals = decals;
+    }
+
+    public List<Decal>[] getLayerDecals() {
+        return layerDecals;
+    }
+
+    public void setLayerDecals(List<Decal>[] layerDecals) {
+        this.layerDecals = layerDecals;
     }
 
     public TileCache(SpriteCache cache, int cacheID, int intex, int intey){
