@@ -2731,6 +2731,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             case "tset":
                                 gotoStage(tTsProp);
                                 break;
+                            case "tsetlist":
+                                showTilesetManager();
+                                break;
                             case "map":
                                 gotoStage(tProperties);
                                 break;
@@ -14273,6 +14276,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         pp = layers.get(selLayer).getProperties();
                         break;
                     case "tset":
+                    case "tsetlist":
                         pp = tilesets.get(selTsetID).getProperties();
                         break;
                     case "map":
@@ -17064,6 +17068,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         });
         optionsTable.add(btnProp).width(dialogBtnWidth).height(btny).pad(5).row();
 
+        TextButton btnCustomProp = new TextButton(z.customproperties, skin);
+        btnCustomProp.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                optionsDlg.hide();
+                selTsetID = tsetIdx;
+                refreshProperties(tilesets.get(tsetIdx).getProperties());
+                lPropID.setText(z.customproperties);
+                sender = "tsetlist";
+                gotoStage(tPropsMgmt);
+            }
+        });
+        optionsTable.add(btnCustomProp).width(dialogBtnWidth).height(btny).pad(5).row();
+
         TextButton btnSaveTsx = new TextButton(z.saveastsx, skin);
         btnSaveTsx.addListener(new ChangeListener() {
             @Override
@@ -17746,6 +17764,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "tset":
                         gotoStage(tTsProp);
                         break;
+                    case "tsetlist":
+                        showTilesetManager();
+                        break;
                     case "map":
                         gotoStage(tProperties);
                         break;
@@ -17775,6 +17796,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         pp = selectedColObj.getProperties();
                         break;
                     case "tset":
+                    case "tsetlist":
                         pp = tilesets.get(selTsetID).getProperties();
                         break;
                     case "layer":
@@ -17817,6 +17839,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         pp = selectedColObj.getProperties();
                         break;
                     case "tset":
+                    case "tsetlist":
                         pp = tilesets.get(selTsetID).getProperties();
                         break;
                     case "layer":
@@ -17861,6 +17884,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             selectedColObj.setProperties(at.getProperties());
                             break;
                         case "tset":
+                        case "tsetlist":
                             tilesets.get(selTsetID).setProperties(at.getProperties());
                             break;
                         case "layer":
@@ -18061,6 +18085,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         pp = selobjs.get(0).getProperties();
                         break;
                     case "tset":
+                    case "tsetlist":
                         pp = tilesets.get(selTsetID).getProperties();
                         break;
                     case "layer":
@@ -18150,6 +18175,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         pp = selectedColObj.getProperties();
                         break;
                     case "tset":
+                    case "tsetlist":
                         pp = tilesets.get(selTsetID).getProperties();
                         break;
                     case "layer":
@@ -18192,6 +18218,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         pp = selectedColObj.getProperties();
                         break;
                     case "tset":
+                    case "tsetlist":
                         pp = tilesets.get(selTsetID).getProperties();
                         break;
                     case "layer":
@@ -18428,6 +18455,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     int gid = center != null ? center.getTileID() : tr.getTile();
                     curspr = gid;
                     setTsetFromCurspr();
+                    seltset = curtset;
+                    adjustLayer(tilesets.get(curtset));
                     pickMacroTerrain = true;
                     pickAuto = false;
                     curpickMacroTerrain = true;
@@ -18504,6 +18533,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 break;
 
             case "tset":
+            case "tsetlist":
                 showTilesetManager();
                 break;
             case "macro":
@@ -18927,6 +18957,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         break;
                     case "tset":
                         tilesets.get(seltset).setProperties(at.getProperties());
+
+                        break;
+                    case "tsetlist":
+                        tilesets.get(selTsetID).setProperties(at.getProperties());
 
                         break;
 
@@ -29603,6 +29637,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void showSelectToolMenu() {
         activetool = 3;
+        pickMacroTerrain = false;
+        curpickMacroTerrain = false;
         String[] labels = new String[] { z.picker, z.copy, z.move, z.flip, z.clone };
         showDrawingToolMenu(z.select != null ? z.select : "Select", labels, movetool.ordinal(),
                 new ToolMenuCallback() {
@@ -32897,7 +32933,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     curtset = seltset;
                     setTsetFromCurspr();
                     curpickAuto = pickAuto;
-                    if (!pickAuto) {
+                    if (!pickAuto || (pickMacroTerrain && macroTerrain.getTileMeta(curspr) == null)) {
                         pickMacroTerrain = false;
                         curpickMacroTerrain = false;
                     }
@@ -32972,6 +33008,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         curspr = num;
 
                         setTsetFromCurspr();
+                        if (pickMacroTerrain && macroTerrain.getTileMeta(curspr) == null) { pickMacroTerrain = false; curpickMacroTerrain = false; }
+                        adjustLayer(tilesets.get(curtset));
                         addSW(num, "sw1");
 
                         break;
@@ -32981,6 +33019,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         curspr = num;
 
                         setTsetFromCurspr();
+                        if (pickMacroTerrain && macroTerrain.getTileMeta(curspr) == null) { pickMacroTerrain = false; curpickMacroTerrain = false; }
+                        adjustLayer(tilesets.get(curtset));
                         addSW(num, "sw2");
                         break;
                     case "sw3":
@@ -32988,6 +33028,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         swatchValue.set(2, num);
                         curspr = num;
                         setTsetFromCurspr();
+                        if (pickMacroTerrain && macroTerrain.getTileMeta(curspr) == null) { pickMacroTerrain = false; curpickMacroTerrain = false; }
+                        adjustLayer(tilesets.get(curtset));
                         addSW(num, "sw3");
 
                         break;
@@ -32996,6 +33038,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         swatchValue.set(3, num);
                         curspr = num;
                         setTsetFromCurspr();
+                        if (pickMacroTerrain && macroTerrain.getTileMeta(curspr) == null) { pickMacroTerrain = false; curpickMacroTerrain = false; }
+                        adjustLayer(tilesets.get(curtset));
                         addSW(num, "sw4");
 
                         break;
@@ -33004,6 +33048,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         swatchValue.set(4, num);
                         curspr = num;
                         setTsetFromCurspr();
+                        if (pickMacroTerrain && macroTerrain.getTileMeta(curspr) == null) { pickMacroTerrain = false; curpickMacroTerrain = false; }
+                        adjustLayer(tilesets.get(curtset));
                         addSW(num, "sw5");
 
                         break;
@@ -33012,6 +33058,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         swatchValue.set(5, num);
                         curspr = num;
                         setTsetFromCurspr();
+                        if (pickMacroTerrain && macroTerrain.getTileMeta(curspr) == null) { pickMacroTerrain = false; curpickMacroTerrain = false; }
+                        adjustLayer(tilesets.get(curtset));
                         addSW(num, "sw6");
 
                         break;
@@ -33997,7 +34045,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         } else {
 
             // first, work with rotation.
-            if (!eraser && !(activetool == 2 && fillMode == FillMode.EDGES) && !prepareBrushForDraw()) {
+            if (!eraser && activetool != 3 && !(activetool == 2 && fillMode == FillMode.EDGES) && !prepareBrushForDraw()) {
                 status("Pick a tile in the tileset first", 2);
                 return;
             }
@@ -34166,6 +34214,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         addRecentTile(this.curspr);
                         setTsetFromCurspr();
                         seltset = curtset;
+                        if (pickMacroTerrain && macroTerrain.getTileMeta(curspr) == null) {
+                            pickMacroTerrain = false;
+                            curpickMacroTerrain = false;
+                        }
+                        if (seltset >= 0 && seltset < tilesets.size())
+                            adjustLayer(tilesets.get(curtset));
                         break;
                     }
 
@@ -36430,7 +36484,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (p.getName().equalsIgnoreCase("layer")) {
                 for (int l = 0; l < layers.size(); l++) {
                     if (layers.get(l).getName().equalsIgnoreCase(p.getValue())) {
-                        selLayer = l;
+                        if (selLayer != l) {
+                            selLayer = l;
+                            status("auto switching layer to " + layers.get(l).getName(), 3);
+                        } else {
+                            selLayer = l;
+                        }
                         updateObjectCollision();
 
                         switch (viewMode) {
@@ -36701,8 +36760,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     } else {
                         curspr = swatchValue.get(0);
                         setTsetFromCurspr();
+                        if (pickMacroTerrain && macroTerrain.getTileMeta(curspr) == null) {
+                            pickMacroTerrain = false;
+                            curpickMacroTerrain = false;
+                        }
                     }
-                    adjustLayer(tilesets.get(seltset));
+                    adjustLayer(tilesets.get(curtset));
                     stamp = false;
                     assemblymode = false;
 
@@ -36718,8 +36781,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     } else {
                         curspr = swatchValue.get(1);
                         setTsetFromCurspr();
+                        if (pickMacroTerrain && macroTerrain.getTileMeta(curspr) == null) {
+                            pickMacroTerrain = false;
+                            curpickMacroTerrain = false;
+                        }
                     }
-                    adjustLayer(tilesets.get(seltset));
+                    adjustLayer(tilesets.get(curtset));
                     stamp = false;
                     assemblymode = false;
 
@@ -36734,8 +36801,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     } else {
                         curspr = swatchValue.get(2);
                         setTsetFromCurspr();
+                        if (pickMacroTerrain && macroTerrain.getTileMeta(curspr) == null) {
+                            pickMacroTerrain = false;
+                            curpickMacroTerrain = false;
+                        }
                     }
-                    adjustLayer(tilesets.get(seltset));
+                    adjustLayer(tilesets.get(curtset));
                     stamp = false;
                     assemblymode = false;
 
@@ -36750,8 +36821,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     } else {
                         curspr = swatchValue.get(3);
                         setTsetFromCurspr();
+                        if (pickMacroTerrain && macroTerrain.getTileMeta(curspr) == null) {
+                            pickMacroTerrain = false;
+                            curpickMacroTerrain = false;
+                        }
                     }
-                    adjustLayer(tilesets.get(seltset));
+                    adjustLayer(tilesets.get(curtset));
                     stamp = false;
                     assemblymode = false;
 
@@ -36766,8 +36841,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     } else {
                         curspr = swatchValue.get(4);
                         setTsetFromCurspr();
+                        if (pickMacroTerrain && macroTerrain.getTileMeta(curspr) == null) {
+                            pickMacroTerrain = false;
+                            curpickMacroTerrain = false;
+                        }
                     }
-                    adjustLayer(tilesets.get(seltset));
+                    adjustLayer(tilesets.get(curtset));
                     stamp = false;
                     assemblymode = false;
 
@@ -36782,8 +36861,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     } else {
                         curspr = swatchValue.get(5);
                         setTsetFromCurspr();
+                        if (pickMacroTerrain && macroTerrain.getTileMeta(curspr) == null) {
+                            pickMacroTerrain = false;
+                            curpickMacroTerrain = false;
+                        }
                     }
-                    adjustLayer(tilesets.get(seltset));
+                    adjustLayer(tilesets.get(curtset));
                     stamp = false;
                     assemblymode = false;
 
@@ -36820,7 +36903,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (!cue("tool4") && lockUI)
                     return true;
                 activetool = 3;
-
+                pickMacroTerrain = false;
+                curpickMacroTerrain = false;
                 stamp = false;
                 assemblymode = false;
                 return true;
@@ -39096,7 +39180,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (touch3.y < Tsh && touch3.y > -Tsh * tilesets.get(seltset).getHeight() + Tsh && touch3.x > 0
                     && touch3.x < Tsw * tilesets.get(seltset).getWidth()) {
                 startSelect = (tilesets.get(seltset).getWidth() * ((-ab + Tsh) / Tsh) + (ae / Tsw));
-                adjustLayer(tilesets.get(seltset));
+                adjustLayer(tilesets.get(curtset));
                 endSelect = startSelect;
                 initialSelect = startSelect;
             }
