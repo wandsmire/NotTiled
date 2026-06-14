@@ -1,0 +1,5455 @@
+{
+selTerrain: 21
+terrains: [
+	{
+		name: deep water
+		tile: 11
+	}
+	{
+		name: water
+		tile: 11
+	}
+	{
+		name: shallow water
+		tile: 29
+	}
+	{
+		name: grass flat
+		tile: 11
+	}
+	{
+		name: dirt flat
+		tile: 11
+	}
+	{
+		name: stone flat
+		tile: 11
+	}
+	{
+		name: sand flat
+		tile: 11
+	}
+	{
+		name: mountain flat
+		tile: 1021
+	}
+	{
+		name: ice flat
+		tile: 647
+	}
+	{
+		name: snow flat
+		tile: 838
+	}
+	{
+		name: lava
+		tile: 3837
+	}
+	{
+		name: long grass
+		tile: 884
+	}
+	{
+		name: stone cliff
+		tile: 1029
+	}
+	{
+		name: mountain cliff
+		tile: 2775
+	}
+	{
+		name: dirt cliff
+		tile: 412
+	}
+	{
+		name: grass cliff
+		tile: 730
+	}
+	{
+		name: sand cliff
+		tile: 601
+	}
+	{
+		name: snow cliff
+		tile: 850
+	}
+	{
+		name: snow hill
+		tile: 847
+	}
+	{
+		name: mountain hill
+		tile: 1006
+	}
+	{
+		name: sand hill
+		tile: 1657
+	}
+	{
+		name: res_pool
+		tile: 284
+	}
+	{
+		name: trees
+		tile: 290
+	}
+	{
+		name: stone x2
+		tile: 867
+	}
+	{
+		name: stone x3
+		tile: 952
+	}
+]
+tiles: [
+	{
+		gid: 4096
+		terrain: "10,10,10,12"
+	}
+	{
+		gid: 4097
+		terrain: "14,14,14,3"
+	}
+	{
+		gid: 4098
+		terrain: "14,14,3,3"
+	}
+	{
+		gid: 4099
+		terrain: "14,14,3,14"
+	}
+	{
+		gid: 4100
+		terrain: "14,3,14,3"
+	}
+	{
+		gid: 4102
+		terrain: "3,14,3,14"
+	}
+	{
+		gid: 4103
+		terrain: "14,3,14,14"
+	}
+	{
+		gid: 4104
+		terrain: "3,3,14,14"
+	}
+	{
+		gid: 2056
+		terrain: "14,14,14,8"
+	}
+	{
+		gid: 4105
+		terrain: "3,14,14,14"
+	}
+	{
+		gid: 2057
+		terrain: "14,14,8,8"
+	}
+	{
+		gid: 2058
+		terrain: "14,14,8,14"
+	}
+	{
+		gid: 2059
+		terrain: "14,8,14,8"
+	}
+	{
+		gid: 4109
+		terrain: "14,3,3,3"
+	}
+	{
+		gid: 2061
+		terrain: "8,14,8,14"
+	}
+	{
+		gid: 2062
+		terrain: "14,8,14,14"
+	}
+	{
+		gid: 4111
+		terrain: "3,14,3,3"
+	}
+	{
+		gid: 2063
+		terrain: "8,8,14,14"
+	}
+	{
+		gid: 2064
+		terrain: "8,14,14,14"
+	}
+	{
+		gid: 4115
+		terrain: "3,3,14,3"
+	}
+	{
+		gid: 2068
+		terrain: "14,8,8,8"
+	}
+	{
+		gid: 4117
+		terrain: "3,3,3,14"
+	}
+	{
+		gid: 2070
+		terrain: "8,14,8,8"
+	}
+	{
+		gid: 2074
+		terrain: "8,8,14,8"
+	}
+	{
+		gid: 2076
+		terrain: "8,8,8,14"
+	}
+	{
+		gid: 2077
+		terrain: "16,16,16,8"
+	}
+	{
+		gid: 2078
+		terrain: "16,16,8,8"
+	}
+	{
+		gid: 2079
+		terrain: "16,16,8,16"
+	}
+	{
+		gid: 2080
+		terrain: "16,8,16,8"
+	}
+	{
+		gid: 2082
+		terrain: "8,16,8,16"
+	}
+	{
+		gid: 2083
+		terrain: "16,8,16,16"
+	}
+	{
+		gid: 2084
+		terrain: "8,8,16,16"
+	}
+	{
+		gid: 2085
+		terrain: "8,16,16,16"
+	}
+	{
+		gid: 2089
+		terrain: "16,8,8,8"
+	}
+	{
+		gid: 4139
+		terrain: "8,8,8,2"
+	}
+	{
+		gid: 2091
+		terrain: "8,16,8,8"
+	}
+	{
+		gid: 4140
+		terrain: "8,8,2,2"
+	}
+	{
+		gid: 4141
+		terrain: "8,8,2,8"
+	}
+	{
+		gid: 4142
+		terrain: "8,2,8,2"
+	}
+	{
+		gid: 2095
+		terrain: "8,8,16,8"
+	}
+	{
+		gid: 4144
+		terrain: "2,8,2,8"
+	}
+	{
+		gid: 4145
+		terrain: "8,2,8,8"
+	}
+	{
+		gid: 2097
+		terrain: "8,8,8,16"
+	}
+	{
+		gid: 4146
+		terrain: "2,2,8,8"
+	}
+	{
+		gid: 2098
+		terrain: "7,7,7,19"
+	}
+	{
+		gid: 4147
+		terrain: "2,8,8,8"
+	}
+	{
+		gid: 2099
+		terrain: "7,7,19,19"
+	}
+	{
+		gid: 2100
+		terrain: "7,7,19,7"
+	}
+	{
+		gid: 2101
+		terrain: "7,19,7,19"
+	}
+	{
+		gid: 4151
+		terrain: "8,2,2,2"
+	}
+	{
+		gid: 2103
+		terrain: "19,7,19,7"
+	}
+	{
+		gid: 2104
+		terrain: "7,19,7,7"
+	}
+	{
+		gid: 4153
+		terrain: "2,8,2,2"
+	}
+	{
+		gid: 2105
+		terrain: "19,19,7,7"
+	}
+	{
+		gid: 2106
+		terrain: "19,7,7,7"
+	}
+	{
+		gid: 4157
+		terrain: "2,2,8,2"
+	}
+	{
+		gid: 2110
+		terrain: "7,19,19,19"
+	}
+	{
+		gid: 4159
+		terrain: "2,2,2,8"
+	}
+	{
+		gid: 4160
+		terrain: "16,16,16,2"
+	}
+	{
+		gid: 2112
+		terrain: "19,7,19,19"
+	}
+	{
+		gid: 4161
+		terrain: "16,16,2,2"
+	}
+	{
+		gid: 4162
+		terrain: "16,16,2,16"
+	}
+	{
+		gid: 4163
+		terrain: "16,2,16,2"
+	}
+	{
+		gid: 2116
+		terrain: "19,19,7,19"
+	}
+	{
+		gid: 4165
+		terrain: "2,16,2,16"
+	}
+	{
+		gid: 4166
+		terrain: "16,2,16,16"
+	}
+	{
+		gid: 2118
+		terrain: "19,19,19,7"
+	}
+	{
+		gid: 4167
+		terrain: "2,2,16,16"
+	}
+	{
+		gid: 2119
+		terrain: "7,7,7,10"
+	}
+	{
+		gid: 4168
+		terrain: "2,16,16,16"
+	}
+	{
+		gid: 2120
+		terrain: "7,7,10,10"
+	}
+	{
+		gid: 2121
+		terrain: "7,7,10,7"
+	}
+	{
+		gid: 2122
+		terrain: "7,10,7,10"
+	}
+	{
+		gid: 4172
+		terrain: "16,2,2,2"
+	}
+	{
+		gid: 2124
+		terrain: "10,7,10,7"
+	}
+	{
+		gid: 2125
+		terrain: "7,10,7,7"
+	}
+	{
+		gid: 4174
+		terrain: "2,16,2,2"
+	}
+	{
+		gid: 2126
+		terrain: "10,10,7,7"
+	}
+	{
+		gid: 2127
+		terrain: "10,7,7,7"
+	}
+	{
+		gid: 4178
+		terrain: "2,2,16,2"
+	}
+	{
+		gid: 2131
+		terrain: "7,10,10,10"
+	}
+	{
+		gid: 4180
+		terrain: "2,2,2,16"
+	}
+	{
+		gid: 2133
+		terrain: "10,7,10,10"
+	}
+	{
+		gid: 2137
+		terrain: "10,10,7,10"
+	}
+	{
+		gid: 2139
+		terrain: "10,10,10,7"
+	}
+	{
+		gid: 2143
+		terrain: "17,17,17,10"
+	}
+	{
+		gid: 2144
+		terrain: "17,17,10,10"
+	}
+	{
+		gid: 2145
+		terrain: "17,17,10,17"
+	}
+	{
+		gid: 2146
+		terrain: "17,10,17,10"
+	}
+	{
+		gid: 2148
+		terrain: "10,17,10,17"
+	}
+	{
+		gid: 2149
+		terrain: "17,10,17,17"
+	}
+	{
+		gid: 2150
+		terrain: "10,10,17,17"
+	}
+	{
+		gid: 2151
+		terrain: "10,17,17,17"
+	}
+	{
+		gid: 2155
+		terrain: "17,10,10,10"
+	}
+	{
+		gid: 2157
+		terrain: "10,17,10,10"
+	}
+	{
+		gid: 2161
+		terrain: "10,10,17,10"
+	}
+	{
+		gid: 2163
+		terrain: "10,10,10,17"
+	}
+	{
+		gid: 2164
+		terrain: "3,3,3,9"
+	}
+	{
+		gid: 2165
+		terrain: "3,3,9,9"
+	}
+	{
+		gid: 2166
+		terrain: "3,3,9,3"
+	}
+	{
+		gid: 2167
+		terrain: "3,9,3,9"
+	}
+	{
+		gid: 2169
+		terrain: "9,3,9,3"
+	}
+	{
+		gid: 2170
+		terrain: "3,9,3,3"
+	}
+	{
+		gid: 2171
+		terrain: "9,9,3,3"
+	}
+	{
+		gid: 2172
+		terrain: "9,3,3,3"
+	}
+	{
+		gid: 2176
+		terrain: "3,9,9,9"
+	}
+	{
+		gid: 2178
+		terrain: "9,3,9,9"
+	}
+	{
+		gid: 2182
+		terrain: "9,9,3,9"
+	}
+	{
+		gid: 2184
+		terrain: "9,9,9,3"
+	}
+	{
+		gid: 2185
+		terrain: "17,17,17,9"
+	}
+	{
+		gid: 2186
+		terrain: "17,17,9,9"
+	}
+	{
+		gid: 2187
+		terrain: "17,17,9,17"
+	}
+	{
+		gid: 2188
+		terrain: "17,9,17,9"
+	}
+	{
+		gid: 2190
+		terrain: "9,17,9,17"
+	}
+	{
+		gid: 2191
+		terrain: "17,9,17,17"
+	}
+	{
+		gid: 2192
+		terrain: "9,9,17,17"
+	}
+	{
+		gid: 2193
+		terrain: "9,17,17,17"
+	}
+	{
+		gid: 2197
+		terrain: "17,9,9,9"
+	}
+	{
+		gid: 2199
+		terrain: "9,17,9,9"
+	}
+	{
+		gid: 2203
+		terrain: "9,9,17,9"
+	}
+	{
+		gid: 2205
+		terrain: "9,9,9,17"
+	}
+	{
+		gid: 2206
+		terrain: "12,12,12,3"
+	}
+	{
+		gid: 2207
+		terrain: "12,12,3,3"
+	}
+	{
+		gid: 2208
+		terrain: "12,12,3,12"
+	}
+	{
+		gid: 2209
+		terrain: "12,3,12,3"
+	}
+	{
+		gid: 2211
+		terrain: "3,12,3,12"
+	}
+	{
+		gid: 2212
+		terrain: "12,3,12,12"
+	}
+	{
+		gid: 2213
+		terrain: "3,3,12,12"
+	}
+	{
+		gid: 2214
+		terrain: "3,12,12,12"
+	}
+	{
+		gid: 2216
+		terrain: "12,3,3,3"
+	}
+	{
+		gid: 168
+		terrain: "3,-1,-1,-1"
+	}
+	{
+		gid: 2217
+		terrain: "3,12,3,3"
+	}
+	{
+		gid: 2219
+		terrain: "3,3,12,3"
+	}
+	{
+		gid: 2220
+		terrain: "3,3,3,12"
+	}
+	{
+		gid: 2221
+		terrain: "16,16,16,10"
+	}
+	{
+		gid: 2222
+		terrain: "16,16,10,10"
+	}
+	{
+		gid: 2223
+		terrain: "16,16,10,16"
+	}
+	{
+		gid: 2224
+		terrain: "16,10,16,10"
+	}
+	{
+		gid: 2226
+		terrain: "10,16,10,16"
+	}
+	{
+		gid: 2227
+		terrain: "16,10,16,16"
+	}
+	{
+		gid: 2228
+		terrain: "10,10,16,16"
+	}
+	{
+		gid: 180
+		terrain: "3,-1,-1,-1"
+	}
+	{
+		gid: 2229
+		terrain: "10,16,16,16"
+	}
+	{
+		gid: 2233
+		terrain: "16,10,10,10"
+	}
+	{
+		gid: 2235
+		terrain: "10,16,10,10"
+	}
+	{
+		gid: 2239
+		terrain: "10,10,16,10"
+	}
+	{
+		gid: 2241
+		terrain: "10,10,10,16"
+	}
+	{
+		gid: 2242
+		terrain: "5,5,5,9"
+	}
+	{
+		gid: 2243
+		terrain: "5,5,9,9"
+	}
+	{
+		gid: 2244
+		terrain: "5,5,9,5"
+	}
+	{
+		gid: 2245
+		terrain: "5,9,5,9"
+	}
+	{
+		gid: 2247
+		terrain: "9,5,9,5"
+	}
+	{
+		gid: 2248
+		terrain: "5,9,5,5"
+	}
+	{
+		gid: 2249
+		terrain: "9,9,5,5"
+	}
+	{
+		gid: 2250
+		terrain: "9,5,5,5"
+	}
+	{
+		gid: 205
+		terrain: "-1,-1,-1,3"
+	}
+	{
+		gid: 2254
+		terrain: "5,9,9,9"
+	}
+	{
+		gid: 2256
+		terrain: "9,5,9,9"
+	}
+	{
+		gid: 2260
+		terrain: "9,9,5,9"
+	}
+	{
+		gid: 2262
+		terrain: "9,9,9,5"
+	}
+	{
+		gid: 2263
+		terrain: "15,15,15,10"
+	}
+	{
+		gid: 2264
+		terrain: "15,15,10,10"
+	}
+	{
+		gid: 2265
+		terrain: "15,15,10,15"
+	}
+	{
+		gid: 2266
+		terrain: "15,10,15,10"
+	}
+	{
+		gid: 2268
+		terrain: "10,15,10,15"
+	}
+	{
+		gid: 2269
+		terrain: "15,10,15,15"
+	}
+	{
+		gid: 2270
+		terrain: "10,10,15,15"
+	}
+	{
+		gid: 2271
+		terrain: "10,15,15,15"
+	}
+	{
+		gid: 2275
+		terrain: "15,10,10,10"
+	}
+	{
+		gid: 2277
+		terrain: "10,15,10,10"
+	}
+	{
+		gid: 2281
+		terrain: "10,10,15,10"
+	}
+	{
+		gid: 2283
+		terrain: "10,10,10,15"
+	}
+	{
+		gid: 2293
+		terrain: "7,7,7,2"
+	}
+	{
+		gid: 2294
+		terrain: "7,7,2,2"
+	}
+	{
+		gid: 2295
+		terrain: "7,7,2,7"
+	}
+	{
+		gid: 2296
+		terrain: "7,2,7,2"
+	}
+	{
+		gid: 2298
+		terrain: "2,7,2,7"
+	}
+	{
+		gid: 2299
+		terrain: "7,2,7,7"
+	}
+	{
+		gid: 2300
+		terrain: "2,2,7,7"
+	}
+	{
+		gid: 2301
+		terrain: "2,7,7,7"
+	}
+	{
+		gid: 2305
+		terrain: "7,2,2,2"
+	}
+	{
+		gid: 2307
+		terrain: "2,7,2,2"
+	}
+	{
+		gid: 2311
+		terrain: "2,2,7,2"
+	}
+	{
+		gid: 2313
+		terrain: "2,2,2,7"
+	}
+	{
+		gid: 2320
+		terrain: "15,15,15,6"
+	}
+	{
+		gid: 2321
+		terrain: "15,15,6,6"
+	}
+	{
+		gid: 2322
+		terrain: "15,15,6,15"
+	}
+	{
+		gid: 2323
+		terrain: "15,6,15,6"
+	}
+	{
+		gid: 2325
+		terrain: "6,15,6,15"
+	}
+	{
+		gid: 2326
+		terrain: "15,6,15,15"
+	}
+	{
+		gid: 2327
+		terrain: "6,6,15,15"
+	}
+	{
+		gid: 2328
+		terrain: "6,15,15,15"
+	}
+	{
+		gid: 280
+		terrain: "-1,-1,-1,21"
+	}
+	{
+		gid: 281
+		terrain: "-1,-1,21,21"
+	}
+	{
+		gid: 282
+		terrain: "-1,-1,21,-1"
+	}
+	{
+		gid: 283
+		terrain: "-1,21,-1,21"
+	}
+	{
+		gid: 2332
+		terrain: "15,6,6,6"
+	}
+	{
+		gid: 284
+		terrain: "21,21,21,21"
+	}
+	{
+		gid: 285
+		terrain: "21,-1,21,-1"
+	}
+	{
+		gid: 2334
+		terrain: "6,15,6,6"
+	}
+	{
+		gid: 286
+		terrain: "-1,21,-1,-1"
+	}
+	{
+		gid: 287
+		terrain: "21,21,-1,-1"
+	}
+	{
+		gid: 288
+		terrain: "21,-1,-1,-1"
+	}
+	{
+		gid: 2338
+		terrain: "6,6,15,6"
+	}
+	{
+		gid: 290
+		terrain: "22,22,22,22"
+	}
+	{
+		gid: 291
+		terrain: "22,22,22,22"
+	}
+	{
+		gid: 2340
+		terrain: "6,6,6,15"
+	}
+	{
+		gid: 292
+		terrain: "22,22,22,22"
+	}
+	{
+		gid: 293
+		terrain: "22,22,22,22"
+	}
+	{
+		gid: 294
+		terrain: "22,22,22,22"
+	}
+	{
+		gid: 2350
+		terrain: "17,17,17,4"
+	}
+	{
+		gid: 2351
+		terrain: "17,17,4,4"
+	}
+	{
+		gid: 2352
+		terrain: "17,17,4,17"
+	}
+	{
+		gid: 2353
+		terrain: "17,4,17,4"
+	}
+	{
+		gid: 2354
+		terrain: "4,4,4,4"
+	}
+	{
+		gid: 2355
+		terrain: "4,17,4,17"
+	}
+	{
+		gid: 2356
+		terrain: "17,4,17,17"
+	}
+	{
+		gid: 2357
+		terrain: "4,4,17,17"
+	}
+	{
+		gid: 2358
+		terrain: "4,17,17,17"
+	}
+	{
+		gid: 2362
+		terrain: "17,4,4,4"
+	}
+	{
+		gid: 2364
+		terrain: "4,17,4,4"
+	}
+	{
+		gid: 2368
+		terrain: "4,4,17,4"
+	}
+	{
+		gid: 2370
+		terrain: "4,4,4,17"
+	}
+	{
+		gid: 2371
+		terrain: "6,6,6,9"
+	}
+	{
+		gid: 2372
+		terrain: "6,6,9,9"
+	}
+	{
+		gid: 2373
+		terrain: "6,6,9,6"
+	}
+	{
+		gid: 2374
+		terrain: "6,9,6,9"
+	}
+	{
+		gid: 2376
+		terrain: "9,6,9,6"
+	}
+	{
+		gid: 2377
+		terrain: "6,9,6,6"
+	}
+	{
+		gid: 2378
+		terrain: "9,9,6,6"
+	}
+	{
+		gid: 2379
+		terrain: "9,6,6,6"
+	}
+	{
+		gid: 333
+		terrain: "3,3,3,2"
+	}
+	{
+		gid: 334
+		terrain: "3,3,2,2"
+	}
+	{
+		gid: 335
+		terrain: "3,3,2,3"
+	}
+	{
+		gid: 2383
+		terrain: "6,9,9,9"
+	}
+	{
+		gid: 336
+		terrain: "3,2,3,2"
+	}
+	{
+		gid: 2385
+		terrain: "9,6,9,9"
+	}
+	{
+		gid: 338
+		terrain: "2,3,2,3"
+	}
+	{
+		gid: 339
+		terrain: "3,2,3,3"
+	}
+	{
+		gid: 340
+		terrain: "2,2,3,3"
+	}
+	{
+		gid: 341
+		terrain: "2,3,3,3"
+	}
+	{
+		gid: 2389
+		terrain: "9,9,6,9"
+	}
+	{
+		gid: 2391
+		terrain: "9,9,9,6"
+	}
+	{
+		gid: 345
+		terrain: "3,2,2,2"
+	}
+	{
+		gid: 347
+		terrain: "2,3,2,2"
+	}
+	{
+		gid: 351
+		terrain: "2,2,3,2"
+	}
+	{
+		gid: 353
+		terrain: "2,2,2,3"
+	}
+	{
+		gid: 2432
+		terrain: "12,12,12,8"
+	}
+	{
+		gid: 2433
+		terrain: "12,12,8,8"
+	}
+	{
+		gid: 2434
+		terrain: "12,12,8,12"
+	}
+	{
+		gid: 2435
+		terrain: "12,8,12,8"
+	}
+	{
+		gid: 2437
+		terrain: "8,12,8,12"
+	}
+	{
+		gid: 2438
+		terrain: "12,8,12,12"
+	}
+	{
+		gid: 2439
+		terrain: "8,8,12,12"
+	}
+	{
+		gid: 2440
+		terrain: "8,12,12,12"
+	}
+	{
+		gid: 2442
+		terrain: "12,8,8,8"
+	}
+	{
+		gid: 2443
+		terrain: "8,12,8,8"
+	}
+	{
+		gid: 396
+		terrain: "4,4,4,9"
+	}
+	{
+		gid: 397
+		terrain: "4,4,9,9"
+	}
+	{
+		gid: 2445
+		terrain: "8,8,12,8"
+	}
+	{
+		gid: 398
+		terrain: "4,4,9,4"
+	}
+	{
+		gid: 2446
+		terrain: "8,8,8,12"
+	}
+	{
+		gid: 399
+		terrain: "4,9,4,9"
+	}
+	{
+		gid: 401
+		terrain: "9,4,9,4"
+	}
+	{
+		gid: 402
+		terrain: "4,9,4,4"
+	}
+	{
+		gid: 403
+		terrain: "9,9,4,4"
+	}
+	{
+		gid: 404
+		terrain: "9,4,4,4"
+	}
+	{
+		gid: 408
+		terrain: "4,9,9,9"
+	}
+	{
+		gid: 410
+		terrain: "9,4,9,9"
+	}
+	{
+		gid: 412
+		terrain: "14,14,14,14"
+	}
+	{
+		gid: 414
+		terrain: "9,9,4,9"
+	}
+	{
+		gid: 416
+		terrain: "9,9,9,4"
+	}
+	{
+		gid: 417
+		terrain: "17,17,17,2"
+	}
+	{
+		gid: 418
+		terrain: "17,17,2,2"
+	}
+	{
+		gid: 419
+		terrain: "17,17,2,17"
+	}
+	{
+		gid: 420
+		terrain: "17,2,17,2"
+	}
+	{
+		gid: 2468
+		terrain: "7,7,7,9"
+	}
+	{
+		gid: 2469
+		terrain: "7,7,9,9"
+	}
+	{
+		gid: 422
+		terrain: "2,17,2,17"
+	}
+	{
+		gid: 2470
+		terrain: "7,7,9,7"
+	}
+	{
+		gid: 423
+		terrain: "17,2,17,17"
+	}
+	{
+		gid: 2471
+		terrain: "7,9,7,9"
+	}
+	{
+		gid: 424
+		terrain: "2,2,17,17"
+	}
+	{
+		gid: 425
+		terrain: "2,17,17,17"
+	}
+	{
+		gid: 2473
+		terrain: "9,7,9,7"
+	}
+	{
+		gid: 2474
+		terrain: "7,9,7,7"
+	}
+	{
+		gid: 2475
+		terrain: "9,9,7,7"
+	}
+	{
+		gid: 2476
+		terrain: "9,7,7,7"
+	}
+	{
+		gid: 429
+		terrain: "17,2,2,2"
+	}
+	{
+		gid: 431
+		terrain: "2,17,2,2"
+	}
+	{
+		gid: 2480
+		terrain: "7,9,9,9"
+	}
+	{
+		gid: 2482
+		terrain: "9,7,9,9"
+	}
+	{
+		gid: 435
+		terrain: "2,2,17,2"
+	}
+	{
+		gid: 437
+		terrain: "2,2,2,17"
+	}
+	{
+		gid: 2486
+		terrain: "9,9,7,9"
+	}
+	{
+		gid: 2488
+		terrain: "9,9,9,7"
+	}
+	{
+		gid: 2489
+		terrain: "7,7,7,6"
+	}
+	{
+		gid: 2490
+		terrain: "7,7,6,6"
+	}
+	{
+		gid: 2491
+		terrain: "7,7,6,7"
+	}
+	{
+		gid: 2492
+		terrain: "7,6,7,6"
+	}
+	{
+		gid: 2494
+		terrain: "6,7,6,7"
+	}
+	{
+		gid: 2495
+		terrain: "7,6,7,7"
+	}
+	{
+		gid: 2496
+		terrain: "6,6,7,7"
+	}
+	{
+		gid: 2497
+		terrain: "6,7,7,7"
+	}
+	{
+		gid: 2501
+		terrain: "7,6,6,6"
+	}
+	{
+		gid: 2503
+		terrain: "6,7,6,6"
+	}
+	{
+		gid: 2507
+		terrain: "6,6,7,6"
+	}
+	{
+		gid: 2509
+		terrain: "6,6,6,7"
+	}
+	{
+		gid: 2510
+		terrain: "15,15,15,7"
+	}
+	{
+		gid: 2511
+		terrain: "15,15,7,7"
+	}
+	{
+		gid: 2512
+		terrain: "15,15,7,15"
+	}
+	{
+		gid: 2513
+		terrain: "15,7,15,7"
+	}
+	{
+		gid: 2515
+		terrain: "7,15,7,15"
+	}
+	{
+		gid: 2516
+		terrain: "15,7,15,15"
+	}
+	{
+		gid: 2517
+		terrain: "7,7,15,15"
+	}
+	{
+		gid: 2518
+		terrain: "7,15,15,15"
+	}
+	{
+		gid: 2522
+		terrain: "15,7,7,7"
+	}
+	{
+		gid: 2524
+		terrain: "7,15,7,7"
+	}
+	{
+		gid: 2528
+		terrain: "7,7,15,7"
+	}
+	{
+		gid: 2530
+		terrain: "7,7,7,15"
+	}
+	{
+		gid: 2540
+		terrain: "9,9,9,4"
+	}
+	{
+		gid: 2541
+		terrain: "9,9,4,4"
+	}
+	{
+		gid: 2542
+		terrain: "9,9,4,9"
+	}
+	{
+		gid: 2543
+		terrain: "9,4,9,4"
+	}
+	{
+		gid: 2545
+		terrain: "4,9,4,9"
+	}
+	{
+		gid: 2546
+		terrain: "9,4,9,9"
+	}
+	{
+		gid: 2547
+		terrain: "4,4,9,9"
+	}
+	{
+		gid: 2548
+		terrain: "4,9,9,9"
+	}
+	{
+		gid: 2552
+		terrain: "9,4,4,4"
+	}
+	{
+		gid: 2554
+		terrain: "4,9,4,4"
+	}
+	{
+		gid: 2558
+		terrain: "4,4,9,4"
+	}
+	{
+		gid: 2560
+		terrain: "4,4,4,9"
+	}
+	{
+		gid: 2582
+		terrain: "15,15,15,2"
+	}
+	{
+		gid: 2583
+		terrain: "15,15,2,2"
+	}
+	{
+		gid: 2584
+		terrain: "15,15,2,15"
+	}
+	{
+		gid: 2585
+		terrain: "15,2,15,2"
+	}
+	{
+		gid: 2586
+		terrain: "2,2,2,2"
+	}
+	{
+		gid: 2587
+		terrain: "2,15,2,15"
+	}
+	{
+		gid: 2588
+		terrain: "15,2,15,15"
+	}
+	{
+		gid: 2589
+		terrain: "2,2,15,15"
+	}
+	{
+		gid: 2590
+		terrain: "2,15,15,15"
+	}
+	{
+		gid: 2594
+		terrain: "15,2,2,2"
+	}
+	{
+		gid: 2596
+		terrain: "2,15,2,2"
+	}
+	{
+		gid: 2600
+		terrain: "2,2,15,2"
+	}
+	{
+		gid: 2602
+		terrain: "2,2,2,15"
+	}
+	{
+		gid: 2612
+		terrain: "3,3,3,4"
+	}
+	{
+		gid: 2613
+		terrain: "3,3,4,4"
+	}
+	{
+		gid: 2614
+		terrain: "3,3,4,3"
+	}
+	{
+		gid: 2615
+		terrain: "3,4,3,4"
+	}
+	{
+		gid: 2617
+		terrain: "4,3,4,3"
+	}
+	{
+		gid: 2618
+		terrain: "3,4,3,3"
+	}
+	{
+		gid: 571
+		terrain: "15,15,15,4"
+	}
+	{
+		gid: 2619
+		terrain: "4,4,3,3"
+	}
+	{
+		gid: 572
+		terrain: "15,15,4,4"
+	}
+	{
+		gid: 2620
+		terrain: "4,3,3,3"
+	}
+	{
+		gid: 573
+		terrain: "15,15,4,15"
+	}
+	{
+		gid: 574
+		terrain: "15,4,15,4"
+	}
+	{
+		gid: 576
+		terrain: "4,15,4,15"
+	}
+	{
+		gid: 2624
+		terrain: "3,4,4,4"
+	}
+	{
+		gid: 577
+		terrain: "15,4,15,15"
+	}
+	{
+		gid: 578
+		terrain: "4,4,15,15"
+	}
+	{
+		gid: 2626
+		terrain: "4,3,4,4"
+	}
+	{
+		gid: 579
+		terrain: "4,15,15,15"
+	}
+	{
+		gid: 2630
+		terrain: "4,4,3,4"
+	}
+	{
+		gid: 583
+		terrain: "15,4,4,4"
+	}
+	{
+		gid: 2632
+		terrain: "4,4,4,3"
+	}
+	{
+		gid: 585
+		terrain: "4,15,4,4"
+	}
+	{
+		gid: 2633
+		terrain: "10,10,10,4"
+	}
+	{
+		gid: 2634
+		terrain: "10,10,4,4"
+	}
+	{
+		gid: 2635
+		terrain: "10,10,4,10"
+	}
+	{
+		gid: 2636
+		terrain: "10,4,10,4"
+	}
+	{
+		gid: 589
+		terrain: "4,4,15,4"
+	}
+	{
+		gid: 2638
+		terrain: "4,10,4,10"
+	}
+	{
+		gid: 591
+		terrain: "4,4,4,15"
+	}
+	{
+		gid: 2639
+		terrain: "10,4,10,10"
+	}
+	{
+		gid: 2640
+		terrain: "4,4,10,10"
+	}
+	{
+		gid: 2641
+		terrain: "4,10,10,10"
+	}
+	{
+		gid: 2645
+		terrain: "10,4,4,4"
+	}
+	{
+		gid: 2647
+		terrain: "4,10,4,4"
+	}
+	{
+		gid: 601
+		terrain: "16,16,16,16"
+	}
+	{
+		gid: 2651
+		terrain: "4,4,10,4"
+	}
+	{
+		gid: 2653
+		terrain: "4,4,4,10"
+	}
+	{
+		gid: 2654
+		terrain: "8,8,8,11"
+	}
+	{
+		gid: 2655
+		terrain: "8,8,11,11"
+	}
+	{
+		gid: 2656
+		terrain: "8,8,11,8"
+	}
+	{
+		gid: 2657
+		terrain: "8,11,8,11"
+	}
+	{
+		gid: 2659
+		terrain: "11,8,11,8"
+	}
+	{
+		gid: 2660
+		terrain: "8,11,8,8"
+	}
+	{
+		gid: 2661
+		terrain: "11,11,8,8"
+	}
+	{
+		gid: 2662
+		terrain: "11,8,8,8"
+	}
+	{
+		gid: 2666
+		terrain: "8,11,11,11"
+	}
+	{
+		gid: 2668
+		terrain: "11,8,11,11"
+	}
+	{
+		gid: 2672
+		terrain: "11,11,8,11"
+	}
+	{
+		gid: 2674
+		terrain: "11,11,11,8"
+	}
+	{
+		gid: 643
+		terrain: "6,6,6,8"
+	}
+	{
+		gid: 644
+		terrain: "6,6,8,8"
+	}
+	{
+		gid: 645
+		terrain: "6,6,8,6"
+	}
+	{
+		gid: 646
+		terrain: "6,8,6,8"
+	}
+	{
+		gid: 647
+		terrain: "8,8,8,8"
+	}
+	{
+		gid: 648
+		terrain: "8,6,8,6"
+	}
+	{
+		gid: 649
+		terrain: "6,8,6,6"
+	}
+	{
+		gid: 650
+		terrain: "8,8,6,6"
+	}
+	{
+		gid: 651
+		terrain: "8,6,6,6"
+	}
+	{
+		gid: 655
+		terrain: "6,8,8,8"
+	}
+	{
+		gid: 657
+		terrain: "8,6,8,8"
+	}
+	{
+		gid: 661
+		terrain: "8,8,6,8"
+	}
+	{
+		gid: 663
+		terrain: "8,8,8,6"
+	}
+	{
+		gid: 2738
+		terrain: "3,3,3,5"
+	}
+	{
+		gid: 2739
+		terrain: "3,3,5,5"
+	}
+	{
+		gid: 2740
+		terrain: "3,3,5,3"
+	}
+	{
+		gid: 2741
+		terrain: "3,5,3,5"
+	}
+	{
+		gid: 2743
+		terrain: "5,3,5,3"
+	}
+	{
+		gid: 2744
+		terrain: "3,5,3,3"
+	}
+	{
+		gid: 2745
+		terrain: "5,5,3,3"
+	}
+	{
+		gid: 2746
+		terrain: "5,3,3,3"
+	}
+	{
+		gid: 2750
+		terrain: "3,5,5,5"
+	}
+	{
+		gid: 2752
+		terrain: "5,3,5,5"
+	}
+	{
+		gid: 2756
+		terrain: "5,5,3,5"
+	}
+	{
+		gid: 2758
+		terrain: "5,5,5,3"
+	}
+	{
+		gid: 2759
+		terrain: "6,6,6,7"
+	}
+	{
+		gid: 2760
+		terrain: "6,6,7,7"
+	}
+	{
+		gid: 2761
+		terrain: "6,6,7,6"
+	}
+	{
+		gid: 714
+		terrain: "16,16,16,3"
+	}
+	{
+		gid: 2762
+		terrain: "6,7,6,7"
+	}
+	{
+		gid: 715
+		terrain: "16,16,3,3"
+	}
+	{
+		gid: 716
+		terrain: "16,16,3,16"
+	}
+	{
+		gid: 2764
+		terrain: "7,6,7,6"
+	}
+	{
+		gid: 717
+		terrain: "16,3,16,3"
+	}
+	{
+		gid: 2765
+		terrain: "6,7,6,6"
+	}
+	{
+		gid: 718
+		terrain: "3,3,3,3"
+	}
+	{
+		gid: 2766
+		terrain: "7,7,6,6"
+	}
+	{
+		gid: 719
+		terrain: "3,16,3,16"
+	}
+	{
+		gid: 2767
+		terrain: "7,6,6,6"
+	}
+	{
+		gid: 720
+		terrain: "16,3,16,16"
+	}
+	{
+		gid: 721
+		terrain: "3,3,16,16"
+	}
+	{
+		gid: 722
+		terrain: "3,16,16,16"
+	}
+	{
+		gid: 2771
+		terrain: "6,7,7,7"
+	}
+	{
+		gid: 2773
+		terrain: "7,6,7,7"
+	}
+	{
+		gid: 726
+		terrain: "16,3,3,3"
+	}
+	{
+		gid: 2775
+		terrain: "13,13,13,13"
+	}
+	{
+		gid: 728
+		terrain: "3,16,3,3"
+	}
+	{
+		gid: 2777
+		terrain: "7,7,6,7"
+	}
+	{
+		gid: 730
+		terrain: "15,15,15,15"
+	}
+	{
+		gid: 2779
+		terrain: "7,7,7,6"
+	}
+	{
+		gid: 732
+		terrain: "3,3,16,3"
+	}
+	{
+		gid: 2780
+		terrain: "16,16,16,5"
+	}
+	{
+		gid: 2781
+		terrain: "16,16,5,5"
+	}
+	{
+		gid: 734
+		terrain: "3,3,3,16"
+	}
+	{
+		gid: 2782
+		terrain: "16,16,5,16"
+	}
+	{
+		gid: 2783
+		terrain: "16,5,16,5"
+	}
+	{
+		gid: 2785
+		terrain: "5,16,5,16"
+	}
+	{
+		gid: 2786
+		terrain: "16,5,16,16"
+	}
+	{
+		gid: 2787
+		terrain: "5,5,16,16"
+	}
+	{
+		gid: 2788
+		terrain: "5,16,16,16"
+	}
+	{
+		gid: 2792
+		terrain: "16,5,5,5"
+	}
+	{
+		gid: 2794
+		terrain: "5,16,5,5"
+	}
+	{
+		gid: 2798
+		terrain: "5,5,16,5"
+	}
+	{
+		gid: 2800
+		terrain: "5,5,5,16"
+	}
+	{
+		gid: 2801
+		terrain: "9,9,9,6"
+	}
+	{
+		gid: 2802
+		terrain: "9,9,6,6"
+	}
+	{
+		gid: 2803
+		terrain: "9,9,6,9"
+	}
+	{
+		gid: 2804
+		terrain: "9,6,9,6"
+	}
+	{
+		gid: 2806
+		terrain: "6,9,6,9"
+	}
+	{
+		gid: 2807
+		terrain: "9,6,9,9"
+	}
+	{
+		gid: 2808
+		terrain: "6,6,9,9"
+	}
+	{
+		gid: 2809
+		terrain: "6,9,9,9"
+	}
+	{
+		gid: 2813
+		terrain: "9,6,6,6"
+	}
+	{
+		gid: 2815
+		terrain: "6,9,6,6"
+	}
+	{
+		gid: 2819
+		terrain: "6,6,9,6"
+	}
+	{
+		gid: 2821
+		terrain: "6,6,6,9"
+	}
+	{
+		gid: 2822
+		terrain: "2,2,2,9"
+	}
+	{
+		gid: 2823
+		terrain: "2,2,9,9"
+	}
+	{
+		gid: 2824
+		terrain: "2,2,9,2"
+	}
+	{
+		gid: 2825
+		terrain: "2,9,2,9"
+	}
+	{
+		gid: 2827
+		terrain: "9,2,9,2"
+	}
+	{
+		gid: 2828
+		terrain: "2,9,2,2"
+	}
+	{
+		gid: 2829
+		terrain: "9,9,2,2"
+	}
+	{
+		gid: 2830
+		terrain: "9,2,2,2"
+	}
+	{
+		gid: 2834
+		terrain: "2,9,9,9"
+	}
+	{
+		gid: 2836
+		terrain: "9,2,9,9"
+	}
+	{
+		gid: 2840
+		terrain: "9,9,2,9"
+	}
+	{
+		gid: 792
+		terrain: "13,13,13,5"
+	}
+	{
+		gid: 793
+		terrain: "13,13,5,5"
+	}
+	{
+		gid: 2842
+		terrain: "9,9,9,2"
+	}
+	{
+		gid: 794
+		terrain: "13,13,5,13"
+	}
+	{
+		gid: 795
+		terrain: "13,5,13,5"
+	}
+	{
+		gid: 2843
+		terrain: "14,14,14,6"
+	}
+	{
+		gid: 796
+		terrain: "5,5,5,5"
+	}
+	{
+		gid: 2844
+		terrain: "14,14,6,6"
+	}
+	{
+		gid: 797
+		terrain: "5,13,5,13"
+	}
+	{
+		gid: 2845
+		terrain: "14,14,6,14"
+	}
+	{
+		gid: 798
+		terrain: "13,5,13,13"
+	}
+	{
+		gid: 2846
+		terrain: "14,6,14,6"
+	}
+	{
+		gid: 799
+		terrain: "5,5,13,13"
+	}
+	{
+		gid: 800
+		terrain: "5,13,13,13"
+	}
+	{
+		gid: 2848
+		terrain: "6,14,6,14"
+	}
+	{
+		gid: 2849
+		terrain: "14,6,14,14"
+	}
+	{
+		gid: 802
+		terrain: "13,5,5,5"
+	}
+	{
+		gid: 2850
+		terrain: "6,6,14,14"
+	}
+	{
+		gid: 803
+		terrain: "5,13,5,5"
+	}
+	{
+		gid: 2851
+		terrain: "6,14,14,14"
+	}
+	{
+		gid: 805
+		terrain: "5,5,13,5"
+	}
+	{
+		gid: 806
+		terrain: "5,5,5,13"
+	}
+	{
+		gid: 2855
+		terrain: "14,6,6,6"
+	}
+	{
+		gid: 2857
+		terrain: "6,14,6,6"
+	}
+	{
+		gid: 813
+		terrain: "6,6,6,2"
+	}
+	{
+		gid: 2861
+		terrain: "6,6,14,6"
+	}
+	{
+		gid: 814
+		terrain: "6,6,2,2"
+	}
+	{
+		gid: 815
+		terrain: "6,6,2,6"
+	}
+	{
+		gid: 2863
+		terrain: "6,6,6,14"
+	}
+	{
+		gid: 816
+		terrain: "6,2,6,2"
+	}
+	{
+		gid: 2864
+		terrain: "2,2,2,4"
+	}
+	{
+		gid: 2865
+		terrain: "2,2,4,4"
+	}
+	{
+		gid: 818
+		terrain: "2,6,2,6"
+	}
+	{
+		gid: 2866
+		terrain: "2,2,4,2"
+	}
+	{
+		gid: 819
+		terrain: "6,2,6,6"
+	}
+	{
+		gid: 2867
+		terrain: "2,4,2,4"
+	}
+	{
+		gid: 820
+		terrain: "2,2,6,6"
+	}
+	{
+		gid: 821
+		terrain: "2,6,6,6"
+	}
+	{
+		gid: 2869
+		terrain: "4,2,4,2"
+	}
+	{
+		gid: 2870
+		terrain: "2,4,2,2"
+	}
+	{
+		gid: 2871
+		terrain: "4,4,2,2"
+	}
+	{
+		gid: 2872
+		terrain: "4,2,2,2"
+	}
+	{
+		gid: 825
+		terrain: "6,2,2,2"
+	}
+	{
+		gid: 827
+		terrain: "2,6,2,2"
+	}
+	{
+		gid: 2876
+		terrain: "2,4,4,4"
+	}
+	{
+		gid: 2878
+		terrain: "4,2,4,4"
+	}
+	{
+		gid: 831
+		terrain: "2,2,6,2"
+	}
+	{
+		gid: 833
+		terrain: "2,2,2,6"
+	}
+	{
+		gid: 2882
+		terrain: "4,4,2,4"
+	}
+	{
+		gid: 834
+		terrain: "14,14,14,9"
+	}
+	{
+		gid: 835
+		terrain: "14,14,9,9"
+	}
+	{
+		gid: 2884
+		terrain: "4,4,4,2"
+	}
+	{
+		gid: 836
+		terrain: "14,14,9,14"
+	}
+	{
+		gid: 837
+		terrain: "14,9,14,9"
+	}
+	{
+		gid: 2885
+		terrain: "10,10,10,9"
+	}
+	{
+		gid: 838
+		terrain: "9,9,9,9"
+	}
+	{
+		gid: 2886
+		terrain: "10,10,9,9"
+	}
+	{
+		gid: 839
+		terrain: "9,14,9,14"
+	}
+	{
+		gid: 2887
+		terrain: "10,10,9,10"
+	}
+	{
+		gid: 840
+		terrain: "14,9,14,14"
+	}
+	{
+		gid: 2888
+		terrain: "10,9,10,9"
+	}
+	{
+		gid: 841
+		terrain: "9,9,14,14"
+	}
+	{
+		gid: 842
+		terrain: "9,14,14,14"
+	}
+	{
+		gid: 2890
+		terrain: "9,10,9,10"
+	}
+	{
+		gid: 2891
+		terrain: "10,9,10,10"
+	}
+	{
+		gid: 2892
+		terrain: "9,9,10,10"
+	}
+	{
+		gid: 2893
+		terrain: "9,10,10,10"
+	}
+	{
+		gid: 846
+		terrain: "14,9,9,9"
+	}
+	{
+		gid: 847
+		terrain: "18,18,18,18"
+	}
+	{
+		gid: 848
+		terrain: "9,14,9,9"
+	}
+	{
+		gid: 2897
+		terrain: "10,9,9,9"
+	}
+	{
+		gid: 850
+		terrain: "17,17,17,17"
+	}
+	{
+		gid: 2899
+		terrain: "9,10,9,9"
+	}
+	{
+		gid: 852
+		terrain: "9,9,14,9"
+	}
+	{
+		gid: 854
+		terrain: "9,9,9,14"
+	}
+	{
+		gid: 2903
+		terrain: "9,9,10,9"
+	}
+	{
+		gid: 855
+		terrain: "23,23,23,12"
+	}
+	{
+		gid: 856
+		terrain: "23,23,12,12"
+	}
+	{
+		gid: 2905
+		terrain: "9,9,9,10"
+	}
+	{
+		gid: 857
+		terrain: "23,23,12,23"
+	}
+	{
+		gid: 2906
+		terrain: "3,3,3,8"
+	}
+	{
+		gid: 858
+		terrain: "23,12,23,12"
+	}
+	{
+		gid: 2907
+		terrain: "3,3,8,8"
+	}
+	{
+		gid: 2908
+		terrain: "3,3,8,3"
+	}
+	{
+		gid: 860
+		terrain: "12,23,12,23"
+	}
+	{
+		gid: 2909
+		terrain: "3,8,3,8"
+	}
+	{
+		gid: 861
+		terrain: "23,12,23,23"
+	}
+	{
+		gid: 862
+		terrain: "12,12,23,23"
+	}
+	{
+		gid: 2911
+		terrain: "8,3,8,3"
+	}
+	{
+		gid: 863
+		terrain: "12,23,23,23"
+	}
+	{
+		gid: 2912
+		terrain: "3,8,3,3"
+	}
+	{
+		gid: 2913
+		terrain: "8,8,3,3"
+	}
+	{
+		gid: 865
+		terrain: "23,12,12,12"
+	}
+	{
+		gid: 2914
+		terrain: "8,3,3,3"
+	}
+	{
+		gid: 866
+		terrain: "12,23,12,12"
+	}
+	{
+		gid: 867
+		terrain: "23,23,23,23"
+	}
+	{
+		gid: 868
+		terrain: "12,12,23,12"
+	}
+	{
+		gid: 869
+		terrain: "12,12,12,23"
+	}
+	{
+		gid: 2918
+		terrain: "3,8,8,8"
+	}
+	{
+		gid: 2920
+		terrain: "8,3,8,8"
+	}
+	{
+		gid: 2924
+		terrain: "8,8,3,8"
+	}
+	{
+		gid: 2926
+		terrain: "8,8,8,3"
+	}
+	{
+		gid: 2927
+		terrain: "15,15,15,5"
+	}
+	{
+		gid: 880
+		terrain: "9,9,9,11"
+	}
+	{
+		gid: 2928
+		terrain: "15,15,5,5"
+	}
+	{
+		gid: 881
+		terrain: "9,9,11,11"
+	}
+	{
+		gid: 2929
+		terrain: "15,15,5,15"
+	}
+	{
+		gid: 882
+		terrain: "9,9,11,9"
+	}
+	{
+		gid: 2930
+		terrain: "15,5,15,5"
+	}
+	{
+		gid: 883
+		terrain: "9,11,9,11"
+	}
+	{
+		gid: 2932
+		terrain: "5,15,5,15"
+	}
+	{
+		gid: 884
+		terrain: "11,11,11,11"
+	}
+	{
+		gid: 885
+		terrain: "11,9,11,9"
+	}
+	{
+		gid: 2933
+		terrain: "15,5,15,15"
+	}
+	{
+		gid: 886
+		terrain: "9,11,9,9"
+	}
+	{
+		gid: 2934
+		terrain: "5,5,15,15"
+	}
+	{
+		gid: 887
+		terrain: "11,11,9,9"
+	}
+	{
+		gid: 2935
+		terrain: "5,15,15,15"
+	}
+	{
+		gid: 888
+		terrain: "11,9,9,9"
+	}
+	{
+		gid: 2939
+		terrain: "15,5,5,5"
+	}
+	{
+		gid: 892
+		terrain: "9,11,11,11"
+	}
+	{
+		gid: 2941
+		terrain: "5,15,5,5"
+	}
+	{
+		gid: 894
+		terrain: "11,9,11,11"
+	}
+	{
+		gid: 2945
+		terrain: "5,5,15,5"
+	}
+	{
+		gid: 898
+		terrain: "11,11,9,11"
+	}
+	{
+		gid: 2947
+		terrain: "5,5,5,15"
+	}
+	{
+		gid: 900
+		terrain: "11,11,11,9"
+	}
+	{
+		gid: 904
+		terrain: "13,13,13,3"
+	}
+	{
+		gid: 905
+		terrain: "13,13,3,3"
+	}
+	{
+		gid: 906
+		terrain: "13,13,3,13"
+	}
+	{
+		gid: 907
+		terrain: "13,3,13,3"
+	}
+	{
+		gid: 909
+		terrain: "3,13,3,13"
+	}
+	{
+		gid: 2957
+		terrain: "17,17,17,6"
+	}
+	{
+		gid: 910
+		terrain: "13,3,13,13"
+	}
+	{
+		gid: 2958
+		terrain: "17,17,6,6"
+	}
+	{
+		gid: 911
+		terrain: "3,3,13,13"
+	}
+	{
+		gid: 2959
+		terrain: "17,17,6,17"
+	}
+	{
+		gid: 912
+		terrain: "3,13,13,13"
+	}
+	{
+		gid: 2960
+		terrain: "17,6,17,6"
+	}
+	{
+		gid: 914
+		terrain: "13,3,3,3"
+	}
+	{
+		gid: 2962
+		terrain: "6,17,6,17"
+	}
+	{
+		gid: 915
+		terrain: "3,13,3,3"
+	}
+	{
+		gid: 2963
+		terrain: "17,6,17,17"
+	}
+	{
+		gid: 2964
+		terrain: "6,6,17,17"
+	}
+	{
+		gid: 917
+		terrain: "3,3,13,3"
+	}
+	{
+		gid: 2965
+		terrain: "6,17,17,17"
+	}
+	{
+		gid: 918
+		terrain: "3,3,3,13"
+	}
+	{
+		gid: 2969
+		terrain: "17,6,6,6"
+	}
+	{
+		gid: 2971
+		terrain: "6,17,6,6"
+	}
+	{
+		gid: 925
+		terrain: "12,12,12,4"
+	}
+	{
+		gid: 926
+		terrain: "12,12,4,4"
+	}
+	{
+		gid: 927
+		terrain: "12,12,4,12"
+	}
+	{
+		gid: 2975
+		terrain: "6,6,17,6"
+	}
+	{
+		gid: 928
+		terrain: "12,4,12,4"
+	}
+	{
+		gid: 2977
+		terrain: "6,6,6,17"
+	}
+	{
+		gid: 930
+		terrain: "4,12,4,12"
+	}
+	{
+		gid: 2978
+		terrain: "7,7,7,4"
+	}
+	{
+		gid: 931
+		terrain: "12,4,12,12"
+	}
+	{
+		gid: 2979
+		terrain: "7,7,4,4"
+	}
+	{
+		gid: 932
+		terrain: "4,4,12,12"
+	}
+	{
+		gid: 2980
+		terrain: "7,7,4,7"
+	}
+	{
+		gid: 933
+		terrain: "4,12,12,12"
+	}
+	{
+		gid: 2981
+		terrain: "7,4,7,4"
+	}
+	{
+		gid: 935
+		terrain: "12,4,4,4"
+	}
+	{
+		gid: 2983
+		terrain: "4,7,4,7"
+	}
+	{
+		gid: 936
+		terrain: "4,12,4,4"
+	}
+	{
+		gid: 2984
+		terrain: "7,4,7,7"
+	}
+	{
+		gid: 2985
+		terrain: "4,4,7,7"
+	}
+	{
+		gid: 938
+		terrain: "4,4,12,4"
+	}
+	{
+		gid: 2986
+		terrain: "4,7,7,7"
+	}
+	{
+		gid: 939
+		terrain: "4,4,4,12"
+	}
+	{
+		gid: 940
+		terrain: "24,24,24,23"
+	}
+	{
+		gid: 941
+		terrain: "24,24,23,23"
+	}
+	{
+		gid: 2990
+		terrain: "7,4,4,4"
+	}
+	{
+		gid: 942
+		terrain: "24,24,23,24"
+	}
+	{
+		gid: 943
+		terrain: "24,23,24,23"
+	}
+	{
+		gid: 2992
+		terrain: "4,7,4,4"
+	}
+	{
+		gid: 945
+		terrain: "23,24,23,24"
+	}
+	{
+		gid: 946
+		terrain: "24,23,24,24"
+	}
+	{
+		gid: 947
+		terrain: "23,23,24,24"
+	}
+	{
+		gid: 2996
+		terrain: "4,4,7,4"
+	}
+	{
+		gid: 948
+		terrain: "23,24,24,24"
+	}
+	{
+		gid: 2998
+		terrain: "4,4,4,7"
+	}
+	{
+		gid: 950
+		terrain: "24,23,23,23"
+	}
+	{
+		gid: 2999
+		terrain: "15,15,15,3"
+	}
+	{
+		gid: 951
+		terrain: "23,24,23,23"
+	}
+	{
+		gid: 3000
+		terrain: "15,15,3,3"
+	}
+	{
+		gid: 952
+		terrain: "24,24,24,24"
+	}
+	{
+		gid: 3001
+		terrain: "15,15,3,15"
+	}
+	{
+		gid: 953
+		terrain: "23,23,24,23"
+	}
+	{
+		gid: 3002
+		terrain: "15,3,15,3"
+	}
+	{
+		gid: 954
+		terrain: "23,23,23,24"
+	}
+	{
+		gid: 3004
+		terrain: "3,15,3,15"
+	}
+	{
+		gid: 3005
+		terrain: "15,3,15,15"
+	}
+	{
+		gid: 3006
+		terrain: "3,3,15,15"
+	}
+	{
+		gid: 3007
+		terrain: "3,15,15,15"
+	}
+	{
+		gid: 3011
+		terrain: "15,3,3,3"
+	}
+	{
+		gid: 3013
+		terrain: "3,15,3,3"
+	}
+	{
+		gid: 3017
+		terrain: "3,3,15,3"
+	}
+	{
+		gid: 3019
+		terrain: "3,3,3,15"
+	}
+	{
+		gid: 3029
+		terrain: "4,4,4,6"
+	}
+	{
+		gid: 3030
+		terrain: "4,4,6,6"
+	}
+	{
+		gid: 3031
+		terrain: "4,4,6,4"
+	}
+	{
+		gid: 3032
+		terrain: "4,6,4,6"
+	}
+	{
+		gid: 3034
+		terrain: "6,4,6,4"
+	}
+	{
+		gid: 3035
+		terrain: "4,6,4,4"
+	}
+	{
+		gid: 3036
+		terrain: "6,6,4,4"
+	}
+	{
+		gid: 3037
+		terrain: "6,4,4,4"
+	}
+	{
+		gid: 3041
+		terrain: "4,6,6,6"
+	}
+	{
+		gid: 3043
+		terrain: "6,4,6,6"
+	}
+	{
+		gid: 996
+		terrain: "7,7,7,11"
+	}
+	{
+		gid: 997
+		terrain: "7,7,11,11"
+	}
+	{
+		gid: 998
+		terrain: "7,7,11,7"
+	}
+	{
+		gid: 999
+		terrain: "7,11,7,11"
+	}
+	{
+		gid: 3047
+		terrain: "6,6,4,6"
+	}
+	{
+		gid: 1001
+		terrain: "11,7,11,7"
+	}
+	{
+		gid: 3049
+		terrain: "6,6,6,4"
+	}
+	{
+		gid: 1002
+		terrain: "7,11,7,7"
+	}
+	{
+		gid: 3050
+		terrain: "3,3,3,10"
+	}
+	{
+		gid: 1003
+		terrain: "11,11,7,7"
+	}
+	{
+		gid: 3051
+		terrain: "3,3,10,10"
+	}
+	{
+		gid: 1004
+		terrain: "11,7,7,7"
+	}
+	{
+		gid: 3052
+		terrain: "3,3,10,3"
+	}
+	{
+		gid: 3053
+		terrain: "3,10,3,10"
+	}
+	{
+		gid: 1006
+		terrain: "19,19,19,19"
+	}
+	{
+		gid: 3055
+		terrain: "10,3,10,3"
+	}
+	{
+		gid: 1008
+		terrain: "7,11,11,11"
+	}
+	{
+		gid: 3056
+		terrain: "3,10,3,3"
+	}
+	{
+		gid: 3057
+		terrain: "10,10,3,3"
+	}
+	{
+		gid: 1010
+		terrain: "11,7,11,11"
+	}
+	{
+		gid: 3058
+		terrain: "10,3,3,3"
+	}
+	{
+		gid: 1014
+		terrain: "11,11,7,11"
+	}
+	{
+		gid: 3062
+		terrain: "3,10,10,10"
+	}
+	{
+		gid: 1016
+		terrain: "11,11,11,7"
+	}
+	{
+		gid: 3064
+		terrain: "10,3,10,10"
+	}
+	{
+		gid: 1017
+		terrain: "12,12,12,7"
+	}
+	{
+		gid: 1018
+		terrain: "12,12,7,7"
+	}
+	{
+		gid: 1019
+		terrain: "12,12,7,12"
+	}
+	{
+		gid: 1020
+		terrain: "12,7,12,7"
+	}
+	{
+		gid: 3068
+		terrain: "10,10,3,10"
+	}
+	{
+		gid: 1021
+		terrain: "7,7,7,7"
+	}
+	{
+		gid: 1022
+		terrain: "7,12,7,12"
+	}
+	{
+		gid: 3070
+		terrain: "10,10,10,3"
+	}
+	{
+		gid: 1023
+		terrain: "12,7,12,12"
+	}
+	{
+		gid: 1024
+		terrain: "7,7,12,12"
+	}
+	{
+		gid: 1025
+		terrain: "7,12,12,12"
+	}
+	{
+		gid: 1027
+		terrain: "12,7,7,7"
+	}
+	{
+		gid: 1028
+		terrain: "7,12,7,7"
+	}
+	{
+		gid: 1029
+		terrain: "12,12,12,12"
+	}
+	{
+		gid: 1030
+		terrain: "7,7,12,7"
+	}
+	{
+		gid: 1031
+		terrain: "7,7,7,12"
+	}
+	{
+		gid: 1032
+		terrain: "5,5,5,11"
+	}
+	{
+		gid: 1033
+		terrain: "5,5,11,11"
+	}
+	{
+		gid: 1034
+		terrain: "5,5,11,5"
+	}
+	{
+		gid: 1035
+		terrain: "5,11,5,11"
+	}
+	{
+		gid: 1037
+		terrain: "11,5,11,5"
+	}
+	{
+		gid: 1038
+		terrain: "5,11,5,5"
+	}
+	{
+		gid: 1039
+		terrain: "11,11,5,5"
+	}
+	{
+		gid: 1040
+		terrain: "11,5,5,5"
+	}
+	{
+		gid: 1044
+		terrain: "5,11,11,11"
+	}
+	{
+		gid: 3092
+		terrain: "12,12,12,6"
+	}
+	{
+		gid: 3093
+		terrain: "12,12,6,6"
+	}
+	{
+		gid: 1046
+		terrain: "11,5,11,11"
+	}
+	{
+		gid: 3094
+		terrain: "12,12,6,12"
+	}
+	{
+		gid: 3095
+		terrain: "12,6,12,6"
+	}
+	{
+		gid: 3097
+		terrain: "6,12,6,12"
+	}
+	{
+		gid: 1050
+		terrain: "11,11,5,11"
+	}
+	{
+		gid: 3098
+		terrain: "12,6,12,12"
+	}
+	{
+		gid: 3099
+		terrain: "6,6,12,12"
+	}
+	{
+		gid: 1052
+		terrain: "11,11,11,5"
+	}
+	{
+		gid: 3100
+		terrain: "6,12,12,12"
+	}
+	{
+		gid: 1053
+		terrain: "12,12,12,2"
+	}
+	{
+		gid: 1054
+		terrain: "12,12,2,2"
+	}
+	{
+		gid: 3102
+		terrain: "12,6,6,6"
+	}
+	{
+		gid: 1055
+		terrain: "12,12,2,12"
+	}
+	{
+		gid: 3103
+		terrain: "6,12,6,6"
+	}
+	{
+		gid: 1056
+		terrain: "12,2,12,2"
+	}
+	{
+		gid: 3105
+		terrain: "6,6,12,6"
+	}
+	{
+		gid: 1058
+		terrain: "2,12,2,12"
+	}
+	{
+		gid: 3106
+		terrain: "6,6,6,12"
+	}
+	{
+		gid: 1059
+		terrain: "12,2,12,12"
+	}
+	{
+		gid: 3107
+		terrain: "6,6,6,20"
+	}
+	{
+		gid: 1060
+		terrain: "2,2,12,12"
+	}
+	{
+		gid: 3108
+		terrain: "6,6,20,20"
+	}
+	{
+		gid: 1061
+		terrain: "2,12,12,12"
+	}
+	{
+		gid: 3109
+		terrain: "6,6,20,6"
+	}
+	{
+		gid: 3110
+		terrain: "6,20,6,20"
+	}
+	{
+		gid: 1063
+		terrain: "12,2,2,2"
+	}
+	{
+		gid: 1064
+		terrain: "2,12,2,2"
+	}
+	{
+		gid: 3112
+		terrain: "20,6,20,6"
+	}
+	{
+		gid: 3113
+		terrain: "6,20,6,6"
+	}
+	{
+		gid: 1066
+		terrain: "2,2,12,2"
+	}
+	{
+		gid: 3114
+		terrain: "20,20,6,6"
+	}
+	{
+		gid: 1067
+		terrain: "2,2,2,12"
+	}
+	{
+		gid: 3115
+		terrain: "20,6,6,6"
+	}
+	{
+		gid: 3119
+		terrain: "6,20,20,20"
+	}
+	{
+		gid: 3121
+		terrain: "20,6,20,20"
+	}
+	{
+		gid: 3125
+		terrain: "20,20,6,20"
+	}
+	{
+		gid: 3127
+		terrain: "20,20,20,6"
+	}
+	{
+		gid: 3128
+		terrain: "14,14,14,4"
+	}
+	{
+		gid: 3129
+		terrain: "14,14,4,4"
+	}
+	{
+		gid: 3130
+		terrain: "14,14,4,14"
+	}
+	{
+		gid: 3131
+		terrain: "14,4,14,4"
+	}
+	{
+		gid: 3133
+		terrain: "4,14,4,14"
+	}
+	{
+		gid: 3134
+		terrain: "14,4,14,14"
+	}
+	{
+		gid: 3135
+		terrain: "4,4,14,14"
+	}
+	{
+		gid: 3136
+		terrain: "4,14,14,14"
+	}
+	{
+		gid: 3140
+		terrain: "14,4,4,4"
+	}
+	{
+		gid: 3142
+		terrain: "4,14,4,4"
+	}
+	{
+		gid: 3146
+		terrain: "4,4,14,4"
+	}
+	{
+		gid: 3148
+		terrain: "4,4,4,14"
+	}
+	{
+		gid: 3149
+		terrain: "6,6,6,5"
+	}
+	{
+		gid: 3150
+		terrain: "6,6,5,5"
+	}
+	{
+		gid: 3151
+		terrain: "6,6,5,6"
+	}
+	{
+		gid: 3152
+		terrain: "6,5,6,5"
+	}
+	{
+		gid: 3154
+		terrain: "5,6,5,6"
+	}
+	{
+		gid: 3155
+		terrain: "6,5,6,6"
+	}
+	{
+		gid: 3156
+		terrain: "5,5,6,6"
+	}
+	{
+		gid: 3157
+		terrain: "5,6,6,6"
+	}
+	{
+		gid: 1110
+		terrain: "17,17,17,3"
+	}
+	{
+		gid: 1111
+		terrain: "17,17,3,3"
+	}
+	{
+		gid: 1112
+		terrain: "17,17,3,17"
+	}
+	{
+		gid: 1113
+		terrain: "17,3,17,3"
+	}
+	{
+		gid: 3161
+		terrain: "6,5,5,5"
+	}
+	{
+		gid: 1115
+		terrain: "3,17,3,17"
+	}
+	{
+		gid: 3163
+		terrain: "5,6,5,5"
+	}
+	{
+		gid: 1116
+		terrain: "17,3,17,17"
+	}
+	{
+		gid: 1117
+		terrain: "3,3,17,17"
+	}
+	{
+		gid: 1118
+		terrain: "3,17,17,17"
+	}
+	{
+		gid: 3167
+		terrain: "5,5,6,5"
+	}
+	{
+		gid: 3169
+		terrain: "5,5,5,6"
+	}
+	{
+		gid: 1122
+		terrain: "17,3,3,3"
+	}
+	{
+		gid: 1124
+		terrain: "3,17,3,3"
+	}
+	{
+		gid: 1128
+		terrain: "3,3,17,3"
+	}
+	{
+		gid: 1130
+		terrain: "3,3,3,17"
+	}
+	{
+		gid: 1131
+		terrain: "14,14,14,2"
+	}
+	{
+		gid: 1132
+		terrain: "14,14,2,2"
+	}
+	{
+		gid: 1133
+		terrain: "14,14,2,14"
+	}
+	{
+		gid: 1134
+		terrain: "14,2,14,2"
+	}
+	{
+		gid: 1136
+		terrain: "2,14,2,14"
+	}
+	{
+		gid: 1137
+		terrain: "14,2,14,14"
+	}
+	{
+		gid: 1138
+		terrain: "2,2,14,14"
+	}
+	{
+		gid: 1139
+		terrain: "2,14,14,14"
+	}
+	{
+		gid: 1143
+		terrain: "14,2,2,2"
+	}
+	{
+		gid: 3191
+		terrain: "3,3,3,7"
+	}
+	{
+		gid: 3192
+		terrain: "3,3,7,7"
+	}
+	{
+		gid: 1145
+		terrain: "2,14,2,2"
+	}
+	{
+		gid: 3193
+		terrain: "3,3,7,3"
+	}
+	{
+		gid: 3194
+		terrain: "3,7,3,7"
+	}
+	{
+		gid: 3196
+		terrain: "7,3,7,3"
+	}
+	{
+		gid: 1149
+		terrain: "2,2,14,2"
+	}
+	{
+		gid: 3197
+		terrain: "3,7,3,3"
+	}
+	{
+		gid: 3198
+		terrain: "7,7,3,3"
+	}
+	{
+		gid: 1151
+		terrain: "2,2,2,14"
+	}
+	{
+		gid: 3199
+		terrain: "7,3,3,3"
+	}
+	{
+		gid: 1152
+		terrain: "13,13,13,9"
+	}
+	{
+		gid: 1153
+		terrain: "13,13,9,9"
+	}
+	{
+		gid: 1154
+		terrain: "13,13,9,13"
+	}
+	{
+		gid: 1155
+		terrain: "13,9,13,9"
+	}
+	{
+		gid: 3203
+		terrain: "3,7,7,7"
+	}
+	{
+		gid: 1157
+		terrain: "9,13,9,13"
+	}
+	{
+		gid: 3205
+		terrain: "7,3,7,7"
+	}
+	{
+		gid: 1158
+		terrain: "13,9,13,13"
+	}
+	{
+		gid: 1159
+		terrain: "9,9,13,13"
+	}
+	{
+		gid: 1160
+		terrain: "9,13,13,13"
+	}
+	{
+		gid: 3209
+		terrain: "7,7,3,7"
+	}
+	{
+		gid: 1162
+		terrain: "13,9,9,9"
+	}
+	{
+		gid: 1163
+		terrain: "9,13,9,9"
+	}
+	{
+		gid: 3211
+		terrain: "7,7,7,3"
+	}
+	{
+		gid: 3212
+		terrain: "3,3,3,6"
+	}
+	{
+		gid: 1165
+		terrain: "9,9,13,9"
+	}
+	{
+		gid: 3213
+		terrain: "3,3,6,6"
+	}
+	{
+		gid: 1166
+		terrain: "9,9,9,13"
+	}
+	{
+		gid: 3214
+		terrain: "3,3,6,3"
+	}
+	{
+		gid: 3215
+		terrain: "3,6,3,6"
+	}
+	{
+		gid: 3217
+		terrain: "6,3,6,3"
+	}
+	{
+		gid: 3218
+		terrain: "3,6,3,3"
+	}
+	{
+		gid: 3219
+		terrain: "6,6,3,3"
+	}
+	{
+		gid: 3220
+		terrain: "6,3,3,3"
+	}
+	{
+		gid: 1173
+		terrain: "8,8,8,4"
+	}
+	{
+		gid: 1174
+		terrain: "8,8,4,4"
+	}
+	{
+		gid: 1175
+		terrain: "8,8,4,8"
+	}
+	{
+		gid: 1176
+		terrain: "8,4,8,4"
+	}
+	{
+		gid: 3224
+		terrain: "3,6,6,6"
+	}
+	{
+		gid: 1178
+		terrain: "4,8,4,8"
+	}
+	{
+		gid: 3226
+		terrain: "6,3,6,6"
+	}
+	{
+		gid: 1179
+		terrain: "8,4,8,8"
+	}
+	{
+		gid: 1180
+		terrain: "4,4,8,8"
+	}
+	{
+		gid: 1181
+		terrain: "4,8,8,8"
+	}
+	{
+		gid: 3230
+		terrain: "6,6,3,6"
+	}
+	{
+		gid: 3232
+		terrain: "6,6,6,3"
+	}
+	{
+		gid: 1185
+		terrain: "8,4,4,4"
+	}
+	{
+		gid: 3233
+		terrain: "15,15,15,9"
+	}
+	{
+		gid: 3234
+		terrain: "15,15,9,9"
+	}
+	{
+		gid: 1187
+		terrain: "4,8,4,4"
+	}
+	{
+		gid: 3235
+		terrain: "15,15,9,15"
+	}
+	{
+		gid: 3236
+		terrain: "15,9,15,9"
+	}
+	{
+		gid: 3238
+		terrain: "9,15,9,15"
+	}
+	{
+		gid: 1191
+		terrain: "4,4,8,4"
+	}
+	{
+		gid: 3239
+		terrain: "15,9,15,15"
+	}
+	{
+		gid: 3240
+		terrain: "9,9,15,15"
+	}
+	{
+		gid: 1193
+		terrain: "4,4,4,8"
+	}
+	{
+		gid: 3241
+		terrain: "9,15,15,15"
+	}
+	{
+		gid: 3245
+		terrain: "15,9,9,9"
+	}
+	{
+		gid: 3247
+		terrain: "9,15,9,9"
+	}
+	{
+		gid: 3251
+		terrain: "9,9,15,9"
+	}
+	{
+		gid: 3253
+		terrain: "9,9,9,15"
+	}
+	{
+		gid: 3263
+		terrain: "14,14,14,10"
+	}
+	{
+		gid: 3264
+		terrain: "14,14,10,10"
+	}
+	{
+		gid: 3265
+		terrain: "14,14,10,14"
+	}
+	{
+		gid: 3266
+		terrain: "14,10,14,10"
+	}
+	{
+		gid: 3268
+		terrain: "10,14,10,14"
+	}
+	{
+		gid: 3269
+		terrain: "14,10,14,14"
+	}
+	{
+		gid: 3270
+		terrain: "10,10,14,14"
+	}
+	{
+		gid: 3271
+		terrain: "10,14,14,14"
+	}
+	{
+		gid: 3275
+		terrain: "14,10,10,10"
+	}
+	{
+		gid: 3277
+		terrain: "10,14,10,10"
+	}
+	{
+		gid: 3281
+		terrain: "10,10,14,10"
+	}
+	{
+		gid: 3283
+		terrain: "10,10,10,14"
+	}
+	{
+		gid: 1250
+		terrain: "13,13,13,3"
+	}
+	{
+		gid: 1251
+		terrain: "13,13,3,3"
+	}
+	{
+		gid: 1252
+		terrain: "13,13,3,13"
+	}
+	{
+		gid: 1253
+		terrain: "13,3,13,3"
+	}
+	{
+		gid: 1255
+		terrain: "3,13,3,13"
+	}
+	{
+		gid: 1256
+		terrain: "13,3,13,13"
+	}
+	{
+		gid: 1257
+		terrain: "3,3,13,13"
+	}
+	{
+		gid: 1258
+		terrain: "3,13,13,13"
+	}
+	{
+		gid: 1260
+		terrain: "13,3,3,3"
+	}
+	{
+		gid: 1261
+		terrain: "3,13,3,3"
+	}
+	{
+		gid: 1263
+		terrain: "3,3,13,3"
+	}
+	{
+		gid: 1264
+		terrain: "3,3,3,13"
+	}
+	{
+		gid: 1311
+		terrain: "5,5,5,9"
+	}
+	{
+		gid: 1312
+		terrain: "5,5,9,9"
+	}
+	{
+		gid: 1313
+		terrain: "5,5,9,5"
+	}
+	{
+		gid: 1314
+		terrain: "5,9,5,9"
+	}
+	{
+		gid: 1316
+		terrain: "9,5,9,5"
+	}
+	{
+		gid: 1317
+		terrain: "5,9,5,5"
+	}
+	{
+		gid: 1318
+		terrain: "9,9,5,5"
+	}
+	{
+		gid: 1319
+		terrain: "9,5,5,5"
+	}
+	{
+		gid: 1324
+		terrain: "5,9,9,9"
+	}
+	{
+		gid: 1325
+		terrain: "9,5,9,9"
+	}
+	{
+		gid: 1330
+		terrain: "9,9,5,9"
+	}
+	{
+		gid: 1331
+		terrain: "9,9,9,5"
+	}
+	{
+		gid: 1332
+		terrain: "1,1,1,0"
+	}
+	{
+		gid: 1333
+		terrain: "1,1,0,0"
+	}
+	{
+		gid: 1334
+		terrain: "1,1,0,1"
+	}
+	{
+		gid: 1335
+		terrain: "1,0,1,0"
+	}
+	{
+		gid: 1336
+		terrain: "0,0,0,0"
+	}
+	{
+		gid: 1337
+		terrain: "0,1,0,1"
+	}
+	{
+		gid: 1338
+		terrain: "1,0,1,1"
+	}
+	{
+		gid: 1339
+		terrain: "0,0,1,1"
+	}
+	{
+		gid: 1340
+		terrain: "0,1,1,1"
+	}
+	{
+		gid: 1344
+		terrain: "1,0,0,0"
+	}
+	{
+		gid: 1346
+		terrain: "0,1,0,0"
+	}
+	{
+		gid: 1350
+		terrain: "0,0,1,0"
+	}
+	{
+		gid: 1352
+		terrain: "0,0,0,1"
+	}
+	{
+		gid: 1363
+		terrain: "13,13,13,2"
+	}
+	{
+		gid: 1364
+		terrain: "13,13,2,2"
+	}
+	{
+		gid: 1365
+		terrain: "13,13,2,13"
+	}
+	{
+		gid: 1366
+		terrain: "13,2,13,2"
+	}
+	{
+		gid: 1368
+		terrain: "2,13,2,13"
+	}
+	{
+		gid: 1369
+		terrain: "13,2,13,13"
+	}
+	{
+		gid: 1370
+		terrain: "2,2,13,13"
+	}
+	{
+		gid: 1371
+		terrain: "2,13,13,13"
+	}
+	{
+		gid: 1373
+		terrain: "13,2,2,2"
+	}
+	{
+		gid: 1374
+		terrain: "2,13,2,2"
+	}
+	{
+		gid: 1376
+		terrain: "2,2,13,2"
+	}
+	{
+		gid: 1377
+		terrain: "2,2,2,13"
+	}
+	{
+		gid: 1405
+		terrain: "10,10,10,11"
+	}
+	{
+		gid: 1406
+		terrain: "10,10,11,11"
+	}
+	{
+		gid: 1407
+		terrain: "10,10,11,10"
+	}
+	{
+		gid: 1408
+		terrain: "10,11,10,11"
+	}
+	{
+		gid: 1410
+		terrain: "11,10,11,10"
+	}
+	{
+		gid: 1411
+		terrain: "10,11,10,10"
+	}
+	{
+		gid: 1412
+		terrain: "11,11,10,10"
+	}
+	{
+		gid: 1413
+		terrain: "11,10,10,10"
+	}
+	{
+		gid: 1417
+		terrain: "10,11,11,11"
+	}
+	{
+		gid: 1419
+		terrain: "11,10,11,11"
+	}
+	{
+		gid: 1423
+		terrain: "11,11,10,11"
+	}
+	{
+		gid: 1425
+		terrain: "11,11,11,10"
+	}
+	{
+		gid: 1426
+		terrain: "13,13,13,9"
+	}
+	{
+		gid: 1427
+		terrain: "13,13,9,9"
+	}
+	{
+		gid: 1428
+		terrain: "13,13,9,13"
+	}
+	{
+		gid: 1429
+		terrain: "13,9,13,9"
+	}
+	{
+		gid: 1431
+		terrain: "9,13,9,13"
+	}
+	{
+		gid: 1432
+		terrain: "13,9,13,13"
+	}
+	{
+		gid: 1433
+		terrain: "9,9,13,13"
+	}
+	{
+		gid: 1434
+		terrain: "9,13,13,13"
+	}
+	{
+		gid: 1436
+		terrain: "13,9,9,9"
+	}
+	{
+		gid: 1437
+		terrain: "9,13,9,9"
+	}
+	{
+		gid: 1439
+		terrain: "9,9,13,9"
+	}
+	{
+		gid: 1440
+		terrain: "9,9,9,13"
+	}
+	{
+		gid: 1441
+		terrain: "13,13,13,10"
+	}
+	{
+		gid: 1442
+		terrain: "13,13,10,10"
+	}
+	{
+		gid: 1443
+		terrain: "13,13,10,13"
+	}
+	{
+		gid: 1444
+		terrain: "13,10,13,10"
+	}
+	{
+		gid: 1446
+		terrain: "10,13,10,13"
+	}
+	{
+		gid: 1447
+		terrain: "13,10,13,13"
+	}
+	{
+		gid: 1448
+		terrain: "10,10,13,13"
+	}
+	{
+		gid: 1449
+		terrain: "10,13,13,13"
+	}
+	{
+		gid: 1451
+		terrain: "13,10,10,10"
+	}
+	{
+		gid: 1452
+		terrain: "10,13,10,10"
+	}
+	{
+		gid: 1454
+		terrain: "10,10,13,10"
+	}
+	{
+		gid: 1455
+		terrain: "10,10,10,13"
+	}
+	{
+		gid: 1462
+		terrain: "13,13,13,7"
+	}
+	{
+		gid: 1463
+		terrain: "13,13,7,7"
+	}
+	{
+		gid: 1464
+		terrain: "13,13,7,13"
+	}
+	{
+		gid: 1465
+		terrain: "13,7,13,7"
+	}
+	{
+		gid: 1466
+		terrain: "7,7,7,7"
+	}
+	{
+		gid: 1467
+		terrain: "7,13,7,13"
+	}
+	{
+		gid: 1468
+		terrain: "13,7,13,13"
+	}
+	{
+		gid: 1469
+		terrain: "7,7,13,13"
+	}
+	{
+		gid: 1470
+		terrain: "7,13,13,13"
+	}
+	{
+		gid: 1472
+		terrain: "13,7,7,7"
+	}
+	{
+		gid: 1473
+		terrain: "7,13,7,7"
+	}
+	{
+		gid: 1475
+		terrain: "7,7,13,7"
+	}
+	{
+		gid: 1476
+		terrain: "7,7,7,13"
+	}
+	{
+		gid: 3656
+		terrain: "15,15,15,8"
+	}
+	{
+		gid: 3657
+		terrain: "15,15,8,8"
+	}
+	{
+		gid: 3658
+		terrain: "15,15,8,15"
+	}
+	{
+		gid: 3659
+		terrain: "15,8,15,8"
+	}
+	{
+		gid: 3661
+		terrain: "8,15,8,15"
+	}
+	{
+		gid: 3662
+		terrain: "15,8,15,15"
+	}
+	{
+		gid: 3663
+		terrain: "8,8,15,15"
+	}
+	{
+		gid: 3664
+		terrain: "8,15,15,15"
+	}
+	{
+		gid: 3668
+		terrain: "15,8,8,8"
+	}
+	{
+		gid: 3670
+		terrain: "8,15,8,8"
+	}
+	{
+		gid: 1626
+		terrain: "7,7,7,8"
+	}
+	{
+		gid: 3674
+		terrain: "8,8,15,8"
+	}
+	{
+		gid: 1627
+		terrain: "7,7,8,8"
+	}
+	{
+		gid: 1628
+		terrain: "7,7,8,7"
+	}
+	{
+		gid: 3676
+		terrain: "8,8,8,15"
+	}
+	{
+		gid: 1629
+		terrain: "7,8,7,8"
+	}
+	{
+		gid: 1631
+		terrain: "8,7,8,7"
+	}
+	{
+		gid: 1632
+		terrain: "7,8,7,7"
+	}
+	{
+		gid: 1633
+		terrain: "8,8,7,7"
+	}
+	{
+		gid: 1634
+		terrain: "8,7,7,7"
+	}
+	{
+		gid: 1638
+		terrain: "7,8,8,8"
+	}
+	{
+		gid: 3686
+		terrain: "14,14,14,7"
+	}
+	{
+		gid: 3687
+		terrain: "14,14,7,7"
+	}
+	{
+		gid: 1640
+		terrain: "8,7,8,8"
+	}
+	{
+		gid: 3688
+		terrain: "14,14,7,14"
+	}
+	{
+		gid: 3689
+		terrain: "14,7,14,7"
+	}
+	{
+		gid: 3691
+		terrain: "7,14,7,14"
+	}
+	{
+		gid: 1644
+		terrain: "8,8,7,8"
+	}
+	{
+		gid: 3692
+		terrain: "14,7,14,14"
+	}
+	{
+		gid: 3693
+		terrain: "7,7,14,14"
+	}
+	{
+		gid: 1646
+		terrain: "8,8,8,7"
+	}
+	{
+		gid: 3694
+		terrain: "7,14,14,14"
+	}
+	{
+		gid: 1647
+		terrain: "6,6,6,11"
+	}
+	{
+		gid: 1648
+		terrain: "6,6,11,11"
+	}
+	{
+		gid: 1649
+		terrain: "6,6,11,6"
+	}
+	{
+		gid: 1650
+		terrain: "6,11,6,11"
+	}
+	{
+		gid: 3698
+		terrain: "14,7,7,7"
+	}
+	{
+		gid: 1652
+		terrain: "11,6,11,6"
+	}
+	{
+		gid: 3700
+		terrain: "7,14,7,7"
+	}
+	{
+		gid: 1653
+		terrain: "6,11,6,6"
+	}
+	{
+		gid: 1654
+		terrain: "11,11,6,6"
+	}
+	{
+		gid: 1655
+		terrain: "11,6,6,6"
+	}
+	{
+		gid: 3704
+		terrain: "7,7,14,7"
+	}
+	{
+		gid: 1657
+		terrain: "20,20,20,20"
+	}
+	{
+		gid: 3706
+		terrain: "7,7,7,14"
+	}
+	{
+		gid: 1659
+		terrain: "6,11,11,11"
+	}
+	{
+		gid: 3707
+		terrain: "2,2,2,11"
+	}
+	{
+		gid: 3708
+		terrain: "2,2,11,11"
+	}
+	{
+		gid: 1661
+		terrain: "11,6,11,11"
+	}
+	{
+		gid: 3709
+		terrain: "2,2,11,2"
+	}
+	{
+		gid: 3710
+		terrain: "2,11,2,11"
+	}
+	{
+		gid: 3712
+		terrain: "11,2,11,2"
+	}
+	{
+		gid: 1665
+		terrain: "11,11,6,11"
+	}
+	{
+		gid: 3713
+		terrain: "2,11,2,2"
+	}
+	{
+		gid: 3714
+		terrain: "11,11,2,2"
+	}
+	{
+		gid: 1667
+		terrain: "11,11,11,6"
+	}
+	{
+		gid: 3715
+		terrain: "11,2,2,2"
+	}
+	{
+		gid: 1668
+		terrain: "6,6,6,4"
+	}
+	{
+		gid: 1669
+		terrain: "6,6,4,4"
+	}
+	{
+		gid: 1670
+		terrain: "6,6,4,6"
+	}
+	{
+		gid: 1671
+		terrain: "6,4,6,4"
+	}
+	{
+		gid: 3719
+		terrain: "2,11,11,11"
+	}
+	{
+		gid: 1673
+		terrain: "4,6,4,6"
+	}
+	{
+		gid: 3721
+		terrain: "11,2,11,11"
+	}
+	{
+		gid: 1674
+		terrain: "6,4,6,6"
+	}
+	{
+		gid: 1675
+		terrain: "4,4,6,6"
+	}
+	{
+		gid: 1676
+		terrain: "4,6,6,6"
+	}
+	{
+		gid: 3725
+		terrain: "11,11,2,11"
+	}
+	{
+		gid: 3727
+		terrain: "11,11,11,2"
+	}
+	{
+		gid: 1680
+		terrain: "6,4,4,4"
+	}
+	{
+		gid: 3728
+		terrain: "16,16,16,4"
+	}
+	{
+		gid: 3729
+		terrain: "16,16,4,4"
+	}
+	{
+		gid: 1682
+		terrain: "4,6,4,4"
+	}
+	{
+		gid: 3730
+		terrain: "16,16,4,16"
+	}
+	{
+		gid: 3731
+		terrain: "16,4,16,4"
+	}
+	{
+		gid: 3733
+		terrain: "4,16,4,16"
+	}
+	{
+		gid: 1686
+		terrain: "4,4,6,4"
+	}
+	{
+		gid: 3734
+		terrain: "16,4,16,16"
+	}
+	{
+		gid: 3735
+		terrain: "4,4,16,16"
+	}
+	{
+		gid: 1688
+		terrain: "4,4,4,6"
+	}
+	{
+		gid: 3736
+		terrain: "4,16,16,16"
+	}
+	{
+		gid: 1689
+		terrain: "16,16,16,7"
+	}
+	{
+		gid: 1690
+		terrain: "16,16,7,7"
+	}
+	{
+		gid: 1691
+		terrain: "16,16,7,16"
+	}
+	{
+		gid: 3740
+		terrain: "16,4,4,4"
+	}
+	{
+		gid: 1692
+		terrain: "16,7,16,7"
+	}
+	{
+		gid: 3742
+		terrain: "4,16,4,4"
+	}
+	{
+		gid: 1694
+		terrain: "7,16,7,16"
+	}
+	{
+		gid: 1695
+		terrain: "16,7,16,16"
+	}
+	{
+		gid: 1696
+		terrain: "7,7,16,16"
+	}
+	{
+		gid: 1697
+		terrain: "7,16,16,16"
+	}
+	{
+		gid: 3746
+		terrain: "4,4,16,4"
+	}
+	{
+		gid: 3748
+		terrain: "4,4,4,16"
+	}
+	{
+		gid: 1701
+		terrain: "16,7,7,7"
+	}
+	{
+		gid: 1703
+		terrain: "7,16,7,7"
+	}
+	{
+		gid: 1707
+		terrain: "7,7,16,7"
+	}
+	{
+		gid: 1709
+		terrain: "7,7,7,16"
+	}
+	{
+		gid: 1710
+		terrain: "12,12,12,5"
+	}
+	{
+		gid: 1711
+		terrain: "12,12,5,5"
+	}
+	{
+		gid: 1712
+		terrain: "12,12,5,12"
+	}
+	{
+		gid: 1713
+		terrain: "12,5,12,5"
+	}
+	{
+		gid: 1715
+		terrain: "5,12,5,12"
+	}
+	{
+		gid: 1716
+		terrain: "12,5,12,12"
+	}
+	{
+		gid: 1717
+		terrain: "5,5,12,12"
+	}
+	{
+		gid: 1718
+		terrain: "5,12,12,12"
+	}
+	{
+		gid: 1720
+		terrain: "12,5,5,5"
+	}
+	{
+		gid: 1721
+		terrain: "5,12,5,5"
+	}
+	{
+		gid: 1723
+		terrain: "5,5,12,5"
+	}
+	{
+		gid: 1724
+		terrain: "5,5,5,12"
+	}
+	{
+		gid: 1725
+		terrain: "17,17,17,5"
+	}
+	{
+		gid: 1726
+		terrain: "17,17,5,5"
+	}
+	{
+		gid: 1727
+		terrain: "17,17,5,17"
+	}
+	{
+		gid: 1728
+		terrain: "17,5,17,5"
+	}
+	{
+		gid: 1730
+		terrain: "5,17,5,17"
+	}
+	{
+		gid: 1731
+		terrain: "17,5,17,17"
+	}
+	{
+		gid: 1732
+		terrain: "5,5,17,17"
+	}
+	{
+		gid: 1733
+		terrain: "5,17,17,17"
+	}
+	{
+		gid: 1737
+		terrain: "17,5,5,5"
+	}
+	{
+		gid: 1739
+		terrain: "5,17,5,5"
+	}
+	{
+		gid: 1743
+		terrain: "5,5,17,5"
+	}
+	{
+		gid: 3791
+		terrain: "16,16,16,8"
+	}
+	{
+		gid: 3792
+		terrain: "16,16,8,8"
+	}
+	{
+		gid: 1745
+		terrain: "5,5,5,17"
+	}
+	{
+		gid: 3793
+		terrain: "16,16,8,16"
+	}
+	{
+		gid: 3794
+		terrain: "16,8,16,8"
+	}
+	{
+		gid: 1746
+		terrain: "12,12,12,10"
+	}
+	{
+		gid: 1747
+		terrain: "12,12,10,10"
+	}
+	{
+		gid: 3796
+		terrain: "8,16,8,16"
+	}
+	{
+		gid: 1748
+		terrain: "12,12,10,12"
+	}
+	{
+		gid: 3797
+		terrain: "16,8,16,16"
+	}
+	{
+		gid: 1749
+		terrain: "12,10,12,10"
+	}
+	{
+		gid: 3798
+		terrain: "8,8,16,16"
+	}
+	{
+		gid: 3799
+		terrain: "8,16,16,16"
+	}
+	{
+		gid: 1751
+		terrain: "10,12,10,12"
+	}
+	{
+		gid: 1752
+		terrain: "12,10,12,12"
+	}
+	{
+		gid: 1753
+		terrain: "10,10,12,12"
+	}
+	{
+		gid: 1754
+		terrain: "10,12,12,12"
+	}
+	{
+		gid: 3803
+		terrain: "16,8,8,8"
+	}
+	{
+		gid: 1756
+		terrain: "12,10,10,10"
+	}
+	{
+		gid: 3805
+		terrain: "8,16,8,8"
+	}
+	{
+		gid: 1757
+		terrain: "10,12,10,10"
+	}
+	{
+		gid: 1759
+		terrain: "10,10,12,10"
+	}
+	{
+		gid: 1760
+		terrain: "10,10,10,12"
+	}
+	{
+		gid: 3809
+		terrain: "8,8,16,8"
+	}
+	{
+		gid: 1761
+		terrain: "13,13,13,10"
+	}
+	{
+		gid: 1762
+		terrain: "13,13,10,10"
+	}
+	{
+		gid: 3811
+		terrain: "8,8,8,16"
+	}
+	{
+		gid: 1763
+		terrain: "13,13,10,13"
+	}
+	{
+		gid: 3812
+		terrain: "5,5,5,4"
+	}
+	{
+		gid: 1764
+		terrain: "13,10,13,10"
+	}
+	{
+		gid: 3813
+		terrain: "5,5,4,4"
+	}
+	{
+		gid: 3814
+		terrain: "5,5,4,5"
+	}
+	{
+		gid: 1766
+		terrain: "10,13,10,13"
+	}
+	{
+		gid: 3815
+		terrain: "5,4,5,4"
+	}
+	{
+		gid: 1767
+		terrain: "13,10,13,13"
+	}
+	{
+		gid: 1768
+		terrain: "10,10,13,13"
+	}
+	{
+		gid: 3817
+		terrain: "4,5,4,5"
+	}
+	{
+		gid: 1769
+		terrain: "10,13,13,13"
+	}
+	{
+		gid: 3818
+		terrain: "5,4,5,5"
+	}
+	{
+		gid: 3819
+		terrain: "4,4,5,5"
+	}
+	{
+		gid: 1771
+		terrain: "13,10,10,10"
+	}
+	{
+		gid: 3820
+		terrain: "4,5,5,5"
+	}
+	{
+		gid: 1772
+		terrain: "10,13,10,10"
+	}
+	{
+		gid: 1774
+		terrain: "10,10,13,10"
+	}
+	{
+		gid: 1775
+		terrain: "10,10,10,13"
+	}
+	{
+		gid: 3824
+		terrain: "5,4,4,4"
+	}
+	{
+		gid: 3826
+		terrain: "4,5,4,4"
+	}
+	{
+		gid: 3830
+		terrain: "4,4,5,4"
+	}
+	{
+		gid: 3832
+		terrain: "4,4,4,5"
+	}
+	{
+		gid: 3833
+		terrain: "6,6,6,10"
+	}
+	{
+		gid: 3834
+		terrain: "6,6,10,10"
+	}
+	{
+		gid: 3835
+		terrain: "6,6,10,6"
+	}
+	{
+		gid: 3836
+		terrain: "6,10,6,10"
+	}
+	{
+		gid: 3837
+		terrain: "10,10,10,10"
+	}
+	{
+		gid: 3838
+		terrain: "10,6,10,6"
+	}
+	{
+		gid: 3839
+		terrain: "6,10,6,6"
+	}
+	{
+		gid: 3840
+		terrain: "10,10,6,6"
+	}
+	{
+		gid: 3841
+		terrain: "10,6,6,6"
+	}
+	{
+		gid: 3845
+		terrain: "6,10,10,10"
+	}
+	{
+		gid: 3847
+		terrain: "10,6,10,10"
+	}
+	{
+		gid: 3851
+		terrain: "10,10,6,10"
+	}
+	{
+		gid: 3853
+		terrain: "10,10,10,6"
+	}
+	{
+		gid: 3854
+		terrain: "13,13,13,6"
+	}
+	{
+		gid: 3855
+		terrain: "13,13,6,6"
+	}
+	{
+		gid: 3856
+		terrain: "13,13,6,13"
+	}
+	{
+		gid: 3857
+		terrain: "13,6,13,6"
+	}
+	{
+		gid: 3858
+		terrain: "6,6,6,6"
+	}
+	{
+		gid: 3859
+		terrain: "6,13,6,13"
+	}
+	{
+		gid: 3860
+		terrain: "13,6,13,13"
+	}
+	{
+		gid: 3861
+		terrain: "6,6,13,13"
+	}
+	{
+		gid: 3862
+		terrain: "6,13,13,13"
+	}
+	{
+		gid: 3864
+		terrain: "13,6,6,6"
+	}
+	{
+		gid: 3865
+		terrain: "6,13,6,6"
+	}
+	{
+		gid: 3867
+		terrain: "6,6,13,6"
+	}
+	{
+		gid: 3868
+		terrain: "6,6,6,13"
+	}
+	{
+		gid: 1822
+		terrain: "9,9,9,18"
+	}
+	{
+		gid: 1823
+		terrain: "9,9,18,18"
+	}
+	{
+		gid: 1824
+		terrain: "9,9,18,9"
+	}
+	{
+		gid: 1825
+		terrain: "9,18,9,18"
+	}
+	{
+		gid: 1827
+		terrain: "18,9,18,9"
+	}
+	{
+		gid: 1828
+		terrain: "9,18,9,9"
+	}
+	{
+		gid: 1829
+		terrain: "18,18,9,9"
+	}
+	{
+		gid: 1830
+		terrain: "18,9,9,9"
+	}
+	{
+		gid: 1834
+		terrain: "9,18,18,18"
+	}
+	{
+		gid: 1836
+		terrain: "18,9,18,18"
+	}
+	{
+		gid: 1840
+		terrain: "18,18,9,18"
+	}
+	{
+		gid: 1842
+		terrain: "18,18,18,9"
+	}
+	{
+		gid: 3914
+		terrain: "13,13,13,8"
+	}
+	{
+		gid: 3915
+		terrain: "13,13,8,8"
+	}
+	{
+		gid: 3916
+		terrain: "13,13,8,13"
+	}
+	{
+		gid: 3917
+		terrain: "13,8,13,8"
+	}
+	{
+		gid: 3919
+		terrain: "8,13,8,13"
+	}
+	{
+		gid: 3920
+		terrain: "13,8,13,13"
+	}
+	{
+		gid: 3921
+		terrain: "8,8,13,13"
+	}
+	{
+		gid: 3922
+		terrain: "8,13,13,13"
+	}
+	{
+		gid: 3924
+		terrain: "13,8,8,8"
+	}
+	{
+		gid: 3925
+		terrain: "8,13,8,8"
+	}
+	{
+		gid: 3927
+		terrain: "8,8,13,8"
+	}
+	{
+		gid: 3928
+		terrain: "8,8,8,13"
+	}
+	{
+		gid: 3935
+		terrain: "16,16,16,6"
+	}
+	{
+		gid: 3936
+		terrain: "16,16,6,6"
+	}
+	{
+		gid: 3937
+		terrain: "16,16,6,16"
+	}
+	{
+		gid: 3938
+		terrain: "16,6,16,6"
+	}
+	{
+		gid: 3940
+		terrain: "6,16,6,16"
+	}
+	{
+		gid: 3941
+		terrain: "16,6,16,16"
+	}
+	{
+		gid: 3942
+		terrain: "6,6,16,16"
+	}
+	{
+		gid: 3943
+		terrain: "6,16,16,16"
+	}
+	{
+		gid: 3947
+		terrain: "16,6,6,6"
+	}
+	{
+		gid: 3949
+		terrain: "6,16,6,6"
+	}
+	{
+		gid: 3953
+		terrain: "6,6,16,6"
+	}
+	{
+		gid: 3955
+		terrain: "6,6,6,16"
+	}
+	{
+		gid: 3977
+		terrain: "17,17,17,7"
+	}
+	{
+		gid: 3978
+		terrain: "17,17,7,7"
+	}
+	{
+		gid: 3979
+		terrain: "17,17,7,17"
+	}
+	{
+		gid: 3980
+		terrain: "17,7,17,7"
+	}
+	{
+		gid: 3982
+		terrain: "7,17,7,17"
+	}
+	{
+		gid: 3983
+		terrain: "17,7,17,17"
+	}
+	{
+		gid: 3984
+		terrain: "7,7,17,17"
+	}
+	{
+		gid: 3985
+		terrain: "7,17,17,17"
+	}
+	{
+		gid: 3989
+		terrain: "17,7,7,7"
+	}
+	{
+		gid: 3991
+		terrain: "7,17,7,7"
+	}
+	{
+		gid: 3995
+		terrain: "7,7,17,7"
+	}
+	{
+		gid: 3997
+		terrain: "7,7,7,17"
+	}
+	{
+		gid: 3998
+		terrain: "4,4,4,3"
+	}
+	{
+		gid: 1951
+		terrain: "5,5,5,6"
+	}
+	{
+		gid: 3999
+		terrain: "4,4,3,3"
+	}
+	{
+		gid: 1952
+		terrain: "5,5,6,6"
+	}
+	{
+		gid: 4000
+		terrain: "4,4,3,4"
+	}
+	{
+		gid: 1953
+		terrain: "5,5,6,5"
+	}
+	{
+		gid: 4001
+		terrain: "4,3,4,3"
+	}
+	{
+		gid: 1954
+		terrain: "5,6,5,6"
+	}
+	{
+		gid: 4003
+		terrain: "3,4,3,4"
+	}
+	{
+		gid: 1956
+		terrain: "6,5,6,5"
+	}
+	{
+		gid: 4004
+		terrain: "4,3,4,4"
+	}
+	{
+		gid: 1957
+		terrain: "5,6,5,5"
+	}
+	{
+		gid: 4005
+		terrain: "3,3,4,4"
+	}
+	{
+		gid: 1958
+		terrain: "6,6,5,5"
+	}
+	{
+		gid: 4006
+		terrain: "3,4,4,4"
+	}
+	{
+		gid: 1959
+		terrain: "6,5,5,5"
+	}
+	{
+		gid: 4010
+		terrain: "4,3,3,3"
+	}
+	{
+		gid: 1963
+		terrain: "5,6,6,6"
+	}
+	{
+		gid: 4012
+		terrain: "3,4,3,3"
+	}
+	{
+		gid: 1965
+		terrain: "6,5,6,6"
+	}
+	{
+		gid: 4016
+		terrain: "3,3,4,3"
+	}
+	{
+		gid: 1969
+		terrain: "6,6,5,6"
+	}
+	{
+		gid: 4018
+		terrain: "3,3,3,4"
+	}
+	{
+		gid: 1971
+		terrain: "6,6,6,5"
+	}
+	{
+		gid: 4019
+		terrain: "17,17,17,8"
+	}
+	{
+		gid: 4020
+		terrain: "17,17,8,8"
+	}
+	{
+		gid: 4021
+		terrain: "17,17,8,17"
+	}
+	{
+		gid: 4022
+		terrain: "17,8,17,8"
+	}
+	{
+		gid: 4024
+		terrain: "8,17,8,17"
+	}
+	{
+		gid: 4025
+		terrain: "17,8,17,17"
+	}
+	{
+		gid: 4026
+		terrain: "8,8,17,17"
+	}
+	{
+		gid: 4027
+		terrain: "8,17,17,17"
+	}
+	{
+		gid: 4031
+		terrain: "17,8,8,8"
+	}
+	{
+		gid: 4033
+		terrain: "8,17,8,8"
+	}
+	{
+		gid: 4037
+		terrain: "8,8,17,8"
+	}
+	{
+		gid: 4039
+		terrain: "8,8,8,17"
+	}
+	{
+		gid: 4040
+		terrain: "7,7,7,5"
+	}
+	{
+		gid: 1993
+		terrain: "14,14,14,5"
+	}
+	{
+		gid: 4041
+		terrain: "7,7,5,5"
+	}
+	{
+		gid: 1994
+		terrain: "14,14,5,5"
+	}
+	{
+		gid: 4042
+		terrain: "7,7,5,7"
+	}
+	{
+		gid: 1995
+		terrain: "14,14,5,14"
+	}
+	{
+		gid: 4043
+		terrain: "7,5,7,5"
+	}
+	{
+		gid: 1996
+		terrain: "14,5,14,5"
+	}
+	{
+		gid: 4045
+		terrain: "5,7,5,7"
+	}
+	{
+		gid: 1998
+		terrain: "5,14,5,14"
+	}
+	{
+		gid: 4046
+		terrain: "7,5,7,7"
+	}
+	{
+		gid: 1999
+		terrain: "14,5,14,14"
+	}
+	{
+		gid: 4047
+		terrain: "5,5,7,7"
+	}
+	{
+		gid: 2000
+		terrain: "5,5,14,14"
+	}
+	{
+		gid: 4048
+		terrain: "5,7,7,7"
+	}
+	{
+		gid: 2001
+		terrain: "5,14,14,14"
+	}
+	{
+		gid: 4052
+		terrain: "7,5,5,5"
+	}
+	{
+		gid: 2005
+		terrain: "14,5,5,5"
+	}
+	{
+		gid: 4054
+		terrain: "5,7,5,5"
+	}
+	{
+		gid: 2007
+		terrain: "5,14,5,5"
+	}
+	{
+		gid: 4058
+		terrain: "5,5,7,5"
+	}
+	{
+		gid: 2011
+		terrain: "5,5,14,5"
+	}
+	{
+		gid: 4060
+		terrain: "5,5,5,7"
+	}
+	{
+		gid: 2013
+		terrain: "5,5,5,14"
+	}
+	{
+		gid: 4061
+		terrain: "8,8,8,9"
+	}
+	{
+		gid: 2014
+		terrain: "2,2,2,1"
+	}
+	{
+		gid: 4062
+		terrain: "8,8,9,9"
+	}
+	{
+		gid: 2015
+		terrain: "2,2,1,1"
+	}
+	{
+		gid: 4063
+		terrain: "8,8,9,8"
+	}
+	{
+		gid: 2016
+		terrain: "2,2,1,2"
+	}
+	{
+		gid: 4064
+		terrain: "8,9,8,9"
+	}
+	{
+		gid: 2017
+		terrain: "2,1,2,1"
+	}
+	{
+		gid: 2018
+		terrain: "1,1,1,1"
+	}
+	{
+		gid: 4066
+		terrain: "9,8,9,8"
+	}
+	{
+		gid: 2019
+		terrain: "1,2,1,2"
+	}
+	{
+		gid: 4067
+		terrain: "8,9,8,8"
+	}
+	{
+		gid: 2020
+		terrain: "2,1,2,2"
+	}
+	{
+		gid: 4068
+		terrain: "9,9,8,8"
+	}
+	{
+		gid: 2021
+		terrain: "1,1,2,2"
+	}
+	{
+		gid: 4069
+		terrain: "9,8,8,8"
+	}
+	{
+		gid: 2022
+		terrain: "1,2,2,2"
+	}
+	{
+		gid: 4073
+		terrain: "8,9,9,9"
+	}
+	{
+		gid: 2026
+		terrain: "2,1,1,1"
+	}
+	{
+		gid: 4075
+		terrain: "9,8,9,9"
+	}
+	{
+		gid: 2028
+		terrain: "1,2,1,1"
+	}
+	{
+		gid: 4079
+		terrain: "9,9,8,9"
+	}
+	{
+		gid: 2032
+		terrain: "1,1,2,1"
+	}
+	{
+		gid: 4081
+		terrain: "9,9,9,8"
+	}
+	{
+		gid: 2034
+		terrain: "1,1,1,2"
+	}
+	{
+		gid: 4082
+		terrain: "12,12,12,10"
+	}
+	{
+		gid: 4083
+		terrain: "12,12,10,10"
+	}
+	{
+		gid: 4084
+		terrain: "12,12,10,12"
+	}
+	{
+		gid: 4085
+		terrain: "12,10,12,10"
+	}
+	{
+		gid: 4087
+		terrain: "10,12,10,12"
+	}
+	{
+		gid: 4088
+		terrain: "12,10,12,12"
+	}
+	{
+		gid: 4089
+		terrain: "10,10,12,12"
+	}
+	{
+		gid: 4090
+		terrain: "10,12,12,12"
+	}
+	{
+		gid: 4092
+		terrain: "12,10,10,10"
+	}
+	{
+		gid: 4093
+		terrain: "10,12,10,10"
+	}
+	{
+		gid: 4095
+		terrain: "10,10,12,10"
+	}
+]
+}

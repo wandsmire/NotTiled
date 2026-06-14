@@ -520,10 +520,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     com.badlogic.gdx.scenes.scene2d.ui.List<String> lrecentlist;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> ltutorial;
     Table tTemplate, tOnline;
+    Table tTemplateList, tOnlineList;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> ltemplate;
     com.badlogic.gdx.scenes.scene2d.ui.List<String> lonline;
     TextButton bTmplOK, bTmplBack, bTmplDownload;
     TextButton bOnlineDownload, bOnlineBack, bOnlineRefresh;
+    Label onlineStatusLabel;
     Table tImport, tExport;
     private TextField fExportFilename;
     SelectBox sbExport;
@@ -9211,7 +9213,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         assemblymode = false;
         newfile = true;
 
-        String faths = basepath + "NotTiled/sample/template/" + ltemplate.getSelected();
+        String faths = basepath + "NotTiled/sample/template/" + templateSelectedName;
         FileHandle fh = Gdx.files.absolute(faths);
         if (!fh.exists()) {
             loadingfile = false;
@@ -9412,8 +9414,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bTmplBack = new TextButton(z.back, skin);
         bTmplOK = new TextButton(z.ok, skin);
         bTmplDownload = new TextButton(z.download, skin);
-        ltemplate = new com.badlogic.gdx.scenes.scene2d.ui.List<String>(skin);
-        ScrollPane spok = new ScrollPane(ltemplate);
+        tTemplateList = new Table(skin);
+        tTemplateList.defaults().left();
+        ScrollPane spok = new ScrollPane(tTemplateList, skin);
+        spok.setScrollingDisabled(true, false);
+        spok.setFadeScrollBars(false);
 
         bTmplBack.addListener(new ChangeListener() {
             @Override
@@ -9429,9 +9434,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 if (!softcue("usetemplate") && !softcue("newfilecontinue") && lockUI)
                     return;
-                if (ltemplate.getSelectedIndex() < 0)
+                if (templateSelectedName == null)
                     return;
-                applyNewFilePresets(ltemplate.getSelected());
+                applyNewFilePresets(templateSelectedName);
                 prepareNewFileForm();
                 gotoStage(tNewFile);
                 cue("newfilecontinue");
@@ -9448,51 +9453,157 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         });
 
+        TextButton bTmplRemove = new TextButton(z.remove, skin);
+        bTmplRemove.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (templateSelectedName == null) return;
+                final String name = templateSelectedName;
+                final FileHandle dir = Gdx.files.absolute(basepath + "NotTiled/sample/template/" + name);
+                if (!dir.exists()) return;
+                Dialog dlg = new Dialog(z.confirmation, skin, "dialog") {
+                    @Override
+                    protected void result(Object object) {
+                        if (Boolean.TRUE.equals(object)) {
+                            dir.deleteDirectory();
+                            refreshTemplate();
+                            status(name + " removed", 3);
+                        }
+                    }
+                };
+                dlg.text(z.remove + " \"" + name + "\"?");
+                dlg.button(z.yes, true);
+                dlg.button(z.no, false);
+                dlg.show(stage);
+            }
+        });
+
         tTemplate = new Table();
         tTemplate.setFillParent(true);
         tTemplate.defaults().width(btnx).padBottom(2);
         tTemplate.add(new Label(z.selecttemplate, skin)).padTop(10).row();
-        tTemplate.add(spok).height(0.45f * ssy).row();
+        tTemplate.add(spok).width(btnx).height(0.45f * ssy).row();
         tTemplate.add(bTmplOK).row();
+        tTemplate.add(bTmplRemove).row();
         tTemplate.add(bTmplDownload).row();
         tTemplate.add(bTmplBack).row();
     }
 
     public void refreshTemplate() {
-        String[] srr = new String[] {};
+        if (tTemplateList == null) return;
+        tTemplateList.clear();
+        templateSelectedName = null;
+        templateSelectedRow = null;
         FileHandle del = Gdx.files.absolute(basepath + "NotTiled/sample/template/");
-
+        if (!del.exists()) return;
         FileHandle[] handle = del.list();
+        java.util.Arrays.sort(handle, new java.util.Comparator<FileHandle>() {
+            public int compare(FileHandle a, FileHandle b) { return a.name().compareToIgnoreCase(b.name()); }
+        });
 
-        if (handle.length > 0) {
-            int ia = 0;
-            for (FileHandle file : handle) {
-                if (file.isDirectory()) {
-                    ia += 1;
+        float iconSize = Math.min(56f, btnx * 0.2f);
+        float textW = btnx * 0.72f;
+        Label.LabelStyle titleStyle = new Label.LabelStyle(skin.getFont("font"), Color.WHITE);
+        Label.LabelStyle descStyle = new Label.LabelStyle(skin.getFont("font"), new Color(0.8f, 0.8f, 0.8f, 1f));
+
+        boolean first = true;
+        for (FileHandle file : handle) {
+            if (!file.isDirectory()) continue;
+            if (!hasTmxFile(file)) continue;
+            final String name = file.name();
+            final Table row = new Table(skin);
+            row.setTouchable(com.badlogic.gdx.scenes.scene2d.Touchable.enabled);
+            row.pad(4, 4, 4, 4);
+
+            Image icon = new Image(new SpriteDrawable(new Sprite(txmap)));
+            row.add(icon).size(iconSize, iconSize).padRight(6).top();
+
+            Table textCol = new Table(skin);
+            Label titleLbl = new Label(name, titleStyle);
+            titleLbl.setAlignment(Align.left);
+            textCol.add(titleLbl).left().row();
+            FileHandle infoFile = file.child("info.txt");
+            String desc = "";
+            if (infoFile.exists()) {
+                String d = parseInfoField(infoFile.readString(), "description");
+                if (d != null) desc = d;
+            } else {
+                FileHandle tmxFile = file.child("template.tmx");
+                if (tmxFile.exists()) {
+                    desc = formatBytes(tmxFile.length());
+                    FileHandle autoF = file.child("auto.json");
+                    if (autoF.exists()) desc += " + auto terrain";
                 }
             }
-            srr = new String[ia];
-            int i = 0;
-            for (FileHandle file : handle) {
-                if (file.isDirectory()) {
-                    srr[i] = file.name();
-                    i += 1;
-                }
+            if (!desc.isEmpty()) {
+                Label descLbl = new Label(desc, descStyle);
+                descLbl.setWrap(true);
+                descLbl.setFontScale(0.8f);
+                descLbl.setAlignment(Align.left);
+                textCol.add(descLbl).width(textW).left();
             }
+            row.add(textCol).expandX().fillX().left().top();
 
-        }
-        ltemplate.setItems(srr);
-
-        if (ltemplate.getItems().size > 0) {
-            ltemplate.setSelectedIndex(0);
+            row.addListener(new ClickListener() {
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    selectTemplateRow(row, name);
+                }
+            });
+            tTemplateList.add(row).fillX().expandX().padBottom(3).row();
+            if (first) {
+                selectTemplateRow(row, name);
+                first = false;
+            }
         }
     }
 
+    private Table templateSelectedRow;
+    private String templateSelectedName;
+
+    private void selectTemplateRow(Table row, String name) {
+        if (templateSelectedRow != null)
+            templateSelectedRow.setBackground((Drawable) null);
+        templateSelectedRow = row;
+        templateSelectedName = name;
+        if (newFileKindSelDrawable == null) {
+            com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle listStyle = skin.get(com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle.class);
+            if (listStyle != null && listStyle.selection != null)
+                newFileKindSelDrawable = listStyle.selection;
+        }
+        if (newFileKindSelDrawable != null)
+            row.setBackground(newFileKindSelDrawable);
+    }
+
+    private String formatBytes(long bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024) + " KB";
+        return String.format("%.1f MB", bytes / (1024.0 * 1024.0));
+    }
+
+    private int onlineSelectedIndex = -1;
+    private Table onlineSelectedRow;
+
+    private void selectOnlineRow(Table row, int index) {
+        if (onlineSelectedRow != null)
+            onlineSelectedRow.setBackground((Drawable) null);
+        onlineSelectedRow = row;
+        onlineSelectedIndex = index;
+        if (newFileKindSelDrawable == null) {
+            com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle listStyle = skin.get(com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle.class);
+            if (listStyle != null && listStyle.selection != null)
+                newFileKindSelDrawable = listStyle.selection;
+        }
+        if (newFileKindSelDrawable != null)
+            row.setBackground(newFileKindSelDrawable);
+    }
+
     public void refreshOnline() {
-        String[] srr = new String[] {};
-        lonline.setItems(srr);
+        if (tOnlineList != null) tOnlineList.clear();
+        onlineSelectedIndex = -1;
+        onlineSelectedRow = null;
         Net.HttpRequest request = new Net.HttpRequest(Net.HttpMethods.GET);
-        request.setUrl("https://www.dropbox.com/s/d114sswkkv64vs6/test.txt?dl=1");
+        request.setUrl("https://mirwanda.com/nottiled/templates.json");
         Gdx.net.sendHttpRequest(request, new com.badlogic.gdx.Net.HttpResponseListener() {
 
             @Override
@@ -9502,30 +9613,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 Gdx.app.postRunnable(new Runnable() {
                     @Override
                     public void run() {
-                        // String sss= tmpFile.readString();
-                        // msgbox(sss);
                         try {
                             templates = new Online();
-
                             Json json = new Json();
                             templates = json.fromJson(Online.class, tmpFile);
-
-                            String[] srr = new String[templates.getTemplates().size()];
-                            for (int i = 0; i < templates.getTemplates().size(); i++) {
-                                String nem = templates.getTemplates().get(i).getName();
-                                FileHandle del = Gdx.files.absolute(basepath + "NotTiled/sample/template/" + nem);
-                                if (del.exists()) {
-                                    srr[i] = nem + " (" + z.saved + ")";
-                                } else {
-                                    srr[i] = nem + " *" + z.newnew + "*";
-                                }
-                            }
-
-                            lonline.setItems(srr);
-                            if (lonline.getItems().size > 0) {
-                                lonline.setSelectedIndex(0);
-                            }
-
+                            buildOnlineList();
                         } catch (Exception e) {
                             ErrorBung(e, "errorlog.txt");
                         }
@@ -9546,17 +9638,72 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     }
 
+    private void buildOnlineList() {
+        if (tOnlineList == null || templates == null) return;
+        tOnlineList.clear();
+        onlineSelectedIndex = -1;
+        onlineSelectedRow = null;
+
+        float iconSize = Math.min(56f, btnx * 0.2f);
+        float textW = btnx * 0.72f;
+        Label.LabelStyle titleStyle = new Label.LabelStyle(skin.getFont("font"), Color.WHITE);
+        Label.LabelStyle descStyle = new Label.LabelStyle(skin.getFont("font"), new Color(0.8f, 0.8f, 0.8f, 1f));
+        Label.LabelStyle savedStyle = new Label.LabelStyle(skin.getFont("font"), new Color(0.4f, 1f, 0.4f, 1f));
+
+        for (int i = 0; i < templates.getTemplates().size(); i++) {
+            final int idx = i;
+            mytemplate t = templates.getTemplates().get(i);
+            String nem = t.getName();
+            boolean saved = Gdx.files.absolute(basepath + "NotTiled/sample/template/" + nem).exists();
+
+            final Table row = new Table(skin);
+            row.setTouchable(com.badlogic.gdx.scenes.scene2d.Touchable.enabled);
+            row.pad(4, 4, 4, 4);
+
+            Image icon = new Image(new SpriteDrawable(new Sprite(txmap)));
+            row.add(icon).size(iconSize, iconSize).padRight(6).top();
+
+            Table textCol = new Table(skin);
+            Label titleLbl = new Label(nem, titleStyle);
+            titleLbl.setAlignment(Align.left);
+            textCol.add(titleLbl).left().row();
+            String desc = t.description != null ? t.description : (t.extension_name != null ? "Includes " + t.extension_name : "");
+            if (saved) desc = (desc.isEmpty() ? "" : desc + " — ") + z.saved;
+            if (!desc.isEmpty()) {
+                Label descLbl = new Label(desc, saved ? savedStyle : descStyle);
+                descLbl.setWrap(true);
+                descLbl.setFontScale(0.8f);
+                descLbl.setAlignment(Align.left);
+                textCol.add(descLbl).width(textW).left();
+            }
+            row.add(textCol).expandX().fillX().left().top();
+
+            row.addListener(new ClickListener() {
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    selectOnlineRow(row, idx);
+                }
+            });
+            tOnlineList.add(row).fillX().expandX().padBottom(3).row();
+            if (i == 0) selectOnlineRow(row, 0);
+        }
+    }
+
     public void downloadTemplate() {
-        if (lonline.getSelectedIndex() < 0)
+        if (onlineSelectedIndex < 0)
             return;
-        final String foldname = templates.getTemplates().get(lonline.getSelectedIndex()).getName();
-        final String lonk1 = templates.getTemplates().get(lonline.getSelectedIndex()).getTemplate();
-        final String lonk2 = templates.getTemplates().get(lonline.getSelectedIndex()).getExtension();
-        final String extName = templates.getTemplates().get(lonline.getSelectedIndex()).getExtension_name();
+        final String foldname = templates.getTemplates().get(onlineSelectedIndex).getName();
+        final String lonk1 = templates.getTemplates().get(onlineSelectedIndex).getTemplate();
+        final String lonk2 = templates.getTemplates().get(onlineSelectedIndex).getExtension();
+        final String extName = templates.getTemplates().get(onlineSelectedIndex).getExtension_name();
+        final String desc = templates.getTemplates().get(onlineSelectedIndex).description;
 
         FileHandle fh = Gdx.files.absolute(basepath + "NotTiled/sample/template/" + foldname);
         if (!fh.exists())
             fh.mkdirs();
+
+        status("", 0);
+        onlineStatusLabel.setText("Downloading " + foldname + "...");
 
         if (lonk2 != null) {
             Net.HttpRequest request2 = new Net.HttpRequest(Net.HttpMethods.GET);
@@ -9570,7 +9717,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     Gdx.app.postRunnable(new Runnable() {
                         @Override
                         public void run() {
-
+                            status("", 0);
+                            onlineStatusLabel.setText("Downloading " + foldname + "... (" + extName + " done)");
                             try {
                                 templates = new Online();
                                 FileHandle fh = Gdx.files
@@ -9585,12 +9733,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 @Override
                 public void failed(Throwable t) {
-                    msgbox(z.checkinternet);
+                    Gdx.app.postRunnable(new Runnable() { public void run() {
+                        onlineStatusLabel.setText(z.checkinternet);
+                        downloading = false;
+                    }});
                 }
 
                 @Override
                 public void cancelled() {
-                    msgbox(z.downloadcancel);
+                    Gdx.app.postRunnable(new Runnable() { public void run() {
+                        onlineStatusLabel.setText(z.downloadcancel);
+                        downloading = false;
+                    }});
                 }
             });
         }
@@ -9613,8 +9767,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             FileHandle fh = Gdx.files
                                     .absolute(basepath + "NotTiled/sample/template/" + foldname + "/template.tmx");
                             fh.writeString(sss, false);
+                            if (desc != null && !desc.isEmpty()) {
+                                FileHandle infoFh = Gdx.files.absolute(basepath + "NotTiled/sample/template/" + foldname + "/info.txt");
+                                infoFh.writeString("description: " + desc + "\n", false);
+                            }
                             refreshOnline();
-                            msgbox(z.downloadcomplete);
+                            onlineStatusLabel.setText(z.downloadcomplete);
                             downloading = false;
 
                         } catch (Exception e) {
@@ -9626,14 +9784,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             @Override
             public void failed(Throwable t) {
-                msgbox(z.checkinternet);
-                downloading = false;
+                Gdx.app.postRunnable(new Runnable() { public void run() {
+                    onlineStatusLabel.setText(z.checkinternet);
+                    downloading = false;
+                }});
             }
 
             @Override
             public void cancelled() {
-                msgbox(z.downloadcancel);
-                downloading = false;
+                Gdx.app.postRunnable(new Runnable() { public void run() {
+                    onlineStatusLabel.setText(z.downloadcancel);
+                    downloading = false;
+                }});
             }
         });
     }
@@ -9952,8 +10114,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bOnlineBack = new TextButton(z.back, skin);
         bOnlineRefresh = new TextButton(z.refresh, skin);
         bOnlineDownload = new TextButton(z.dls, skin);
+        tOnlineList = new Table(skin);
+        tOnlineList.defaults().left();
         lonline = new com.badlogic.gdx.scenes.scene2d.ui.List<String>(skin);
-        ScrollPane spok = new ScrollPane(lonline);
+        ScrollPane spok = new ScrollPane(tOnlineList, skin);
+        spok.setScrollingDisabled(true, false);
+        spok.setFadeScrollBars(false);
 
         bOnlineBack.addListener(new ChangeListener() {
             @Override
@@ -9966,7 +10132,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bOnlineRefresh.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                lonline.clearItems();
+                tOnlineList.clear();
                 refreshOnline();
             }
         });
@@ -9984,11 +10150,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         });
 
+        onlineStatusLabel = new Label("", skin);
+        onlineStatusLabel.setAlignment(Align.center);
+
         tOnline = new Table();
         tOnline.setFillParent(true);
         tOnline.defaults().width(btnx).padBottom(2);
         tOnline.add(new Label(z.onlinetemplate, skin)).padTop(10).row();
-        tOnline.add(spok).height(0.5f * ssy).row();
+        tOnline.add(spok).width(btnx).height(0.5f * ssy).row();
+        tOnline.add(onlineStatusLabel).row();
         tOnline.add(bOnlineDownload).row();
         tOnline.add(bOnlineRefresh).row();
         tOnline.add(bOnlineBack).row();
@@ -10180,6 +10350,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bNew.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                newFileKindsConfig = null;
                 buildNewFileKindList();
                 gotoStage(tNewFilePick);
                 cue("newfilepick");
@@ -17576,7 +17747,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 autotiles at = new autotiles(autotiles);
                 Json json = new Json();
-                writeThisAbs(curdir + "/auto.json", json.prettyPrint(at));
+                writeThisAbs(curdir + "/" + curfile + ".auto.json", json.prettyPrint(at));
 
             }
 
@@ -19149,12 +19320,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                     autotiles at = new autotiles();
                     Json json = new Json();
-                    FileHandle f = Gdx.files.absolute(curdir + "/auto.json");
+                    FileHandle f = Gdx.files.absolute(curdir + "/" + curfile + ".auto.json");
                     at = json.fromJson(autotiles.class, f);
                     autotiles = at.getAutotiles();
                     refreshAutoMgmt();
                 } catch (Exception e) {
-                    msgbox("place auto.json on the same folder with the tmx file.");
+                    msgbox("auto.json not found.");
                 }
             }
         });
@@ -19164,8 +19335,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 autotiles at = new autotiles(autotiles);
                 Json json = new Json();
-                writeThisAbs(curdir + "/auto.json", json.prettyPrint(at));
-                msgbox("auto.json saved!");
+                writeThisAbs(curdir + "/" + curfile + ".auto.json", json.prettyPrint(at));
+                msgbox(curfile + ".auto.json saved!");
 
             }
         });
@@ -19182,19 +19353,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void loadautotiles() {
         try {
             autotiles.clear();
+            FileHandle f = Gdx.files.absolute(curdir + "/" + curfile + ".auto.json");
+            if (!f.exists()) return;
             autotiles at = new autotiles();
             Json json = new Json();
-            FileHandle f = Gdx.files.absolute(curdir + "/auto.json");
             at = json.fromJson(autotiles.class, f);
             autotiles = at.getAutotiles();
-            // refreshAutoMgmt();
         } catch (Exception e) {
         }
     }
 
     public void loadMacroAutoTerrain() {
         try {
-            FileHandle f = Gdx.files.absolute(curdir + "/" + MacroTerrainStore.FILE_NAME);
+            FileHandle f = Gdx.files.absolute(curdir + "/" + curfile + ".macro.json");
             if (f.exists())
                 macroTerrain.fromJsonString(f.readString());
             else
@@ -19207,14 +19378,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void saveMacroAutoTerrain() {
         if (macroTerrain.isEmpty()) {
             try {
-                FileHandle f = Gdx.files.absolute(curdir + "/" + MacroTerrainStore.FILE_NAME);
+                FileHandle f = Gdx.files.absolute(curdir + "/" + curfile + ".macro.json");
                 if (f.exists())
                     f.delete();
             } catch (Exception ignored) {
             }
             return;
         }
-        writeThisAbs(curdir + "/" + MacroTerrainStore.FILE_NAME, macroTerrain.toJsonPretty());
+        writeThisAbs(curdir + "/" + curfile + ".macro.json", macroTerrain.toJsonPretty());
     }
 
     public void saveRecents() {
@@ -19527,15 +19698,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void selectTemplateFolder(String folder) {
         refreshTemplate();
-        com.badlogic.gdx.utils.Array<String> items = ltemplate.getItems();
-        for (int i = 0; i < items.size; i++) {
-            if (items.get(i).equals(folder)) {
-                ltemplate.setSelectedIndex(i);
-                return;
-            }
-        }
-        ltemplate.setItems(folder);
-        ltemplate.setSelected(folder);
+        templateSelectedName = folder;
     }
 
     private void finishNewFileCreation() {
@@ -19604,21 +19767,60 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private void loadNewFileKindsConfig() {
         if (newFileKindsConfig != null)
             return;
-        try {
-            FileHandle f = Gdx.files.internal("newfile-kinds.json");
-            if (f.exists()) {
-                Json json = new Json();
-                newfilekinds loaded = json.fromJson(newfilekinds.class, f);
-                if (loaded != null && loaded.kinds != null && loaded.kinds.length > 0)
-                    newFileKindsConfig = loaded;
+        newFileKindsConfig = new newfilekinds();
+        newFileKindsConfig.title = z.newfilekindtitle != null ? z.newfilekindtitle : "What do you want to create?";
+        java.util.List<newfilekinds.kindentry> entries = new java.util.ArrayList<newfilekinds.kindentry>();
+
+        FileHandle templatesDir = Gdx.files.absolute(basepath + "NotTiled/sample/template/");
+        if (templatesDir.exists()) {
+            FileHandle[] folders = templatesDir.list();
+            java.util.Arrays.sort(folders, new java.util.Comparator<FileHandle>() {
+                public int compare(FileHandle a, FileHandle b) { return a.name().compareToIgnoreCase(b.name()); }
+            });
+            for (FileHandle folder : folders) {
+                if (!folder.isDirectory()) continue;
+                if (!hasTmxFile(folder)) continue;
+                FileHandle info = folder.child("info.txt");
+                if (!info.exists()) continue;
+                String content = info.readString();
+                String hl = parseInfoField(content, "highlight");
+                if (!"true".equalsIgnoreCase(hl)) continue;
+                newfilekinds.kindentry e = new newfilekinds.kindentry();
+                e.title = folder.name();
+                e.template = folder.name();
+                e.description = parseInfoField(content, "description");
+                String icon = parseInfoField(content, "icon");
+                if (icon != null) e.icon = "images/" + icon + ".png";
+                entries.add(e);
             }
-        } catch (Exception e) {
-            log("newfile-kinds.json: " + e.toString());
         }
-        if (newFileKindsConfig == null)
-            newFileKindsConfig = defaultNewFileKindsConfig();
+
+        // Always add "Empty map" at the end
+        newfilekinds.kindentry empty = new newfilekinds.kindentry();
+        empty.title = "Empty map";
+        empty.description = "Blank map \u2014 add your own tilesets.";
+        empty.template = "";
+        empty.icon = "images/add.png";
+        entries.add(empty);
+
+        newFileKindsConfig.kinds = entries.toArray(new newfilekinds.kindentry[entries.size()]);
         if (newFileKindIconTextures == null)
             newFileKindIconTextures = new java.util.HashMap<String, Texture>();
+    }
+
+    private String parseInfoField(String content, String field) {
+        for (String line : content.split("\n")) {
+            String trimmed = line.trim();
+            if (trimmed.toLowerCase().startsWith(field + ":")) {
+                String val = trimmed.substring(field.length() + 1).trim();
+                return val.isEmpty() ? null : val;
+            }
+        }
+        return null;
+    }
+
+    private boolean hasTmxFile(FileHandle folder) {
+        return folder.child("template.tmx").exists();
     }
 
     private Texture newFileKindIcon(String iconPath, int fallbackIndex) {
@@ -19874,7 +20076,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         newFileAdvancedRowCell = tNewFile.add(tNewFileAdvanced).colspan(2);
         newFileAdvancedRowCell.height(0).pad(0);
         newFileAdvancedRowCell.row();
-        tNewFile.add(bNNewplus).padBottom(1).colspan(2).row();
+        tNewFile.add(bNNewplus).padBottom(1).height(btny * 2).colspan(2).row();
         tNewFile.add(bNBack).padBottom(1).colspan(2).row();
         tNewFile.add(bNCancel).padBottom(1).colspan(2).row();
         setNewFileAdvancedVisible(false);
@@ -22145,7 +22347,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     public void confirm(String input) {
                         if (input != null && !input.trim().isEmpty()) {
                             try {
+                                String oldName = child.name();
                                 child.moveTo(child.parent().child(input.trim()));
+                                if (oldName.endsWith(".tmx")) {
+                                    FileHandle parent = child.parent();
+                                    String newName = input.trim();
+                                    FileHandle oldAuto = parent.child(oldName + ".auto.json");
+                                    if (oldAuto.exists()) oldAuto.moveTo(parent.child(newName + ".auto.json"));
+                                    FileHandle oldMacro = parent.child(oldName + ".macro.json");
+                                    if (oldMacro.exists()) oldMacro.moveTo(parent.child(newName + ".macro.json"));
+                                }
                                 showFileManager(fileManagerDir);
                             } catch (Exception e) {
                                 e.printStackTrace();
@@ -24130,7 +24341,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (autotiles.size() > 0) {
             autotiles at = new autotiles(autotiles);
             Json json = new Json();
-            writeThisAbs(curdir + "/auto.json", json.prettyPrint(at));
+            writeThisAbs(curdir + "/" + curfile + ".auto.json", json.prettyPrint(at));
         }
         saveMacroAutoTerrain();
 
@@ -26179,9 +26390,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         // copy macro
                         check = Gdx.files.absolute(filepath + "/auto.json");
                         if (check.exists()) {
-                            FileHandle check2 = Gdx.files.absolute(curdir + "/auto.json");
-                            to = Gdx.files.absolute(curdir);
-                            check.copyTo(to);
+                            FileHandle dest = Gdx.files.absolute(curdir + "/" + curfile + ".auto.json");
+                            dest.write(check.read(), false);
+                        }
+
+                        check = Gdx.files.absolute(filepath + "/" + MacroTerrainStore.FILE_NAME);
+                        if (check.exists()) {
+                            FileHandle dest = Gdx.files.absolute(curdir + "/" + curfile + ".macro.json");
+                            dest.write(check.read(), false);
                         }
 
                         String[] templateAssets = { "swatch.png", "basic_swatch.png" };
@@ -39948,6 +40164,28 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private boolean longpressobj(float p1, float p2) {
+        // If in select mode and have selected objects, open properties
+        if (activeobjtoolmode == 1 && !selobjs.isEmpty()) {
+            Vector3 touchObj = new Vector3();
+            unprojectMain(touchObj.set(p1, p2, 0));
+            float objX = touchObj.x;
+            float objY = touchObj.y;
+            final java.util.List<obj> foundObjs = new ArrayList<obj>();
+            world.QueryAABB(new com.badlogic.gdx.physics.box2d.QueryCallback() {
+                @Override
+                public boolean reportFixture(com.badlogic.gdx.physics.box2d.Fixture fixture) {
+                    Object userData = fixture.getUserData();
+                    if (userData instanceof obj && selobjs.contains(userData))
+                        foundObjs.add((obj) userData);
+                    return true;
+                }
+            }, objX - 3, objY - 3, objX + 3, objY + 3);
+            if (!foundObjs.isEmpty()) {
+                try { Gdx.input.vibrate(25); } catch (Exception e) {}
+                showPropBox2D(foundObjs.get(0));
+                return true;
+            }
+        }
 
         longpressObject(p1, p2);
         return true;

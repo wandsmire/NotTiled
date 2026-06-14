@@ -1,0 +1,3 @@
+description: 16×16 canvas with swatch + editable palette; paint and export PNG.
+highlight: true
+icon: pencil

@@ -146,3 +146,6 @@ android/assets/newfile-kinds.json
 # Symlinks created by setup_private.sh (still gitignored)
 /local.properties
 android/assets/export.keystore
+
+## Templates (hosted separately)
+/Templates/

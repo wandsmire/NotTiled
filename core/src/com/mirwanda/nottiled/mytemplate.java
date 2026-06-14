@@ -5,6 +5,7 @@ public class mytemplate
 	public String name;
 	public String template;
 	public String extension;
+	public String description;
 
 	public String getExtension_name() {
 		return extension_name;

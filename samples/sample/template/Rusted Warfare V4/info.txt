@@ -1,0 +1,3 @@
+description: Latest vanilla RW tilesets using new macro terrain feature.
+highlight: true
+icon: map
