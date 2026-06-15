@@ -133,6 +133,11 @@ import org.jfugue.pattern.Pattern;
 import org.jfugue.player.Player;
 import org.jfugue.rhythm.Rhythm;
 import org.jfugue.theory.ChordProgression;
+import com.leff.midi.MidiFile;
+import com.leff.midi.MidiTrack;
+import com.leff.midi.event.ProgramChange;
+import com.leff.midi.event.meta.Tempo;
+import com.leff.midi.event.meta.TimeSignature;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserFactory;
 import org.xmlpull.v1.XmlSerializer;
@@ -833,6 +838,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private TextButton bPropParse;
     private Table tpt;
     private int brushsize = 1;
+    private boolean pencilMode = false;
     private int brushLastCenter = -1;
     private boolean brushStrokeActive = false;
     private boolean brushDeferSideEffects = false;
@@ -4099,11 +4105,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         boolean ifmusic = false;
         for (property p : properties) {
-            if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
+            if (p.getName().equalsIgnoreCase("type") && (p.getValue().equalsIgnoreCase("NotTiled music") || p.getValue().equalsIgnoreCase("NotTiled pianoroll"))) {
                 ifmusic = true;
                 break;
             }
-
         }
 
         if (sShowCustomGrid) {
@@ -4207,6 +4212,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
         }
+
+        // Draw playback cursor for music maps
+        if (midiplaying && ifmusic) {
+            long elapsed = System.currentTimeMillis() - midiPlayStartTime;
+            float beatsPerMs = midiPlayTempo / 60000f;
+            float currentCol = midiPlayXStart + elapsed * beatsPerMs * 2;
+            int col = (int) currentCol;
+            if (col >= 0 && col < Tw) {
+                sr.setColor(1, 0, 0, 0.25f);
+                sr.rect(col * Tsw, -Tsh * Th + Tsh, Tsw, Tsh * Th);
+            }
+        }
+
         sr.setColor(0, 0, 0, 0.5f);
 
         sr.end();
@@ -8509,7 +8527,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     break;
             }
 
-            uidrawbutton(txbrush, z.brush, gui.tool5, 3);
+            uidrawbutton(pencilMode ? txpencil : txbrush, pencilMode ? z.pencil : z.brush, gui.tool5, 3);
             uidrawbutton(txundo, z.undo, gui.undo, 3.1f);
             uidrawbutton(txredo, z.redo, gui.redo, 3.1f);
         } else if (mode == "object") {
@@ -19712,6 +19730,35 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             fNTh.setText("20");
         if (fNTw.getText() == null)
             fNTw.setText("20");
+
+        String dir = fNCurdir.getText().replace("//", "/");
+        String file = fNFilename.getText();
+        FileHandle target = Gdx.files.absolute(dir + "/" + file);
+        if (target.exists()) {
+            Dialog dlg = new Dialog(z.confirmation, skin, "dialog") {
+                @Override
+                protected void result(Object object) {
+                    if (Boolean.TRUE.equals(object)) {
+                        // Delete existing file and associated terrain files
+                        target.delete();
+                        FileHandle autoF = Gdx.files.absolute(dir + "/" + file + ".auto.json");
+                        if (autoF.exists()) autoF.delete();
+                        FileHandle macroF = Gdx.files.absolute(dir + "/" + file + ".macro.json");
+                        if (macroF.exists()) macroF.delete();
+                        doFinishNewFile();
+                    }
+                }
+            };
+            dlg.text(file + " already exists. Overwrite?");
+            dlg.button(z.yes, true);
+            dlg.button(z.no, false);
+            dlg.show(stage);
+            return;
+        }
+        doFinishNewFile();
+    }
+
+    private void doFinishNewFile() {
         prefs.putString("Tsw", fNTsw.getText());
         prefs.putString("Tsh", fNTsh.getText());
         prefs.putString("Tw", fNTw.getText());
@@ -27310,6 +27357,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         loadautotiles();
         loadMacroAutoTerrain();
+
+        // Detect music map (enables audible tap feedback)
+        isPianoRollMap = false;
+        pianoRollBaseNote = 48;
+        for (property p : properties) {
+            if (p.getName().equalsIgnoreCase("type") && (p.getValue().equalsIgnoreCase("NotTiled music") || p.getValue().equalsIgnoreCase("NotTiled pianoroll")))
+                isPianoRollMap = true;
+            if (p.getName().equalsIgnoreCase("baseNote"))
+                try { pianoRollBaseNote = Integer.parseInt(p.getValue()); } catch (Exception e) {}
+        }
+
         uicam.zoom = 0.5f;
         uicam.update();
         loadingfile = false;
@@ -28287,6 +28345,96 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
+    private void runTerrainifyPencil(int num, tile t) {
+        if (t == null || !t.isTerrainForEditor() || !t.isCenter())
+            return;
+        int[] aa = t.getTerrain();
+        if (aa == null) return;
+        int T = aa[0];
+        // Paint vertex at the bottom-right corner of num.
+        // 4 tiles sharing that vertex:
+        int[] positions = {num, num + 1, num + Tw, num + Tw + 1};
+        // The inner corner index for each tile (facing the shared vertex)
+        // 0=TL,1=TR,2=BL,3=BR
+        int[] innerCorner = {3, 2, 1, 0};
+        for (int i = 0; i < 4; i++) {
+            int gogo = positions[i];
+            if (gogo < 0 || gogo >= Tw * Th) continue;
+            if ((i == 1 || i == 3) && num % Tw == Tw - 1) continue;
+            if ((i == 2 || i == 3) && num / Tw >= Th - 1) continue;
+            // Build full terrain for this tile by checking all 4 corners against neighbors
+            int[] cc = new int[]{-1, -1, -1, -1};
+            // Inner corner always gets T
+            cc[innerCorner[i]] = T;
+            // For the other 3 corners, check if neighbor shares terrain there
+            for (int c = 0; c < 4; c++) {
+                if (c == innerCorner[i]) continue;
+                // Find the neighbor tile that shares this corner
+                // Corner layout: 0=TL, 1=TR, 2=BL, 3=BR
+                // Neighbor offsets sharing each corner:
+                // TL(0): tile at gogo-Tw-1 has BR, gogo-Tw has BL, gogo-1 has TR
+                // TR(1): tile at gogo-Tw+1 has BL, gogo-Tw has BR, gogo+1 has TL
+                // BL(2): tile at gogo+Tw-1 has TR, gogo+Tw has TL, gogo-1 has BR
+                // BR(3): tile at gogo+Tw+1 has TL, gogo+Tw has TR, gogo+1 has BL
+                int neighborCornerTerrain = getCornerTerrainFromNeighbors(gogo, c);
+                if (neighborCornerTerrain >= 0) cc[c] = neighborCornerTerrain;
+            }
+            String ccStr = cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3];
+            if (isMacroTerrainPaintMode()) {
+                placeMacroAutotileCandidate(gogo, ccStr);
+                continue;
+            }
+            java.util.List<Integer> lint = new ArrayList<>(tilesets.get(curtset).getTilesByTerrain(ccStr));
+            if (lint.size() == 0) continue;
+            int tileindex = lint.get((int) (Math.random() * lint.size()));
+            tile y = tilesets.get(curtset).getTiles().get(tileindex);
+            updateTileData(selLayer, gogo, (long) y.getTileID() + tilesets.get(curtset).getFirstgid(), curtset, tileindex);
+        }
+    }
+
+    private int getCornerTerrainFromNeighbors(int pos, int corner) {
+        // Each corner of a tile is shared with 3 neighbors.
+        // We check the direct edge neighbors (not diagonal) for the matching corner.
+        // Corner 0(TL): shared with tile above (its BL=2) and tile left (its TR=1)
+        // Corner 1(TR): shared with tile above (its BR=3) and tile right (its TL=0)
+        // Corner 2(BL): shared with tile below (its TL=0) and tile left (its BR=3)
+        // Corner 3(BR): shared with tile below (its TR=1) and tile right (its BL=2)
+        int[][] neighborOffsets = {
+            {-Tw, 2,  -1, 1},  // corner 0: above→BL, left→TR
+            {-Tw, 3,   1, 0},  // corner 1: above→BR, right→TL
+            { Tw, 0,  -1, 3},  // corner 2: below→TL, left→BR
+            { Tw, 1,   1, 2}   // corner 3: below→TR, right→BL
+        };
+        int off1 = neighborOffsets[corner][0];
+        int c1 = neighborOffsets[corner][1];
+        int off2 = neighborOffsets[corner][2];
+        int c2 = neighborOffsets[corner][3];
+        // Check first neighbor
+        int n1 = pos + off1;
+        if (n1 >= 0 && n1 < Tw * Th) {
+            // boundary check for left/right
+            if (off1 != -1 || pos % Tw != 0) {
+                if (off1 != 1 || pos % Tw != Tw - 1) {
+                    tile m = getLayerTileMeta(selLayer, n1);
+                    if (m != null && m.getTerrain() != null && m.getTerrain()[c1] >= 0)
+                        return m.getTerrain()[c1];
+                }
+            }
+        }
+        // Check second neighbor
+        int n2 = pos + off2;
+        if (n2 >= 0 && n2 < Tw * Th) {
+            if (off2 != -1 || pos % Tw != 0) {
+                if (off2 != 1 || pos % Tw != Tw - 1) {
+                    tile m = getLayerTileMeta(selLayer, n2);
+                    if (m != null && m.getTerrain() != null && m.getTerrain()[c2] >= 0)
+                        return m.getTerrain()[c2];
+                }
+            }
+        }
+        return -1;
+    }
+
     private void beginBrushStroke() {
         if (brushStrokeActive)
             return;
@@ -28501,7 +28649,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         forEachBrushCell(centerNum, new BrushCellHandler() {
             @Override
             public void onCell(int tileIndex, int bx, int by) {
-                if (brushStrokePaintedCells != null && brushStrokePaintedCells.contains(tileIndex))
+                if (!pencilMode && brushStrokePaintedCells != null && brushStrokePaintedCells.contains(tileIndex))
                     return;
                 applyBrushCell(tileIndex, oi, bareLocalGid, isBrushTerrainAnchor(bx, by, brushsize), brushTileIdx);
             }
@@ -28523,17 +28671,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (t != null)
                 gid = t.getTileID();
             int tsetIdx = resolveTilesetIndexForGid(gid, curtset);
-            updateTileData(selLayer, num, gid, tsetIdx);
+            if (!pencilMode) updateTileData(selLayer, num, gid, tsetIdx);
         } else {
             t = tilesets.get(curtset).getTileMeta((int) bareLocalGid);
             t = resolveTerrainAutotileCenter(tilesets.get(curtset), t);
-            updateTileData(selLayer, num, oi, curtset);
+            if (!pencilMode) updateTileData(selLayer, num, oi, curtset);
         }
         if (!isMacroTerrainPaintMode() && oi == 0)
             return;
         if (t == null || !terra)
             return;
-        if (brushDeferSideEffects) {
+        if (pencilMode) {
+            runTerrainifyPencil(num, t);
+        } else if (brushDeferSideEffects) {
             if (brushDeferredTerrainAnchors == null)
                 brushDeferredTerrainAnchors = new java.util.LinkedHashSet<Integer>();
             brushDeferredTerrainAnchors.add(num);
@@ -29807,6 +29957,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         titleLabel.setWrap(true);
         content.add(titleLabel).width(dialogBtnWidth).pad(8).row();
 
+        String pencilLabel = z.pencil != null ? z.pencil : "Pencil (2x2)";
+        if (pencilMode) pencilLabel = "> " + pencilLabel;
+        TextButton pencilBtn = new TextButton(pencilLabel, skin);
+        pencilBtn.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                dlg.hide();
+                pencilMode = !pencilMode;
+            }
+        });
+        content.add(pencilBtn).width(dialogBtnWidth).height(btny).pad(3).row();
+
         String[] labels = new String[] {
                 brushShapeLabel(BrushShape.SQUARE),
                 brushShapeLabel(BrushShape.CIRCLE),
@@ -29817,13 +29979,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         for (int i = 0; i < labels.length; i++) {
             final int idx = i;
             String label = labels[i];
-            if (i == selected)
+            if (i == selected && !pencilMode)
                 label = "> " + label;
             TextButton btn = new TextButton(label, skin);
             btn.addListener(new ChangeListener() {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
                     dlg.hide();
+                    pencilMode = false;
                     if (idx == 0)
                         brushShape = BrushShape.SQUARE;
                     else if (idx == 1)
@@ -29955,13 +30118,24 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (cx == x1 && cy == y1)
                 break;
             int e2 = 2 * err;
-            if (e2 > -dy) {
+            boolean moveX = e2 > -dy;
+            boolean moveY = e2 < dx;
+            if (pencilMode && moveX && moveY) {
+                // avoid pure diagonal: step horizontally first, stamp, then vertically
                 err -= dy;
                 cx += sx;
-            }
-            if (e2 < dx) {
+                stampBrushAt(cy * Tw + cx);
                 err += dx;
                 cy += sy;
+            } else {
+                if (moveX) {
+                    err -= dy;
+                    cx += sx;
+                }
+                if (moveY) {
+                    err += dx;
+                    cy += sy;
+                }
             }
         }
     }
@@ -34195,6 +34369,24 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         else
             updateCache(num);
 
+        // Piano roll feedback: play a short note when placing a tile
+        if (str != 0 && oldStr != str && isPianoRollMap && !brushDeferSideEffects) {
+            int row = num / Tw;
+            int pianoRollPitch = pianoRollBaseNote + (Th - 1 - row);
+            int feedbackInstrument = 0;
+            if (tsetID >= 0 && tsetID < tilesets.size()) {
+                long localId = str - tilesets.get(tsetID).getFirstgid();
+                for (tile ti : tilesets.get(tsetID).getTiles())
+                    if (ti.getTileID() == localId) {
+                        for (property p : ti.getProperties())
+                            if (p.getName().equalsIgnoreCase("instrument"))
+                                try { feedbackInstrument = Integer.parseInt(p.getValue()); } catch (Exception e) {}
+                        break;
+                    }
+            }
+            playPianoRollNote(pianoRollPitch, feedbackInstrument);
+        }
+
     }
 
     boolean follower = false;
@@ -34317,6 +34509,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (!curpickAuto && !isMacroTerrainPaintMode()) {
                         if (isPixelArtSwatchActive())
                             return;
+                        // Music mode: tap on filled tile to erase it (toggle)
+                        if (isPianoRollMap && !eraser && layers.get(selLayer).getStr().get(num) != 0) {
+                            updateTileData(selLayer, num, 0, curtset);
+                            return;
+                        }
                         updateTileData(selLayer, num, oi, curtset);
                         return;
                     }
@@ -36851,6 +37048,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                     saveMapBlocking(curdir + "/" + curfile);
                     playgame(curdir, curfile);
+                    return true;
+                } else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled pianoroll")) {
+                    saveMapBlocking(curdir + "/" + curfile);
+                    playmusic(playback.PLAY, "");
                     return true;
                 } else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
                     saveMapBlocking(curdir + "/" + curfile);
@@ -39451,6 +39652,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     boolean midiplaying = false;
+    long midiPlayStartTime = 0;
+    int midiPlayXStart = 0;
+    int midiPlayTempo = 120;
     int tempo = 120;
     Thread play;
     // composer c = new composer("V9 L0 [PEDAL_HI_HAT]s Rs Ri [PEDAL_HI_HAT]s Rs Ri
@@ -39561,10 +39765,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         boolean ismusic = false;
         for (property p : properties) {
-            if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
+            if (p.getName().equalsIgnoreCase("type") && (p.getValue().equalsIgnoreCase("NotTiled music") || p.getValue().equalsIgnoreCase("NotTiled pianoroll"))) {
                 ismusic = true;
             }
-
         }
 
         if (ismusic) {
@@ -39588,10 +39791,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private void recordwav(String filenya) {
         boolean ismusic = false;
         for (property p : properties) {
-            if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
+            if (p.getName().equalsIgnoreCase("type") && (p.getValue().equalsIgnoreCase("NotTiled music") || p.getValue().equalsIgnoreCase("NotTiled pianoroll"))) {
                 ismusic = true;
             }
-
         }
 
         if (ismusic) {
@@ -39606,6 +39808,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     public Music composerPlayer;
+    boolean isPianoRollMap = false;
+    int pianoRollBaseNote = 48;
+    private Music pianoRollFeedback;
 
     private void playmusic(final playback pbt, final String filenya) {
 
@@ -39659,8 +39864,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void run() {
                 try {
-                    int wavwidth = 0;
-
                     int xstart = 0;
                     int xstop = Tw - 1;
                     int ystart = 0;
@@ -39672,127 +39875,112 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         ystop = mapendSelect / Tw;
                     }
 
-                    wavwidth = (2 + (xstop - xstart)) * 4;
-                    Pattern seq = new Pattern();
-                    int index = -1;
-                    boolean indexup;
-                    for (int y = ystart; y <= ystop; y++) {
-                        indexup = false;
-                        for (int x = xstart; x <= xstop; x++) {
-                            int num = y * Tw + x;
-                            Long spr = layers.get(selLayer).getStr().get(num);
-                            int tst = layers.get(selLayer).getTset().get(num);
-                            if (tst == -1) {
-                                continue;
-                            }
+                    int tempo = 120;
+                    int baseNote = 48;
+                    int ticksPerCol = 240;
+                    for (property p : properties) {
+                        if (p.getName().equalsIgnoreCase("tempo")) try { tempo = Integer.parseInt(p.getValue()); } catch (Exception e) {}
+                        if (p.getName().equalsIgnoreCase("baseNote")) try { baseNote = Integer.parseInt(p.getValue()); } catch (Exception e) {}
+                    }
 
-                            Long cspr = spr - tilesets.get(tst).getFirstgid();
+                    MidiTrack tempoTrack = new MidiTrack();
+                    TimeSignature ts = new TimeSignature();
+                    ts.setTimeSignature(4, 4, TimeSignature.DEFAULT_METER, TimeSignature.DEFAULT_DIVISION);
+                    tempoTrack.insertEvent(ts);
+                    Tempo t = new Tempo();
+                    t.setBpm(tempo);
+                    tempoTrack.insertEvent(t);
 
-                            for (tile t : tilesets.get(tst).getTiles()) {
-                                if (t.getTileID() == cspr) {
-                                    for (property p : t.getProperties()) {
-                                        if (p.getName().equalsIgnoreCase("chords")) {
-                                            if (!indexup) {
-                                                index++;
-                                                indexup = true;
-                                            }
-                                            ChordProgression cp = new ChordProgression(p.getValue());
-                                            Pattern tp = cp.getPattern();
-                                            seq.add(tp);
-                                        }
-                                        if (p.getName().equalsIgnoreCase("pattern")) {
-                                            if (!indexup) {
-                                                index++;
-                                                indexup = true;
-                                            }
-                                            Pattern tp = new Pattern(p.getValue().replace("!", "" + (x - xstart)));
-                                            // if (!tp.toString().contains( "[" )) tp.setVoice( index );
-                                            // voice setting sendiri -_-!
-                                            seq.add(tp);
-                                        }
-                                        if (p.getName().equalsIgnoreCase("rhythm")) {
-                                            if (!indexup) {
-                                                index++;
-                                                indexup = true;
-                                            }
-                                            String ss[] = p.getValue().split("\\n");
-                                            Rhythm r = new Rhythm();
-                                            for (String s : ss) {
-                                                r.addLayer(s);
-                                            }
+                    MidiTrack noteTrack = new MidiTrack();
 
-                                            seq.add(r.getPattern());
+                    for (int lay = 0; lay < layers.size(); lay++) {
+                        layer l = layers.get(lay);
+                        if (l.getType() != layer.Type.TILE) continue;
+                        int channel = Math.min(lay, 15);
+                        if (channel == 9) channel = 10;
+
+                        for (int row = ystart; row <= ystop; row++) {
+                            int pitch = baseNote + (Th - 1 - row);
+                            int col = xstart;
+                            while (col <= xstop) {
+                                int idx = row * Tw + col;
+                                long gid = l.getStr().get(idx);
+                                if (gid == 0) { col++; continue; }
+
+                                int tsetIdx = resolveTilesetIndexForGid((int) gid, l.getTset().get(idx));
+                                if (tsetIdx < 0) { col++; continue; }
+                                tileset tset = tilesets.get(tsetIdx);
+                                long localId = gid - tset.getFirstgid();
+
+                                // Read instrument and duration from individual tile properties
+                                int instrument = 0;
+                                int tileTicks = ticksPerCol;
+                                for (tile ti : tset.getTiles()) {
+                                    if (ti.getTileID() == localId) {
+                                        for (property p : ti.getProperties()) {
+                                            if (p.getName().equalsIgnoreCase("instrument"))
+                                                try { instrument = Integer.parseInt(p.getValue()); } catch (Exception e) {}
+                                            if (p.getName().equalsIgnoreCase("duration")) {
+                                                String dv = p.getValue().trim();
+                                                if (dv.contains("/")) {
+                                                    String[] parts = dv.split("/");
+                                                    try { tileTicks = (1920 * Integer.parseInt(parts[0].trim())) / Integer.parseInt(parts[1].trim()); } catch (Exception e) {}
+                                                }
+                                            }
                                         }
+                                        break;
                                     }
                                 }
+
+                                // Count consecutive same-tile for extended duration
+                                int startCol = col;
+                                while (col <= xstop) {
+                                    int ni = row * Tw + col;
+                                    long ng = l.getStr().get(ni);
+                                    if (ng != gid) break;
+                                    col++;
+                                }
+                                int tileCount = col - startCol;
+
+                                long startTick = (long) (startCol - xstart) * ticksPerCol;
+                                long durTicks = (long) tileCount * tileTicks;
+
+                                ProgramChange pc = new ProgramChange(startTick, channel, instrument);
+                                noteTrack.insertEvent(pc);
+                                noteTrack.insertNote(channel, pitch, 100, 0, startTick, durTicks);
                             }
                         }
-
                     }
 
-                    int tempo = 120;
-                    for (property p : properties) {
-                        if (p.getName().equalsIgnoreCase("tempo")) {
-                            tempo = Integer.parseInt(p.getValue());
-                        }
-                    }
-                    seq.setTempo(tempo);
+                    java.util.List<MidiTrack> tracks = new java.util.ArrayList<MidiTrack>();
+                    tracks.add(tempoTrack);
+                    tracks.add(noteTrack);
+                    MidiFile midi = new MidiFile(MidiFile.DEFAULT_RESOLUTION, tracks);
 
-                    // Gdx.app.log( "ASD",seq.toString() );
+                    int wavwidth = (2 + (xstop - xstart)) * 4;
                     switch (pbt) {
                         case MIDI:
-                            composer c = new composer(seq.toString());
-                            c.save(curdir + "/" + filenya + ".mid");
-                            MidiFileManager.savePatternToMidi(seq,
-                                    Gdx.files.absolute(curdir + "/" + filenya + "v2.midi").file());
+                            FileHandle midiOut = Gdx.files.absolute(curdir + "/" + filenya + ".mid");
+                            midi.writeToFile(midiOut.file());
                             break;
                         case PLAY:
-                            switch (Gdx.app.getType()) {
-                                case Android:
-                                    c = new composer(seq.toString());
-                                    c.save("NotTiled/Temp/composer.mid");
-                                    composerPlayer = Gdx.audio
-                                            .newMusic(Gdx.files.absolute(basepath + "NotTiled/Temp/composer.mid"));
-                                    composerPlayer.play();
-                                    break;
-                                // android specific code
-                                case Desktop:
-                                    // Gdx.app.log("SEQ", seq.toString());
-                                    new Player().play(seq);
-                                    break;
-                                // desktop specific code
-                                case iOS:
-                                    c = new composer(seq.toString());
-                                    c.save("NotTiled/Temp/composer.mid");
-                                    composerPlayer = Gdx.audio
-                                            .newMusic(Gdx.files.absolute(basepath + "NotTiled/Temp/composer.mid"));
-                                    composerPlayer.play();
-                                    break;
-                                // android specific code
-                            }
+                            FileHandle tmp = Gdx.files.absolute(basepath + "NotTiled/Temp/composer.mid");
+                            tmp.parent().mkdirs();
+                            midi.writeToFile(tmp.file());
+                            composerPlayer = Gdx.audio.newMusic(tmp);
+                            midiPlayStartTime = System.currentTimeMillis();
+                            midiPlayXStart = xstart;
+                            midiPlayTempo = tempo;
+                            composerPlayer.play();
                             break;
                         case WAV:
+                            FileHandle wavTmp = Gdx.files.absolute(basepath + "NotTiled/Temp/composer.mid");
+                            wavTmp.parent().mkdirs();
+                            midi.writeToFile(wavTmp.file());
                             recordAudio(wavwidth, filenya);
-                            switch (Gdx.app.getType()) {
-                                case Android:
-                                    Music m = Gdx.audio.newMusic(Gdx.files.absolute(curdir + "/" + filenya + ".mid"));
-                                    m.play();
-                                    break;
-                                // android specific code
-                                case Desktop:
-                                    new Player().play(seq);
-                                    midiplaying = false;
-                                    play = null;
-                                    break;
-                                // desktop specific code
-                                case iOS:
-                                    m = Gdx.audio.newMusic(Gdx.files.absolute(curdir + "/" + filenya + ".mid"));
-                                    m.play();
-                                    break;
-                                // android specific code
-                            }
+                            composerPlayer = Gdx.audio.newMusic(wavTmp);
+                            composerPlayer.play();
                             break;
-
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -39823,6 +40011,152 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         play.start();
 
+    }
+
+    /** Build a MIDI file from the piano-roll map layout. */
+    private MidiFile buildPianoRollMidi() {
+        int tempo = 120;
+        int baseNote = 48; // C3
+        int ticksPerCol = 240; // 1/8 note = 240 ticks (default)
+        for (property p : properties) {
+            if (p.getName().equalsIgnoreCase("tempo")) try { tempo = Integer.parseInt(p.getValue()); } catch (Exception e) {}
+            if (p.getName().equalsIgnoreCase("baseNote")) try { baseNote = Integer.parseInt(p.getValue()); } catch (Exception e) {}
+        }
+
+        MidiTrack tempoTrack = new MidiTrack();
+        TimeSignature ts = new TimeSignature();
+        ts.setTimeSignature(4, 4, TimeSignature.DEFAULT_METER, TimeSignature.DEFAULT_DIVISION);
+        tempoTrack.insertEvent(ts);
+        Tempo t = new Tempo();
+        t.setBpm(tempo);
+        tempoTrack.insertEvent(t);
+
+        MidiTrack noteTrack = new MidiTrack();
+
+        // Each layer = a MIDI channel
+        for (int lay = 0; lay < layers.size(); lay++) {
+            layer l = layers.get(lay);
+            if (l.getType() != layer.Type.TILE) continue;
+            int channel = Math.min(lay, 15);
+            if (channel == 9) channel = 10; // skip drum channel unless needed
+
+            // Scan rows (each row = a pitch)
+            for (int row = 0; row < Th; row++) {
+                int pitch = baseNote + (Th - 1 - row); // bottom row = lowest pitch
+                int col = 0;
+                while (col < Tw) {
+                    int idx = row * Tw + col;
+                    long gid = l.getStr().get(idx);
+                    if (gid == 0) { col++; continue; }
+
+                    // Resolve tileset and get instrument + duration from tile properties
+                    int tsetIdx = resolveTilesetIndexForGid((int) gid, l.getTset().get(idx));
+                    if (tsetIdx < 0) { col++; continue; }
+                    tileset tset = tilesets.get(tsetIdx);
+                    int instrument = 0;
+                    int tileTicks = ticksPerCol; // default 1/4
+                    long localId = gid - tset.getFirstgid();
+                    for (tile ti : tset.getTiles()) {
+                        if (ti.getTileID() == localId) {
+                            for (property p : ti.getProperties()) {
+                                if (p.getName().equalsIgnoreCase("instrument"))
+                                    try { instrument = Integer.parseInt(p.getValue()); } catch (Exception e) {}
+                                if (p.getName().equalsIgnoreCase("duration")) {
+                                    String dv = p.getValue().trim();
+                                    if (dv.contains("/")) {
+                                        String[] parts = dv.split("/");
+                                        try {
+                                            int num = Integer.parseInt(parts[0].trim());
+                                            int den = Integer.parseInt(parts[1].trim());
+                                            tileTicks = (1920 * num) / den;
+                                        } catch (Exception e) {}
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    }
+
+                    // Count consecutive tiles in this row for duration
+                    int startCol = col;
+                    while (col < Tw) {
+                        int ni = row * Tw + col;
+                        long ng = l.getStr().get(ni);
+                        if (ng == 0) break;
+                        int nt = resolveTilesetIndexForGid((int) ng, l.getTset().get(ni));
+                        if (nt != tsetIdx) break;
+                        col++;
+                    }
+                    int tileCount = col - startCol;
+
+                    long startTick = (long) startCol * ticksPerCol;
+                    long durTicks = (long) tileCount * tileTicks;
+
+                    ProgramChange pc = new ProgramChange(startTick, channel, instrument);
+                    noteTrack.insertEvent(pc);
+                    noteTrack.insertNote(channel, pitch, 100, 0, startTick, durTicks);
+                }
+            }
+        }
+
+        java.util.List<MidiTrack> tracks = new java.util.ArrayList<MidiTrack>();
+        tracks.add(tempoTrack);
+        tracks.add(noteTrack);
+        return new MidiFile(MidiFile.DEFAULT_RESOLUTION, tracks);
+    }
+
+    private void exportPianoRoll(String filenya) {
+        try {
+            MidiFile midi = buildPianoRollMidi();
+            String cleanName = filenya;
+            if (cleanName.toLowerCase().endsWith(".mid")) cleanName = cleanName.substring(0, cleanName.length() - 4);
+            else if (cleanName.toLowerCase().endsWith(".midi")) cleanName = cleanName.substring(0, cleanName.length() - 5);
+            FileHandle out = Gdx.files.absolute(curdir + "/" + cleanName + ".mid");
+            midi.writeToFile(out.file());
+            face.saveasFile(out.readBytes(), cleanName + ".mid");
+            backToMap();
+            status(z.exportfinished, 3);
+        } catch (Exception e) {
+            e.printStackTrace();
+            msgbox("Export failed: " + e.getMessage());
+        }
+    }
+
+    private void playPianoRoll() {
+        try {
+            if (composerPlayer != null) { composerPlayer.stop(); composerPlayer = null; return; }
+            MidiFile midi = buildPianoRollMidi();
+            FileHandle tmp = Gdx.files.absolute(basepath + "NotTiled/Temp/composer.mid");
+            tmp.parent().mkdirs();
+            midi.writeToFile(tmp.file());
+            composerPlayer = Gdx.audio.newMusic(tmp);
+            composerPlayer.play();
+        } catch (Exception e) {
+            e.printStackTrace();
+            msgbox("Play failed: " + e.getMessage());
+        }
+    }
+
+    private void playPianoRollNote(int pitch, int instrument) {
+        try {
+            if (pianoRollFeedback != null) { pianoRollFeedback.stop(); pianoRollFeedback.dispose(); pianoRollFeedback = null; }
+            MidiTrack tempoTrack = new MidiTrack();
+            Tempo t = new Tempo(); t.setBpm(120);
+            tempoTrack.insertEvent(t);
+            MidiTrack noteTrack = new MidiTrack();
+            ProgramChange pc = new ProgramChange(0, 0, instrument);
+            noteTrack.insertEvent(pc);
+            noteTrack.insertNote(0, pitch, 100, 0, 0, 240);
+            java.util.List<MidiTrack> tracks = new java.util.ArrayList<MidiTrack>();
+            tracks.add(tempoTrack);
+            tracks.add(noteTrack);
+            MidiFile midi = new MidiFile(MidiFile.DEFAULT_RESOLUTION, tracks);
+            FileHandle tmp = Gdx.files.absolute(basepath + "NotTiled/Temp/note.mid");
+            tmp.parent().mkdirs();
+            midi.writeToFile(tmp.file());
+            pianoRollFeedback = Gdx.audio.newMusic(tmp);
+            pianoRollFeedback.play();
+        } catch (Exception e) {}
     }
 
     private void previewpattern(final playback pbt, final String filenya) {
