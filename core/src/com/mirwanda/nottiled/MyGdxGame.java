@@ -28351,86 +28351,99 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         int[] aa = t.getTerrain();
         if (aa == null) return;
         int T = aa[0];
-        // Paint vertex at the bottom-right corner of num.
-        // 4 tiles sharing that vertex:
         int[] positions = {num, num + 1, num + Tw, num + Tw + 1};
-        // The inner corner index for each tile (facing the shared vertex)
-        // 0=TL,1=TR,2=BL,3=BR
         int[] innerCorner = {3, 2, 1, 0};
+        boolean[] valid = new boolean[4];
         for (int i = 0; i < 4; i++) {
-            int gogo = positions[i];
-            if (gogo < 0 || gogo >= Tw * Th) continue;
-            if ((i == 1 || i == 3) && num % Tw == Tw - 1) continue;
-            if ((i == 2 || i == 3) && num / Tw >= Th - 1) continue;
-            // Build full terrain for this tile by checking all 4 corners against neighbors
-            int[] cc = new int[]{-1, -1, -1, -1};
-            // Inner corner always gets T
-            cc[innerCorner[i]] = T;
-            // For the other 3 corners, check if neighbor shares terrain there
-            for (int c = 0; c < 4; c++) {
-                if (c == innerCorner[i]) continue;
-                // Find the neighbor tile that shares this corner
-                // Corner layout: 0=TL, 1=TR, 2=BL, 3=BR
-                // Neighbor offsets sharing each corner:
-                // TL(0): tile at gogo-Tw-1 has BR, gogo-Tw has BL, gogo-1 has TR
-                // TR(1): tile at gogo-Tw+1 has BL, gogo-Tw has BR, gogo+1 has TL
-                // BL(2): tile at gogo+Tw-1 has TR, gogo+Tw has TL, gogo-1 has BR
-                // BR(3): tile at gogo+Tw+1 has TL, gogo+Tw has TR, gogo+1 has BL
-                int neighborCornerTerrain = getCornerTerrainFromNeighbors(gogo, c);
-                if (neighborCornerTerrain >= 0) cc[c] = neighborCornerTerrain;
+            valid[i] = positions[i] >= 0 && positions[i] < Tw * Th;
+            if ((i == 1 || i == 3) && num % Tw == Tw - 1) valid[i] = false;
+            if ((i == 2 || i == 3) && num / Tw >= Th - 1) valid[i] = false;
+        }
+        for (int pass = 0; pass < 2; pass++) {
+            for (int i = 0; i < 4; i++) {
+                if (!valid[i]) continue;
+                int gogo = positions[i];
+                int[] cc = pencilBuildCorners(gogo, innerCorner[i], T);
+                String ccStr = cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3];
+                if (isMacroTerrainPaintMode()) {
+                    placeMacroAutotileCandidate(gogo, ccStr);
+                    continue;
+                }
+                java.util.List<Integer> lint = new ArrayList<>(tilesets.get(curtset).getTilesByTerrain(ccStr));
+                if (lint.size() == 0) continue;
+                int tileindex = lint.get((int) (Math.random() * lint.size()));
+                tile y = tilesets.get(curtset).getTiles().get(tileindex);
+                updateTileData(selLayer, gogo, (long) y.getTileID() + tilesets.get(curtset).getFirstgid(), curtset, tileindex);
             }
-            String ccStr = cc[0] + "," + cc[1] + "," + cc[2] + "," + cc[3];
-            if (isMacroTerrainPaintMode()) {
-                placeMacroAutotileCandidate(gogo, ccStr);
-                continue;
+        }
+        // Fix outer neighbors that border the 2x2
+        if (!isMacroTerrainPaintMode()) {
+            int[] outerPos = {
+                num - Tw, num - Tw + 1,
+                num - 1, num + 2,
+                num + Tw - 1, num + Tw + 2,
+                num + 2 * Tw, num + 2 * Tw + 1
+            };
+            for (int opos : outerPos) {
+                if (opos < 0 || opos >= Tw * Th) continue;
+                pencilFixNeighbor(opos);
             }
-            java.util.List<Integer> lint = new ArrayList<>(tilesets.get(curtset).getTilesByTerrain(ccStr));
-            if (lint.size() == 0) continue;
-            int tileindex = lint.get((int) (Math.random() * lint.size()));
-            tile y = tilesets.get(curtset).getTiles().get(tileindex);
-            updateTileData(selLayer, gogo, (long) y.getTileID() + tilesets.get(curtset).getFirstgid(), curtset, tileindex);
         }
     }
 
-    private int getCornerTerrainFromNeighbors(int pos, int corner) {
-        // Each corner of a tile is shared with 3 neighbors.
-        // We check the direct edge neighbors (not diagonal) for the matching corner.
-        // Corner 0(TL): shared with tile above (its BL=2) and tile left (its TR=1)
-        // Corner 1(TR): shared with tile above (its BR=3) and tile right (its TL=0)
-        // Corner 2(BL): shared with tile below (its TL=0) and tile left (its BR=3)
-        // Corner 3(BR): shared with tile below (its TR=1) and tile right (its BL=2)
-        int[][] neighborOffsets = {
-            {-Tw, 2,  -1, 1},  // corner 0: above→BL, left→TR
-            {-Tw, 3,   1, 0},  // corner 1: above→BR, right→TL
-            { Tw, 0,  -1, 3},  // corner 2: below→TL, left→BR
-            { Tw, 1,   1, 2}   // corner 3: below→TR, right→BL
-        };
-        int off1 = neighborOffsets[corner][0];
-        int c1 = neighborOffsets[corner][1];
-        int off2 = neighborOffsets[corner][2];
-        int c2 = neighborOffsets[corner][3];
-        // Check first neighbor
-        int n1 = pos + off1;
-        if (n1 >= 0 && n1 < Tw * Th) {
-            // boundary check for left/right
-            if (off1 != -1 || pos % Tw != 0) {
-                if (off1 != 1 || pos % Tw != Tw - 1) {
-                    tile m = getLayerTileMeta(selLayer, n1);
-                    if (m != null && m.getTerrain() != null && m.getTerrain()[c1] >= 0)
-                        return m.getTerrain()[c1];
-                }
+    private void pencilFixNeighbor(int pos) {
+        tile m = getLayerTileMeta(selLayer, pos);
+        if (m == null || m.getTerrain() == null) return;
+        int[] existing = m.getTerrain().clone();
+        boolean changed = false;
+        int v;
+        v = pencilCheckEdge(pos, -Tw, 2, -1, 1);
+        if (v >= 0 && existing[0] != v) { existing[0] = v; changed = true; }
+        v = pencilCheckEdge(pos, -Tw, 3, 1, 0);
+        if (v >= 0 && existing[1] != v) { existing[1] = v; changed = true; }
+        v = pencilCheckEdge(pos, Tw, 0, -1, 3);
+        if (v >= 0 && existing[2] != v) { existing[2] = v; changed = true; }
+        v = pencilCheckEdge(pos, Tw, 1, 1, 2);
+        if (v >= 0 && existing[3] != v) { existing[3] = v; changed = true; }
+        if (!changed) return;
+        String ccStr = existing[0] + "," + existing[1] + "," + existing[2] + "," + existing[3];
+        java.util.List<Integer> lint = new ArrayList<>(tilesets.get(curtset).getTilesByTerrain(ccStr));
+        if (lint.size() == 0) return;
+        int tileindex = lint.get((int) (Math.random() * lint.size()));
+        tile y = tilesets.get(curtset).getTiles().get(tileindex);
+        updateTileData(selLayer, pos, (long) y.getTileID() + tilesets.get(curtset).getFirstgid(), curtset, tileindex);
+    }
+
+    private int[] pencilBuildCorners(int pos, int forceCorner, int T) {
+        int[] cc = new int[]{-1, -1, -1, -1};
+        cc[forceCorner] = T;
+        tile existing = getLayerTileMeta(selLayer, pos);
+        if (existing != null && existing.getTerrain() != null) {
+            int[] ex = existing.getTerrain();
+            for (int c = 0; c < 4; c++) {
+                if (ex[c] >= 0) cc[c] = ex[c];
             }
         }
-        // Check second neighbor
+        if (cc[0] < 0) cc[0] = pencilCheckEdge(pos, -Tw, 2, -1, 1);
+        if (cc[1] < 0) cc[1] = pencilCheckEdge(pos, -Tw, 3, 1, 0);
+        if (cc[2] < 0) cc[2] = pencilCheckEdge(pos, Tw, 0, -1, 3);
+        if (cc[3] < 0) cc[3] = pencilCheckEdge(pos, Tw, 1, 1, 2);
+        cc[forceCorner] = T;
+        return cc;
+    }
+
+    private int pencilCheckEdge(int pos, int off1, int c1, int off2, int c2) {
+        int n1 = pos + off1;
+        if (n1 >= 0 && n1 < Tw * Th && !(off1 == -1 && pos % Tw == 0) && !(off1 == 1 && pos % Tw == Tw - 1)) {
+            tile m = getLayerTileMeta(selLayer, n1);
+            if (m != null && m.getTerrain() != null && m.getTerrain()[c1] >= 0)
+                return m.getTerrain()[c1];
+        }
         int n2 = pos + off2;
-        if (n2 >= 0 && n2 < Tw * Th) {
-            if (off2 != -1 || pos % Tw != 0) {
-                if (off2 != 1 || pos % Tw != Tw - 1) {
-                    tile m = getLayerTileMeta(selLayer, n2);
-                    if (m != null && m.getTerrain() != null && m.getTerrain()[c2] >= 0)
-                        return m.getTerrain()[c2];
-                }
-            }
+        if (n2 >= 0 && n2 < Tw * Th && !(off2 == -1 && pos % Tw == 0) && !(off2 == 1 && pos % Tw == Tw - 1)) {
+            tile m = getLayerTileMeta(selLayer, n2);
+            if (m != null && m.getTerrain() != null && m.getTerrain()[c2] >= 0)
+                return m.getTerrain()[c2];
         }
         return -1;
     }
