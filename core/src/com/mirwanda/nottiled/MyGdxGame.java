@@ -9443,6 +9443,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 if (!cue("usetemplateback") && lockUI)
                     return;
+                refreshNewFileKindList();
                 gotoStage(tNewFilePick);
             }
         });
