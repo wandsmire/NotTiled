@@ -855,6 +855,21 @@ public class MainActivity extends AndroidApplication implements Interface
 	private String not2pixEditPath = null;
 
 	@Override
+	public boolean isNot2PixInstalled() {
+		try {
+			Intent intent = new Intent("com.mirwanda.not2pix.EDIT_TILESET");
+			if (intent.resolveActivity(getPackageManager()) != null) {
+				return true;
+			}
+			// Fallback: check if the package exists
+			getPackageManager().getApplicationInfo("com.mirwanda.not2pix", 0);
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	@Override
 	public void editInNot2Pix(final String absolutePath) {
 		runOnUiThread(new Runnable() {
 			@Override
@@ -877,10 +892,8 @@ public class MainActivity extends AndroidApplication implements Interface
 					intent.putExtra("file_path", absolutePath);
 					intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 					startActivityForResult(intent, EDIT_NOT2PIX_CODE);
-				} catch (android.content.ActivityNotFoundException e) {
-					// Not2Pix not installed
 				} catch (Exception e) {
-					// FileProvider error or other
+					not2pixEditPath = null;
 				}
 			}
 		});

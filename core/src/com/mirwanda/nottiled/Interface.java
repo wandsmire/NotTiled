@@ -31,5 +31,6 @@ public interface Interface
 	public boolean isAccessAllFilesGranted();
 	public String getExternalStoragePath();
 	public void editInNot2Pix(String absolutePath);
+	public boolean isNot2PixInstalled();
 
 }

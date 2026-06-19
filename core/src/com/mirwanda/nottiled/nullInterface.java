@@ -203,4 +203,9 @@ public class nullInterface implements Interface {
         // Desktop: no-op or could open with system default editor
     }
 
+    @Override
+    public boolean isNot2PixInstalled() {
+        return false;
+    }
+
 }

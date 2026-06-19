@@ -66,4 +66,12 @@
         </provider>
          </application>
 
+    <!-- Allow querying for Not2Pix (required on Android 11+ for package visibility) -->
+    <queries>
+        <package android:name="com.mirwanda.not2pix" />
+        <intent>
+            <action android:name="com.mirwanda.not2pix.EDIT_TILESET" />
+        </intent>
+    </queries>
+
 </manifest>

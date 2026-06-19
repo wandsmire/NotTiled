@@ -7415,6 +7415,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     @Override
     public void resume() {
+        Gdx.app.postRunnable(new Runnable() {
+            @Override
+            public void run() {
+                resetCaches();
+            }
+        });
     }
 
     public void uisrect(gui gui, Vector3 mousepos, Color color) {
@@ -17325,6 +17331,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             btnEditNot2Pix.addListener(new ChangeListener() {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
+                    if (!face.isNot2PixInstalled()) {
+                        showNot2PixNotInstalledDialog();
+                        return;
+                    }
                     optionsDlg.hide();
                     // Check if tileset has embedded_png - if so, export that
                     boolean hasEmbedded = false;
@@ -17487,6 +17497,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
+    public void showNot2PixNotInstalledDialog() {
+        Gdx.app.postRunnable(new Runnable() {
+            @Override
+            public void run() {
+                Dialog dlg = new Dialog("", skin, "dialog");
+                Label lbl = new Label("Not2Pix not installed.", skin);
+                lbl.setWrap(true);
+                dlg.getContentTable().add(lbl).width(getDialogContentWidth()).pad(10).row();
+                dlg.button(z.ok != null ? z.ok : "OK", true);
+                dlg.show(stage);
+            }
+        });
+    }
+
     private void invalidateTileCache() {
         for (TileCache cace : tcaches) {
             cace.getCache().dispose();
@@ -17494,6 +17518,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tcaches.clear();
         pickerCacheValid = false;
         terrainPickerCacheValid = false;
+        resetCaches();
     }
 
     private void updateEmbeddedPng(tileset ts, FileHandle imageFile) {
@@ -36503,8 +36528,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Label lTitle = new Label(z.collaboration, skin);
         tbHost = new TextButton(z.runserver, skin);
         Label lRemote = new Label(z.remoteip, skin);
-        tfRemoteIP = new TextField(prefs.getString("collab_ip", "zion-ceramics.with.playit.plus"), skin);
-        tfPort = new TextField(prefs.getString("collab_port", "1038"), skin);
+        tfRemoteIP = new TextField(prefs.getString("collab_ip", "thereon-duplicate.with.playit.plus"), skin);
+        tfPort = new TextField(prefs.getString("collab_port", "1097"), skin);
         tbJoin = new TextButton(z.join, skin);
         roomName = new TextField(prefs.getString("collab_room", "room1"), skin);
         uniqueID = new TextField(prefs.getString("collab_username", "Steve"), skin);
