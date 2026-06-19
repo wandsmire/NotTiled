@@ -198,5 +198,9 @@ public class nullInterface implements Interface {
         return com.badlogic.gdx.Gdx.files.getExternalStoragePath();
     }
 
+    @Override
+    public void editInNot2Pix(String absolutePath) {
+        // Desktop: no-op or could open with system default editor
+    }
 
 }

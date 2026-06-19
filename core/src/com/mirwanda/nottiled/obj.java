@@ -266,7 +266,7 @@ public class obj implements Cloneable
 		body.setUserData(this);
 	}
 
-	public void updateVerticesActive(World world, int Tsh){
+	public void updateVerticesActive(World world, int Tsh, float zoom){
 		if (body!=null) {
 			world.destroyBody( body );
 			body = null;
@@ -291,7 +291,7 @@ public class obj implements Cloneable
 			fdef.shape = pshape;
 			fixture = body.createFixture(fdef);
 			fixture.setUserData(this);
-			addMarker( "SEI" );
+			addMarker( "SEI", zoom );
 			//addMarker( "R" );
 
 		}else if (shape=="polygon"){
@@ -374,7 +374,7 @@ public class obj implements Cloneable
 			fdef.shape = pshape;
 			fixture = body.createFixture(fdef);
 			fixture.setUserData(this);
-			addMarker( "SE" );
+			addMarker( "SE", zoom );
 
 		}else if (shape=="ellipse"){
 			bdef.position.set(x,-y+Tsh);
@@ -390,7 +390,7 @@ public class obj implements Cloneable
 			fixture = body.createFixture(fdef);
 			fixture.setUserData(this);
 
-			addMarker( "SE" );
+			addMarker( "SE", zoom );
 			///
 
 		}else{
@@ -407,14 +407,20 @@ public class obj implements Cloneable
 			fixture = body.createFixture(fdef);
 			fixture.setUserData(this);
 
-			addMarker( "SE" );
+			addMarker( "SE", zoom );
 			//addMarker( "R" );
 			///
 			///
 		}
 
-		addMarker( "NW" );
-		//addMarker( "P" );
+		addMarker( "NW", zoom );
+		addMarker( "NE", zoom );
+		addMarker( "SW", zoom );
+		addMarker( "N", zoom );
+		addMarker( "S", zoom );
+		addMarker( "E", zoom );
+		addMarker( "W", zoom );
+		addMarker( "C", zoom );
 
 
 
@@ -425,13 +431,12 @@ public class obj implements Cloneable
 		body.setUserData(this);
 	}
 
-	private void addMarker(String markerstring){
+	private void addMarker(String markerstring, float zoom){
 		Vector2[] vertices = new Vector2[4];
-		float ow=Math.min(w,h)/8f;
+		float ow = 32f * zoom;
 
 		switch (markerstring){
 			case "NW":
-				//NORTH WEST
 				vertices[0] = new Vector2( -ow, -ow );
 				vertices[1] = new Vector2( -ow, ow );
 				vertices[2] = new Vector2( ow, -ow );
@@ -441,11 +446,9 @@ public class obj implements Cloneable
 				fdef.shape = pshape;
 				fixture = body.createFixture(fdef);
 				fixture.setUserData("NW");
-
 				break;
 
 			case "SE":
-				//SOUTH EAST
 				vertices[0] = new Vector2( -ow+w, -ow-h );
 				vertices[1] = new Vector2( -ow+w, ow-h );
 				vertices[2] = new Vector2( ow+w, -ow-h );
@@ -455,11 +458,9 @@ public class obj implements Cloneable
 				fdef.shape = pshape;
 				fixture = body.createFixture(fdef);
 				fixture.setUserData("SE");
-				//
 				break;
 
 			case "SEI":
-				//SOUTH EAST
 				vertices[0] = new Vector2( -ow+w, -ow+h );
 				vertices[1] = new Vector2( -ow+w, ow+h );
 				vertices[2] = new Vector2( ow+w, -ow+h );
@@ -469,11 +470,81 @@ public class obj implements Cloneable
 				fdef.shape = pshape;
 				fixture = body.createFixture(fdef);
 				fixture.setUserData("SEI");
-				//
+				break;
+
+			case "NE":
+				vertices[0] = new Vector2( -ow+w, -ow );
+				vertices[1] = new Vector2( -ow+w, ow );
+				vertices[2] = new Vector2( ow+w, -ow );
+				vertices[3] = new Vector2( ow+w, ow );
+				pshape = new PolygonShape();
+				pshape.set(vertices);
+				fdef.shape = pshape;
+				fixture = body.createFixture(fdef);
+				fixture.setUserData("NE");
+				break;
+
+			case "SW":
+				vertices[0] = new Vector2( -ow, -ow-h );
+				vertices[1] = new Vector2( -ow, ow-h );
+				vertices[2] = new Vector2( ow, -ow-h );
+				vertices[3] = new Vector2( ow, ow-h );
+				pshape = new PolygonShape();
+				pshape.set(vertices);
+				fdef.shape = pshape;
+				fixture = body.createFixture(fdef);
+				fixture.setUserData("SW");
+				break;
+
+			case "N":
+				vertices[0] = new Vector2( -ow+w/2f, -ow );
+				vertices[1] = new Vector2( -ow+w/2f, ow );
+				vertices[2] = new Vector2( ow+w/2f, -ow );
+				vertices[3] = new Vector2( ow+w/2f, ow );
+				pshape = new PolygonShape();
+				pshape.set(vertices);
+				fdef.shape = pshape;
+				fixture = body.createFixture(fdef);
+				fixture.setUserData("N");
+				break;
+
+			case "S":
+				vertices[0] = new Vector2( -ow+w/2f, -ow-h );
+				vertices[1] = new Vector2( -ow+w/2f, ow-h );
+				vertices[2] = new Vector2( ow+w/2f, -ow-h );
+				vertices[3] = new Vector2( ow+w/2f, ow-h );
+				pshape = new PolygonShape();
+				pshape.set(vertices);
+				fdef.shape = pshape;
+				fixture = body.createFixture(fdef);
+				fixture.setUserData("S");
+				break;
+
+			case "W":
+				vertices[0] = new Vector2( -ow, -ow-h/2f );
+				vertices[1] = new Vector2( -ow, ow-h/2f );
+				vertices[2] = new Vector2( ow, -ow-h/2f );
+				vertices[3] = new Vector2( ow, ow-h/2f );
+				pshape = new PolygonShape();
+				pshape.set(vertices);
+				fdef.shape = pshape;
+				fixture = body.createFixture(fdef);
+				fixture.setUserData("W");
+				break;
+
+			case "E":
+				vertices[0] = new Vector2( -ow+w, -ow-h/2f );
+				vertices[1] = new Vector2( -ow+w, ow-h/2f );
+				vertices[2] = new Vector2( ow+w, -ow-h/2f );
+				vertices[3] = new Vector2( ow+w, ow-h/2f );
+				pshape = new PolygonShape();
+				pshape.set(vertices);
+				fdef.shape = pshape;
+				fixture = body.createFixture(fdef);
+				fixture.setUserData("E");
 				break;
 
 			case "R":
-				//ROTATE
 				vertices[0] = new Vector2( -ow+w/2f, -ow+2*ow );
 				vertices[1] = new Vector2( -ow+w/2f, ow+2*ow );
 				vertices[2] = new Vector2( ow+w/2f, -ow+2*ow );
@@ -483,11 +554,9 @@ public class obj implements Cloneable
 				fdef.shape = pshape;
 				fixture = body.createFixture(fdef);
 				fixture.setUserData("R");
-				//
 				break;
 
 			case "P":
-				//PROPERTIES
 				vertices[0] = new Vector2( -ow-2*ow, -ow-h/2f );
 				vertices[1] = new Vector2( -ow-2*ow, ow-h/2f );
 				vertices[2] = new Vector2( ow-2*ow, -ow-h/2f );
@@ -497,110 +566,19 @@ public class obj implements Cloneable
 				fdef.shape = pshape;
 				fixture = body.createFixture(fdef);
 				fixture.setUserData("P");
-				//
 				break;
 
-		/*
-		//SOUTH WEST
-		vertices[0] = new Vector2( -ow, -ow-h );
-		vertices[1] = new Vector2( -ow, ow-h );
-		vertices[2] = new Vector2( ow, -ow-h );
-		vertices[3] = new Vector2( ow, ow-h );
-		pshape = new PolygonShape();
-		pshape.set(vertices);
-		fdef.shape = pshape;
-		fixture = body.createFixture(fdef);
-		fixture.setUserData("SW");
-		//
-
-		 */
-
-
-
-
-
-		/*
-		//NORTH EAST
-		vertices[0] = new Vector2( -ow+w, -ow );
-		vertices[1] = new Vector2( -ow+w, ow );
-		vertices[2] = new Vector2( ow+w, -ow );
-		vertices[3] = new Vector2( ow+w, ow );
-		pshape = new PolygonShape();
-		pshape.set(vertices);
-		fdef.shape = pshape;
-		fixture = body.createFixture(fdef);
-		fixture.setUserData("NE");
-		//
-
-		 */
-
-		/*
-		//NORTH
-		vertices[0] = new Vector2( -ow+w/2f, -ow );
-		vertices[1] = new Vector2( -ow+w/2f, ow );
-		vertices[2] = new Vector2( ow+w/2f, -ow );
-		vertices[3] = new Vector2( ow+w/2f, ow );
-		pshape = new PolygonShape();
-		pshape.set(vertices);
-		fdef.shape = pshape;
-		fixture = body.createFixture(fdef);
-		fixture.setUserData("N");
-		//
-
-		//SOUTH
-		vertices[0] = new Vector2( -ow+w/2f, -ow-h );
-		vertices[1] = new Vector2( -ow+w/2f, ow-h );
-		vertices[2] = new Vector2( ow+w/2f, -ow-h );
-		vertices[3] = new Vector2( ow+w/2f, ow-h );
-		pshape = new PolygonShape();
-		pshape.set(vertices);
-		fdef.shape = pshape;
-		fixture = body.createFixture(fdef);
-		fixture.setUserData("S");
-		//
-
-		//WEST
-		vertices[0] = new Vector2( -ow, -ow-h/2f );
-		vertices[1] = new Vector2( -ow, ow-h/2f );
-		vertices[2] = new Vector2( ow, -ow-h/2f );
-		vertices[3] = new Vector2( ow, ow-h/2f );
-		pshape = new PolygonShape();
-		pshape.set(vertices);
-		fdef.shape = pshape;
-		fixture = body.createFixture(fdef);
-		fixture.setUserData("W");
-		//
-
-		//EAST
-		vertices[0] = new Vector2( -ow+w, -ow-h/2f );
-		vertices[1] = new Vector2( -ow+w, ow-h/2f );
-		vertices[2] = new Vector2( ow+w, -ow-h/2f );
-		vertices[3] = new Vector2( ow+w, ow-h/2f );
-		pshape = new PolygonShape();
-		pshape.set(vertices);
-		fdef.shape = pshape;
-		fixture = body.createFixture(fdef);
-		fixture.setUserData("E");
-		//
-
-		 */
-
-
-		/*
-		//CENTER
-		vertices[0] = new Vector2( -ow+w/2f, -ow-h/2f );
-		vertices[1] = new Vector2( -ow+w/2f, ow-h/2f );
-		vertices[2] = new Vector2( ow+w/2f, -ow-h/2f );
-		vertices[3] = new Vector2( ow+w/2f, ow-h/2f );
-		pshape = new PolygonShape();
-		pshape.set(vertices);
-		fdef.shape = pshape;
-		fixture = body.createFixture(fdef);
-		fixture.setUserData("C");
-		//
-
-		 */
-
+			case "C":
+				vertices[0] = new Vector2( -ow+w/2f, -ow-h/2f );
+				vertices[1] = new Vector2( -ow+w/2f, ow-h/2f );
+				vertices[2] = new Vector2( ow+w/2f, -ow-h/2f );
+				vertices[3] = new Vector2( ow+w/2f, ow-h/2f );
+				pshape = new PolygonShape();
+				pshape.set(vertices);
+				fdef.shape = pshape;
+				fixture = body.createFixture(fdef);
+				fixture.setUserData("C");
+				break;
 		}
 
 	}

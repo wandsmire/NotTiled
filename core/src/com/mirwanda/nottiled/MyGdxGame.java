@@ -1125,6 +1125,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (layers.size() > 0 && layers.get(selLayer).getType() == layer.Type.OBJECT) {
                     // move
                     if (activeobjtoolmode == 2) {
+                        editDragStarted = false;
+                        oldae = -1;
+                        oldab = -1;
                         Vector3 touch = new Vector3();
                         unprojectMain(touch.set(new Vector3(screenX, screenY, 0)));
                         float ae = touch.x;
@@ -1167,7 +1170,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (o.getW() < 5)
                             o.setW(5);
 
-                        o.updateVerticesActive(world, Tsh);
+                        o.updateVerticesActive(world, Tsh, cam.zoom);
 
                         layerobjecthistory loh = new layerobjecthistory();
                         loh.setRelatedobj(o);
@@ -1209,17 +1212,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             @Override
             public boolean touchDragged(int screenX, int screenY, int pointer) {
-
-                if (layers.size() > 0 && layers.get(selLayer).getType() == layer.Type.OBJECT) {
-                    Vector3 touch = new Vector3();
-                    unprojectMain(touch.set(new Vector3(screenX, screenY, 0)));
-                    float ae = touch.x;
-                    float ab = touch.y;
-                    // body.setTransform( 9999, 9999,0 );
-                    // body.setAwake( false );
-                    // body.setAwake( false );
-
-                }
 
                 return false;
             }
@@ -2143,8 +2135,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         // drawCollisions();
                         postProcessor.render();
                         drawWorldUI();
-                        // draw debug for collision detection
-                        b2dr.render(world, isFull3DMode ? camFull3D.combined : (is3DMode ? cam3d.combined : cam.combined));
+                        // draw debug for collision detection (only in edit mode, hide while dragging)
+                        if (activeobjtoolmode == 2 && !markermode) {
+                            b2dr.render(world, isFull3DMode ? camFull3D.combined : (is3DMode ? cam3d.combined : cam.combined));
+                        }
 
                         drawstage(delta);
 
@@ -17326,6 +17320,84 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         if (!isProtectedPixelArtTileset(tsetIdx)) {
+            TextButton btnEditNot2Pix = new TextButton(
+                    z.editinnot2pix != null ? z.editinnot2pix : "Edit in Not2Pix", skin);
+            btnEditNot2Pix.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    optionsDlg.hide();
+                    // Check if tileset has embedded_png - if so, export that
+                    boolean hasEmbedded = false;
+                    for (property p : ts.getProperties()) {
+                        if (p.getName().equalsIgnoreCase("embedded_png")) { hasEmbedded = true; break; }
+                    }
+                    if (hasEmbedded && ts.getPixmap() != null) {
+                        String extPath = face.getExternalStoragePath();
+                        String tmpPath = extPath + "/.not2pix_embedded_edit.png";
+                        FileHandle tmp = Gdx.files.absolute(tmpPath);
+                        PixmapIO.writePNG(tmp, ts.getPixmap());
+                        not2pixEditTsetIdx = tsetIdx;
+                        face.editInNot2Pix(tmpPath);
+                    } else {
+                        String src = ts.getSource();
+                        if (src != null && !src.isEmpty()) {
+                            String absPath = convertToAbsolutepath(src, curdir);
+                            FileHandle extFile = Gdx.files.absolute(absPath);
+                            if (!extFile.exists()) {
+                                // Check if it's an internal RW tileset
+                                String internalpath = "rusted_warfare/assets/tilesets";
+                                String inter = convertToAbsolutepath(src, internalpath);
+                                FileHandle finter = Gdx.files.internal(inter);
+                                if (finter.exists() && ts.getPixmap() != null) {
+                                    // Show confirmation dialog
+                                    Dialog dlg = new Dialog(z.confirmation, skin, "dialog") {
+                                        @Override
+                                        protected void result(Object obj) {
+                                            if ((boolean) obj) {
+                                                // Convert to embedded_png
+                                                String extPath = face.getExternalStoragePath();
+                                                String tmpPath = extPath + "/.not2pix_embedded_edit.png";
+                                                FileHandle tmp = Gdx.files.absolute(tmpPath);
+                                                PixmapIO.writePNG(tmp, ts.getPixmap());
+                                                byte[] bytes = tmp.readBytes();
+                                                String encoded = android.util.Base64.encodeToString(bytes, 0);
+                                                ts.getProperties().add(new property("embedded_png", encoded));
+                                                ts.setSource("");
+                                                ts.setUsetsx(false);
+                                                ts.setTsxfile("");
+                                                not2pixEditTsetIdx = tsetIdx;
+                                                face.editInNot2Pix(tmpPath);
+                                            }
+                                        }
+                                    };
+                                    Label lbl = new Label("Editing Rusted Warfare tileset will convert it into an embedded PNG. Continue?", skin);
+                                    lbl.setWrap(true);
+                                    dlg.getContentTable().add(lbl).width(getDialogContentWidth()).pad(10).row();
+                                    dlg.button(z.yes, true);
+                                    dlg.button(z.no, false);
+                                    dlg.show(stage);
+                                } else {
+                                    status("No image for this tileset", 3);
+                                }
+                            } else {
+                                not2pixEditTsetIdx = tsetIdx;
+                                face.editInNot2Pix(absPath);
+                            }
+                        } else if (ts.getPixmap() != null) {
+                            String extPath = face.getExternalStoragePath();
+                            String tmpPath = extPath + "/.not2pix_embedded_edit.png";
+                            FileHandle tmp = Gdx.files.absolute(tmpPath);
+                            PixmapIO.writePNG(tmp, ts.getPixmap());
+                            not2pixEditTsetIdx = tsetIdx;
+                            face.editInNot2Pix(tmpPath);
+                        } else {
+                            status("No image for this tileset", 3);
+                        }
+                    }
+                }
+            });
+            optionsTable.add(btnEditNot2Pix).width(dialogBtnWidth).height(btny).pad(5).row();
+
             TextButton btnDel = new TextButton(z.remove, skin);
             btnDel.addListener(new ChangeListener() {
                 @Override
@@ -17353,6 +17425,90 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         optionsTable.add(btnCancel).width(dialogBtnWidth).height(btny).pad(5).row();
 
         optionsDlg.show(stage);
+    }
+
+    /** Reload a tileset texture from disk after external edit (e.g. from Not2Pix). */
+    public int not2pixEditTsetIdx = -1;
+
+    public void reloadTilesetByPath(String absolutePath) {
+        // Check if this was an embedded PNG edit (temp file)
+        if (not2pixEditTsetIdx >= 0 && not2pixEditTsetIdx < tilesets.size()) {
+            tileset ts = tilesets.get(not2pixEditTsetIdx);
+            String src = ts.getSource();
+            boolean isEmbedded = (src == null || src.isEmpty());
+            try {
+                FileHandle f = Gdx.files.absolute(absolutePath);
+                if (f.exists()) {
+                    Pixmap pm = new Pixmap(f);
+                    ts.setPixmap(pm);
+                    ts.setTexture(new Texture(pm));
+                    if (ts.getTrans() != null) {
+                        ts.setTexture(chromaKey(ts.getTexture(), ts.getTrans()));
+                    }
+                    // Update embedded_png if this tileset uses it
+                    if (isEmbedded) {
+                        updateEmbeddedPng(ts, f);
+                    } else {
+                        updateEmbeddedPng(ts, f);
+                    }
+                }
+            } catch (Exception e) {
+                ErrorBung(e, "errorlog.txt");
+            }
+            not2pixEditTsetIdx = -1;
+            invalidateTileCache();
+            return;
+        }
+
+        // Fallback: find by path
+        for (int i = 0; i < tilesets.size(); i++) {
+            String src = tilesets.get(i).getSource();
+            if (src == null || src.isEmpty()) continue;
+            String abs = convertToAbsolutepath(src, curdir);
+            if (abs.equals(absolutePath)) {
+                try {
+                    FileHandle f = Gdx.files.absolute(absolutePath);
+                    if (f.exists()) {
+                        Pixmap pm = new Pixmap(f);
+                        tilesets.get(i).setPixmap(pm);
+                        tilesets.get(i).setTexture(new Texture(pm));
+                        if (tilesets.get(i).getTrans() != null) {
+                            tilesets.get(i).setTexture(
+                                chromaKey(tilesets.get(i).getTexture(), tilesets.get(i).getTrans()));
+                        }
+                        updateEmbeddedPng(tilesets.get(i), f);
+                    }
+                } catch (Exception e) {
+                    ErrorBung(e, "errorlog.txt");
+                }
+                invalidateTileCache();
+                return;
+            }
+        }
+    }
+
+    private void invalidateTileCache() {
+        for (TileCache cace : tcaches) {
+            cace.getCache().dispose();
+        }
+        tcaches.clear();
+        pickerCacheValid = false;
+        terrainPickerCacheValid = false;
+    }
+
+    private void updateEmbeddedPng(tileset ts, FileHandle imageFile) {
+        try {
+            byte[] bytes = imageFile.readBytes();
+            String encoded = android.util.Base64.encodeToString(bytes, 0);
+            for (property p : ts.getProperties()) {
+                if (p.getName().equalsIgnoreCase("embedded_png")) {
+                    p.setValue(encoded);
+                    return;
+                }
+            }
+        } catch (Exception e) {
+            // ignore
+        }
     }
 
     private int getLayerDepth(layer l) {
@@ -33699,12 +33855,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     boolean requestupdatemarker = false;
     public boolean markermode = false;
+    public boolean editDragStarted = false;
+    private float lastMarkerZoom = -1f;
     public String markerstring;
     public obj activeDraggedObject;
 
     public void updateMarkers() {
         if (selobjs.size() == 0)
             return;
+        if (!markermode && cam.zoom != lastMarkerZoom) {
+            requestupdatemarker = true;
+            lastMarkerZoom = cam.zoom;
+        }
         if (requestupdatemarker) {
             requestupdatemarker = false;
 
@@ -33714,7 +33876,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 return;
             for (obj o : layers.get(selLayer).getObjects()) {
                 if (selobjs.contains(o)) {
-                    o.updateVerticesActive(world, Tsh);
+                    o.updateVerticesActive(world, Tsh, cam.zoom);
                 }
             }
         }
@@ -33954,22 +34116,34 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 break;
 
             case "NW":
-                targetObj.setX(ae);
-                targetObj.setY(-ab + Tsh);
+                if (origTarget.getRotation() == 0) {
+                    float newX = ae;
+                    float newY = -ab + Tsh;
+                    float origRight = origTarget.getX() + origTarget.getW();
+                    float origBottom = origTarget.getY() + origTarget.getH();
+                    targetObj.setX(newX);
+                    targetObj.setY(newY);
+                    targetObj.setW(origRight - newX);
+                    targetObj.setH(origBottom - newY);
+                } else {
+                    n1 = Math.sqrt(Math.pow(ae - targetObj.getX(), 2) + Math.pow(-ab + Tsh - targetObj.getY(), 2));
+                    targetObj.setW((float) n1);
+                    targetObj.setH((float) n1);
+                }
                 break;
 
             case "C":
-                if (oldae != -1) {
-                    float deltaX = ae - oldae;
-                    float deltaY = oldab - ab;
-                    targetObj.setX(targetObj.getX() + deltaX);
-                    targetObj.setY(targetObj.getY() + deltaY);
-                }
+                targetObj.setX(ae - targetObj.getW() / 2f);
+                targetObj.setY(-ab + Tsh - targetObj.getH() / 2f);
                 break;
 
             case "SW":
                 if (targetObj.getRotation() == 0) {
-                    targetObj.setH(ae - targetObj.getY());
+                    float newX_sw = ae;
+                    float origRight_sw = origTarget.getX() + origTarget.getW();
+                    targetObj.setX(newX_sw);
+                    targetObj.setW(origRight_sw - newX_sw);
+                    targetObj.setH((-ab + Tsh) - targetObj.getY());
                 } else {
                     n1 = Math.sqrt(Math.pow(ae - targetObj.getX(), 2) + Math.pow(-ab + Tsh - targetObj.getY(), 2));
                     targetObj.setH((float) n1);
@@ -33978,6 +34152,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             case "NE":
                 if (targetObj.getRotation() == 0) {
+                    float newY_ne = -ab + Tsh;
+                    float origBottom_ne = origTarget.getY() + origTarget.getH();
+                    targetObj.setY(newY_ne);
+                    targetObj.setH(origBottom_ne - newY_ne);
                     targetObj.setW(ae - targetObj.getX());
                 } else {
                     n1 = Math.sqrt(Math.pow(ae - targetObj.getX(), 2) + Math.pow(-ab + Tsh - targetObj.getY(), 2));
@@ -33986,18 +34164,74 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 break;
 
             case "W":
+                if (targetObj.getRotation() == 0) {
+                    float newX_w = ae;
+                    float origRight_w = origTarget.getX() + origTarget.getW();
+                    targetObj.setX(newX_w);
+                    targetObj.setW(origRight_w - newX_w);
+                } else {
+                    angle = (float) ((90 + rotation) * DEGREES_TO_RADIANS);
+                    posx = targetObj.getX() + Math.cos(angle) * (targetObj.getH() / 2f);
+                    posy = targetObj.getY() + Math.sin(angle) * (targetObj.getH() / 2f);
+                    n1 = Math.sqrt(Math.pow(ae - posx, 2) + Math.pow(-ab + Tsh - posy, 2));
+                    targetObj.setW((float) n1);
+                }
+                break;
+
+            case "N":
+                if (targetObj.getRotation() == 0) {
+                    float newY_n = -ab + Tsh;
+                    float origBottom_n = origTarget.getY() + origTarget.getH();
+                    targetObj.setY(newY_n);
+                    targetObj.setH(origBottom_n - newY_n);
+                } else {
+                    angle2 = (float) ((rotation) * DEGREES_TO_RADIANS);
+                    posx2 = targetObj.getX() + Math.cos(angle2) * (targetObj.getW() / 2f);
+                    posy2 = targetObj.getY() + Math.sin(angle2) * (targetObj.getW() / 2f);
+                    n2 = Math.sqrt(Math.pow(ae - posx2, 2) + Math.pow(-ab + Tsh - posy2, 2));
+                    targetObj.setH((float) n2);
+                }
                 break;
         }
 
         if (magnet == 1) {
-            float newW = ((int) targetObj.getW() / (int) (Tsw * 0.5f)) * Tsw * 0.5f;
-            float newH = ((int) targetObj.getH() / (int) (Tsh * 0.5f)) * Tsh * 0.5f;
-            float newX = ((int) targetObj.getX() / (int) (Tsw * 0.5f)) * Tsw * 0.5f;
-            float newY = ((int) targetObj.getY() / (int) (Tsh * 0.5f)) * Tsh * 0.5f;
-            targetObj.setW(newW);
-            targetObj.setH(newH);
-            targetObj.setX(newX);
-            targetObj.setY(newY);
+            float snapW = Tsw * 0.5f;
+            float snapH = Tsh * 0.5f;
+            float origRight = origTarget.getX() + origTarget.getW();
+            float origBottom = origTarget.getY() + origTarget.getH();
+
+            switch (markerstring) {
+                case "N":
+                case "NW":
+                case "NE":
+                case "W":
+                case "SW":
+                    // Snap origin, then compute size to preserve opposite edge
+                    float snappedX = ((int) (targetObj.getX() / snapW)) * snapW;
+                    float snappedY = ((int) (targetObj.getY() / snapH)) * snapH;
+                    if ("N".equals(markerstring) || "NW".equals(markerstring) || "NE".equals(markerstring)) {
+                        targetObj.setY(snappedY);
+                        targetObj.setH(origBottom - snappedY);
+                    }
+                    if ("W".equals(markerstring) || "NW".equals(markerstring) || "SW".equals(markerstring)) {
+                        targetObj.setX(snappedX);
+                        targetObj.setW(origRight - snappedX);
+                    }
+                    if ("NE".equals(markerstring)) {
+                        targetObj.setW(((int) (targetObj.getW() / snapW)) * snapW);
+                    }
+                    if ("SW".equals(markerstring)) {
+                        targetObj.setH(((int) (targetObj.getH() / snapH)) * snapH);
+                    }
+                    break;
+                default:
+                    // E, SE, S, C, etc - origin stays fixed, just snap size
+                    targetObj.setW(((int) (targetObj.getW() / snapW)) * snapW);
+                    targetObj.setH(((int) (targetObj.getH() / snapH)) * snapH);
+                    targetObj.setX(((int) (targetObj.getX() / snapW)) * snapW);
+                    targetObj.setY(((int) (targetObj.getY() / snapH)) * snapH);
+                    break;
+            }
         }
         if (targetObj.getH() < 5)
             targetObj.setH(5);
@@ -40648,6 +40882,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         if (markermode && activeobjtoolmode == 2) {
+            editDragStarted = true;
             Vector3 touch2 = new Vector3();
             unprojectMain(touch2.set(p1, p2, 0));
             resizeobject(touch2.x, touch2.y);

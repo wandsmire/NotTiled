@@ -19,7 +19,6 @@ BUILD=false
 # Parse args
 for arg in "$@"; do
     case "$arg" in
-        --build) BUILD=true ;;
         debug|release|sdebug|srelease)
             TYPES+=("$arg")
             ;;
@@ -31,25 +30,23 @@ if [ ${#TYPES[@]} -eq 0 ]; then
     TYPES+=("sdebug")
 fi
 
-# Optionally build first
-if [ "$BUILD" = true ]; then
-    echo "==> Building..."
-    HAS_DEBUG=false
-    HAS_RELEASE=false
-    for t in "${TYPES[@]}"; do
-        if [ "$t" = "debug" ] || [ "$t" = "sdebug" ]; then
-            HAS_DEBUG=true
-        fi
-        if [ "$t" = "release" ] || [ "$t" = "srelease" ]; then
-            HAS_RELEASE=true
-        fi
-    done
-    if [ "$HAS_DEBUG" = true ]; then
-        ./build_debug.sh
+# Always build
+echo "==> Building..."
+HAS_DEBUG=false
+HAS_RELEASE=false
+for t in "${TYPES[@]}"; do
+    if [ "$t" = "debug" ] || [ "$t" = "sdebug" ]; then
+        HAS_DEBUG=true
     fi
-    if [ "$HAS_RELEASE" = true ]; then
-        ./build_release.sh
+    if [ "$t" = "release" ] || [ "$t" = "srelease" ]; then
+        HAS_RELEASE=true
     fi
+done
+if [ "$HAS_DEBUG" = true ]; then
+    ./build_debug.sh
+fi
+if [ "$HAS_RELEASE" = true ]; then
+    ./build_release.sh
 fi
 
 # Check ADB is available

@@ -30,5 +30,6 @@ public interface Interface
 	public String getApkPath();
 	public boolean isAccessAllFilesGranted();
 	public String getExternalStoragePath();
+	public void editInNot2Pix(String absolutePath);
 
 }

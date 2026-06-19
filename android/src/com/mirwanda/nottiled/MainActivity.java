@@ -13,6 +13,7 @@ import android.provider.OpenableColumns;
 import android.provider.Settings;
 import android.speech.tts.*;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.backends.android.*;
 //import com.google.android.gms.ads.*;//
 
@@ -40,6 +41,7 @@ public class MainActivity extends AndroidApplication implements Interface
 	private static final int SAVEAS_REQUEST_CODE = 43;
 	private static final int BINARY_CREATE_CODE = 39;
 	private static final int REQUEST_TREE_CODE = 45;
+	private static final int EDIT_NOT2PIX_CODE = 46;
 	Uri currentMAP = null;
 	SharedPreferences myPrefs;
 	SharedPreferences.Editor prefs;
@@ -665,6 +667,17 @@ public class MainActivity extends AndroidApplication implements Interface
 			}
 
 		}
+		if (requestCode == EDIT_NOT2PIX_CODE && not2pixEditPath != null) {
+			// Not2Pix returned — reload the tileset texture
+			final String path = not2pixEditPath;
+			not2pixEditPath = null;
+			Gdx.app.postRunnable(new Runnable() {
+				@Override
+				public void run() {
+					((MyGdxGame) getApplicationListener()).reloadTilesetByPath(path);
+				}
+			});
+		}
 		super.onActivityResult(requestCode, resultCode, resultData);
 	}
 
@@ -837,6 +850,40 @@ public class MainActivity extends AndroidApplication implements Interface
 	@Override
 	public String getExternalStoragePath() {
 		return Environment.getExternalStorageDirectory().getAbsolutePath() + "/";
+	}
+
+	private String not2pixEditPath = null;
+
+	@Override
+	public void editInNot2Pix(final String absolutePath) {
+		runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				not2pixEditPath = absolutePath;
+				try {
+					java.io.File file = new java.io.File(absolutePath);
+					// Use FileProvider for Android 7+ (content:// URI with rw grant)
+					Uri uri;
+					if (Build.VERSION.SDK_INT >= 24) {
+						uri = androidx.core.content.FileProvider.getUriForFile(
+							MainActivity.this,
+							getPackageName() + ".fileprovider",
+							file);
+					} else {
+						uri = Uri.fromFile(file);
+					}
+					Intent intent = new Intent("com.mirwanda.not2pix.EDIT_TILESET");
+					intent.setDataAndType(uri, "image/png");
+					intent.putExtra("file_path", absolutePath);
+					intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+					startActivityForResult(intent, EDIT_NOT2PIX_CODE);
+				} catch (android.content.ActivityNotFoundException e) {
+					// Not2Pix not installed
+				} catch (Exception e) {
+					// FileProvider error or other
+				}
+			}
+		});
 	}
 
 	private String mainTmxRelativePath = null;

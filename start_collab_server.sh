@@ -27,5 +27,6 @@ fi
 
 cp "$JAR" ./private/NotTiled-CollabServer.jar
 echo "Built: private/NotTiled-CollabServer.jar (from $JAR)"
+
 echo "Starting standalone collaboration server on port $PORT..."
 exec java -jar private/NotTiled-CollabServer.jar "$PORT"

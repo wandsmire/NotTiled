@@ -81,6 +81,7 @@ if ./gradlew clean :android:assembleDebug; then
         [ "$f" = "out/${SA_FILE}" ] || rm -f "$f"
     done
     shopt -u nullglob
+
 else
     echo "ERROR: Build failed."
     exit 1

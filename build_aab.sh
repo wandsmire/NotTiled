@@ -72,6 +72,7 @@ if ./gradlew :android:bundleRelease; then
     [ -f "out_release/${PS_FILE}" ] && echo "  Play Store: out_release/${PS_FILE}"
     [ -f "out_release/${SA_FILE}" ] && echo "  Standalone: out_release/${SA_FILE}"
     echo "--------------------------------------------------"
+
 else
     echo "ERROR: Build failed."
     exit 1

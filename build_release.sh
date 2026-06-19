@@ -71,6 +71,7 @@ if ./gradlew clean :android:assembleApkRelease; then
     echo "  Play Store: out_release/${PS_FILE}"
     echo "  Standalone: out_release/${SA_FILE}"
     echo "--------------------------------------------------"
+
 else
     echo "ERROR: Build failed."
     exit 1

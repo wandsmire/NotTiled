@@ -521,4 +521,5 @@ public class language
 	String octagon;
 	String plus;
 	String layerlisthint;
+	String editinnot2pix;
 }
