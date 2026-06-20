@@ -8671,27 +8671,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void ErrorBung(Throwable e, String filenya) {
         filenya = "errorlog.txt";
-        FileHandle file;
-        try {
-            file = Gdx.files.absolute(face.getExternalStoragePath() + "NotTiled/" + filenya);
-            // Ensure parent directory exists
-            file.parent().mkdirs();
-        } catch (Throwable t) {
-            file = Gdx.files.absolute(basepath + filenya);
-        }
+        FileHandle file = Gdx.files.absolute(basepath + filenya);
         StringWriter sw = new StringWriter();
         e.printStackTrace(new PrintWriter(sw));
         String exceptionAsString = sw.toString();
         System.out.println(exceptionAsString);
         try {
             file.writeString("\n\n" + exceptionAsString, true);
-        } catch (Throwable t) {
-            // fallback if writing to public storage fails due to permissions
-            try {
-                FileHandle fallbackFile = Gdx.files.absolute(basepath + filenya);
-                fallbackFile.writeString("\n\n" + exceptionAsString, true);
-            } catch (Throwable t2) {}
-        }
+        } catch (Throwable t) {}
 
         // do not save the map if error occurs!
         // saveMap( curdir + "/" + curfile );
@@ -17373,8 +17360,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (p.getName().equalsIgnoreCase("embedded_png")) { hasEmbedded = true; break; }
                     }
                     if (hasEmbedded && ts.getPixmap() != null) {
-                        String extPath = face.getExternalStoragePath();
-                        String tmpPath = extPath + "/.not2pix_embedded_edit.png";
+                        String extPath = face.getFilesDirPath();
+                        String tmpPath = extPath + ".not2pix_embedded_edit.png";
                         FileHandle tmp = Gdx.files.absolute(tmpPath);
                         PixmapIO.writePNG(tmp, ts.getPixmap());
                         not2pixEditTsetIdx = tsetIdx;
@@ -17396,8 +17383,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                         protected void result(Object obj) {
                                             if ((boolean) obj) {
                                                 // Convert to embedded_png
-                                                String extPath = face.getExternalStoragePath();
-                                                String tmpPath = extPath + "/.not2pix_embedded_edit.png";
+                                                String extPath = face.getFilesDirPath();
+                                                String tmpPath = extPath + ".not2pix_embedded_edit.png";
                                                 FileHandle tmp = Gdx.files.absolute(tmpPath);
                                                 PixmapIO.writePNG(tmp, ts.getPixmap());
                                                 byte[] bytes = tmp.readBytes();
@@ -17425,8 +17412,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 face.editInNot2Pix(absPath);
                             }
                         } else if (ts.getPixmap() != null) {
-                            String extPath = face.getExternalStoragePath();
-                            String tmpPath = extPath + "/.not2pix_embedded_edit.png";
+                            String extPath = face.getFilesDirPath();
+                            String tmpPath = extPath + ".not2pix_embedded_edit.png";
                             FileHandle tmp = Gdx.files.absolute(tmpPath);
                             PixmapIO.writePNG(tmp, ts.getPixmap());
                             not2pixEditTsetIdx = tsetIdx;
