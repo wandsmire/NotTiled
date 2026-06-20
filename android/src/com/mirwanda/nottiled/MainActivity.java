@@ -687,6 +687,7 @@ public class MainActivity extends AndroidApplication implements Interface
 			ParcelFileDescriptor pfd =
 					this.getContentResolver().
 							openFileDescriptor(uri, "rwt");
+			if (pfd == null) throw new FileNotFoundException("Cannot open file descriptor for: " + uri);
 
 			FileOutputStream fileOutputStream =
 					new FileOutputStream(
@@ -711,6 +712,7 @@ public class MainActivity extends AndroidApplication implements Interface
 			ParcelFileDescriptor pfd =
 					this.getContentResolver().
 							openFileDescriptor(uri, "rwt");
+			if (pfd == null) throw new IOException("Cannot open file descriptor for: " + uri);
 
 			FileOutputStream fileOutputStream =
 					new FileOutputStream(
@@ -730,7 +732,7 @@ public class MainActivity extends AndroidApplication implements Interface
 
 		InputStream inputStream =
 				getContentResolver().openInputStream(uri);
-
+		if (inputStream == null) throw new IOException("Cannot open stream for: " + uri);
 
 		ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
 		int bufferSize = 1024;
@@ -750,15 +752,19 @@ public class MainActivity extends AndroidApplication implements Interface
 
 		InputStream inputStream =
 				getContentResolver().openInputStream(uri);
+		if (inputStream == null) throw new IOException("Cannot open stream for: " + uri);
 		BufferedReader reader =
 				new BufferedReader(new InputStreamReader(
 						inputStream));
 		StringBuilder stringBuilder = new StringBuilder();
 		String currentline;
-		while ((currentline = reader.readLine()) != null) {
-			stringBuilder.append(currentline + "\n");
+		try {
+			while ((currentline = reader.readLine()) != null) {
+				stringBuilder.append(currentline + "\n");
+			}
+		} finally {
+			reader.close();
 		}
-		inputStream.close();
 		return stringBuilder.toString();
 	}
 
@@ -993,7 +999,9 @@ public class MainActivity extends AndroidApplication implements Interface
 		@Override
 		public void run() {
 			try {
-				java.io.File destDir = new java.io.File(getExternalFilesDir(null), "NotTiled/Temp");
+				java.io.File extDir = getExternalFilesDir(null);
+				if (extDir == null) throw new IOException("External storage unavailable");
+				java.io.File destDir = new java.io.File(extDir, "NotTiled/Temp");
 				copyDocumentTree(treeUri, treeDocumentId, destDir);
 
 				SAFfilename = mainTmxRelativePath != null ? mainTmxRelativePath : "";
