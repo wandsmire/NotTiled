@@ -27,7 +27,7 @@ done
 
 # Default to sdebug if no type is specified
 if [ ${#TYPES[@]} -eq 0 ]; then
-    TYPES+=("sdebug")
+    TYPES+=("debug")
 fi
 
 # Always build

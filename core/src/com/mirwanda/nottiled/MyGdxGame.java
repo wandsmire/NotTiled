@@ -10611,7 +10611,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 assemblymode = false;
                 stamp = false;
                 backToMap();
-                loadInterface("custominterface.json");
+                if (sCustomUI) {
+                    loadInterface("custominterface.json");
+                }
                 kartu = "editor";
             }
         });
@@ -15313,12 +15315,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tPreference2.add(fDefaultObjW).width(btnx / 2).padBottom(5).row();
         tPreference2.add(new Label(z.defaultobjectheight, skin)).padBottom(10).width(btnx / 2);
         tPreference2.add(fDefaultObjH).width(btnx / 2).padBottom(10).row();
-        tPreference2.add(new Label(z.aiapikey != null ? z.aiapikey : "AI API Key", skin)).width(btnx / 2);
-        tPreference2.add(tfAiApiKey).width(btnx / 2).padBottom(2).row();
-        tPreference2.add(new Label(z.aiapiurl != null ? z.aiapiurl : "AI API URL", skin)).width(btnx / 2);
-        tPreference2.add(tfAiApiUrl).width(btnx / 2).padBottom(2).row();
-        tPreference2.add(new Label(z.aimodel != null ? z.aimodel : "AI Model", skin)).width(btnx / 2);
-        tPreference2.add(tfAiModel).width(btnx / 2).padBottom(10).row();
+        // AI API settings hidden until feature is ready for release
 
         tPreference2.add(bSavePref).width(btnx).padBottom(5).height(btny).colspan(2).row();
         tPreference2.add(bBack3).width(btnx).padBottom(5).height(btny).colspan(2);
