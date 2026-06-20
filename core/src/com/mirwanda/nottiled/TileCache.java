@@ -111,6 +111,69 @@ public class TileCache {
         }
     }
 
+    // ---- Old cache backup (held during rebuild to prevent blank-tile flicker) ----
+    private SpriteCache oldCache;
+    private int oldCacheID = -1;
+    private int[] oldCacheIDs;
+    private com.badlogic.gdx.graphics.g3d.ModelInstance oldModelInstance;
+    private com.badlogic.gdx.graphics.g3d.ModelInstance[] oldLayerModelInstances;
+    private com.badlogic.gdx.graphics.g3d.ModelInstance oldShadowModelInstance;
+    private Model oldShadowModel;
+    @SuppressWarnings("unchecked")
+    private java.util.List<com.badlogic.gdx.graphics.g3d.decals.Decal>[] oldLayerDecals;
+    private boolean hasOldCache;
+
+    public boolean hasOldCache() { return hasOldCache; }
+    public SpriteCache getOldCache() { return oldCache; }
+    public int getOldCacheID() { return oldCacheID; }
+    public int[] getOldCacheIDs() { return oldCacheIDs; }
+    public com.badlogic.gdx.graphics.g3d.ModelInstance[] getOldLayerModelInstances() { return oldLayerModelInstances; }
+    public com.badlogic.gdx.graphics.g3d.ModelInstance getOldShadowModelInstance() { return oldShadowModelInstance; }
+    public java.util.List<com.badlogic.gdx.graphics.g3d.decals.Decal>[] getOldLayerDecals() { return oldLayerDecals; }
+
+    public void saveAsOldCache() {
+        disposeOldCache();
+        oldCache = cache;
+        oldCacheID = cacheID;
+        oldCacheIDs = cacheIDs;
+        oldModelInstance = modelInstance;
+        oldLayerModelInstances = layerModelInstances;
+        oldShadowModelInstance = shadowModelInstance;
+        oldShadowModel = shadowModel;
+        oldLayerDecals = layerDecals;
+        hasOldCache = true;
+        cache = null;
+        cacheID = -1;
+        cacheIDs = null;
+        modelInstance = null;
+        layerModelInstances = null;
+        shadowModelInstance = null;
+        shadowModel = null;
+        layerDecals = null;
+    }
+
+    public void disposeOldCache() {
+        if (oldCache != null) {
+            try { oldCache.dispose(); } catch (Throwable t) {}
+            oldCache = null;
+        }
+        if (oldShadowModel != null) {
+            try { oldShadowModel.dispose(); } catch (Throwable t) {}
+            oldShadowModel = null;
+        }
+        if (oldModelInstance != null && oldModelInstance.model != null) {
+            try { oldModelInstance.model.dispose(); } catch (Throwable t) {}
+        }
+        oldModelInstance = null;
+        oldLayerModelInstances = null;
+        oldShadowModelInstance = null;
+        oldCacheID = -1;
+        oldCacheIDs = null;
+        oldLayerDecals = null;
+        hasOldCache = false;
+    }
+    // ---- End old cache backup ----
+
     public void disposeModel() {
         if (modelInstance != null && modelInstance.model != null) {
             modelInstance.model.dispose();

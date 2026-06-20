@@ -4630,7 +4630,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             continue;
                         }
 
-                        com.badlogic.gdx.graphics.g3d.ModelInstance[] lModels = tc.getLayerModelInstances();
+                        com.badlogic.gdx.graphics.g3d.ModelInstance[] lModels =
+                            (tc.isChanged() && tc.hasOldCache() && tc.getOldLayerModelInstances() != null)
+                                ? tc.getOldLayerModelInstances() : tc.getLayerModelInstances();
                         if (lModels != null && jo < lModels.length) {
                             com.badlogic.gdx.graphics.g3d.ModelInstance mi = lModels[jo];
                             if (mi != null) {
@@ -4662,7 +4664,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 continue;
                             }
                             
-                            List<Decal>[] lDecals = tc.getLayerDecals();
+                            List<Decal>[] lDecals =
+                                (tc.isChanged() && tc.hasOldCache() && tc.getOldLayerDecals() != null)
+                                    ? tc.getOldLayerDecals() : tc.getLayerDecals();
                             if (lDecals != null && jo < lDecals.length) {
                                 List<Decal> ds = lDecals[jo];
                                 if (ds != null && ds.size() > 0) {
@@ -4711,7 +4715,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     float sExtentZ = (layers.size() * Tsh * 0.75f) / 2.0f;
                     if (camFull3D.frustum.boundsInFrustum(sChunkX + sChunkW / 2f, sChunkY - sChunkH / 2f, sCenterZ,
                             sChunkW / 2f, sChunkH / 2f, sExtentZ)) {
-                        com.badlogic.gdx.graphics.g3d.ModelInstance shadowMi = tcS.getShadowModelInstance();
+                        com.badlogic.gdx.graphics.g3d.ModelInstance shadowMi =
+                            (tcS.isChanged() && tcS.hasOldCache() && tcS.getOldShadowModelInstance() != null)
+                                ? tcS.getOldShadowModelInstance() : tcS.getShadowModelInstance();
                         if (shadowMi != null) {
                             modelBatch.render(shadowMi);
                         }
@@ -4756,7 +4762,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (isFull3DMode) {
                         // Already handled sequentially per-layer above.
                     } else {
-                        SpriteCache cache = tc.getCache();
+                        SpriteCache cache = (tc.isChanged() && tc.hasOldCache() && tc.getOldCache() != null)
+                            ? tc.getOldCache() : tc.getCache();
                         if (isFull3DMode) {
                             cache.setProjectionMatrix(camFull3D.combined);
                         } else {
@@ -4767,7 +4774,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         cache.setColor(1f, 1f, 1f, 1f);
 
                         if (sShowAnimations || is3DMode || isFull3DMode) {
-                            int[] cids = tc.getCacheIDs();
+                            int[] cids = (tc.isChanged() && tc.hasOldCache() && tc.getOldCacheIDs() != null)
+                                ? tc.getOldCacheIDs() : tc.getCacheIDs();
                             if (cids != null) {
                                 com.badlogic.gdx.math.Matrix4 transform = new com.badlogic.gdx.math.Matrix4();
                                 for (int jo = 0; jo < layers.size(); jo++) {
@@ -4875,7 +4883,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 }
                             }
                         } else {
-                            int myid = tc.getCacheID();
+                            int myid = (tc.isChanged() && tc.hasOldCache() && tc.getOldCacheID() != -1)
+                                ? tc.getOldCacheID() : tc.getCacheID();
                             if (myid != -1) {
                                 cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
                                 boolean begun = false;
@@ -5254,10 +5263,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 heii = Th; // temennya
 
             log("resetting cache...");
-            for (TileCache cace : tcaches) {
-                cace.getCache().dispose();
-            }
-            tcaches.clear();
             int maxx = Tw / widd;
             if (Tw % widd != 0)
                 maxx++;
@@ -5265,23 +5270,49 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             int maxy = Th / heii;
             if (Th % heii != 0)
                 maxy++;
+            int expectedCount = maxx * maxy;
 
-            SpriteCache cache;
-            TileCache tcache;
-
-            for (int y = 0; y < maxy; y++) {
-                for (int x = 0; x < maxx; x++) {
-                    cache = new SpriteCache(buffersz, true);// 8191max
+            if (!tcaches.isEmpty() && tcaches.size() == expectedCount) {
+                // Reuse existing TileCaches: save old rendered state as backup so the
+                // render loop can keep showing stale-but-valid tiles while rebuilding.
+                for (TileCache tc : tcaches) {
+                    tc.saveAsOldCache();
+                    SpriteCache newSC = new SpriteCache(buffersz, true);
+                    tc.setCache(newSC);
                     if (sShowAnimations || is3DMode || isFull3DMode) {
-                        int[] cids = new int[layers.size() * 3];
-                        for(int i=0; i<cids.length; i++) cids[i] = -1;
-                        tcache = new TileCache(cache, cids, x, y);
-                        tcache.setChanged(true);
-                        tcaches.add(tcache);
+                        int[] newCids = new int[layers.size() * 3];
+                        for (int i = 0; i < newCids.length; i++) newCids[i] = -1;
+                        tc.setCacheIDs(newCids);
                     } else {
-                        tcache = new TileCache(cache, -1, x, y);
-                        tcache.setChanged(true);
-                        tcaches.add(tcache);
+                        tc.setCacheID(-1);
+                    }
+                    tc.setChanged(true);
+                }
+            } else {
+                // Count changed (map resized) – dispose everything and recreate.
+                for (TileCache cace : tcaches) {
+                    if (cace.getCache() != null) cace.getCache().dispose();
+                    cace.disposeOldCache();
+                }
+                tcaches.clear();
+
+                SpriteCache cache;
+                TileCache tcache;
+
+                for (int y = 0; y < maxy; y++) {
+                    for (int x = 0; x < maxx; x++) {
+                        cache = new SpriteCache(buffersz, true);// 8191max
+                        if (sShowAnimations || is3DMode || isFull3DMode) {
+                            int[] cids = new int[layers.size() * 3];
+                            for(int i=0; i<cids.length; i++) cids[i] = -1;
+                            tcache = new TileCache(cache, cids, x, y);
+                            tcache.setChanged(true);
+                            tcaches.add(tcache);
+                        } else {
+                            tcache = new TileCache(cache, -1, x, y);
+                            tcache.setChanged(true);
+                            tcaches.add(tcache);
+                        }
                     }
                 }
             }
@@ -5351,6 +5382,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         tc.setCacheID(cid);
                     }
                     tc.setChanged(false);
+                    tc.disposeOldCache(); // free stale backup held since last resetCaches()
                     if (oldCache != null) {
                         try {
                             oldCache.dispose();
@@ -8032,11 +8064,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 for (int i = 0; i < tcaches.size(); i++) {
                     TileCache tc = tcaches.get(i);
-                    cache = tc.getCache();
+                    // Use old backup while the chunk is being rebuilt (prevents blank minimap flicker).
+                    boolean useOld = tc.isChanged() && tc.hasOldCache() && tc.getOldCache() != null;
+                    cache = useOld ? tc.getOldCache() : tc.getCache();
                     cache.setProjectionMatrix(minicam.combined);
                     cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4());
 
-                    int[] cids = tc.getCacheIDs();
+                    int[] cids = useOld ? tc.getOldCacheIDs() : tc.getCacheIDs();
                     if (cids != null) {
                         boolean begun = false;
                         try {
@@ -8059,7 +8093,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             }
                         }
                     } else {
-                        int myid = tc.getCacheID();
+                        int myid = useOld ? tc.getOldCacheID() : tc.getCacheID();
                         if (myid != -1) {
                             boolean begun = false;
                             try {
