@@ -1,0 +1,3 @@
+description: Update of RW V2 tilesets with more autotiles and units (beware of bigger export size)
+highlight: true
+icon: map
