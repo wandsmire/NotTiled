@@ -208,4 +208,14 @@ public class nullInterface implements Interface {
         return false;
     }
 
+    @Override
+    public void fetchTmxAssets(String tmxContent, String tmxUri) {
+        // Desktop: no tree access, signal caller to skip
+    }
+
+    @Override
+    public boolean hasTreeAccess() {
+        return false;
+    }
+
 }

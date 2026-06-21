@@ -522,4 +522,17 @@ public class language
 	String plus;
 	String layerlisthint;
 	String editinnot2pix;
+	// SAF open flow
+	String browseDevice;
+	String openAppStorage;
+	String grantFolderAccess;
+	String skipFolderAccess;
+	String tilesetImagesNotFound;
+	String folderAccessInfo;
+	// Empty-state card
+	String noMapOpenTitle;
+	String trySampleMap;
+	// File Manager
+	String clearTempCache;
+	String clearTempCacheConfirm;
 }

@@ -492,7 +492,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     TextButton bUseTsx, bApplyMP, bCancelMP, bPropertiesMap;
     ChangeListener listBack;
     Table tMenu, tMenu1, tMenu2, tOpen, tNewFile, tSaveAs, tLicense, tTutorial;
-    TextButton bNew, bOpen, bSave, bSaveAs, bRestoreBackup, bExit, bBack, bLicense, bReload, bTutorial, bFileManager;
+    TextButton bNew, bOpen, bSamples, bSave, bSaveAs, bRestoreBackup, bExit, bBack, bLicense, bReload, bTutorial, bFileManager;
     private Table tRestoreBackup;
     private com.badlogic.gdx.scenes.scene2d.ui.List<String> lbackupList;
     private FileHandle fileManagerDir;
@@ -1438,6 +1438,197 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             }
         }).start();
+    }
+
+    /** Open a TMX file via the system SAF picker, then resolve and copy all
+     *  referenced tileset images from the granted folder tree into Temp. */
+    private void nativeOpenSAF(final String tujuan, final Table T) {
+        nativeData = null;
+        nativeFilename = "";
+        nativeStatus = "";
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // Step 1: let user pick the TMX file
+                face.openFile();
+                while (nativeStatus.equalsIgnoreCase("")) {
+                    nativeStatus = face.getStatus();
+                }
+                if (nativeStatus.equalsIgnoreCase("cancel")) {
+                    exitDialog(T);
+                    return;
+                }
+
+                final byte[] tmxData     = face.getData();
+                final String tmxFilename = face.getFilename();
+                final String tmxUri      = face.getUri();
+                if (tmxData == null || tmxFilename == null || tmxFilename.isEmpty()) {
+                    exitDialog(T);
+                    return;
+                }
+
+                String tmxContent = "";
+                try { tmxContent = new String(tmxData, "UTF-8"); } catch (Exception ignore) {}
+
+                // Step 2: try to fetch referenced images from the saved folder tree
+                nativeStatus = "";
+                face.fetchTmxAssets(tmxContent, tmxUri);
+                while (nativeStatus.equalsIgnoreCase("")) {
+                    nativeStatus = face.getStatus();
+                }
+
+                if (nativeStatus.equalsIgnoreCase("no_tree")) {
+                    // Write the TMX to Temp so we can at least open it without images
+                    FileHandle tempTmx = Gdx.files.absolute(basepath + "NotTiled/Temp/" + tmxFilename);
+                    tempTmx.parent().mkdirs();
+                    tempTmx.writeBytes(tmxData, false);
+                    final FileHandle finalTmx = tempTmx;
+                    final String finalContent = tmxContent;
+                    final String finalUri = tmxUri;
+                    // Prompt for folder access on the GL thread
+                    Gdx.app.postRunnable(new Runnable() {
+                        @Override
+                        public void run() {
+                            showFolderPermissionPrompt(finalTmx, finalContent, finalUri, tujuan, T);
+                        }
+                    });
+                    return;
+                }
+
+                // fetchTmxAssets set SAFfilename to the tree-relative TMX path
+                String tmxRelPath = face.getFilename();
+                if (tmxRelPath == null || tmxRelPath.isEmpty()) tmxRelPath = tmxFilename;
+                FileHandle ff = Gdx.files.absolute(basepath + "NotTiled/Temp/" + tmxRelPath);
+                if (!ff.exists()) {
+                    // Fallback: write TMX directly
+                    ff = Gdx.files.absolute(basepath + "NotTiled/Temp/" + tmxFilename);
+                    ff.parent().mkdirs();
+                    ff.writeBytes(tmxData, false);
+                }
+                exitDialog(T);
+                tujuanDialog(tujuan, ff);
+            }
+        }).start();
+    }
+
+    /** Show a two-button dialog: "Browse Device / Cloud" (SAF) vs "Open from App Storage" (internal FileChooser). */
+    private void showOpenChooserDialog(final String tujuan, final Table T) {
+        final Dialog dlg = new Dialog("", skin, "dialog");
+        Table content = dlg.getContentTable();
+        content.pad(20);
+
+        Label lbl = new Label(z.opentmxfile != null ? z.opentmxfile : "Open Map", skin);
+        content.add(lbl).colspan(2).padBottom(16).row();
+
+        TextButton btnSAF = new TextButton(
+                z.browseDevice != null ? z.browseDevice : "Browse Device / Cloud", skin);
+        btnSAF.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                dlg.hide();
+                nativeOpenSAF(tujuan, T);
+            }
+        });
+        content.add(btnSAF).width(btnx).height(btny).padBottom(8).colspan(2).row();
+
+        TextButton btnInternal = new TextButton(
+                z.openAppStorage != null ? z.openAppStorage : "Open from App Storage", skin);
+        btnInternal.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                dlg.hide();
+                FileDialog(z.opentmxfile, tujuan, "file",
+                        new String[]{".tmx", ".png", ".ntp", ".json"}, T);
+            }
+        });
+        content.add(btnInternal).width(btnx).height(btny).padBottom(8).colspan(2).row();
+
+        TextButton btnCancel = new TextButton(z.cancel, skin);
+        btnCancel.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                dlg.hide();
+                if (T != null) gotoStage(T);
+            }
+        });
+        content.add(btnCancel).width(btnx * 0.6f).height(btny).colspan(2);
+
+        dlg.show(stage);
+    }
+
+    /** Shown when a TMX is open but no folder-tree permission is available to resolve images. */
+    private void showFolderPermissionPrompt(final FileHandle tmxFile, final String tmxContent,
+            final String tmxUri, final String tujuan, final Table T) {
+        final Dialog dlg = new Dialog("", skin, "dialog");
+        Table ct = dlg.getContentTable();
+        ct.pad(20);
+
+        Label title = new Label(
+                z.tilesetImagesNotFound != null ? z.tilesetImagesNotFound : "Tileset images not found",
+                skin);
+        ct.add(title).colspan(2).padBottom(10).row();
+
+        Label info = new Label(
+                z.folderAccessInfo != null ? z.folderAccessInfo
+                        : "Grant access to the folder containing your .tmx\nfile so NotTiled can load tileset images.",
+                skin);
+        info.setWrap(true);
+        ct.add(info).width(btnx).colspan(2).padBottom(16).row();
+
+        TextButton btnGrant = new TextButton(
+                z.grantFolderAccess != null ? z.grantFolderAccess : "Grant Folder Access", skin);
+        btnGrant.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                dlg.hide();
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        nativeStatus = "";
+                        face.selectFolder();
+                        while (nativeStatus.equalsIgnoreCase("")) {
+                            nativeStatus = face.getStatus();
+                        }
+                        if (!nativeStatus.equalsIgnoreCase("cancel")) {
+                            // Now retry fetching assets with the new tree
+                            nativeStatus = "";
+                            face.fetchTmxAssets(tmxContent, tmxUri);
+                            while (nativeStatus.equalsIgnoreCase("")) {
+                                nativeStatus = face.getStatus();
+                            }
+                            String relPath = face.getFilename();
+                            if (relPath != null && !relPath.isEmpty()) {
+                                FileHandle updated = Gdx.files.absolute(basepath + "NotTiled/Temp/" + relPath);
+                                if (updated.exists()) {
+                                    exitDialog(T);
+                                    tujuanDialog(tujuan, updated);
+                                    return;
+                                }
+                            }
+                        }
+                        // Fall through: load with whatever we have
+                        exitDialog(T);
+                        tujuanDialog(tujuan, tmxFile);
+                    }
+                }).start();
+            }
+        });
+        ct.add(btnGrant).width(btnx).height(btny).padBottom(8).colspan(2).row();
+
+        TextButton btnSkip = new TextButton(
+                z.skipFolderAccess != null ? z.skipFolderAccess : "Skip (load without images)", skin);
+        btnSkip.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                dlg.hide();
+                exitDialog(T);
+                tujuanDialog(tujuan, tmxFile);
+            }
+        });
+        ct.add(btnSkip).width(btnx).height(btny).colspan(2);
+
+        dlg.show(stage);
     }
 
     private void resetSwatches() {
@@ -10218,6 +10409,30 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bLicense = new TextButton(z.license, skin);
         bNew = new TextButton(z.newfile, skin);
         bOpen = new TextButton(z.open, skin);
+        bSamples = new TextButton(z.trySampleMap != null ? z.trySampleMap : "Try Sample Map", skin);
+        bSamples.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                FileHandle sampleTmx = Gdx.files.absolute(basepath + "NotTiled/sample/island.tmx");
+                if (!sampleTmx.exists()) {
+                    try {
+                        FileHandle from = Gdx.files.internal("sample.zip");
+                        FileHandle to = Gdx.files.absolute(basepath + "NotTiled");
+                        from.copyTo(to);
+                        FileHandle zipo = Gdx.files.absolute(basepath + "NotTiled/sample.zip");
+                        unzip(zipo, Gdx.files.absolute(basepath + "NotTiled"));
+                        zipo.delete();
+                    } catch (Exception e) {
+                        log("Sample install failed: " + e.getMessage());
+                    }
+                }
+                sampleTmx = Gdx.files.absolute(basepath + "NotTiled/sample/island.tmx");
+                if (sampleTmx.exists()) {
+                    exitDialog(null);
+                    tujuanDialog("open", sampleTmx);
+                }
+            }
+        });
         bSave = new TextButton(z.save, skin);
         bSaveAs = new TextButton(z.saveas, skin);
         bTutorial = new TextButton(z.tutorial, skin);
@@ -10400,7 +10615,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bOpen.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                FileDialog(z.opentmxfile, "open", "file", new String[] { ".tmx", ".png", ".ntp", ".json" }, null);
+                showOpenChooserDialog("open", tMenu);
             }
         });
 
@@ -10825,6 +11040,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tMenu1.add(bPatreon).row();
             tMenu1.add(bNew).row();
             tMenu1.add(bOpen).row();
+            tMenu1.add(bSamples).row();
             tMenu1.add(bRecent).row();
             tMenu1.add(bSave).row();
             tMenu1.add(bSaveAs).row();
@@ -10849,6 +11065,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tMenu.add(bPatreon).row();
             tMenu.add(bNew).row();
             tMenu.add(bOpen).row();
+            tMenu.add(bSamples).row();
             tMenu.add(bRecent).row();
             tMenu.add(bSave).row();
             tMenu.add(bSaveAs).row();
@@ -22246,6 +22463,40 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         pathLabel.setWrap(true);
         topBar.add(pathLabel).expandX().fillX().colspan(3).row();
 
+        // Clear Temp Cache button — shown with current cache size
+        final FileHandle tempDir = Gdx.files.absolute(basepath + "NotTiled/Temp");
+        if (tempDir.exists()) {
+            long tempBytes = folderSize(tempDir);
+            String sizeStr = tempBytes > 1024 * 1024
+                    ? String.format("%.1f MB", tempBytes / (1024.0 * 1024.0))
+                    : String.format("%d KB", tempBytes / 1024);
+            String clearLabel = (z.clearTempCache != null ? z.clearTempCache : "Clear Temp Cache")
+                    + " (" + sizeStr + ")";
+            TextButton btnClearTemp = new TextButton(clearLabel, skin);
+            btnClearTemp.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    Dialog confirm = new Dialog("", skin, "dialog") {
+                        @Override
+                        protected void result(Object obj) {
+                            if ((boolean) obj) {
+                                deleteRecursiveHandle(tempDir);
+                                tempDir.mkdirs();
+                                showFileManager(fileManagerDir);
+                            }
+                        }
+                    };
+                    String msg = z.clearTempCacheConfirm != null ? z.clearTempCacheConfirm
+                            : "Delete all cached files in NotTiled/Temp?";
+                    confirm.getContentTable().add(new Label(msg, skin)).pad(20).row();
+                    confirm.button(z.yes != null ? z.yes : "Yes", true);
+                    confirm.button(z.cancel, false);
+                    confirm.show(stage);
+                }
+            });
+            topBar.add(btnClearTemp).expandX().fillX().colspan(3).padBottom(6).row();
+        }
+
         TextButton btnNewFolder = new TextButton(z.addnew + " " + z.directory, skin);
         btnNewFolder.addListener(new ChangeListener() {
             @Override
@@ -22399,6 +22650,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tFileManager.add(bottomBar).expandX().fillX().pad(10);
 
         gotoStage(tFileManager);
+    }
+
+    private long folderSize(FileHandle dir) {
+        long total = 0;
+        if (!dir.exists()) return 0;
+        for (FileHandle child : dir.list()) {
+            total += child.isDirectory() ? folderSize(child) : child.length();
+        }
+        return total;
+    }
+
+    private void deleteRecursiveHandle(FileHandle fh) {
+        if (fh.isDirectory()) {
+            for (FileHandle child : fh.list()) deleteRecursiveHandle(child);
+        }
+        fh.delete();
     }
 
     private FileHandle resolveFileManagerStartDir() {

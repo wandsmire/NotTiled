@@ -306,8 +306,28 @@ public class MainActivity extends AndroidApplication implements Interface
 		try {
 			currentMAP = Uri.parse(myPrefs.getString("url", ""));
 		} catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}
+
+		// Restore saved folder-tree URI and rebuild index in background
+		String savedTree = myPrefs.getString("treeUri", "");
+		if (!savedTree.isEmpty()) {
+			try {
+				Uri treeUri = Uri.parse(savedTree);
+				// Verify we still hold the permission
+				getContentResolver().takePersistableUriPermission(treeUri,
+						Intent.FLAG_GRANT_READ_URI_PERMISSION);
+				savedTreeUri = treeUri;
+				new Thread(new Runnable() {
+					@Override
+					public void run() {
+						buildTreeIndex(savedTreeUri);
+					}
+				}).start();
+			} catch (Exception e) {
+				// Permission was revoked — clear saved URI
+				prefs.remove("treeUri").commit();
+			}
 		}
 
 		//throw new RuntimeException("Test Crash"); // Force a crash
@@ -570,6 +590,10 @@ public class MainActivity extends AndroidApplication implements Interface
 	String SAFuri="";
 	String SAFstatus="";
 
+	// Persistent document-tree for smart asset resolution
+	private Uri savedTreeUri = null;
+	private final java.util.HashMap<String, Uri> treeIndex = new java.util.HashMap<>();
+
 	@SuppressLint("WrongConstant")
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent resultData) {
@@ -619,13 +643,31 @@ public class MainActivity extends AndroidApplication implements Interface
 
 				if (resultData != null) {
 					final Uri treeUri = resultData.getData();
-					final String treeDocumentId = DocumentsContract.getTreeDocumentId(treeUri);
 					SAFstatus = "";
-					SAFdatas.clear();
 					SAFfilenames.clear();
 					SAFfilename = "";
 
-					new Thread(new CopyTreeRunnable(treeUri, treeDocumentId)).start();
+					// Take persistable read permission and save URI
+					try {
+						final int takeFlags = resultData.getFlags()
+								& (Intent.FLAG_GRANT_READ_URI_PERMISSION
+								| Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+						getContentResolver().takePersistableUriPermission(treeUri,
+								Intent.FLAG_GRANT_READ_URI_PERMISSION);
+						savedTreeUri = treeUri;
+						prefs.putString("treeUri", treeUri.toString()).commit();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+
+					// Build index in background; set SAFstatus = "OK" when done
+					new Thread(new Runnable() {
+						@Override
+						public void run() {
+							buildTreeIndex(treeUri);
+							SAFstatus = "OK";
+						}
+					}).start();
 				} else {
 					SAFstatus = "cancel";
 				}
@@ -985,6 +1027,316 @@ public class MainActivity extends AndroidApplication implements Interface
 			}
 		}
 		fileOrDirectory.delete();
+	}
+
+	// ─── Document-tree index ────────────────────────────────────────────────────
+
+	/** Walk the tree rooted at treeUri and populate treeIndex with
+	 *  (tree-relative-path → document-Uri) entries. */
+	private void buildTreeIndex(Uri treeUri) {
+		synchronized (treeIndex) {
+			treeIndex.clear();
+		}
+		String rootDocId = DocumentsContract.getTreeDocumentId(treeUri);
+		walkTree(treeUri, rootDocId, "");
+	}
+
+	private void walkTree(Uri treeUri, String parentDocId, String parentRelPath) {
+		Uri childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentDocId);
+		android.database.Cursor cursor = null;
+		try {
+			cursor = getContentResolver().query(childrenUri, new String[]{
+					DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+					DocumentsContract.Document.COLUMN_MIME_TYPE,
+					DocumentsContract.Document.COLUMN_DISPLAY_NAME
+			}, null, null, null);
+			if (cursor == null) return;
+			while (cursor.moveToNext()) {
+				String docId    = cursor.getString(0);
+				String mimeType = cursor.getString(1);
+				String name     = cursor.getString(2);
+				String relPath  = parentRelPath.isEmpty() ? name : parentRelPath + "/" + name;
+				if (DocumentsContract.Document.MIME_TYPE_DIR.equals(mimeType)) {
+					walkTree(treeUri, docId, relPath);
+				} else {
+					Uri docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId);
+					synchronized (treeIndex) {
+						treeIndex.put(relPath, docUri);
+					}
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			if (cursor != null) cursor.close();
+		}
+	}
+
+	/** Look up a filename (case-insensitive) anywhere in the tree and return its URI.
+	 *  Prefers an exact relative-path match, then falls back to filename-only match. */
+	private Uri resolveInTree(String relPath) {
+		if (relPath == null || relPath.isEmpty()) return null;
+		synchronized (treeIndex) {
+			// Normalise separators
+			String norm = relPath.replace('\\', '/');
+			Uri exact = treeIndex.get(norm);
+			if (exact != null) return exact;
+			// Case-insensitive exact
+			for (java.util.Map.Entry<String, Uri> e : treeIndex.entrySet()) {
+				if (e.getKey().equalsIgnoreCase(norm)) return e.getValue();
+			}
+			// Filename-only fallback
+			String filename = norm.contains("/") ? norm.substring(norm.lastIndexOf('/') + 1) : norm;
+			for (java.util.Map.Entry<String, Uri> e : treeIndex.entrySet()) {
+				String key = e.getKey();
+				String keyName = key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key;
+				if (keyName.equalsIgnoreCase(filename)) return e.getValue();
+			}
+		}
+		return null;
+	}
+
+	/** Find the tree-relative path of the document whose URI matches tmxSafUri.
+	 *  Matches by document-ID component in the URI. */
+	private String findRelPathForUri(String tmxSafUri) {
+		if (tmxSafUri == null || tmxSafUri.isEmpty()) return null;
+		// Extract document ID from content:// URI (last path segment after "document/")
+		try {
+			Uri u = Uri.parse(tmxSafUri);
+			String docId = DocumentsContract.getDocumentId(u);
+			if (docId == null) return null;
+			// docId for external storage looks like "primary:Maps/town.tmx"
+			// Strip the storage-volume prefix (everything up to and including the colon)
+			String pathPart = docId.contains(":") ? docId.substring(docId.indexOf(':') + 1) : docId;
+			pathPart = pathPart.replace('\\', '/');
+			synchronized (treeIndex) {
+				for (java.util.Map.Entry<String, Uri> e : treeIndex.entrySet()) {
+					String edocId = null;
+					try { edocId = DocumentsContract.getDocumentId(e.getValue()); } catch (Exception ex) {}
+					if (edocId != null) {
+						String ep = edocId.contains(":") ? edocId.substring(edocId.indexOf(':') + 1) : edocId;
+						if (ep.equalsIgnoreCase(pathPart)) return e.getKey();
+					}
+				}
+			}
+			// Fallback: match by filename
+			String tmxName = pathPart.contains("/") ? pathPart.substring(pathPart.lastIndexOf('/') + 1) : pathPart;
+			synchronized (treeIndex) {
+				for (java.util.Map.Entry<String, Uri> e : treeIndex.entrySet()) {
+					String keyName = e.getKey().contains("/") ? e.getKey().substring(e.getKey().lastIndexOf('/') + 1) : e.getKey();
+					if (keyName.equalsIgnoreCase(tmxName)) return e.getKey();
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	/** Resolve a relative path (possibly containing ".." segments) against a base dir. */
+	private static String resolveRelativePath(String base, String relative) {
+		String combined = (base.isEmpty() ? "" : base + "/") + relative.replace('\\', '/');
+		// Resolve ".." segments
+		String[] parts = combined.split("/");
+		java.util.ArrayDeque<String> stack = new java.util.ArrayDeque<>();
+		for (String p : parts) {
+			if (p.equals("..")) {
+				if (!stack.isEmpty()) stack.pollLast();
+			} else if (!p.equals(".") && !p.isEmpty()) {
+				stack.addLast(p);
+			}
+		}
+		StringBuilder sb = new StringBuilder();
+		for (String s : stack) {
+			if (sb.length() > 0) sb.append('/');
+			sb.append(s);
+		}
+		return sb.toString();
+	}
+
+	// ─── Interface: fetchTmxAssets ───────────────────────────────────────────────
+
+	@Override
+	public void fetchTmxAssets(final String tmxContent, final String tmxUriStr) {
+		synchronized (treeIndex) {
+			if (savedTreeUri == null || treeIndex.isEmpty()) {
+				SAFstatus = "no_tree";
+				return;
+			}
+		}
+		SAFstatus = "";
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					java.io.File extDir = getExternalFilesDir(null);
+					if (extDir == null) throw new IOException("External storage unavailable");
+
+					// Locate TMX in tree → determine its tree-relative directory
+					String tmxRelPath = findRelPathForUri(tmxUriStr);
+					String tmxRelDir = "";
+					if (tmxRelPath != null && tmxRelPath.contains("/")) {
+						tmxRelDir = tmxRelPath.substring(0, tmxRelPath.lastIndexOf('/'));
+					}
+
+					// Copy TMX into Temp at its tree-relative location
+					java.io.File tmxDestFile;
+					if (tmxRelPath != null && !tmxRelPath.isEmpty()) {
+						tmxDestFile = new java.io.File(extDir, "NotTiled/Temp/" + tmxRelPath);
+					} else {
+						// TMX not found in tree — place at Temp root
+						String name = SAFfilename.isEmpty() ? "map.tmx" : SAFfilename;
+						tmxDestFile = new java.io.File(extDir, "NotTiled/Temp/" + name);
+						tmxRelDir = "";
+					}
+					tmxDestFile.getParentFile().mkdirs();
+					java.io.FileOutputStream fos = new java.io.FileOutputStream(tmxDestFile);
+					fos.write(tmxContent.getBytes("UTF-8"));
+					fos.close();
+
+					// Compute the base Temp dir that mirrors the TMX's parent in the tree
+					String tempBaseAbs = new java.io.File(extDir, "NotTiled/Temp").getAbsolutePath()
+							+ (tmxRelDir.isEmpty() ? "" : "/" + tmxRelDir);
+
+					// Collect all image/TSX sources from TMX
+					java.util.List<String> sources = extractSources(tmxContent);
+
+					// Also parse referenced TSX files
+					java.util.List<String> extraSources = new java.util.ArrayList<>();
+					for (String src : sources) {
+						if (src.toLowerCase().endsWith(".tsx")) {
+							String tsxRelInTree = resolveRelativePath(tmxRelDir, src);
+							Uri tsxUri = resolveInTree(tsxRelInTree);
+							if (tsxUri == null) tsxUri = resolveInTree(src);
+							if (tsxUri != null) {
+								String tsxContent = readUriString(tsxUri);
+								if (tsxContent != null) {
+									String tsxDir = tsxRelInTree.contains("/")
+											? tsxRelInTree.substring(0, tsxRelInTree.lastIndexOf('/')) : "";
+									java.util.List<String> tsxImages = extractImageSources(tsxContent);
+									for (String img : tsxImages) {
+										// TSX-relative image path → make TMX-relative
+										String absImg = resolveRelativePath(tsxDir, img);
+										String tmxRelImg = makeRelative(tmxRelDir, absImg);
+										extraSources.add(tmxRelImg);
+									}
+									// Also copy the TSX itself
+									copyTreeFileToTemp(tsxUri, extDir, tsxRelInTree);
+								}
+							}
+						}
+					}
+					sources.addAll(extraSources);
+
+					// Copy each image from tree to Temp using same path arithmetic as convertToAbsolutepath
+					for (String src : sources) {
+						if (src.toLowerCase().endsWith(".tsx")) continue; // already handled above
+						// Resolve source relative to tmxRelDir to get tree-relative path
+						String treeRelPath = resolveRelativePath(tmxRelDir, src);
+						Uri imgUri = resolveInTree(treeRelPath);
+						if (imgUri == null) imgUri = resolveInTree(src); // flat fallback
+						if (imgUri == null) continue;
+
+						// Destination = same path that convertToAbsolutepath(src, tempBaseAbs) would produce
+						String destPath = convertToAbsolutepathStatic(src, tempBaseAbs);
+						java.io.File destFile = new java.io.File(destPath);
+						destFile.getParentFile().mkdirs();
+						copyFile(imgUri, destFile);
+					}
+
+					// Expose tree-relative path of TMX so caller can build FileHandle
+					SAFfilename = tmxRelPath != null ? tmxRelPath : tmxDestFile.getName();
+					SAFstatus = "OK";
+				} catch (Exception e) {
+					e.printStackTrace();
+					SAFstatus = "error";
+				}
+			}
+		}).start();
+	}
+
+	@Override
+	public boolean hasTreeAccess() {
+		synchronized (treeIndex) {
+			return savedTreeUri != null && !treeIndex.isEmpty();
+		}
+	}
+
+	/** Extract all source="" attribute values from TMX/TSX XML (image and tileset references). */
+	private java.util.List<String> extractSources(String xml) {
+		java.util.List<String> result = new java.util.ArrayList<>();
+		java.util.regex.Pattern p = java.util.regex.Pattern.compile("source=\"([^\"]+)\"");
+		java.util.regex.Matcher m = p.matcher(xml);
+		while (m.find()) {
+			result.add(m.group(1));
+		}
+		return result;
+	}
+
+	/** Extract only image source="" values (skip .tsx references). */
+	private java.util.List<String> extractImageSources(String xml) {
+		java.util.List<String> result = new java.util.ArrayList<>();
+		for (String s : extractSources(xml)) {
+			String lower = s.toLowerCase();
+			if (!lower.endsWith(".tsx") && !lower.endsWith(".tx")) result.add(s);
+		}
+		return result;
+	}
+
+	/** Make pathAbs relative to baseDir (both are tree-relative). Simple version. */
+	private String makeRelative(String baseDir, String pathAbs) {
+		if (baseDir.isEmpty()) return pathAbs;
+		if (pathAbs.startsWith(baseDir + "/")) return pathAbs.substring(baseDir.length() + 1);
+		// Build "../" prefixed path
+		String[] baseParts = baseDir.split("/");
+		String[] absParts = pathAbs.split("/");
+		int common = 0;
+		while (common < baseParts.length && common < absParts.length
+				&& baseParts[common].equals(absParts[common])) common++;
+		StringBuilder sb = new StringBuilder();
+		for (int i = common; i < baseParts.length; i++) sb.append("../");
+		for (int i = common; i < absParts.length; i++) {
+			if (i > common) sb.append('/');
+			sb.append(absParts[i]);
+		}
+		return sb.toString();
+	}
+
+	/** Read the content of a document URI as a UTF-8 string. */
+	private String readUriString(Uri uri) {
+		try {
+			java.io.InputStream is = getContentResolver().openInputStream(uri);
+			if (is == null) return null;
+			java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+			byte[] buf = new byte[4096];
+			int n;
+			while ((n = is.read(buf)) != -1) baos.write(buf, 0, n);
+			is.close();
+			return baos.toString("UTF-8");
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	/** Copy a tree URI document into Temp at treeRelPath. */
+	private void copyTreeFileToTemp(Uri srcUri, java.io.File extDir, String treeRelPath) throws IOException {
+		java.io.File dest = new java.io.File(extDir, "NotTiled/Temp/" + treeRelPath);
+		dest.getParentFile().mkdirs();
+		copyFile(srcUri, dest);
+	}
+
+	/** Mirrors the path arithmetic of MyGdxGame.convertToAbsolutepath for use in this layer. */
+	private static String convertToAbsolutepathStatic(String relativePath, String basePath) {
+		if (relativePath == null || relativePath.isEmpty()) return basePath;
+		String rp = relativePath.replace('\\', '/');
+		String bp = basePath.replace('\\', '/');
+		if (!bp.endsWith("/")) bp += "/";
+		while (rp.startsWith("../")) {
+			rp = rp.substring(3);
+			int slash = bp.lastIndexOf('/', bp.length() - 2);
+			if (slash >= 0) bp = bp.substring(0, slash + 1);
+		}
+		return bp + rp;
 	}
 
 	private class CopyTreeRunnable implements Runnable {
