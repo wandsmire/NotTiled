@@ -11,7 +11,7 @@ set -e
 
 BASE_PACKAGE="com.mirwanda.nottiled"
 APP_ACTIVITY=".MainActivity"
-VERSION="2.2.0"
+VERSION="2.2.1"
 # Collect types to deploy
 TYPES=()
 BUILD=false
