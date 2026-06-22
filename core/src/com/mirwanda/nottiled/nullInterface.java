@@ -218,4 +218,19 @@ public class nullInterface implements Interface {
         return false;
     }
 
+    @Override
+    public boolean saveFileToTree(String relPath, byte[] data) {
+        return false;
+    }
+
+    @Override
+    public boolean copyTreeFileToLocal(String relPath, String localPath) {
+        return false;
+    }
+
+    @Override
+    public java.util.List<String> listTreeFiles(String[] extensions) {
+        return new java.util.ArrayList<String>();
+    }
+
 }

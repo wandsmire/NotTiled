@@ -1351,6 +1351,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     String nativeStatus = "";
     String nativeUri = "";
 
+    /** Tree-relative path of the TMX opened via SAF (null if opened from local storage). */
+    private String safOpenedTreeRelPath = null;
+
     private void nativeOpen(final String tujuan, final Table T) {
         nativeData = null;
         nativeFilename = "";
@@ -1506,6 +1509,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     ff.parent().mkdirs();
                     ff.writeBytes(tmxData, false);
                 }
+                safOpenedTreeRelPath = tmxRelPath;
                 exitDialog(T);
                 tujuanDialog(tujuan, ff);
             }
@@ -1538,6 +1542,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 dlg.hide();
+                safOpenedTreeRelPath = null;
                 FileDialog(z.opentmxfile, tujuan, "file",
                         new String[]{".tmx", ".png", ".ntp", ".json"}, T);
             }
@@ -1601,6 +1606,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             if (relPath != null && !relPath.isEmpty()) {
                                 FileHandle updated = Gdx.files.absolute(basepath + "NotTiled/Temp/" + relPath);
                                 if (updated.exists()) {
+                                    safOpenedTreeRelPath = relPath;
                                     exitDialog(T);
                                     tujuanDialog(tujuan, updated);
                                     return;
@@ -17387,6 +17393,63 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         });
     }
 
+    /** Show a list of image files from the SAF folder tree for tileset import. */
+    private void showSafTilesetPicker() {
+        final java.util.List<String> images = face.listTreeFiles(
+                new String[]{".png", ".jpg", ".jpeg", ".bmp", ".gif"});
+        if (images.isEmpty()) {
+            msgbox("No image files found in the granted folder.");
+            showAddTilesetDialog();
+            return;
+        }
+        final Dialog dlg = new Dialog("", skin, "dialog");
+        Table ct = dlg.getContentTable();
+        ct.pad(10);
+        Label title = new Label(z.selectfile != null ? z.selectfile : "Select file", skin);
+        ct.add(title).padBottom(10).row();
+
+        final com.badlogic.gdx.scenes.scene2d.ui.List<String> fileList =
+                new com.badlogic.gdx.scenes.scene2d.ui.List<>(skin);
+        fileList.setItems(images.toArray(new String[0]));
+        ScrollPane sp = new ScrollPane(fileList, skin);
+        sp.setFadeScrollBars(false);
+        ct.add(sp).width(ssx * 0.8f).height(ssy * 0.5f).row();
+
+        TextButton btnOk = new TextButton("OK", skin);
+        btnOk.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                String sel = fileList.getSelected();
+                if (sel == null || sel.isEmpty()) return;
+                dlg.hide();
+                // Copy selected image to local Temp and load as tileset
+                String localPath = basepath + "NotTiled/Temp/" + sel;
+                if (face.copyTreeFileToLocal(sel, localPath)) {
+                    FileHandle f = Gdx.files.absolute(localPath);
+                    if (f.exists()) {
+                        thefile = f;
+                        fImportWidth.setText(Tsw + "");
+                        fImportHeight.setText(Tsh + "");
+                        cImportEmbed.setChecked(false);
+                        gotoStage(tImport);
+                    }
+                }
+            }
+        });
+        ct.add(btnOk).width(btnx * 0.6f).height(btny).pad(5).row();
+
+        TextButton btnCancel = new TextButton(z.cancel, skin);
+        btnCancel.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                dlg.hide();
+                showAddTilesetDialog();
+            }
+        });
+        ct.add(btnCancel).width(btnx * 0.6f).height(btny).pad(5);
+        dlg.show(stage);
+    }
+
     private void showAddTilesetDialog() {
         Gdx.input.setInputProcessor(stage);
         final Dialog addDlg = new Dialog("", skin, "dialog");
@@ -17409,6 +17472,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         });
         addTable.add(btnAdd).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        // SAF: pick image from granted folder tree
+        if (face.hasTreeAccess()) {
+            TextButton btnSafTset = new TextButton(
+                    z.browseDevice != null ? z.browseDevice : "Browse Device / Cloud", skin);
+            btnSafTset.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    addDlg.hide();
+                    frompick = true;
+                    pickAuto = false;
+                    showSafTilesetPicker();
+                }
+            });
+            addTable.add(btnSafTset).width(dialogBtnWidth).height(btny).pad(5).row();
+        }
 
         TextButton btnTsx = new TextButton(z.importtsxfile, skin);
         btnTsx.addListener(new ChangeListener() {
@@ -24660,6 +24739,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         if (ok) {
+            // Write back to SAF folder tree if file was opened via SAF
+            if (safOpenedTreeRelPath != null && face.hasTreeAccess()) {
+                try {
+                    byte[] savedBytes = actualFile.readBytes();
+                    face.saveFileToTree(safOpenedTreeRelPath, savedBytes);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
             if (createBackup && sMapBackups) {
                 MapBackupStore.maybeBackup(basepath, actualFile.path(), actualFile, backupMaxCount,
                         backupMinIntervalMin, true, prefs);

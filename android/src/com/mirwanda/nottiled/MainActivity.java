@@ -314,9 +314,9 @@ public class MainActivity extends AndroidApplication implements Interface
 		if (!savedTree.isEmpty()) {
 			try {
 				Uri treeUri = Uri.parse(savedTree);
-				// Verify we still hold the permission
+				// Verify we still hold the permission (read+write)
 				getContentResolver().takePersistableUriPermission(treeUri,
-						Intent.FLAG_GRANT_READ_URI_PERMISSION);
+						Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 				savedTreeUri = treeUri;
 				new Thread(new Runnable() {
 					@Override
@@ -647,13 +647,13 @@ public class MainActivity extends AndroidApplication implements Interface
 					SAFfilenames.clear();
 					SAFfilename = "";
 
-					// Take persistable read permission and save URI
+					// Take persistable read+write permission and save URI
 					try {
 						final int takeFlags = resultData.getFlags()
 								& (Intent.FLAG_GRANT_READ_URI_PERMISSION
 								| Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 						getContentResolver().takePersistableUriPermission(treeUri,
-								Intent.FLAG_GRANT_READ_URI_PERMISSION);
+								takeFlags != 0 ? takeFlags : Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 						savedTreeUri = treeUri;
 						prefs.putString("treeUri", treeUri.toString()).commit();
 					} catch (Exception e) {
@@ -1337,6 +1337,120 @@ public class MainActivity extends AndroidApplication implements Interface
 			if (slash >= 0) bp = bp.substring(0, slash + 1);
 		}
 		return bp + rp;
+	}
+
+	// ─── Interface: saveFileToTree ────────────────────────────────────────────────
+
+	@Override
+	public boolean saveFileToTree(String relPath, byte[] data) {
+		if (savedTreeUri == null || relPath == null || relPath.isEmpty() || data == null) return false;
+		try {
+			Uri existing = resolveInTree(relPath);
+			if (existing != null) {
+				ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(existing, "rwt");
+				if (pfd == null) return false;
+				FileOutputStream fos = new FileOutputStream(pfd.getFileDescriptor());
+				fos.write(data);
+				fos.close();
+				pfd.close();
+				return true;
+			}
+			// Create new file in tree
+			String norm = relPath.replace('\\', '/');
+			String[] parts = norm.split("/");
+			String parentDocId = DocumentsContract.getTreeDocumentId(savedTreeUri);
+			for (int i = 0; i < parts.length - 1; i++) {
+				String childDocId = findChildDocId(savedTreeUri, parentDocId, parts[i]);
+				if (childDocId == null) {
+					Uri parentUri = DocumentsContract.buildDocumentUriUsingTree(savedTreeUri, parentDocId);
+					Uri newDir = DocumentsContract.createDocument(getContentResolver(), parentUri,
+							DocumentsContract.Document.MIME_TYPE_DIR, parts[i]);
+					if (newDir == null) return false;
+					parentDocId = DocumentsContract.getDocumentId(newDir);
+				} else {
+					parentDocId = childDocId;
+				}
+			}
+			String fileName = parts[parts.length - 1];
+			String mimeType = "application/octet-stream";
+			if (fileName.endsWith(".tmx") || fileName.endsWith(".tsx")) mimeType = "text/xml";
+			else if (fileName.endsWith(".json")) mimeType = "application/json";
+			else if (fileName.endsWith(".png")) mimeType = "image/png";
+			Uri parentUri = DocumentsContract.buildDocumentUriUsingTree(savedTreeUri, parentDocId);
+			Uri newFile = DocumentsContract.createDocument(getContentResolver(), parentUri, mimeType, fileName);
+			if (newFile == null) return false;
+			ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(newFile, "rwt");
+			if (pfd == null) return false;
+			FileOutputStream fos = new FileOutputStream(pfd.getFileDescriptor());
+			fos.write(data);
+			fos.close();
+			pfd.close();
+			synchronized (treeIndex) {
+				treeIndex.put(norm, newFile);
+			}
+			return true;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+	}
+
+	private String findChildDocId(Uri treeUri, String parentDocId, String childName) {
+		Uri childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentDocId);
+		Cursor cursor = null;
+		try {
+			cursor = getContentResolver().query(childrenUri, new String[]{
+					DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+					DocumentsContract.Document.COLUMN_DISPLAY_NAME
+			}, null, null, null);
+			if (cursor != null) {
+				while (cursor.moveToNext()) {
+					if (childName.equalsIgnoreCase(cursor.getString(1))) {
+						return cursor.getString(0);
+					}
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			if (cursor != null) cursor.close();
+		}
+		return null;
+	}
+
+	@Override
+	public boolean copyTreeFileToLocal(String relPath, String localPath) {
+		if (savedTreeUri == null || relPath == null || relPath.isEmpty()) return false;
+		Uri srcUri = resolveInTree(relPath);
+		if (srcUri == null) return false;
+		try {
+			java.io.File dest = new java.io.File(localPath);
+			dest.getParentFile().mkdirs();
+			copyFile(srcUri, dest);
+			return true;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+	}
+
+	@Override
+	public java.util.List<String> listTreeFiles(String[] extensions) {
+		java.util.List<String> result = new java.util.ArrayList<>();
+		if (savedTreeUri == null || extensions == null) return result;
+		synchronized (treeIndex) {
+			for (String path : treeIndex.keySet()) {
+				String lower = path.toLowerCase();
+				for (String ext : extensions) {
+					if (lower.endsWith(ext.toLowerCase())) {
+						result.add(path);
+						break;
+					}
+				}
+			}
+		}
+		java.util.Collections.sort(result);
+		return result;
 	}
 
 	private class CopyTreeRunnable implements Runnable {

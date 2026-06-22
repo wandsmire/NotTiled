@@ -42,4 +42,16 @@ public interface Interface
 	/** Returns true if a persistent folder-tree URI is saved and the index is ready. */
 	public boolean hasTreeAccess();
 
+	/** Write data back to a file in the saved folder tree at the given relative path.
+	 *  Returns true on success. Creates intermediate directories if needed. */
+	public boolean saveFileToTree(String relPath, byte[] data);
+
+	/** Copy a file from the folder tree to a local absolute path.
+	 *  Returns true on success. */
+	public boolean copyTreeFileToLocal(String relPath, String localPath);
+
+	/** Return a list of file paths in the tree matching the given extensions (e.g. ".png").
+	 *  Extensions should include the dot. Returns empty list if no tree access. */
+	public java.util.List<String> listTreeFiles(String[] extensions);
+
 }
