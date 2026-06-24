@@ -473,15 +473,20 @@ public class MainActivity extends AndroidApplication implements Interface
 		SAFstatus="";
 		SAFdata=null;
 
-		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-		intent.addCategory(Intent.CATEGORY_OPENABLE);
-		intent.addFlags(
-				Intent.FLAG_GRANT_READ_URI_PERMISSION
-						| Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-						| Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
-						| Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
-		intent.setType("*/*");
-		startActivityForResult(intent, OPEN_REQUEST_CODE);
+		runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+				intent.addCategory(Intent.CATEGORY_OPENABLE);
+				intent.addFlags(
+						Intent.FLAG_GRANT_READ_URI_PERMISSION
+								| Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+								| Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+								| Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+				intent.setType("*/*");
+				startActivityForResult(intent, OPEN_REQUEST_CODE);
+			}
+		});
 	}
 
 	@Override
@@ -489,8 +494,13 @@ public class MainActivity extends AndroidApplication implements Interface
 	{
 		SAFstatus="";
 		SAFdata=null;
-		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-		startActivityForResult(intent, REQUEST_TREE_CODE);
+		runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+				startActivityForResult(intent, REQUEST_TREE_CODE);
+			}
+		});
 	}
 
 	@Override
@@ -585,10 +595,10 @@ public class MainActivity extends AndroidApplication implements Interface
 	java.util.List<byte[]> SAFdatas = new ArrayList<byte[]>();
 	java.util.List<String> SAFfilenames = new ArrayList<String>();
 
-	byte[] SAFdata;
-	String SAFfilename="";
-	String SAFuri="";
-	String SAFstatus="";
+	volatile byte[] SAFdata;
+	volatile String SAFfilename="";
+	volatile String SAFuri="";
+	volatile String SAFstatus="";
 
 	// Persistent document-tree for smart asset resolution
 	private Uri savedTreeUri = null;
@@ -694,9 +704,12 @@ public class MainActivity extends AndroidApplication implements Interface
 						}
 
 						SAFstatus = "OK";
-					} catch (IOException e) {
+					} catch (Exception e) {
+						e.printStackTrace();
 						SAFstatus = "error";
 					}
+				} else {
+					SAFstatus = "cancel";
 				}
 			} else if (requestCode == REGAIN_ACCESS_CODE) {
 
@@ -708,6 +721,17 @@ public class MainActivity extends AndroidApplication implements Interface
 			}else{
 			}
 
+		} else {
+			// Result was not RESULT_OK (user cancelled, or provider returned a
+			// non-OK code — common with cloud/Drive sources). The background
+			// spin-loop in nativeOpenSAF waits on SAFstatus; if we never set it,
+			// it hangs forever and "nothing happens". Always release the wait.
+			if (requestCode == OPEN_REQUEST_CODE
+					|| requestCode == REQUEST_TREE_CODE
+					|| requestCode == CREATE_REQUEST_CODE
+					|| requestCode == SAVEAS_REQUEST_CODE) {
+				SAFstatus = "cancel";
+			}
 		}
 		if (requestCode == EDIT_NOT2PIX_CODE && not2pixEditPath != null) {
 			// Not2Pix returned — reload the tileset texture
@@ -820,7 +844,7 @@ public class MainActivity extends AndroidApplication implements Interface
 					if(dx!=-1) result = cursor.getString(dx);
 				}
 			} finally {
-				cursor.close();
+				if (cursor != null) cursor.close();
 			}
 		}
 		if (result == null) {
@@ -1257,9 +1281,9 @@ public class MainActivity extends AndroidApplication implements Interface
 
 	@Override
 	public boolean hasTreeAccess() {
-		synchronized (treeIndex) {
-			return savedTreeUri != null && !treeIndex.isEmpty();
-		}
+		// A granted tree URI is enough to write into — the index may be empty for a
+		// freshly-granted folder (e.g. saving a brand-new file into an empty folder).
+		return savedTreeUri != null;
 	}
 
 	/** Extract all source="" attribute values from TMX/TSX XML (image and tileset references). */
@@ -1372,13 +1396,29 @@ public class MainActivity extends AndroidApplication implements Interface
 				}
 			}
 			String fileName = parts[parts.length - 1];
+			// Keep the exact filename. Android's FileSystemProvider rewrites the
+			// name when the supplied extension isn't the canonical one for the MIME
+			// type (e.g. "text/xml" turns "map.tmx" into "map.tmx.xml"), which makes
+			// the saved file vanish from the user's point of view. ".tmx"/".tsx" are
+			// not registered extensions, so "application/octet-stream" leaves them
+			// untouched. ".json"/".png" map cleanly, so keep their real types.
 			String mimeType = "application/octet-stream";
-			if (fileName.endsWith(".tmx") || fileName.endsWith(".tsx")) mimeType = "text/xml";
-			else if (fileName.endsWith(".json")) mimeType = "application/json";
+			if (fileName.endsWith(".json")) mimeType = "application/json";
 			else if (fileName.endsWith(".png")) mimeType = "image/png";
 			Uri parentUri = DocumentsContract.buildDocumentUriUsingTree(savedTreeUri, parentDocId);
 			Uri newFile = DocumentsContract.createDocument(getContentResolver(), parentUri, mimeType, fileName);
 			if (newFile == null) return false;
+			// Some providers still rewrite the extension (e.g. "map.tmx" -> "map.tmx.xml").
+			// If the created display name doesn't match what we asked for, rename it back.
+			String actualName = getFileName(newFile);
+			if (actualName != null && !actualName.equals(fileName)) {
+				try {
+					Uri renamed = DocumentsContract.renameDocument(getContentResolver(), newFile, fileName);
+					if (renamed != null) newFile = renamed;
+				} catch (Exception re) {
+					re.printStackTrace();
+				}
+			}
 			ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(newFile, "rwt");
 			if (pfd == null) return false;
 			FileOutputStream fos = new FileOutputStream(pfd.getFileDescriptor());
