@@ -155,7 +155,7 @@ public class guis
 		tilesetsright.setp(85,100,0,10);
 		tilesetsbtn.setp(85,100,19,28);
 		terraineditorbtn.setp(85,100,28,37);
-		savetogallery.setp(85,100,37,46);
+		savetogallery.setp(85,100,10,19);
 
 		center.setp(70,85,81,90);
 		save.setp(0,15,19,28);
@@ -251,7 +251,7 @@ public class guis
 		tilesetsmid.setl(10,90,0,10);
 		tilesetsright.setl(90,100,0,10);
 		tilesetsbtn.setl(90,100,20,30);
-		savetogallery.setl(90,100,40,50);
+		savetogallery.setl(90,100,10,20);
 		terraineditorbtn.setl(90,100,30,40);
 		tilemode.setl(40,60,10,20);
 

@@ -4185,7 +4185,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 uidrawbutton(txtiles, z.edit, gui.tilesettings, 2);
                 uidrawbutton(txTypeTile, "Tilesets", gui.tilesetsbtn, 2);
                 uidrawbutton(txautopick, z.terraineditor, gui.terraineditorbtn, 2);
-                uidrawbutton(txresources, "Gallery", gui.savetogallery, 2);
+                uidrawbutton(txadd, "Gallery", gui.savetogallery, 2);
                 if (isPixelArtPaletteView()) {
                     uidrawbutton(txinfo, z.swap, gui.tileproperties, 2);
                     uidrawbutton(txeraser, z.remove, gui.tileremove, 2);
@@ -25918,28 +25918,24 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         final String tsxName = raw.replaceAll("[^a-zA-Z0-9_\\-\\.\\(\\) ]", "_");
         final FileHandle destTsx = galleryDir.child(tsxName + ".tsx");
 
-        if (destTsx.exists()) {
-            final Dialog dlg = new Dialog("", skin, "dialog");
-            Table ct = dlg.getContentTable();
-            ct.pad(20);
-            ct.add(new Label("'" + tsxName + ".tsx' already in Gallery.\nReplace?", skin)).row();
-            TextButton bYes = new TextButton("Replace", skin);
-            bYes.addListener(new ChangeListener() {
-                @Override public void changed(ChangeEvent e, Actor a) {
-                    dlg.hide();
-                    doSaveToGallery(t, galleryDir, destTsx);
-                }
-            });
-            TextButton bNo = new TextButton(z.cancel, skin);
-            bNo.addListener(new ChangeListener() {
-                @Override public void changed(ChangeEvent e, Actor a) { dlg.hide(); }
-            });
-            ct.add(bYes).width(btnx).height(btny).pad(5).row();
-            ct.add(bNo).width(btnx).height(btny).pad(5);
-            dlg.show(stage);
-            return;
-        }
-        doSaveToGallery(t, galleryDir, destTsx);
+        final Dialog dlg = new Dialog("", skin, "dialog");
+        Table ct = dlg.getContentTable();
+        ct.pad(20);
+        ct.add(new Label("Save to Gallery?", skin)).row();
+        TextButton bYes = new TextButton("Save", skin);
+        bYes.addListener(new ChangeListener() {
+            @Override public void changed(ChangeEvent e, Actor a) {
+                dlg.hide();
+                doSaveToGallery(t, galleryDir, destTsx);
+            }
+        });
+        TextButton bNo = new TextButton(z.cancel, skin);
+        bNo.addListener(new ChangeListener() {
+            @Override public void changed(ChangeEvent e, Actor a) { dlg.hide(); }
+        });
+        ct.add(bYes).width(btnx).height(btny).pad(5).row();
+        ct.add(bNo).width(btnx).height(btny).pad(5);
+        dlg.show(stage);
     }
 
     private void doSaveToGallery(tileset t, FileHandle galleryDir, FileHandle destTsx) {
