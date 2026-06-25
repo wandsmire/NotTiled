@@ -1485,7 +1485,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     Gdx.app.postRunnable(new Runnable() {
                         @Override
                         public void run() {
-                            exitDialogRebuild(T);
+                            backToMap();
                         }
                     });
                     return;
@@ -1498,7 +1498,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     Gdx.app.postRunnable(new Runnable() {
                         @Override
                         public void run() {
-                            exitDialogRebuild(T);
+                            backToMap();
                         }
                     });
                     return;
@@ -3932,10 +3932,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (kartu == "editor")
             uisrect(gui.tilemode, mouse, null);
         if (kartu == "tile" || kartu == "editor") {
-            uisrect(gui.tilesetsmid, mouse, null);
+            // Empty state shows only Back + Tilesets, so draw only the Tilesets box
+            // here. The mid/terrain/arrow boxes belong to the populated picker.
             uisrect(gui.tilesetsbtn, mouse, null);
-            uisrect(gui.terraineditorbtn, mouse, null);
             if (tilesets.size() > 0) {
+                uisrect(gui.tilesetsmid, mouse, null);
+                uisrect(gui.terraineditorbtn, mouse, null);
                 uisrect(gui.tilesetsleft, mouse, null);
                 uisrect(gui.tilesetsright, mouse, null);
                 if (tilesets.get(seltset).getTerrains().size() > 0) {
@@ -4009,7 +4011,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
         if (tilesets.size() == 0 && (kartu == "tile" || kartu == "editor")) {
             uisrect(gui.pickerback, mouse, null);
-            uisrect(gui.tilewrite, mouse, null);
             uisrect(gui.tilesetsbtn, mouse, null);
         }
         uis.end();
@@ -4029,11 +4030,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
          */
 
         if (tilesets.size() == 0) {
-            // str1draw(ui, "Tileset is empty.",0,100,50);
-            str1draw(ui, z.addnew + " " + z.tileset, gui.tilesetsmid);
+            // No tilesets yet: show only Back and Tilesets — no add button, no
+            // tilepicker, no terrain, and no tap-anywhere file picker.
             uidrawbutton(txTypeTile, "Tilesets", gui.tilesetsbtn, 2);
             uidrawbutton(txundo, z.back, gui.pickerback, 3);
-            uidrawbutton(txpicker, z.tilepicker, gui.tilewrite, 2);
 
         } else {
 
@@ -17528,6 +17528,76 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }).start();
     }
 
+    /**
+     * Pick a .tsx via the native SAF picker, fetch its referenced image from the
+     * saved folder tree (same machinery as the TMX open flow), drop both into Temp,
+     * then route through the normal "seltsx" import so the tileset manager refreshes.
+     * onAbort runs (on the GL thread) if the user cancels or the pick fails.
+     */
+    private void pickTsxViaSaf(final Runnable onAbort) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String st = "";
+                face.openFile();
+                while (st.equalsIgnoreCase("")) {
+                    st = face.getStatus();
+                    try { Thread.sleep(16); } catch (InterruptedException ignored) {}
+                }
+                if (!st.equalsIgnoreCase("OK")) {
+                    Gdx.app.postRunnable(onAbort);
+                    return;
+                }
+                final byte[] data = face.getData();
+                final String name = face.getFilename();
+                final String uri  = face.getUri();
+                if (data == null || name == null || name.isEmpty()
+                        || !name.toLowerCase().endsWith(".tsx")) {
+                    Gdx.app.postRunnable(new Runnable() {
+                        @Override public void run() { status(z.error, 5); onAbort.run(); }
+                    });
+                    return;
+                }
+
+                String tsxContent = "";
+                try { tsxContent = new String(data, "UTF-8"); } catch (Exception ignore) {}
+
+                // Pull the tsx (and its referenced image) into Temp at the tree-relative
+                // layout. fetchTmxAssets regex-scans source="" so the tsx's <image> is
+                // copied alongside it; a no_tree result just means no image (loadtsx then
+                // falls back to empty.jpeg), so we proceed either way.
+                nativeStatus = "";
+                face.fetchTmxAssets(tsxContent, uri);
+                while (nativeStatus.equalsIgnoreCase("")) {
+                    nativeStatus = face.getStatus();
+                    try { Thread.sleep(16); } catch (InterruptedException ignored) {}
+                }
+
+                String tsxRelPath = face.getFilename();
+                if (tsxRelPath == null || tsxRelPath.isEmpty()) tsxRelPath = name;
+                FileHandle tsx = Gdx.files.absolute(basepath + "NotTiled/Temp/" + tsxRelPath);
+                if (!tsx.exists()) {
+                    // no_tree (or asset fetch failed): write the tsx itself so we can still import.
+                    tsx = Gdx.files.absolute(basepath + "NotTiled/Temp/" + name);
+                    tsx.parent().mkdirs();
+                    tsx.writeBytes(data, false);
+                }
+                final FileHandle finalTsx = tsx;
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (finalTsx.exists()) {
+                            tujuanDialog("seltsx", finalTsx);
+                        } else {
+                            status(z.error, 5);
+                            onAbort.run();
+                        }
+                    }
+                });
+            }
+        }).start();
+    }
+
     private void showAddTilesetDialog() {
         Gdx.input.setInputProcessor(stage);
         final Dialog addDlg = new Dialog("", skin, "dialog");
@@ -17579,13 +17649,40 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         });
         addTable.add(btnAdd).width(dialogBtnWidth).height(btny).pad(5).row();
 
+        // "Import tsx file" → choose source: Internal storage or Device/Cloud.
         TextButton btnTsx = new TextButton(z.importtsxfile, skin);
         btnTsx.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 addDlg.hide();
-                frompick = true;
-                FileDialog(z.selectfile, "seltsx", "file", new String[] { ".tsx" }, nullTable);
+                final Dialog srcDlg = new Dialog("", skin, "dialog");
+                Table sct = srcDlg.getContentTable();
+                sct.pad(20);
+                sct.add(new Label(z.importtsxfile, skin)).width(dialogBtnWidth).pad(10).row();
+                TextButton bDev = new TextButton(
+                        z.browseDevice != null ? z.browseDevice : "Browse Device / Cloud", skin);
+                bDev.addListener(new ChangeListener() {
+                    @Override
+                    public void changed(ChangeEvent e2, Actor a2) {
+                        srcDlg.hide();
+                        frompick = true;
+                        pickTsxViaSaf(new Runnable() {
+                            @Override public void run() { showAddTilesetDialog(); }
+                        });
+                    }
+                });
+                sct.add(bDev).width(dialogBtnWidth).height(btny).pad(5).row();
+                TextButton bInt = new TextButton("Internal Storage", skin);
+                bInt.addListener(new ChangeListener() {
+                    @Override
+                    public void changed(ChangeEvent e2, Actor a2) {
+                        srcDlg.hide();
+                        frompick = true;
+                        FileDialog(z.selectfile, "seltsx", "file", new String[] { ".tsx" }, nullTable);
+                    }
+                });
+                sct.add(bInt).width(dialogBtnWidth).height(btny).pad(5).row();
+                srcDlg.show(stage);
             }
         });
         addTable.add(btnTsx).width(dialogBtnWidth).height(btny).pad(5).row();
@@ -33964,11 +34061,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             }
 
-        } else {
-            FileDialog(z.selectfile, "quickaddtset", "file",
-                    new String[] { ".tmx", ".tsx", ".png", ".jpg", ".jpeg", ".bmp", ".gif" }, nullTable);
-            cue("addtileset");
         }
+        // When no tilesets are loaded, taps outside Back/Tilesets do nothing —
+        // the old "tap anywhere to open the add-tileset file picker" was removed.
         return false;
     }
 
@@ -40429,6 +40524,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 return true;
             }
         } else if (kartu == "tile") {
+            // No tilesets loaded: only Back/Tilesets exist. Long-pressing anywhere
+            // else (e.g. the orphaned button regions) must not fall through to
+            // tilesets.get(seltset) below, which would crash on an empty list.
+            if (tilesets.size() == 0) {
+                return true;
+            }
             if (tapped(touch2, gui.tilesetsright)) {
                 return true;
             }
