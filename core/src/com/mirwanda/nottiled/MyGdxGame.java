@@ -3747,7 +3747,43 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (Tsw >= 64)
                 weight = 2;
 
-            if (isActiveTerrainEditorPicker()) {
+            if (isMacroTerrainEditorPicker()) {
+                float[][] gridPacked = computeMacroPackedPositions();
+                for (int ti = 0; ti < tilesets.size(); ti++) {
+                    tileset mts = tilesets.get(ti);
+                    float xOff = gridPacked[0][ti];
+                    float yOff = gridPacked[1][ti];
+                    int mccw = terrainEditorCornerCellW(mts);
+                    int mcch = terrainEditorCornerCellH(mts);
+                    int mhch = terrainEditorHalfCellH(mts);
+                    int mpickerSlots = CollectionTilesetOps.getPickerGridSlots(mts);
+                    int mwd = mts.getWidth();
+                    int mtotalRows = mts.isCollection() ? mts.getHeight()
+                            : (mwd > 0 ? (mpickerSlots + mwd - 1) / mwd : 0);
+                    int mgridW = mwd * 2;
+                    int mgridH = mtotalRows * 2;
+                    float tileLineW = terrainEditorGridLineWidth(mts);
+                    float subLineW = Math.max(0.35f, tileLineW * 0.35f);
+                    float gridTop = yOff + mhch;
+                    float gridBottom = yOff + mhch - mcch * mgridH;
+                    if (xOff + mccw * mgridW < minX || xOff > maxX) continue;
+                    if (gridBottom > maxY || gridTop < minY) continue;
+                    int gridStartCol = Math.max(0, (int) Math.floor((minX - xOff) / mccw));
+                    int gridEndCol = Math.min(mgridW, (int) Math.ceil((maxX - xOff) / mccw));
+                    int gridStartRow = Math.max(0, (int) Math.floor((gridTop - maxY) / mcch));
+                    int gridEndRow = Math.min(mgridH, (int) Math.ceil((gridTop - minY) / mcch));
+                    for (int i = gridStartCol; i <= gridEndCol; i++) {
+                        boolean tileEdge = (i % 2) == 0;
+                        sr.setColor(0, 0, 0, tileEdge ? 0.5f : 0.18f);
+                        sr.rectLine(xOff + mccw * i, gridTop, xOff + mccw * i, gridBottom, tileEdge ? tileLineW : subLineW);
+                    }
+                    for (int j = gridStartRow; j <= gridEndRow; j++) {
+                        boolean tileEdge = (j % 2) == 0;
+                        sr.setColor(0, 0, 0, tileEdge ? 0.5f : 0.18f);
+                        sr.rectLine(xOff, gridTop - mcch * j, xOff + mccw * mgridW, gridTop - mcch * j, tileEdge ? tileLineW : subLineW);
+                    }
+                }
+            } else if (isTerrainEditorPicker()) {
                 int hch = terrainEditorHalfCellH(ts);
                 int ccw = terrainEditorCornerCellW(ts);
                 int cch = terrainEditorCornerCellH(ts);
@@ -3761,14 +3797,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 int gridEndCol = (int) Math.ceil(maxX / ccw);
                 int gridStartRow = (int) Math.floor((gridTop - maxY) / cch);
                 int gridEndRow = (int) Math.ceil((gridTop - minY) / cch);
-                if (gridStartCol < 0)
-                    gridStartCol = 0;
-                if (gridEndCol > gridW)
-                    gridEndCol = gridW;
-                if (gridStartRow < 0)
-                    gridStartRow = 0;
-                if (gridEndRow > gridH)
-                    gridEndRow = gridH;
+                if (gridStartCol < 0) gridStartCol = 0;
+                if (gridEndCol > gridW) gridEndCol = gridW;
+                if (gridStartRow < 0) gridStartRow = 0;
+                if (gridEndRow > gridH) gridEndRow = gridH;
                 for (int i = gridStartCol; i <= gridEndCol; i++) {
                     boolean tileEdge = (i % 2) == 0;
                     sr.setColor(0, 0, 0, tileEdge ? 0.5f : 0.18f);
@@ -3898,13 +3930,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 java.util.List<tile> teTiles = isMacroTerrainEditorOverlayVisible()
                         ? new java.util.ArrayList<tile>(macroTerrain.getAllTileMeta())
                         : ts.getTiles();
-                float[] macroYStarts = isMacroTerrainEditorOverlayVisible() ? getMacroTerrainYStarts() : null;
+                float[][] macroPacked = isMacroTerrainEditorOverlayVisible() ? computeMacroPackedPositions() : null;
                 int teTileMeta = teTiles.size();
                 for (int n = 0; n < teTileMeta; n++) {
                     tile teTile = teTiles.get(n);
                     if (!teTile.isTerrainForEditor())
                         continue;
                     int gi;
+                    float txOff = 0f;
                     float tyOff = 0f;
                     if (isMacroTerrainEditorOverlayVisible()) {
                         int gid = teTile.getTileID();
@@ -3923,8 +3956,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         int ihch = terrainEditorHalfCellH(tsetI);
                         int iccw = terrainEditorCornerCellW(tsetI);
                         int icch = terrainEditorCornerCellH(tsetI);
-                        tyOff = macroYStarts[tsetIdx];
-                        float tx = x * ihcw;
+                        txOff = macroPacked[0][tsetIdx];
+                        tyOff = macroPacked[1][tsetIdx];
+                        float tx = x * ihcw + txOff;
                         float ty = -y * ihch + tyOff;
                         int[] curNodes = teTile.getTerrain();
                         int[][] iCorners = { { 0, 0, icch }, { 1, iccw, icch }, { 2, 0, 0 }, { 3, iccw, 0 } };
@@ -4039,6 +4073,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     uisrect(gui.tilesetsleft, mouse, null);
                     uisrect(gui.tilesetsright, mouse, null);
 
+                    break;
+
+                case "macroterraineditor":
                     break;
 
                 default:
@@ -4221,9 +4258,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         break;
                     case "macroterraineditor":
-                        if (macroTerrain.getTerrains().size() > 0)
+                        if (macroTerrain.getTerrains().size() > 0) {
+                            uidrawbutton(txLeft, "", gui.tilesetsleft, 1);
                             str1draw(ui, macroTerrain.getTerrains().get(macroTerrain.getSelTerrain()).getName(),
                                     gui.tilesetsmid);
+                            uidrawbutton(txRight, "", gui.tilesetsright, 1);
+                        }
                         uidrawbutton(txundo, z.undo, gui.terrainundo, 3);
                         if (macroTerrain.getTerrains().size() > 0)
                             uidrawbutton(txdelete, z.deleteterrain != null ? z.deleteterrain : "Delete",
@@ -32865,10 +32905,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 tilecam.unproject(touch.set(p1, p2, 0));
                 boolean hitTile = false;
                 if (isMacroTerrainEditorPicker()) {
-                    int hitIdx = findMacroTilesetAtWorldY(touch.y);
+                    int hitIdx = findMacroTilesetAtWorld(touch.x, touch.y);
                     if (hitIdx >= 0 && hitIdx < tilesets.size()) {
-                        float localY = touch.y - getMacroTerrainYStarts()[hitIdx];
-                        hitTile = terrainEditorHalfCellAt(tilesets.get(hitIdx), touch.x, localY) >= 0;
+                        float[][] pos = computeMacroPackedPositions();
+                        float localX = touch.x - pos[0][hitIdx];
+                        float localY = touch.y - pos[1][hitIdx];
+                        hitTile = terrainEditorHalfCellAt(tilesets.get(hitIdx), localX, localY) >= 0;
                     }
                 } else {
                     tileset editorTs = getActiveTerrainEditorTileset();
@@ -33862,13 +33904,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Vector3 t = new Vector3();
         tilecam.unproject(t.set(screenX, screenY, 0));
         if (isMacroTerrainEditorPicker()) {
-            int hitIdx = findMacroTilesetAtWorldY(t.y);
+            int hitIdx = findMacroTilesetAtWorld(t.x, t.y);
             if (hitIdx >= 0 && hitIdx < tilesets.size()) {
                 tileset ts = tilesets.get(hitIdx);
                 seltset = hitIdx;
                 pushTerrainUndo(ts);
-                float localY = t.y - getMacroTerrainYStarts()[hitIdx];
-                paintTerrainBrush(ts, t.x, localY);
+                float[][] pos = computeMacroPackedPositions();
+                float localX = t.x - pos[0][hitIdx];
+                float localY = t.y - pos[1][hitIdx];
+                paintTerrainBrush(ts, localX, localY);
             }
         } else {
             tileset ts = getActiveTerrainEditorTileset();
@@ -33987,13 +34031,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private float[] getMacroTerrainYStarts() {
-        float[] yStarts = new float[tilesets.size()];
-        float cumY = 0f;
-        for (int i = 0; i < tilesets.size(); i++) {
-            yStarts[i] = -cumY;
-            cumY += getTilesetPickerHeight(tilesets.get(i));
-        }
-        return yStarts;
+        return computeMacroPackedPositions()[1];
     }
 
     private int findMacroTilesetAtWorldY(float worldY) {
@@ -34002,6 +34040,68 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             float startY = yStarts[i];
             float endY = startY - getTilesetPickerHeight(tilesets.get(i));
             if (worldY <= startY && worldY >= endY)
+                return i;
+        }
+        return Math.max(0, tilesets.size() - 1);
+    }
+
+    private float[][] computeMacroPackedPositions() {
+        int n = tilesets.size();
+        float[] xs = new float[n];
+        float[] ys = new float[n];
+        if (n == 0) return new float[][]{xs, ys};
+        float[] widths = new float[n];
+        float[] heights = new float[n];
+        float totalW = 0, widest = 0, maxH = 0;
+        for (int i = 0; i < n; i++) {
+            tileset ts = tilesets.get(i);
+            widths[i] = ts.getWidth() * terrainEditorHalfCellW(ts);
+            heights[i] = getTilesetPickerHeight(ts);
+            totalW += widths[i];
+            if (widths[i] > widest) widest = widths[i];
+            if (heights[i] > maxH) maxH = heights[i];
+        }
+        float maxRowWidth;
+        if (n == 1 || totalW <= widest + 1) {
+            maxRowWidth = totalW;
+        } else {
+            maxRowWidth = (float) Math.sqrt(totalW * maxH);
+            if (maxRowWidth < widest) maxRowWidth = widest;
+        }
+        float packX = 0, packY = 0, rowH = 0;
+        for (int i = 0; i < n; i++) {
+            if (packX > 0 && packX + widths[i] > maxRowWidth) {
+                packY += rowH;
+                packX = 0;
+                rowH = 0;
+            }
+            xs[i] = packX;
+            ys[i] = -packY;
+            packX += widths[i];
+            if (heights[i] > rowH) rowH = heights[i];
+        }
+        return new float[][]{xs, ys};
+    }
+
+    private float[] getMacroTerrainXStarts() {
+        return computeMacroPackedPositions()[0];
+    }
+
+    private int findMacroTilesetAtWorldX(float worldX) {
+        return findMacroTilesetAtWorld(worldX, Float.MAX_VALUE);
+    }
+
+    private int findMacroTilesetAtWorld(float worldX, float worldY) {
+        float[][] pos = computeMacroPackedPositions();
+        float[] xStarts = pos[0];
+        float[] yStarts = pos[1];
+        for (int i = 0; i < tilesets.size(); i++) {
+            tileset ts = tilesets.get(i);
+            float startX = xStarts[i];
+            float endX = startX + ts.getWidth() * terrainEditorHalfCellW(ts);
+            float topY = yStarts[i] + terrainEditorHalfCellH(ts);
+            float botY = topY - getTilesetPickerHeight(ts);
+            if (worldX >= startX && worldX < endX && worldY <= topY && worldY >= botY)
                 return i;
         }
         return Math.max(0, tilesets.size() - 1);
@@ -34071,10 +34171,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             rebuildMacroPickerCachesAll();
         if (!macroPickerCachesAllValid)
             return;
-        float[] yStarts = getMacroTerrainYStarts();
+        float[][] packed = computeMacroPackedPositions();
+        float[] xStarts = packed[0];
+        float[] yStarts = packed[1];
         for (int ti = 0; ti < tilesets.size(); ti++) {
             tileset ts = tilesets.get(ti);
             int wd = ts.getWidth();
+            int hcw = terrainEditorHalfCellW(ts);
             int hch = terrainEditorHalfCellH(ts);
             int pickerSlots = CollectionTilesetOps.getPickerGridSlots(ts);
             if (wd <= 0 || pickerSlots <= 0)
@@ -34083,7 +34186,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             java.util.ArrayList<Integer> tsCacheIDs = macroPickerCacheIDsAll.get(ti);
             if (tsCaches.isEmpty())
                 continue;
+            float xOff = xStarts[ti];
             float yOff = yStarts[ti];
+            float tsWidth = wd * hcw;
+            float tsHeight = getTilesetPickerHeight(ts);
+            if (xOff >= maxX || xOff + tsWidth <= minX)
+                continue;
+            if (yOff - tsHeight >= maxY || yOff <= minY)
+                continue;
             int chunkSize = 1024;
             for (int chunk = 0; chunk < tsCaches.size(); chunk++) {
                 int startIdx = chunk * chunkSize;
@@ -34096,7 +34206,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     continue;
                 com.badlogic.gdx.graphics.g2d.SpriteCache cache = tsCaches.get(chunk);
                 cache.setProjectionMatrix(tilecam.combined);
-                cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4().idt().translate(0, yOff, 0));
+                cache.setTransformMatrix(new com.badlogic.gdx.math.Matrix4().idt().translate(xOff, yOff, 0));
                 if (sEnableBlending) {
                     Gdx.gl.glEnable(GL20.GL_BLEND);
                     Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
@@ -34118,25 +34228,28 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             }
         }
-        batch.begin();
     }
 
     private void applyMacroTerrainTap(float worldX, float worldY) {
-        int hitIdx = findMacroTilesetAtWorldY(worldY);
+        int hitIdx = findMacroTilesetAtWorld(worldX, worldY);
         if (hitIdx < 0 || hitIdx >= tilesets.size())
             return;
         seltset = hitIdx;
-        float localY = worldY - getMacroTerrainYStarts()[hitIdx];
-        applyTerrainEditorTap(tilesets.get(hitIdx), worldX, localY);
+        float[][] pos = computeMacroPackedPositions();
+        float localX = worldX - pos[0][hitIdx];
+        float localY = worldY - pos[1][hitIdx];
+        applyTerrainEditorTap(tilesets.get(hitIdx), localX, localY);
     }
 
     private void paintMacroTerrainBrush(float worldX, float worldY) {
-        int hitIdx = findMacroTilesetAtWorldY(worldY);
+        int hitIdx = findMacroTilesetAtWorld(worldX, worldY);
         if (hitIdx < 0 || hitIdx >= tilesets.size())
             return;
         seltset = hitIdx;
-        float localY = worldY - getMacroTerrainYStarts()[hitIdx];
-        paintTerrainBrush(tilesets.get(hitIdx), worldX, localY);
+        float[][] pos = computeMacroPackedPositions();
+        float localX = worldX - pos[0][hitIdx];
+        float localY = worldY - pos[1][hitIdx];
+        paintTerrainBrush(tilesets.get(hitIdx), localX, localY);
     }
 
     private void recenterpick() {
@@ -34526,6 +34639,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
                         break;
                     case "macroterraineditor":
+                        if (tapped(touch2, gui.tilesetsleft)) {
+                            cycleSelTerrain(-1);
+                            return true;
+                        }
+                        if (tapped(touch2, gui.tilesetsright)) {
+                            cycleSelTerrain(1);
+                            return true;
+                        }
                         if (tapped(touch2, gui.tilesetsmid)) {
                             showTerrainPickerList();
                             return true;
@@ -41072,12 +41193,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             || tapped(touch2, gui.terrainshape) || tapped(touch2, gui.newterrain))
                         return true;
                     stamp = false; {
-                    int macroHitIdx = findMacroTilesetAtWorldY(touch3.y);
+                    int macroHitIdx = findMacroTilesetAtWorld(touch3.x, touch3.y);
                     if (macroHitIdx >= 0 && macroHitIdx < tilesets.size()
                             && getActiveEditorTerrains().size() > 0) {
                         tileset tt = tilesets.get(macroHitIdx);
-                        float macroLocalY = touch3.y - getMacroTerrainYStarts()[macroHitIdx];
-                        if (terrainEditorHalfCellAt(tt, touch3.x, macroLocalY) >= 0)
+                        float[][] pos = computeMacroPackedPositions();
+                        float macroLocalX = touch3.x - pos[0][macroHitIdx];
+                        float macroLocalY = touch3.y - pos[1][macroHitIdx];
+                        if (terrainEditorHalfCellAt(tt, macroLocalX, macroLocalY) >= 0)
                             beginTerrainPaintAt(p1, p2);
                     }
                 }
@@ -42293,7 +42416,25 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
                     }
 
-                    if (pickAuto) {
+                    if (tilePicker.equals("macroterraineditor")) {
+                        float[][] bndPacked = computeMacroPackedPositions();
+                        float maxX2 = 0, minY2 = 0;
+                        for (int mi = 0; mi < tilesets.size(); mi++) {
+                            tileset mts = tilesets.get(mi);
+                            float rx = bndPacked[0][mi] + mts.getWidth() * terrainEditorHalfCellW(mts);
+                            float by = bndPacked[1][mi] - getTilesetPickerHeight(mts);
+                            if (rx > maxX2) maxX2 = rx;
+                            if (by < minY2) minY2 = by;
+                        }
+                        if (tilecam.position.x < 0)
+                            tilecam.position.x = 0;
+                        if (tilecam.position.x > maxX2)
+                            tilecam.position.x = maxX2;
+                        if (tilecam.position.y > scrollTh)
+                            tilecam.position.y = scrollTh;
+                        if (tilecam.position.y < minY2 + scrollTh)
+                            tilecam.position.y = minY2 + scrollTh;
+                    } else if (pickAuto) {
                         if (tilecam.position.x < 0)
                             tilecam.position.x = 0;
                         if (tilecam.position.x > 6 * scrollTw)
