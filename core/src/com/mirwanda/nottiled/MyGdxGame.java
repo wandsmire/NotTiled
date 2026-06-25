@@ -1504,6 +1504,30 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     return;
                 }
 
+                // PNG/JPG/etc picked via Open → route through the normal import screen
+                // so the user can set tile width/height before it's added as a tileset.
+                String pickedExt = tmxFilename.contains(".")
+                        ? tmxFilename.substring(tmxFilename.lastIndexOf('.') + 1).toLowerCase()
+                        : "";
+                if (pickedExt.equals("png") || pickedExt.equals("jpg") || pickedExt.equals("jpeg")
+                        || pickedExt.equals("bmp") || pickedExt.equals("gif")) {
+                    final FileHandle imgFile = Gdx.files.absolute(basepath + "NotTiled/Temp/" + tmxFilename);
+                    imgFile.parent().mkdirs();
+                    imgFile.writeBytes(tmxData, false);
+                    Gdx.app.postRunnable(new Runnable() {
+                        @Override
+                        public void run() {
+                            backToMap();
+                            thefile = imgFile;
+                            fImportWidth.setText(Tsw + "");
+                            fImportHeight.setText(Tsh + "");
+                            cImportEmbed.setChecked(false);
+                            gotoStage(tImport);
+                        }
+                    });
+                    return;
+                }
+
                 String tmxContent = "";
                 try { tmxContent = new String(tmxData, "UTF-8"); } catch (Exception ignore) {}
 
@@ -11108,8 +11132,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tMenu1.defaults().width(btnx).height(btny * 2);
             tMenu2.defaults().width(btnx).height(btny * 2);
 
-            if (!face.ispro())
-                tMenu1.add(bPatreon).row();
+            // Left column — mirrors the first half of portrait order
             tMenu1.add(bPatreon).row();
             tMenu1.add(bNew).row();
             tMenu1.add(bOpen).row();
@@ -11118,10 +11141,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tMenu1.add(bSave).row();
             tMenu1.add(bSaveAs).row();
             tMenu1.add(bRestoreBackup).row();
+            // Right column — mirrors the second half of portrait order
             if (Gdx.app.getType() == Android)
                 tMenu2.add(bImporter).row();
             tMenu2.add(bFileManager).row();
-            tMenu1.add(bExporter).row();
+            tMenu2.add(bExporter).row();
             tMenu2.add(bPreference).row();
             tMenu2.add(bProperties).row();
             tMenu2.add(bLinks).row();
@@ -11975,12 +11999,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tTools1.add(randomize).row();
             tTools1.add(bScreenshot).row();
             tTools1.add(bToggleFull3D).row();
-            tTools1.add(bAutoMgmt).row();
-            tTools1.add(renumberTilesetIds).row();
-            tTools1.add(bFlattenObjectLayers).row();
-            tTools1.add(bObjectList).row();
+            tTools1.add(generateterrain).row();
 
-            tTools2.add(generateterrain).row();
+            tTools2.add(bAutoMgmt).row();
+            tTools2.add(renumberTilesetIds).row();
+            tTools2.add(bFlattenObjectLayers).row();
+            tTools2.add(bObjectList).row();
             tTools2.add(bMacroTerrainEditor).row();
             tTools2.add(bCollaboration).row();
             tTools2.add(toback).row();
@@ -15661,7 +15685,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void applyLanguageFallbacks() {
         if (z.filemanager == null)
-            z.filemanager = "File Manager";
+            z.filemanager = "Internal File Manager";
         if (z.screenorientation == null)
             z.screenorientation = "Screen Orientation";
         if (z.customfont == null)
