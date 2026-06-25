@@ -4,6 +4,9 @@ s>WandsMire
 m>Patrons
 s>Luke (Rusted Warfare developer)
 s>Nathan Thompson
+s>Noah Rosenberg
+s>Conrad
+s>Kiran Massey
 m>Supporter
 s>Mortimer
 m>Contributors
@@ -15,11 +18,11 @@ s>PoLLeN
 s>KusVoSlavuSatane
 s>Mark
 s>Gato
-m>CN-MiFan_Department:
-s>RT1_JMJS
-s>[ECM]HamSter
-s>JDSA Ling
-s>[ECM]KEND
+m>CN-Technical support department:
+s>XLRmmp(屑路人)
+s>[ECM]HamSter(仓鼠)
+s>JDSA Ling(绫)
+s>[ECM]KEND(肯尼迪)
 m>Translators
 s>WandsMire (English & Bahasa)
 s>Paon (Japanese)
@@ -27,7 +30,7 @@ s>PasteK (French)
 s>Reik-RTS Youtube (Spanish)
 s>Tstis (Russian & Ukrainian)
 s>General Airon (Tagalog)
-s>RT1_JMJS (Chinese)
+s>XLRmmp(屑路人) (Chinese)
 s>Mustafa Hilmi Pehlivanlı (Turkish)
 s>REDGRAUN (Belarusian)
 m>Assets
