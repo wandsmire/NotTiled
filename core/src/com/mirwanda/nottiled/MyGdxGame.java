@@ -28409,6 +28409,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     templastID += tempTset.getWidth() * tempTset.getHeight();
 
                                     alreadyloaded = true;
+                                    tempTset.setSource("");
                                 } catch (Exception e) {
                                     ErrorBung(e, "okok.txt");
                                 }
@@ -28986,6 +28987,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     templastID += tempTset.getWidth() * tempTset.getHeight();
 
                                     alreadyloaded = true;
+                                    tempTset.setSource("");
                                 } catch (Exception e) {
                                     ErrorBung(e, "okok.txt");
                                 }
@@ -32703,6 +32705,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                         templastID += tempTset.getWidth() * tempTset.getHeight();
 
                                         alreadyloaded = true;
+                                        tempTset.setSource("");
                                     } catch (Exception e) {
                                         e.printStackTrace();
                                         log("reading base64 failed");
