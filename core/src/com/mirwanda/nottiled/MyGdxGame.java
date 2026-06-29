@@ -23792,6 +23792,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 String asu = android.util.Base64.encodeToString(fileContent, 0);
                 property po = new property("embedded_png", asu);
                 t.getProperties().add(po);
+                t.setSource("");
                 cImportEmbed.setChecked(false);
             }
             curspr = t.getFirstgid();
@@ -23830,6 +23831,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 byte[] fileContent = f.readBytes();
                 String asu = android.util.Base64.encodeToString(fileContent, 0);
                 t.getProperties().add(new property("embedded_png", asu));
+                t.setSource("");
             }
             tilesets.add(t);
             return t;
@@ -23865,6 +23867,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 byte[] fileContent = tmp.readBytes();
                 String asu = android.util.Base64.encodeToString(fileContent, 0);
                 t.getProperties().add(new property("embedded_png", asu));
+                t.setSource("");
             } finally {
                 if (tmp.exists())
                     tmp.delete();
@@ -24731,6 +24734,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 String asu = android.util.Base64.encodeToString(fileContent, 0);
                 property po = new property("embedded_png", asu);
                 t.getProperties().add(po);
+                t.setSource("");
                 cImportEmbed.setChecked(false);
             }
             curspr = t.getFirstgid();
@@ -25918,6 +25922,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         final String tsxName = raw.replaceAll("[^a-zA-Z0-9_\\-\\.\\(\\) ]", "_");
         final FileHandle destTsx = galleryDir.child(tsxName + ".tsx");
 
+        Gdx.input.setInputProcessor(stage);
         final Dialog dlg = new Dialog("", skin, "dialog");
         Table ct = dlg.getContentTable();
         ct.pad(20);
@@ -25926,12 +25931,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bYes.addListener(new ChangeListener() {
             @Override public void changed(ChangeEvent e, Actor a) {
                 dlg.hide();
+                Gdx.input.setInputProcessor(im);
                 doSaveToGallery(t, galleryDir, destTsx);
             }
         });
         TextButton bNo = new TextButton(z.cancel, skin);
         bNo.addListener(new ChangeListener() {
-            @Override public void changed(ChangeEvent e, Actor a) { dlg.hide(); }
+            @Override public void changed(ChangeEvent e, Actor a) {
+                dlg.hide();
+                Gdx.input.setInputProcessor(im);
+            }
         });
         ct.add(bYes).width(btnx).height(btny).pad(5).row();
         ct.add(bNo).width(btnx).height(btny).pad(5);
@@ -26030,9 +26039,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         } else {
             Table list = new Table();
             for (final FileHandle tsx : tsxFiles) {
-                Table row = new Table();
-                Image icon = new Image(new TextureRegionDrawable(new TextureRegion(txresources)));
-                row.add(icon).size(btny * 0.8f, btny * 0.8f).pad(4);
                 TextButton btn = new TextButton(tsx.nameWithoutExtension(), skin);
                 btn.addListener(new ChangeListener() {
                     @Override public void changed(ChangeEvent e, Actor a) {
@@ -26040,12 +26046,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         tujuanDialog("seltsx", tsx);
                     }
                 });
-                row.add(btn).width(dialogBtnWidth - btny - 12).height(btny).pad(4);
-                list.add(row).row();
+                list.add(btn).width(dialogBtnWidth).height(btny).pad(4).row();
             }
             ScrollPane scroll = new ScrollPane(list, skin);
             scroll.setScrollingDisabled(true, false);
-            ct.add(scroll).height(Gdx.graphics.getHeight() * 0.5f).width(dialogBtnWidth + btny).row();
+            ct.add(scroll).height(Gdx.graphics.getHeight() * 0.5f).width(dialogBtnWidth).row();
         }
 
         TextButton bClose = new TextButton(z.cancel, skin);
