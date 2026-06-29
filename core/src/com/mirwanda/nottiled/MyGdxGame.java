@@ -25487,6 +25487,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             sortAllTilesetTileMetadata();
+            java.util.Collections.sort(tilesets, (a, b) -> a.getFirstgid() - b.getFirstgid());
             if (tilesets.size() > 0) {
                 for (int i = 0; i < tilesets.size(); i++) {
 
@@ -26609,6 +26610,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         ///////////////////////////
         try {
             sortAllTilesetTileMetadata();
+            java.util.Collections.sort(tilesets, (a, b) -> a.getFirstgid() - b.getFirstgid());
             jsn = new jsonmap();
             jsn.orientation = orientation;
             jsn.renderorder = renderorder != null ? renderorder : "right-down";
