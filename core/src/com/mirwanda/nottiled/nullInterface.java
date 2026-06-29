@@ -29,7 +29,7 @@ public class nullInterface implements Interface {
 
     @Override
     public String getVersione() {
-        return "2.2.1";
+        return "2.3.0";
     }
 
     @Override
