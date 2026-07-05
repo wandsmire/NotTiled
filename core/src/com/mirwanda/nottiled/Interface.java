@@ -33,25 +33,17 @@ public interface Interface
 	public void editInNot2Pix(String absolutePath);
 	public boolean isNot2PixInstalled();
 
-	/** Parse TMX content, resolve referenced images from the persistent folder tree,
-	 *  and copy only the needed files into the app's Temp directory.
-	 *  On completion, getStatus() returns "OK", "no_tree" (no folder access granted yet),
-	 *  or "error". getFilename() returns the TMX's tree-relative path used in Temp. */
-	public void fetchTmxAssets(String tmxContent, String tmxUri);
+	/** Virtual-path root under which the granted SAF folder tree is mounted
+	 *  (e.g. "/saf/"). Empty string on platforms without SAF; there the plain
+	 *  filesystem is used directly. Paths under this root resolve through the
+	 *  SAF-backed FileHandle shim installed over Gdx.files. */
+	public String getSafRoot();
+
+	/** Tree-relative path of the document behind a picked content URI, or null
+	 *  if it lives outside the granted folder tree (or no tree is granted). */
+	public String resolveUriToTreePath(String uri);
 
 	/** Returns true if a persistent folder-tree URI is saved and the index is ready. */
 	public boolean hasTreeAccess();
-
-	/** Write data back to a file in the saved folder tree at the given relative path.
-	 *  Returns true on success. Creates intermediate directories if needed. */
-	public boolean saveFileToTree(String relPath, byte[] data);
-
-	/** Copy a file from the folder tree to a local absolute path.
-	 *  Returns true on success. */
-	public boolean copyTreeFileToLocal(String relPath, String localPath);
-
-	/** Return a list of file paths in the tree matching the given extensions (e.g. ".png").
-	 *  Extensions should include the dot. Returns empty list if no tree access. */
-	public java.util.List<String> listTreeFiles(String[] extensions);
 
 }

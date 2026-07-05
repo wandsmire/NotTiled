@@ -1354,9 +1354,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     String nativeStatus = "";
     String nativeUri = "";
 
-    /** Tree-relative path of the TMX opened via SAF (null if opened from local storage). */
-    private String safOpenedTreeRelPath = null;
-    private boolean newFileToDevice = false; // new map should mirror into a granted SAF folder
+    private boolean newFileToDevice = false; // new map should be created in the granted SAF folder
 
     private void nativeOpen(final String tujuan, final Table T) {
         nativeData = null;
@@ -1531,47 +1529,30 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     return;
                 }
 
-                String tmxContent = "";
-                try { tmxContent = new String(tmxData, "UTF-8"); } catch (Exception ignore) {}
+                // Step 2: locate the picked document inside the granted folder tree
+                // and load it in place through the SAF FileHandle shim (/saf/…) —
+                // relative tileset references resolve against its real folder.
+                String tmxRelPath = face.hasTreeAccess() ? face.resolveUriToTreePath(tmxUri) : null;
 
-                // Step 2: try to fetch referenced images from the saved folder tree
-                nativeStatus = "";
-                face.fetchTmxAssets(tmxContent, tmxUri);
-                while (nativeStatus.equalsIgnoreCase("")) {
-                    nativeStatus = face.getStatus();
-                    try { Thread.sleep(16); } catch (InterruptedException ignored) {}
-                }
-
-                if (nativeStatus.equalsIgnoreCase("no_tree")) {
-                    // Write the TMX to Temp so we can at least open it without images
+                if (tmxRelPath == null) {
+                    // No folder granted, or the file lives outside the granted folder.
+                    // Write the TMX to Temp so we can at least open it without images,
+                    // then prompt for folder access on the GL thread.
                     FileHandle tempTmx = Gdx.files.absolute(basepath + "NotTiled/Temp/" + tmxFilename);
                     tempTmx.parent().mkdirs();
                     tempTmx.writeBytes(tmxData, false);
                     final FileHandle finalTmx = tempTmx;
-                    final String finalContent = tmxContent;
                     final String finalUri = tmxUri;
-                    // Prompt for folder access on the GL thread
                     Gdx.app.postRunnable(new Runnable() {
                         @Override
                         public void run() {
-                            showFolderPermissionPrompt(finalTmx, finalContent, finalUri, tujuan, T);
+                            showFolderPermissionPrompt(finalTmx, finalUri, tujuan, T);
                         }
                     });
                     return;
                 }
 
-                // fetchTmxAssets set SAFfilename to the tree-relative TMX path
-                String tmxRelPath = face.getFilename();
-                if (tmxRelPath == null || tmxRelPath.isEmpty()) tmxRelPath = tmxFilename;
-                FileHandle ff = Gdx.files.absolute(basepath + "NotTiled/Temp/" + tmxRelPath);
-                if (!ff.exists()) {
-                    // Fallback: write TMX directly
-                    ff = Gdx.files.absolute(basepath + "NotTiled/Temp/" + tmxFilename);
-                    ff.parent().mkdirs();
-                    ff.writeBytes(tmxData, false);
-                }
-                safOpenedTreeRelPath = tmxRelPath;
-                final FileHandle finalFf = ff;
+                final FileHandle finalFf = Gdx.files.absolute(face.getSafRoot() + tmxRelPath);
                 Gdx.app.postRunnable(new Runnable() {
                     @Override
                     public void run() {
@@ -1587,54 +1568,85 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }).start();
     }
 
-    /** Show a two-button dialog: "Browse Device / Cloud" (SAF) vs "Open from App Storage" (internal FileChooser). */
-    private void showOpenChooserDialog(final String tujuan, final Table T) {
-        final Dialog dlg = new Dialog("", skin, "dialog");
-        Table content = dlg.getContentTable();
-        content.pad(20);
-
-        Label lbl = new Label(z.opentmxfile != null ? z.opentmxfile : "Open Map", skin);
-        content.add(lbl).colspan(2).padBottom(16).row();
-
-        TextButton btnSAF = new TextButton(
-                z.browseDevice != null ? z.browseDevice : "Browse Device / Cloud", skin);
-        btnSAF.addListener(new ChangeListener() {
+    /** Open a document handed to us by a VIEW intent (tap on a .tmx in a file manager). */
+    private void openFromViewIntent(final String uriStr) {
+        new Thread(new Runnable() {
             @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                dlg.hide();
-                nativeOpenSAF(tujuan, T);
-            }
-        });
-        content.add(btnSAF).width(btnx).height(btny).padBottom(8).colspan(2).row();
+            public void run() {
+                // file:// URIs (legacy senders) carry a real path — open directly.
+                if (uriStr.startsWith("file:")) {
+                    String p = uriStr.substring("file:".length());
+                    while (p.startsWith("//")) p = p.substring(1);
+                    try { p = java.net.URLDecoder.decode(p, "UTF-8"); } catch (Exception ignored) {}
+                    final FileHandle direct = Gdx.files.absolute(p);
+                    Gdx.app.postRunnable(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (direct.exists()) {
+                                exitDialog(null);
+                                tujuanDialog("open", direct);
+                            } else {
+                                newtmxfile(false);
+                            }
+                        }
+                    });
+                    return;
+                }
 
-        TextButton btnInternal = new TextButton(
-                z.openAppStorage != null ? z.openAppStorage : "Open from App Storage", skin);
-        btnInternal.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                dlg.hide();
-                safOpenedTreeRelPath = null;
-                FileDialog(z.opentmxfile, tujuan, "file",
-                        new String[]{".tmx", ".png", ".ntp", ".json"}, T);
-            }
-        });
-        content.add(btnInternal).width(btnx).height(btny).padBottom(8).colspan(2).row();
+                // Inside the granted folder → open in place through the /saf/ shim so
+                // tileset images resolve and saves land in the real file.
+                String relPath = face.hasTreeAccess() ? face.resolveUriToTreePath(uriStr) : null;
+                if (relPath != null && !relPath.isEmpty()) {
+                    final FileHandle ff = Gdx.files.absolute(face.getSafRoot() + relPath);
+                    if (ff.exists()) {
+                        Gdx.app.postRunnable(new Runnable() {
+                            @Override
+                            public void run() {
+                                exitDialog(null);
+                                tujuanDialog("open", ff);
+                            }
+                        });
+                        return;
+                    }
+                }
 
-        TextButton btnCancel = new TextButton(z.cancel, skin);
-        btnCancel.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                dlg.hide();
-                if (T != null) gotoStage(T);
+                // Outside the granted folder (or none granted): read the document via
+                // the one-shot URI grant, stash it in Temp, and prompt for folder
+                // access so its tileset images can be resolved.
+                final String content = face.getdatafromURI(uriStr);
+                if (content == null || content.isEmpty()) {
+                    Gdx.app.postRunnable(new Runnable() {
+                        @Override
+                        public void run() {
+                            status(z.error != null ? z.error : "Error", 5);
+                            newtmxfile(false);
+                        }
+                    });
+                    return;
+                }
+                String name = face.getFilename();
+                if (name == null || name.isEmpty()) name = "opened.tmx";
+                final FileHandle tempTmx = Gdx.files.absolute(basepath + "NotTiled/Temp/" + name);
+                tempTmx.parent().mkdirs();
+                tempTmx.writeString(content, false);
+                final boolean isTmx = name.toLowerCase().endsWith(".tmx");
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (isTmx) {
+                            showFolderPermissionPrompt(tempTmx, uriStr, "open", null);
+                        } else {
+                            exitDialog(null);
+                            tujuanDialog("open", tempTmx);
+                        }
+                    }
+                });
             }
-        });
-        content.add(btnCancel).width(btnx * 0.6f).height(btny).colspan(2);
-
-        dlg.show(stage);
+        }).start();
     }
 
     /** Shown when a TMX is open but no folder-tree permission is available to resolve images. */
-    private void showFolderPermissionPrompt(final FileHandle tmxFile, final String tmxContent,
+    private void showFolderPermissionPrompt(final FileHandle tmxFile,
             final String tmxUri, final String tujuan, final Table T) {
         final Dialog dlg = new Dialog("", skin, "dialog");
         Table ct = dlg.getContentTable();
@@ -1668,18 +1680,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             try { Thread.sleep(16); } catch (InterruptedException ignored) {}
                         }
                         if (!nativeStatus.equalsIgnoreCase("cancel")) {
-                            // Now retry fetching assets with the new tree
-                            nativeStatus = "";
-                            face.fetchTmxAssets(tmxContent, tmxUri);
-                            while (nativeStatus.equalsIgnoreCase("")) {
-                                nativeStatus = face.getStatus();
-                                try { Thread.sleep(16); } catch (InterruptedException ignored) {}
-                            }
-                            String relPath = face.getFilename();
+                            // Re-resolve the picked document inside the freshly granted tree
+                            String relPath = face.resolveUriToTreePath(tmxUri);
                             if (relPath != null && !relPath.isEmpty()) {
-                                FileHandle updated = Gdx.files.absolute(basepath + "NotTiled/Temp/" + relPath);
+                                FileHandle updated = Gdx.files.absolute(face.getSafRoot() + relPath);
                                 if (updated.exists()) {
-                                    safOpenedTreeRelPath = relPath;
                                     final FileHandle finalUpdated = updated;
                                     Gdx.app.postRunnable(new Runnable() {
                                         @Override
@@ -9059,6 +9064,30 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         file.writeString(isi, false);
     }
 
+    /** True if path addresses the SAF-mounted device folder (see Interface.getSafRoot). */
+    boolean isSafPath(String path) {
+        String root = face.getSafRoot();
+        return root != null && !root.isEmpty() && path != null
+                && (path + "/").startsWith(root);
+    }
+
+    /** The SAF mount point without trailing slash (e.g. "/saf"), or "" off-Android. */
+    private String safRootDir() {
+        String root = face.getSafRoot();
+        if (root == null || root.isEmpty()) return "";
+        return root.endsWith("/") ? root.substring(0, root.length() - 1) : root;
+    }
+
+    /** Local stand-in for handing a real java.io.File to libraries that need one.
+     *  Returns target itself when it's already file-backed; otherwise a Temp twin —
+     *  write it, then moveTo(target) to land the result in the SAF folder. */
+    private FileHandle localStageFor(FileHandle target) {
+        if (!isSafPath(target.path())) return target;
+        FileHandle tmp = Gdx.files.absolute(basepath + "NotTiled/Temp/.stage_" + target.name());
+        tmp.parent().mkdirs();
+        return tmp;
+    }
+
     private void writeThisAbs(String path, String isi) {
         FileHandle file = Gdx.files.absolute(path);
         StringWriter sw = new StringWriter();
@@ -9328,7 +9357,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     newFile.mkdirs();
                 } else {
                     newFile.parent().mkdirs();
-                    FileOutputStream fos = new FileOutputStream(newFile.file());
+                    OutputStream fos = newFile.write(false);
                     int len;
                     while ((len = zis.read(buffer)) > 0) {
                         fos.write(buffer, 0, len);
@@ -9351,7 +9380,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void zip(FileHandle src, FileHandle destZipFile) {
         try {
-            FileOutputStream fos = new FileOutputStream(destZipFile.file());
+            OutputStream fos = destZipFile.write(false);
             ZipOutputStream zos = new ZipOutputStream(fos);
             zipFileOrDirectory(src, src.name(), zos);
             zos.close();
@@ -9409,6 +9438,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             checkAndReloadSamples();
             log("checking samples...");
 
+            // Launched by tapping a map in a file manager (VIEW intent)?
+            if (intend != null && !intend.isEmpty()
+                    && (intend.startsWith("content:") || intend.startsWith("file:"))) {
+                String viewUri = intend;
+                intend = "";
+                loadingfile = false;
+                openFromViewIntent(viewUri);
+                return;
+            }
+
             String lf = prefs.getString("lof", basepath + "NotTiled/sample/island.tmx");
             log(lf);
 
@@ -9461,10 +9500,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             FileHandle tst = Gdx.files.absolute(lf);
-
-            // Capture the persisted SAF folder link before loading (loadmap rewrites it).
-            String savedSafTree = prefs.getString("saftree", "");
-
+            // A /saf/… lof resolves through the shim; if the folder grant was revoked,
+            // exists() is simply false and we fall through to a fresh map.
             if (tst.exists()) {
                 log("Exist.");
                 FileHandle file = tst;
@@ -9489,9 +9526,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     curdir = file.parent().path();
                     loadjsonmap(file);
                 }
-
-                // Restore the SAF folder link so saves/exports keep writing back externally.
-                safOpenedTreeRelPath = savedSafTree.isEmpty() ? null : savedSafTree;
 
             } else {
                 log("Does not exist.");
@@ -10380,7 +10414,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 System.out.println("Saving File...");
                 FileHandle fh = Gdx.files.absolute(curdir + "/" + filenamenya + ".wav");
                 try {
-                    OutputStream out = new FileOutputStream(fh.file());
+                    OutputStream out = fh.write(false);
                     PCMtoFile(out, data, samples, 1, 16);
                     System.out.println("Saved.");
                 } catch (Exception e) {
@@ -10410,7 +10444,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (fImportHeight.getText().equalsIgnoreCase("")) {
                         fImportHeight.setText(Tsh + "");
                     }
-                    if (thefile.file().getName().toLowerCase().contains(".tsx")) {
+                    if (thefile.name().toLowerCase().contains(".tsx")) {
                         if (Gdx.files.getExternalStoragePath().contains("\\")) {
                             loadtsx(thefile, tilesets, curdir);
                         } else {
@@ -10456,13 +10490,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bImportImageSize.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                if (thefile.file().getName().toLowerCase().contains(".tsx")) {
+                if (thefile.name().toLowerCase().contains(".tsx")) {
                     msgbox("TSX");
                 } else {
 
                     try {
-                        File f = thefile.file();
-                        SimpleImageInfo s = new SimpleImageInfo(f);
+                        SimpleImageInfo s = new SimpleImageInfo(thefile.read());
                         fImportHeight.setText(s.getHeight() + "");
                         fImportWidth.setText(s.getWidth() + "");
                     } catch (Exception e) {
@@ -10607,7 +10640,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
                 sampleTmx = Gdx.files.absolute(basepath + "NotTiled/sample/island.tmx");
                 if (sampleTmx.exists()) {
-                    safOpenedTreeRelPath = null; // bundled sample is internal-only
                     exitDialog(null);
                     tujuanDialog("open", sampleTmx);
                 }
@@ -10795,7 +10827,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bOpen.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                showOpenChooserDialog("open", tMenu);
+                // Folder granted → unified browser (starts in the device folder,
+                // Storage toggles to app storage). No grant yet → system picker,
+                // which walks the user through granting folder access.
+                if (face.hasTreeAccess() && !face.getSafRoot().isEmpty()) {
+                    FileDialog(z.opentmxfile, "open", "file",
+                            new String[]{".tmx", ".png", ".ntp", ".json"}, tMenu);
+                } else {
+                    nativeOpenSAF("open", tMenu);
+                }
             }
         });
 
@@ -10890,8 +10930,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     int index = lrecentlist.getSelectedIndex();
                     if (index != -1 && recents != null && index < recents.getPaths().size()) {
                         FileHandle file = Gdx.files.absolute(recents.getPaths().get(index));
-                        // Recents load from the internal Temp copy, so they have no SAF home.
-                        safOpenedTreeRelPath = null;
                         log("File extension=" + file.extension());
                         if (file.extension().equalsIgnoreCase("ntp")) {
                             backToMap();
@@ -10942,53 +10980,25 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bSaveAs.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                final Dialog dlg = new Dialog("", skin, "dialog");
-                Table ct = dlg.getContentTable();
-                ct.pad(20);
-                ct.add(new Label(z.saveas != null ? z.saveas : "Save As", skin))
-                        .width(btnx).padBottom(12).row();
-
-                TextButton bDev = new TextButton(
-                        z.browseDevice != null ? z.browseDevice : "Browse Device / Cloud", skin);
-                bDev.addListener(new ChangeListener() {
-                    @Override
-                    public void changed(ChangeEvent e2, Actor a2) {
-                        dlg.hide();
-                        // Ask for filename then write via ACTION_CREATE_DOCUMENT
-                        String suggested = (curfile != null && !curfile.isEmpty())
-                                ? new java.io.File(curfile).getName() : "map.tmx";
-                        if (!suggested.toLowerCase().endsWith(".tmx"))
-                            suggested = suggested + ".tmx";
-                        final String finalSuggested = suggested;
-                        getNewTextInput(new TextPromptListener() {
-                            @Override public void confirm(String text) {
-                                if (!text.toLowerCase().endsWith(".tmx")) text = text + ".tmx";
-                                saveAsViaSaf(text);
-                            }
-                            @Override public void cancel() {}
-                        }, z.saveas != null ? z.saveas : "Save As", finalSuggested, "");
-                    }
-                });
-                ct.add(bDev).width(btnx).height(btny).pad(5).row();
-
-                TextButton bInt = new TextButton(
-                        z.openAppStorage != null ? z.openAppStorage : "App Storage", skin);
-                bInt.addListener(new ChangeListener() {
-                    @Override
-                    public void changed(ChangeEvent e2, Actor a2) {
-                        dlg.hide();
-                        FileDialog(z.selectnewlocation, "saveas", "dir", new String[] {}, tMenu);
-                    }
-                });
-                ct.add(bInt).width(btnx).height(btny).pad(5).row();
-
-                TextButton bCancel = new TextButton(z.cancel, skin);
-                bCancel.addListener(new ChangeListener() {
-                    @Override
-                    public void changed(ChangeEvent e2, Actor a2) { dlg.hide(); }
-                });
-                ct.add(bCancel).width(btnx).height(btny).pad(5);
-                dlg.show(stage);
+                // Folder granted → browse it to pick a destination (Storage toggles to
+                // app storage). No grant → system create-document, which also lets the
+                // user save anywhere and grant a folder on the way.
+                if (face.hasTreeAccess() && !face.getSafRoot().isEmpty()) {
+                    FileDialog(z.selectnewlocation, "saveas", "dir", new String[] {}, tMenu);
+                } else {
+                    String suggested = (curfile != null && !curfile.isEmpty())
+                            ? new java.io.File(curfile).getName() : "map.tmx";
+                    if (!suggested.toLowerCase().endsWith(".tmx"))
+                        suggested = suggested + ".tmx";
+                    final String finalSuggested = suggested;
+                    getNewTextInput(new TextPromptListener() {
+                        @Override public void confirm(String text) {
+                            if (!text.toLowerCase().endsWith(".tmx")) text = text + ".tmx";
+                            saveAsViaSaf(text);
+                        }
+                        @Override public void cancel() {}
+                    }, z.saveas != null ? z.saveas : "Save As", finalSuggested, "");
+                }
             }
         });
 
@@ -15237,7 +15247,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     if (fh.exists()) {
                         try {
                             Texture tmptx = new Texture(Gdx.files.absolute(curdir + "/" + tfImageSource.getText()));
-                            SimpleImageInfo s = new SimpleImageInfo(fh.file());
+                            SimpleImageInfo s = new SimpleImageInfo(fh.read());
                             layers.get(selLayer).setImagewidth(s.getWidth());
                             layers.get(selLayer).setImageheight(s.getHeight());
                             layers.get(selLayer).setTexture(tmptx);
@@ -17714,25 +17724,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     return;
                 }
 
-                String tsxContent = "";
-                try { tsxContent = new String(data, "UTF-8"); } catch (Exception ignore) {}
-
-                // Pull the tsx (and its referenced image) into Temp at the tree-relative
-                // layout. fetchTmxAssets regex-scans source="" so the tsx's <image> is
-                // copied alongside it; a no_tree result just means no image (loadtsx then
-                // falls back to empty.jpeg), so we proceed either way.
-                nativeStatus = "";
-                face.fetchTmxAssets(tsxContent, uri);
-                while (nativeStatus.equalsIgnoreCase("")) {
-                    nativeStatus = face.getStatus();
-                    try { Thread.sleep(16); } catch (InterruptedException ignored) {}
-                }
-
-                String tsxRelPath = face.getFilename();
-                if (tsxRelPath == null || tsxRelPath.isEmpty()) tsxRelPath = name;
-                FileHandle tsx = Gdx.files.absolute(basepath + "NotTiled/Temp/" + tsxRelPath);
-                if (!tsx.exists()) {
-                    // no_tree (or asset fetch failed): write the tsx itself so we can still import.
+                // Locate the tsx inside the granted folder tree and import it in place
+                // through the /saf/ shim so its <image> reference resolves relatively.
+                // Outside the tree (or no grant): fall back to a Temp copy — loadtsx
+                // then shows empty.jpeg for the image, same as before.
+                String tsxRelPath = face.hasTreeAccess() ? face.resolveUriToTreePath(uri) : null;
+                FileHandle tsx;
+                if (tsxRelPath != null && !tsxRelPath.isEmpty()) {
+                    tsx = Gdx.files.absolute(face.getSafRoot() + tsxRelPath);
+                } else {
                     tsx = Gdx.files.absolute(basepath + "NotTiled/Temp/" + name);
                     tsx.parent().mkdirs();
                     tsx.writeBytes(data, false);
@@ -17781,81 +17781,40 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         titleLabel.setAlignment(Align.center);
         addTable.add(titleLabel).width(dialogBtnWidth).pad(10).row();
 
-        // "Add image tileset" → choose source: Internal storage or Device/Cloud.
+        // "Add image tileset" → browse the granted folder, or SAF-pick + grant if none.
         TextButton btnAdd = new TextButton(z.addimagetileset, skin);
         btnAdd.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 addDlg.hide();
-                final Dialog srcDlg = new Dialog("", skin, "dialog");
-                Table sct = srcDlg.getContentTable();
-                sct.pad(20);
-                sct.add(new Label(z.addimagetileset, skin)).width(dialogBtnWidth).pad(10).row();
-                TextButton bDev = new TextButton(
-                        z.browseDevice != null ? z.browseDevice : "Browse Device / Cloud", skin);
-                bDev.addListener(new ChangeListener() {
-                    @Override
-                    public void changed(ChangeEvent e2, Actor a2) {
-                        srcDlg.hide();
-                        frompick = true;
-                        pickAuto = false;
-                        pickTilesetViaSaf(new Runnable() {
-                            @Override public void run() { showAddTilesetDialog(); }
-                        });
-                    }
-                });
-                sct.add(bDev).width(dialogBtnWidth).height(btny).pad(5).row();
-                TextButton bInt = new TextButton("Internal Storage", skin);
-                bInt.addListener(new ChangeListener() {
-                    @Override
-                    public void changed(ChangeEvent e2, Actor a2) {
-                        srcDlg.hide();
-                        frompick = true;
-                        pickAuto = false;
-                        FileDialog(z.selectfile, "addtset", "file",
-                                new String[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif" }, nullTable);
-                    }
-                });
-                sct.add(bInt).width(dialogBtnWidth).height(btny).pad(5).row();
-                srcDlg.show(stage);
+                frompick = true;
+                pickAuto = false;
+                if (face.hasTreeAccess() && !face.getSafRoot().isEmpty()) {
+                    FileDialog(z.selectfile, "addtset", "file",
+                            new String[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif" }, nullTable);
+                } else {
+                    pickTilesetViaSaf(new Runnable() {
+                        @Override public void run() { showAddTilesetDialog(); }
+                    });
+                }
             }
         });
         addTable.add(btnAdd).width(dialogBtnWidth).height(btny).pad(5).row();
 
-        // "Import tsx file" → choose source: Internal storage or Device/Cloud.
+        // "Import tsx file" → browse the granted folder, or SAF-pick + grant if none.
         TextButton btnTsx = new TextButton(z.importtsxfile, skin);
         btnTsx.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 addDlg.hide();
-                final Dialog srcDlg = new Dialog("", skin, "dialog");
-                Table sct = srcDlg.getContentTable();
-                sct.pad(20);
-                sct.add(new Label(z.importtsxfile, skin)).width(dialogBtnWidth).pad(10).row();
-                TextButton bDev = new TextButton(
-                        z.browseDevice != null ? z.browseDevice : "Browse Device / Cloud", skin);
-                bDev.addListener(new ChangeListener() {
-                    @Override
-                    public void changed(ChangeEvent e2, Actor a2) {
-                        srcDlg.hide();
-                        frompick = true;
-                        pickTsxViaSaf(new Runnable() {
-                            @Override public void run() { showAddTilesetDialog(); }
-                        });
-                    }
-                });
-                sct.add(bDev).width(dialogBtnWidth).height(btny).pad(5).row();
-                TextButton bInt = new TextButton("Internal Storage", skin);
-                bInt.addListener(new ChangeListener() {
-                    @Override
-                    public void changed(ChangeEvent e2, Actor a2) {
-                        srcDlg.hide();
-                        frompick = true;
-                        FileDialog(z.selectfile, "seltsx", "file", new String[] { ".tsx" }, nullTable);
-                    }
-                });
-                sct.add(bInt).width(dialogBtnWidth).height(btny).pad(5).row();
-                srcDlg.show(stage);
+                frompick = true;
+                if (face.hasTreeAccess() && !face.getSafRoot().isEmpty()) {
+                    FileDialog(z.selectfile, "seltsx", "file", new String[] { ".tsx" }, nullTable);
+                } else {
+                    pickTsxViaSaf(new Runnable() {
+                        @Override public void run() { showAddTilesetDialog(); }
+                    });
+                }
             }
         });
         addTable.add(btnTsx).width(dialogBtnWidth).height(btny).pad(5).row();
@@ -18075,7 +18034,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 }
                             } else {
                                 not2pixEditTsetIdx = tsetIdx;
-                                face.editInNot2Pix(absPath);
+                                if (isSafPath(absPath)) {
+                                    // Not2Pix needs a real file path — stage a local copy
+                                    // and push it back to the device folder on return.
+                                    String tmpPath = face.getFilesDirPath() + ".not2pix_saf_edit.png";
+                                    FileHandle tmp = Gdx.files.absolute(tmpPath);
+                                    tmp.writeBytes(extFile.readBytes(), false);
+                                    not2pixSafWriteBackPath = absPath;
+                                    face.editInNot2Pix(tmpPath);
+                                } else {
+                                    face.editInNot2Pix(absPath);
+                                }
                             }
                         } else if (ts.getPixmap() != null) {
                             String extPath = face.getFilesDirPath();
@@ -18123,8 +18092,23 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     /** Reload a tileset texture from disk after external edit (e.g. from Not2Pix). */
     public int not2pixEditTsetIdx = -1;
+    /** SAF path a staged Not2Pix edit must be written back to (null if none). */
+    private String not2pixSafWriteBackPath = null;
 
     public void reloadTilesetByPath(String absolutePath) {
+        // A staged SAF tileset edit comes back as a local temp file — push the
+        // edited PNG into the device folder before reloading the texture from it.
+        if (not2pixSafWriteBackPath != null) {
+            try {
+                FileHandle edited = Gdx.files.absolute(absolutePath);
+                if (edited.exists()) {
+                    Gdx.files.absolute(not2pixSafWriteBackPath).writeBytes(edited.readBytes(), false);
+                }
+            } catch (Exception e) {
+                ErrorBung(e, "errorlog.txt");
+            }
+            not2pixSafWriteBackPath = null;
+        }
         // Check if this was an embedded PNG edit (temp file)
         if (not2pixEditTsetIdx >= 0 && not2pixEditTsetIdx < tilesets.size()) {
             tileset ts = tilesets.get(not2pixEditTsetIdx);
@@ -19835,7 +19819,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 dirHandle = Gdx.files.absolute(basepath + "NotTiled/sample/json/");
                 for (FileHandle entry : dirHandle.list()) {
 
-                    String name = entry.file().getName();
+                    String name = entry.name();
                     if (name.endsWith("." + sender + ".json")) {
                         alltemplates.add(name);
                     }
@@ -19904,7 +19888,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             dirHandle = Gdx.files.absolute(basepath + "NotTiled/sample/json/");
                             for (FileHandle entry : dirHandle.list()) {
 
-                                String name = entry.file().getName();
+                                String name = entry.name();
                                 if (name.endsWith("." + sender + ".json")) {
                                     alltemplates.add(name);
                                 }
@@ -20269,9 +20253,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
             return;
         }
+        // curdir may be a /saf/ path — writeThisAbs goes through the shim either way.
         writeThisAbs(curdir + "/" + curfile + ".macro.json", macroTerrain.toJsonPretty());
-        // Mirror the sidecar into the SAF folder alongside the map (if opened via SAF).
-        writeBackToTree(Gdx.files.absolute(curdir + "/" + curfile + ".macro.json"));
     }
 
     public void saveRecents() {
@@ -20706,8 +20689,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         final boolean toDevice = newFileToDevice;
         newFileToDevice = false; // consume the flag
         if (toDevice) {
-            // Working copy lives internally; the granted SAF folder is the mirror target.
-            fNCurdir.setText(basepath + "NotTiled/Temp");
+            // Create the map directly in the granted device/cloud folder (SAF shim root).
+            fNCurdir.setText(safRootDir());
         }
         backToMap();
         if (newFileTemplateFolder != null) {
@@ -20719,11 +20702,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             cue("newmap");
         }
         if (toDevice) {
-            // Mirror this map (and its JSON/PNG exports) into the granted folder on save.
-            safOpenedTreeRelPath = curfile;
             saveMap(curdir + "/" + curfile); // initial save so the file appears there now
-        } else {
-            safOpenedTreeRelPath = null; // internal-only new file
         }
     }
 
@@ -22780,7 +22759,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void FileDialog(String prompt, final String dialog, final String fileordir, String[] filter,
             final Table exitpoint) {
 
-        FileChooser fc = new FileChooser(prompt, skin, "file", filter, OS, basepath) {
+        FileChooser fc = new FileChooser(prompt, skin, "file", filter, OS, basepath, "open".equals(dialog)) {
             @Override
             protected void result(Object object) {
                 if (object.equals("OK")) {
@@ -22843,16 +22822,28 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     setDirectory(ifh);
                     cancel();
                     return;
+                } else if (object.equals("SAF")) {
+                    // System document picker — also the way to (re)grant a folder.
+                    exitDialog(exitpoint);
+                    nativeOpenSAF(dialog, exitpoint);
                 } else if (object.equals("Cancel")) {
                     exitDialog(exitpoint);
                 }
             }
         };
+        fc.setSafRoot(safRootDir());
 
+        // The granted device/cloud folder is the primary location; app storage is
+        // reachable via the Storage toggle. Remember the last browsed spot per realm.
+        boolean treeGranted = face.hasTreeAccess() && !face.getSafRoot().isEmpty();
         FileHandle fhtest = Gdx.files.absolute(lastpath);
         log("LP:" + lastpath);
-        if (fhtest.exists()) {
-            fc.setDirectory(Gdx.files.absolute(lastpath));
+        if (isSafPath(lastpath) && fhtest.exists()) {
+            fc.setDirectory(fhtest);
+        } else if (treeGranted) {
+            fc.setDirectory(Gdx.files.absolute(safRootDir()));
+        } else if (fhtest.exists()) {
+            fc.setDirectory(fhtest);
         } else {
             fc.setDirectory(Gdx.files.absolute(basepath));
         }
@@ -23566,7 +23557,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         openedfile = file.path();
         switch (dialog) {
             case "propfile":
-                bPropValfile.setText(file.file().getName());
+                bPropValfile.setText(file.name());
                 break;
             case "proppng":
                 byte[] fileContent = file.readBytes();
@@ -23755,7 +23746,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void addImageTset(FileHandle f) {
         try {
-            SimpleImageInfo s = new SimpleImageInfo(f.file());
+            SimpleImageInfo s = new SimpleImageInfo(f.read());
             tileset t = new tileset();
             String nn = f.name();
             if (f.name().indexOf(".") > 0) {
@@ -23806,7 +23797,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private tileset addPixelArtTilesetFromFile(FileHandle f, boolean embed) {
         try {
-            SimpleImageInfo s = new SimpleImageInfo(f.file());
+            SimpleImageInfo s = new SimpleImageInfo(f.read());
             tileset t = new tileset();
             String nn = f.name();
             if (f.name().indexOf(".") > 0)
@@ -24031,7 +24022,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 continue;
             int iw, ih;
             try {
-                SimpleImageInfo sii = new SimpleImageInfo(img.file());
+                SimpleImageInfo sii = new SimpleImageInfo(img.read());
                 iw = sii.getWidth();
                 ih = sii.getHeight();
             } catch (Exception ex) {
@@ -24189,7 +24180,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             java.util.Map<Integer, tile> metaById, java.util.List<tile> outAdded,
             int margin, int spacing, int forcedCols) {
         try {
-            SimpleImageInfo s = new SimpleImageInfo(f.file());
+            SimpleImageInfo s = new SimpleImageInfo(f.read());
             int Tswa = t.getTilewidth();
             int Tsha = t.getTileheight();
             int cols = forcedCols > 0 ? forcedCols
@@ -24353,7 +24344,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 boolean sliced = false;
                 if (imgFile != null && imgFile.exists()) {
                     try {
-                        SimpleImageInfo sii = new SimpleImageInfo(imgFile.file());
+                        SimpleImageInfo sii = new SimpleImageInfo(imgFile.read());
                         if (sii.getWidth() > tw || sii.getHeight() > th) {
                             java.util.Map<Integer, tile> tileMeta = new java.util.HashMap<Integer, tile>();
                             tileMeta.put(srcTile.getTileID(), srcTile);
@@ -24382,7 +24373,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     String rel = convertToRelativePath(curdir, imgFile.path());
                     nt.setImageSource(rel != null ? rel : collectionImagePath(srcTile.getImageSource(), tsxBasePath));
                     try {
-                        SimpleImageInfo sii = new SimpleImageInfo(imgFile.file());
+                        SimpleImageInfo sii = new SimpleImageInfo(imgFile.read());
                         nt.setImageWidth(srcTile.getImageWidth() > 0 ? srcTile.getImageWidth() : sii.getWidth());
                         nt.setImageHeight(srcTile.getImageHeight() > 0 ? srcTile.getImageHeight() : sii.getHeight());
                     } catch (Exception e) {
@@ -24697,7 +24688,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 addImageTset(f);
                 return;
             }
-            // SimpleImageInfo s = new SimpleImageInfo(f.file());
+            // SimpleImageInfo s = new SimpleImageInfo(f.read());
             tileset t = new tileset();
             String nn = f.name();
             if (f.name().indexOf(".") > 0) {
@@ -25126,42 +25117,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
-    /** Tree-relative path for a file saved alongside the SAF-opened map (same folder, given name). */
-    private String treeRelPathForName(String name) {
-        if (safOpenedTreeRelPath == null) return name;
-        String norm = safOpenedTreeRelPath.replace('\\', '/');
-        int slash = norm.lastIndexOf('/');
-        return slash >= 0 ? norm.substring(0, slash + 1) + name : name;
-    }
-
-    /**
-     * Mirror a freshly-saved file back into the SAF document tree (if the map was
-     * opened via SAF). Runs off the render thread because a cloud provider write
-     * can block for seconds. Used by the JSON/PNG export paths, which otherwise
-     * only ever touch internal storage.
-     */
-    private void writeBackToTree(final FileHandle savedFile) {
-        if (safOpenedTreeRelPath == null || !face.hasTreeAccess()) return;
-        final String relPath = treeRelPathForName(savedFile.name());
-        if (mapSaveExecutor == null) {
-            mapSaveExecutor = Executors.newSingleThreadExecutor(r -> {
-                Thread t = new Thread(r, "NotTiled-save");
-                t.setDaemon(true);
-                return t;
-            });
-        }
-        mapSaveExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    face.saveFileToTree(relPath, savedFile.readBytes());
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-    }
-
     private void performSave(String actualPath, boolean createBackup) {
         final FileHandle actualFile = Gdx.files.absolute(actualPath);
         boolean ok = false;
@@ -25171,7 +25126,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 @Override
                 public void run() {
                     exporttopng(actualFile.nameWithoutExtension(), false);
-                    writeBackToTree(actualFile);
                     onSaveCommitted(actualFile);
                     notifySaveFinished(true);
                 }
@@ -25187,7 +25141,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     for (property p : properties) {
                         if (p.getName().equalsIgnoreCase("tag") && p.getValue().equalsIgnoreCase("remixed_dungeon")) {
                             exporttorpd(actualFile.nameWithoutExtension(), false);
-                            writeBackToTree(actualFile);
                             onSaveCommitted(actualFile);
                             notifySaveFinished(true);
                             return;
@@ -25195,7 +25148,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                     setjsonmap();
                     savejsonmap(actualFile);
-                    writeBackToTree(actualFile);
                     onSaveCommitted(actualFile);
                     notifySaveFinished(okJson);
                 }
@@ -25212,7 +25164,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         FileHandle parent = actualFile.parent();
         if (parent != null && !parent.exists())
             parent.mkdirs();
-        String tmpPath = actualFile.parent().path() + "/" + actualFile.nameWithoutExtension() + ".nottiled.tmp";
+        // Stage the .nottiled.tmp locally when saving into the SAF folder — don't
+        // churn temp documents in the user's folder; commitAtomic stream-copies it in.
+        String tmpPath;
+        if (isSafPath(actualPath)) {
+            tmpPath = basepath + "NotTiled/Temp/" + actualFile.nameWithoutExtension() + ".nottiled.tmp";
+            Gdx.files.absolute(tmpPath).parent().mkdirs();
+        } else {
+            tmpPath = actualFile.parent().path() + "/" + actualFile.nameWithoutExtension() + ".nottiled.tmp";
+        }
         FileHandle tmpFile = Gdx.files.absolute(tmpPath);
         if (tmpFile.exists())
             tmpFile.delete();
@@ -25230,31 +25190,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         if (ok) {
-            // Write back to SAF folder tree if file was opened via SAF.
-            // (Already on the background save thread here, so write synchronously.)
-            if (safOpenedTreeRelPath != null && face.hasTreeAccess()) {
-                try {
-                    final boolean wrote = face.saveFileToTree(
-                            treeRelPathForName(actualFile.name()), actualFile.readBytes());
-                    Gdx.app.postRunnable(new Runnable() {
-                        @Override public void run() {
-                            status(wrote ? "Saved to Device/Cloud" : "Device/Cloud save FAILED", wrote ? 3 : 6);
-                        }
-                    });
-                } catch (final Exception e) {
-                    e.printStackTrace();
-                    Gdx.app.postRunnable(new Runnable() {
-                        @Override public void run() {
-                            status("Device/Cloud save error: " + e.getMessage(), 6);
-                        }
-                    });
-                }
-            } else if (safOpenedTreeRelPath != null) {
-                // Have a file→folder link but no tree access (grant lost/revoked).
-                Gdx.app.postRunnable(new Runnable() {
-                    @Override public void run() { status("Device/Cloud folder access not granted", 6); }
-                });
-            }
             if (createBackup && sMapBackups) {
                 MapBackupStore.maybeBackup(basepath, actualFile.path(), actualFile, backupMaxCount,
                         backupMinIntervalMin, true, prefs);
@@ -25299,8 +25234,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         recents.addrecent(actualFile.path(), actualFile.name(), "legacy");
         saveRecents();
         prefs.putString("lof", actualFile.path());
-        // Persist the SAF folder link so startup auto-open keeps writing back externally.
-        prefs.putString("saftree", safOpenedTreeRelPath == null ? "" : safOpenedTreeRelPath);
         prefs.flush();
     }
 
@@ -25458,7 +25391,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         try {
 
-            FileOutputStream fos = new FileOutputStream(tempfile.file());
+            OutputStream fos = tempfile.write(false);
 
             ensureXmlFactory();
             XmlSerializer srz = xmlFactoryObject.newSerializer();
@@ -25847,12 +25780,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void saveTsx(int index) {
         FileHandle file = Gdx.files.absolute(curdir + "/" + tilesets.get(index).getTsxfile());
-        FileHandle tmp = Gdx.files.absolute(file.parent().path() + "/" + file.nameWithoutExtension() + ".nottiled.tmp");
+        // Stage locally when the tsx lives in the SAF folder (see performSave).
+        FileHandle tmp = isSafPath(file.path())
+                ? Gdx.files.absolute(basepath + "NotTiled/Temp/" + file.nameWithoutExtension() + ".nottiled.tmp")
+                : Gdx.files.absolute(file.parent().path() + "/" + file.nameWithoutExtension() + ".nottiled.tmp");
+        tmp.parent().mkdirs();
         if (tmp.exists())
             tmp.delete();
 
         try {
-            FileOutputStream fos = new FileOutputStream(tmp.file());
+            OutputStream fos = tmp.write(false);
 
             ensureXmlFactory();
             XmlSerializer srz = xmlFactoryObject.newSerializer();
@@ -25969,7 +25906,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             FileHandle tmp = galleryDir.child(destTsx.nameWithoutExtension() + ".nottiled.tmp");
             if (tmp.exists()) tmp.delete();
 
-            FileOutputStream fos = new FileOutputStream(tmp.file());
+            OutputStream fos = tmp.write(false);
             ensureXmlFactory();
             XmlSerializer srz = xmlFactoryObject.newSerializer();
             srz.setOutput(fos, "UTF-8");
@@ -27426,7 +27363,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Tw = 10;
         Th = 10;
         try {
-            SimpleImageInfo s = new SimpleImageInfo(f.file());
+            SimpleImageInfo s = new SimpleImageInfo(f.read());
             curfile = f.name();
             Tw = s.getWidth();
             Th = s.getHeight();
@@ -27780,10 +27717,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             FileHandle file = Gdx.files.absolute(filepath);
             String path = file.parent().path();
 
-            FileInputStream stream = new FileInputStream(file.file());
+            InputStream stream = file.read();
 
             curdir = path;
-            curfile = file.file().getName();
+            curfile = file.name();
             myParser.setInput(stream, null);
             undolayer.clear();
             redolayer.clear();
@@ -28513,7 +28450,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             // uicam.position.set(120,-200,0);//center
 
             prefs.putString("lof", file.path());
-            prefs.putString("saftree", safOpenedTreeRelPath == null ? "" : safOpenedTreeRelPath);
             prefs.flush();
 
             kartu = "world";
@@ -28647,7 +28583,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 // file.parent().path().substring(Gdx.files.getExternalStoragePath().length());
                 path = file.parent().path();
             }
-            FileInputStream stream = new FileInputStream(file.file());
+            InputStream stream = file.read();
             Gdx.app.log("", path);
 
             tempcurdir = path;
@@ -41529,7 +41465,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     switch (pbt) {
                         case MIDI:
                             FileHandle midiOut = Gdx.files.absolute(curdir + "/" + filenya + ".mid");
-                            midi.writeToFile(midiOut.file());
+                            FileHandle midiStage = localStageFor(midiOut);
+                            midi.writeToFile(midiStage.file());
+                            if (midiStage != midiOut) { midiStage.copyTo(midiOut); midiStage.delete(); }
                             break;
                         case PLAY:
                             FileHandle tmp = Gdx.files.absolute(basepath + "NotTiled/Temp/composer.mid");
@@ -41680,7 +41618,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (cleanName.toLowerCase().endsWith(".mid")) cleanName = cleanName.substring(0, cleanName.length() - 4);
             else if (cleanName.toLowerCase().endsWith(".midi")) cleanName = cleanName.substring(0, cleanName.length() - 5);
             FileHandle out = Gdx.files.absolute(curdir + "/" + cleanName + ".mid");
-            midi.writeToFile(out.file());
+            FileHandle stage = localStageFor(out);
+            midi.writeToFile(stage.file());
+            if (stage != out) { stage.copyTo(out); stage.delete(); }
             face.saveasFile(out.readBytes(), cleanName + ".mid");
             backToMap();
             status(z.exportfinished, 3);
@@ -41839,9 +41779,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     switch (pbt) {
                         case MIDI:
                             composer c = new composer(seq.toString());
-                            c.save(curdir + "/" + filenya + ".mid");
-                            MidiFileManager.savePatternToMidi(seq,
-                                    Gdx.files.absolute(curdir + "/" + filenya + "v2.midi").file());
+                            FileHandle cOut = Gdx.files.absolute(curdir + "/" + filenya + ".mid");
+                            FileHandle cStage = localStageFor(cOut);
+                            c.save(cStage.path());
+                            if (cStage != cOut) { cStage.copyTo(cOut); cStage.delete(); }
+                            FileHandle v2Out = Gdx.files.absolute(curdir + "/" + filenya + "v2.midi");
+                            FileHandle v2Stage = localStageFor(v2Out);
+                            MidiFileManager.savePatternToMidi(seq, v2Stage.file());
+                            if (v2Stage != v2Out) { v2Stage.copyTo(v2Out); v2Stage.delete(); }
                             break;
                         case PLAY:
                             switch (Gdx.app.getType()) {
@@ -43546,7 +43491,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         try {
             XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
             XmlPullParser parser = factory.newPullParser();
-            FileInputStream stream = new FileInputStream(file.file());
+            InputStream stream = file.read();
             parser.setInput(stream, null);
 
             int event = parser.getEventType();

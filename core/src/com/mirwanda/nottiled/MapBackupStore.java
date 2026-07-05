@@ -57,8 +57,12 @@ public final class MapBackupStore {
                 return false;
             }
         }
-        if (tmp.file().renameTo(dest.file()))
-            return dest.exists() && dest.length() > 0;
+        try {
+            if (tmp.file().renameTo(dest.file()))
+                return dest.exists() && dest.length() > 0;
+        } catch (Exception renameUnsupported) {
+            // SAF-backed handles have no java.io.File; fall through to stream copy.
+        }
         try {
             tmp.copyTo(dest);
             tmp.delete();
@@ -168,10 +172,10 @@ public final class MapBackupStore {
     }
 
     private static final class FileInputStreamHolder {
-        final java.io.FileInputStream stream;
+        final java.io.InputStream stream;
 
         FileInputStreamHolder(FileHandle fh) throws java.io.IOException {
-            stream = new java.io.FileInputStream(fh.file());
+            stream = fh.read();
         }
 
         void closeQuietly() {

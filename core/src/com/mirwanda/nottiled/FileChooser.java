@@ -37,6 +37,12 @@ public class FileChooser extends Dialog
 
 	private String OS;
 	private String basePath = "";
+	private String safRoot = "";
+
+	/** SAF mount point (e.g. "/saf") — directories under it clamp ".." there, not at basePath. */
+	public void setSafRoot(String safRoot) {
+		this.safRoot = safRoot == null ? "" : safRoot;
+	}
 
 
 
@@ -101,15 +107,25 @@ public class FileChooser extends Dialog
 		}      
 	}
 
-	public FileChooser(String title, Skin skin, String mode, String[] filter, String OS, String basePath)
+	public FileChooser(String title, Skin skin, String mode, String[] filter, String OS, String basePath, boolean allowSaf)
 	{
 		super(title, skin);
 		this.getCell(getButtonTable()).expandX().fill();
 		this.getButtonTable().defaults().expandX().fill();
 		this.mode = mode;
 		this.filter=filter;
+		// Split across two rows so buttons don't overflow the dialog on phones.
+		// No internal/external toggle: a granted user only ever wants their own
+		// folder here; app storage (samples, backups, templates) has dedicated
+		// entry points and the separate "Internal File Manager" menu item.
 		this.button("Cancel", "Cancel");
 		this.button("Home", "Home");
+		this.getButtonTable().row();
+		// The SAF system-picker button only belongs to the map-open flow (it routes
+		// through nativeOpenSAF); other pickers converge on the in-app browser.
+		if (allowSaf) {
+			this.button("Device / Cloud", "SAF");
+		}
 		this.button("New Folder", "New Folder");
 		this.button("-OK->", "OK");
 		this.setModal(false);
@@ -170,6 +186,10 @@ public class FileChooser extends Dialog
 
 				if (OS.equalsIgnoreCase("android10+")) {
 					String limitPath = (basePath != null && !basePath.isEmpty()) ? basePath : Gdx.files.getExternalStoragePath();
+					// Inside the SAF mount, clamp ".." at the mount point instead.
+					if (!safRoot.isEmpty() && directory.path().startsWith(safRoot)) {
+						limitPath = safRoot;
+					}
 					if (directory.path().length() > limitPath.length()) {
 						table.row();
 						Image img = new Image(txback);
@@ -233,7 +253,7 @@ public class FileChooser extends Dialog
 				} else{
 					if (filter.length>0){
 						for (String str: filter){
-							String fn=file.file().getName().toLowerCase();
+							String fn=file.name().toLowerCase();
 							if (fn.length()>str.length()){
 							if (fn.substring(fn.length()-str.length()).equalsIgnoreCase(str)){
 								table.row();

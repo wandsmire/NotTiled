@@ -29,7 +29,7 @@ public class nullInterface implements Interface {
 
     @Override
     public String getVersione() {
-        return "2.3.0";
+        return "2.3.1";
     }
 
     @Override
@@ -209,28 +209,18 @@ public class nullInterface implements Interface {
     }
 
     @Override
-    public void fetchTmxAssets(String tmxContent, String tmxUri) {
-        // Desktop: no tree access, signal caller to skip
+    public String getSafRoot() {
+        return "";
+    }
+
+    @Override
+    public String resolveUriToTreePath(String uri) {
+        return null;
     }
 
     @Override
     public boolean hasTreeAccess() {
         return false;
-    }
-
-    @Override
-    public boolean saveFileToTree(String relPath, byte[] data) {
-        return false;
-    }
-
-    @Override
-    public boolean copyTreeFileToLocal(String relPath, String localPath) {
-        return false;
-    }
-
-    @Override
-    public java.util.List<String> listTreeFiles(String[] extensions) {
-        return new java.util.ArrayList<String>();
     }
 
 }
