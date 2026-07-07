@@ -143,8 +143,13 @@ public final class MapBackupStore {
             }
         });
         int remove = list.size() - maxBackups;
-        for (int i = 0; i < remove; i++)
+        for (int i = 0; i < remove; i++) {
+            // "original.tmx" is the pristine pre-NotTiled copy kept by the
+            // compatibility guard — it must survive the rolling window.
+            if ("original.tmx".equals(list.get(i).name()))
+                continue;
             list.get(i).delete();
+        }
     }
 
     public static List<FileHandle> listBackups(String basepath, String absoluteMapPath) {

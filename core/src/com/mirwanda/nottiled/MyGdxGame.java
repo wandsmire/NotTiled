@@ -332,6 +332,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     int Tsw = 32, Tsh = 32, Tw = 5, Th = 5;
     public int nextlayerid = 1;
     public boolean infinite = false;
+    // Compatibility guard + infinite-map (chunk) stitching — see TmxCompatScan.
+    private TmxCompatScan compatScan;
+    private boolean chunkStitchActive;
+    private int chunkOffX, chunkOffY;
+    private java.util.List<Long> chunkGrid;
+    private int curChunkX, curChunkY, curChunkW, curChunkH;
     public int compressionlevel = -1;
     int rotate = 0;
     int ssx = 480;
@@ -9077,6 +9083,51 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         String root = face.getSafRoot();
         if (root == null || root.isEmpty()) return "";
         return root.endsWith("/") ? root.substring(0, root.length() - 1) : root;
+    }
+
+    /** Decode one infinite-map &lt;chunk&gt; payload using the current layer's
+     *  encoding/compression (same formats as full &lt;data&gt; elements). */
+    private java.util.List<Long> decodeChunkData(String raw, int expectedCount) throws Exception {
+        String data = raw.replace("\n", "").replace("\r", "").replace(" ", "").replace("\t", "");
+        if (encoding.equalsIgnoreCase("csv")) {
+            java.util.List<Long> out = new ArrayList<Long>(expectedCount);
+            String[] parts = data.split(",");
+            for (int i = 0; i < expectedCount && i < parts.length; i++) {
+                out.add(Long.parseLong(parts[i]));
+            }
+            return out;
+        } else if (encoding.equalsIgnoreCase("base64") && compression.equalsIgnoreCase("zlib")) {
+            return decoder.decodeZlib(data, expectedCount * 4);
+        } else if (encoding.equalsIgnoreCase("base64") && compression.equalsIgnoreCase("gzip")) {
+            return decoder.decodeGzip(data);
+        } else if (encoding.equalsIgnoreCase("base64")) {
+            return decoder.decode(data);
+        }
+        throw new Exception("Unsupported chunk encoding: " + encoding);
+    }
+
+    /** After a load: warn when the source uses Tiled features a NotTiled save
+     *  would drop, and keep a pristine copy of the original in the map's backup
+     *  folder (shown in Restore backup; never pruned). */
+    private void maybeWarnCompat(FileHandle source, boolean stitched) {
+        if (compatScan == null || !compatScan.needsWarning()) return;
+        try {
+            FileHandle dir = MapBackupStore.backupDir(basepath, source.path());
+            FileHandle orig = dir.child("original.tmx");
+            if (!orig.exists()) source.copyTo(orig);
+        } catch (Exception ignored) {
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("This map uses Tiled features NotTiled doesn't fully support:\n\n");
+        for (String s : compatScan.lostFeatures()) {
+            sb.append("- ").append(s).append("\n");
+        }
+        sb.append("\nSaving from NotTiled will drop the listed features.");
+        if (stitched) {
+            sb.append(" The infinite map was opened as a fixed ").append(Tw).append("x").append(Th).append(" grid.");
+        }
+        sb.append("\n\nA copy of the original file was kept — see Restore backup.");
+        msgbox(sb.toString());
     }
 
     /** Dispose the GPU textures and native pixmaps held by the current map.
@@ -27759,6 +27810,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             FileHandle file = Gdx.files.absolute(filepath);
             String path = file.parent().path();
 
+            // Cheap pre-pass: find features we can't round-trip (to warn about)
+            // and chunk bounds for infinite maps (to stitch into a fixed grid).
+            compatScan = null;
+            chunkStitchActive = false;
+            chunkGrid = null;
+            try {
+                compatScan = TmxCompatScan.scan(file.read());
+            } catch (Exception ignored) {
+            }
+
             InputStream stream = file.read();
 
             curdir = path;
@@ -27830,6 +27891,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             } else {
                                 compressionlevel = -1;
                             }
+                            // Infinite map: adopt the pre-scanned chunk bounds as the
+                            // fixed map size; chunk data is stitched in at its offset.
+                            chunkOffX = 0;
+                            chunkOffY = 0;
+                            chunkStitchActive = infinite && compatScan != null && compatScan.stitchable();
+                            if (chunkStitchActive) {
+                                chunkOffX = compatScan.chunkMinX;
+                                chunkOffY = compatScan.chunkMinY;
+                                Tw = compatScan.chunkMaxX - compatScan.chunkMinX;
+                                Th = compatScan.chunkMaxY - compatScan.chunkMinY;
+                            }
                         }
                         if (name.equals("layer")) {
                             xtree.add("layer");
@@ -27862,9 +27934,28 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     if (compression == null) {
                                         compression = "no compression";
                                     }
+                                    if (chunkStitchActive) {
+                                        chunkGrid = new ArrayList<Long>(Tw * Th);
+                                        for (int i = 0; i < Tw * Th; i++)
+                                            chunkGrid.add(0L);
+                                    }
                                     break;
                             }
 
+                        }
+                        if (name.equals("chunk")) {
+                            // Infinite-map tile block; its payload uses the layer's
+                            // encoding and lands in the stitched grid at (x,y).
+                            try {
+                                curChunkX = Integer.parseInt(myParser.getAttributeValue(null, "x"));
+                                curChunkY = Integer.parseInt(myParser.getAttributeValue(null, "y"));
+                                curChunkW = Integer.parseInt(myParser.getAttributeValue(null, "width"));
+                                curChunkH = Integer.parseInt(myParser.getAttributeValue(null, "height"));
+                            } catch (Exception e) {
+                                curChunkW = 0;
+                                curChunkH = 0;
+                            }
+                            isi = "";
                         }
                         if (name.equals("tileset")) {
                             tempTset = new tileset();
@@ -28254,6 +28345,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     }
                                     tempobj.setW(pWidth);
                                     tempobj.setH(pHeight);
+                                    // Stitched infinite maps move the origin to the
+                                    // chunk bounds — shift objects into that space.
+                                    if (chunkStitchActive && (chunkOffX != 0 || chunkOffY != 0)) {
+                                        tempobj.setX(tempobj.getX() - chunkOffX * Tsw);
+                                        tempobj.setY(tempobj.getY() - chunkOffY * Tsh);
+                                    }
                                     tempobj.setupBox2D(world);
                                     if (myParser.getAttributeValue(null, "rotation") != null)
                                         tempobj.setRotation(
@@ -28420,7 +28517,47 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         }
 
+                        if (name.equals("chunk") && chunkGrid != null && curChunkW > 0) {
+                            try {
+                                java.util.List<Long> cd = decodeChunkData(isi, curChunkW * curChunkH);
+                                for (int cy = 0; cy < curChunkH; cy++) {
+                                    int gy = curChunkY - chunkOffY + cy;
+                                    if (gy < 0 || gy >= Th)
+                                        continue;
+                                    for (int cx = 0; cx < curChunkW; cx++) {
+                                        int gx = curChunkX - chunkOffX + cx;
+                                        int di = cy * curChunkW + cx;
+                                        if (gx < 0 || gx >= Tw || di >= cd.size())
+                                            continue;
+                                        chunkGrid.set(gy * Tw + gx, cd.get(di));
+                                    }
+                                }
+                            } catch (Exception e) {
+                                ErrorBung(e, "errorlog.txt");
+                            }
+                            isi = "";
+                        }
                         if (name.equals("data")) {
+
+                            if (chunkGrid != null) {
+                                // Infinite map: the chunks were stitched into the
+                                // fixed-size grid — adopt it as this layer's data.
+                                spr = chunkGrid;
+                                chunkGrid = null;
+                                if (encoding.equalsIgnoreCase("csv"))
+                                    mapFormat = "csv";
+                                else if (encoding.equalsIgnoreCase("base64") && compression.equalsIgnoreCase("zlib"))
+                                    mapFormat = "base64-zlib";
+                                else if (encoding.equalsIgnoreCase("base64") && compression.equalsIgnoreCase("gzip"))
+                                    mapFormat = "base64-gzip";
+                                else if (encoding.equalsIgnoreCase("base64"))
+                                    mapFormat = "base64";
+                            } else if (infinite && compatScan != null && compatScan.hasChunks) {
+                                // Unstitchable infinite map (too large / xml chunks):
+                                // leave the layer empty rather than mis-decoding the
+                                // leftover chunk text. The load warning explains it.
+                                spr = new ArrayList<Long>();
+                            } else {
 
                             if (!encoding.equalsIgnoreCase("xml"))
                                 spr = new ArrayList<Long>();
@@ -28459,6 +28596,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 mapFormat = "xml";
                             }
 
+                            }
+
                             if (spr == null) {
                                 spr = new ArrayList<Long>();
                             }
@@ -28479,6 +28618,24 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
                 event = myParser.next();
             }
+
+            // Stitched infinite maps are finite in memory from here on: image
+            // layers move into the shifted origin space, and the flag is cleared
+            // so every save/export path writes a consistent fixed-size map.
+            boolean stitchedInfinite = chunkStitchActive;
+            if (chunkStitchActive) {
+                if (chunkOffX != 0 || chunkOffY != 0) {
+                    for (layer l : layers) {
+                        if (l.getType() == layer.Type.IMAGE) {
+                            l.setOffsetX(l.getOffsetX() - chunkOffX * Tsw);
+                            l.setOffsetY(l.getOffsetY() - chunkOffY * Tsh);
+                        }
+                    }
+                }
+                infinite = false;
+                chunkStitchActive = false;
+            }
+            maybeWarnCompat(file, stitchedInfinite);
 
             if (keepView && cam != null) {
                 cam.position.set(pendingCamX, pendingCamY, 0);
