@@ -41,6 +41,11 @@ public final class MapBackupStore {
 
     /**
      * Writes temp file over destination (same directory rename when possible).
+     *
+     * Local destinations get delete + rename (atomic on the same filesystem).
+     * SAF destinations are overwritten in place via a truncating stream copy —
+     * never deleted first, so a crash mid-commit can't erase the user's file
+     * and the provider document identity survives every save.
      */
     public static boolean commitAtomic(FileHandle tmp, FileHandle dest) {
         if (tmp == null || !tmp.exists() || dest == null)
@@ -48,20 +53,21 @@ public final class MapBackupStore {
         FileHandle parent = dest.parent();
         if (parent != null && !parent.exists())
             parent.mkdirs();
-        if (dest.exists() && !dest.delete()) {
-            try {
-                tmp.copyTo(dest);
-                tmp.delete();
-                return dest.exists() && dest.length() > 0;
-            } catch (Exception e) {
-                return false;
-            }
-        }
+
+        boolean destFileBacked;
         try {
-            if (tmp.file().renameTo(dest.file()))
-                return dest.exists() && dest.length() > 0;
-        } catch (Exception renameUnsupported) {
-            // SAF-backed handles have no java.io.File; fall through to stream copy.
+            dest.file();
+            destFileBacked = true;
+        } catch (Exception safHandle) {
+            destFileBacked = false;
+        }
+
+        if (destFileBacked && (!dest.exists() || dest.delete())) {
+            try {
+                if (tmp.file().renameTo(dest.file()))
+                    return dest.exists() && dest.length() > 0;
+            } catch (Exception ignored) {
+            }
         }
         try {
             tmp.copyTo(dest);

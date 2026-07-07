@@ -26,7 +26,16 @@ public class SimpleImageInfo {
 	}
 
 	public SimpleImageInfo(InputStream is) throws IOException {
-		processStream(is);
+		// Owns and closes the stream — call sites pass it inline (fh.read())
+		// and never reuse it; leaving it open leaks a file descriptor per probe.
+		try {
+			processStream(is);
+		} finally {
+			try {
+				is.close();
+			} catch (IOException ignored) {
+			}
+		}
 	}
 
 	public SimpleImageInfo(byte[] bytes) throws IOException {

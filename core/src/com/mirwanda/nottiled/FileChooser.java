@@ -134,11 +134,22 @@ public class FileChooser extends Dialog
 		this.basePath = basePath;
 	}
 
+	// Shared icon textures — buildList runs on every directory navigation, so
+	// per-call textures leak GPU memory. Internal-file textures are managed by
+	// libGDX and survive GL context loss.
+	private static Texture txback, txfolder, txfile;
+
+	private static void ensureIcons() {
+		if (txback == null) {
+			txback = new Texture(Gdx.files.internal( "images/up96.png" ));
+			txfolder = new Texture(Gdx.files.internal( "images/folder96.png" ));
+			txfile = new Texture(Gdx.files.internal( "images/file96.png" ));
+		}
+	}
+
 	private void buildList()
 	{
-		Texture txback = new Texture(Gdx.files.internal( "images/up96.png" ));
-		Texture txfolder = new Texture(Gdx.files.internal( "images/folder96.png" ));
-		Texture txfile = new Texture(Gdx.files.internal( "images/file96.png" ));
+		ensureIcons();
 		FileHandle[] files = directory.list();
 		Arrays.sort(files, new Comparator<FileHandle>() {
 				@Override
@@ -220,7 +231,7 @@ public class FileChooser extends Dialog
 		}
 		for (FileHandle file : files)
 		{
-			if (mode == "dir")
+			if ("dir".equals(mode))
 			{
 				if (file.isDirectory())
 				{

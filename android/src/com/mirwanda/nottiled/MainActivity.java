@@ -42,7 +42,7 @@ public class MainActivity extends AndroidApplication implements Interface
 	private static final int BINARY_CREATE_CODE = 39;
 	private static final int REQUEST_TREE_CODE = 45;
 	private static final int EDIT_NOT2PIX_CODE = 46;
-	Uri currentMAP = null;
+	volatile Uri currentMAP = null;
 	SharedPreferences myPrefs;
 	SharedPreferences.Editor prefs;
 	//TextToSpeech tts;
@@ -559,7 +559,14 @@ public class MainActivity extends AndroidApplication implements Interface
 			startActivityForResult(intent, REGAIN_ACCESS_CODE);
 
 		}else{
-			writeFileContent( currentMAP, data);
+			final Uri uri = currentMAP;
+			final String payload = data;
+			safIoExecutor.execute(new Runnable() {
+				@Override
+				public void run() {
+					writeFileContent( uri, payload);
+				}
+			});
 		}
 	}
 
@@ -603,6 +610,18 @@ public class MainActivity extends AndroidApplication implements Interface
 	SafDocumentStore safStore;
 	private SafFiles safFiles;
 
+	/** Document I/O from picker results runs here — on the main thread a slow
+	 *  provider (Drive) or large file blows the 5s input-dispatch window (ANR). */
+	private final java.util.concurrent.ExecutorService safIoExecutor =
+			java.util.concurrent.Executors.newSingleThreadExecutor(new java.util.concurrent.ThreadFactory() {
+				@Override
+				public Thread newThread(Runnable r) {
+					Thread t = new Thread(r, "SAF-io");
+					t.setDaemon(true);
+					return t;
+				}
+			});
+
 	@Override
 	public com.badlogic.gdx.Files getFiles() {
 		// Keep the SAF wrapper installed across the lifecycle — the superclass
@@ -630,22 +649,30 @@ public class MainActivity extends AndroidApplication implements Interface
 			if (requestCode == CREATE_REQUEST_CODE)
 			{
 				if (resultData != null) {
-					Uri uri = resultData.getData();
-					writeFileContent( uri, tmpdata);
-					SAFuri = uri.toString();
-					SAFfilename = getFileName( uri );
+					final Uri uri = resultData.getData();
+					final int takeFlags = resultData.getFlags()
+							& (Intent.FLAG_GRANT_READ_URI_PERMISSION
+							| Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+					safIoExecutor.execute(new Runnable() {
+						@Override
+						public void run() {
+							writeFileContent( uri, tmpdata);
+							SAFuri = uri.toString();
+							SAFfilename = getFileName( uri );
 
-					if (SAFfilename.endsWith( "tmx" )){
-						currentMAP = resultData.getData();
-						prefs.putString("url", currentMAP.toString());
-						prefs.commit();
-
-						final int takeFlags = resultData.getFlags()
-								& (Intent.FLAG_GRANT_READ_URI_PERMISSION
-								| Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-						getContentResolver().takePersistableUriPermission(uri, takeFlags);
-						SAFstatus="ok";
-					}
+							if (SAFfilename.endsWith( "tmx" )){
+								currentMAP = uri;
+								prefs.putString("url", currentMAP.toString());
+								prefs.commit();
+								try {
+									getContentResolver().takePersistableUriPermission(uri, takeFlags);
+								} catch (Exception e) {
+									e.printStackTrace();
+								}
+								SAFstatus="ok";
+							}
+						}
+					});
 
 				}else{
 					SAFstatus="cancel";
@@ -654,15 +681,26 @@ public class MainActivity extends AndroidApplication implements Interface
 			if (requestCode == BINARY_CREATE_CODE)
 			{
 				if (resultData != null) {
-					Uri uri = resultData.getData();
-					writeByte( uri, bytedata);
+					final Uri uri = resultData.getData();
+					safIoExecutor.execute(new Runnable() {
+						@Override
+						public void run() {
+							writeByte( uri, bytedata);
+						}
+					});
 				}
 			}
 			else if (requestCode == SAVEAS_REQUEST_CODE) {
 
 				if (resultData != null) {
 					currentMAP = resultData.getData();
-					writeFileContent( currentMAP, "test");
+					final Uri uri = currentMAP;
+					safIoExecutor.execute(new Runnable() {
+						@Override
+						public void run() {
+							writeFileContent( uri, "test");
+						}
+					});
 				}
 			}
 			else if (requestCode == REQUEST_TREE_CODE) {
@@ -701,29 +739,36 @@ public class MainActivity extends AndroidApplication implements Interface
 			else if (requestCode == OPEN_REQUEST_CODE) {
 
 				if (resultData != null) {
+					final Uri uri = resultData.getData();
+					final int takeFlags = resultData.getFlags()
+							& (Intent.FLAG_GRANT_READ_URI_PERMISSION
+							| Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+					safIoExecutor.execute(new Runnable() {
+						@Override
+						public void run() {
+							try {
+								SAFdata = readBytes( uri );
+								SAFfilename = getFileName( uri );
+								SAFuri = uri.toString();
 
-					try {
-						Uri uri = resultData.getData();
-						SAFdata = readBytes( uri );
-						SAFfilename = getFileName( uri );
-						SAFuri = uri.toString();
+								if (SAFfilename.endsWith( "tmx" )){
+									currentMAP = uri;
+									prefs.putString("url", currentMAP.toString());
+									prefs.commit();
+									try {
+										getContentResolver().takePersistableUriPermission(uri, takeFlags);
+									} catch (Exception e) {
+										e.printStackTrace();
+									}
+								}
 
-						if (SAFfilename.endsWith( "tmx" )){
-							currentMAP = uri;
-							prefs.putString("url", currentMAP.toString());
-							prefs.commit();
-							final int takeFlags = resultData.getFlags()
-									& (Intent.FLAG_GRANT_READ_URI_PERMISSION
-									| Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-							getContentResolver().takePersistableUriPermission(uri, takeFlags);
-
+								SAFstatus = "OK";
+							} catch (Exception e) {
+								e.printStackTrace();
+								SAFstatus = "error";
+							}
 						}
-
-						SAFstatus = "OK";
-					} catch (Exception e) {
-						e.printStackTrace();
-						SAFstatus = "error";
-					}
+					});
 				} else {
 					SAFstatus = "cancel";
 				}
@@ -731,8 +776,14 @@ public class MainActivity extends AndroidApplication implements Interface
 
 				if (resultData != null) {
 					currentMAP = resultData.getData();
-					SAFuri = currentMAP.toString();
-					writeFileContent( currentMAP, tmpdata);
+					final Uri uri = currentMAP;
+					SAFuri = uri.toString();
+					safIoExecutor.execute(new Runnable() {
+						@Override
+						public void run() {
+							writeFileContent( uri, tmpdata);
+						}
+					});
 				}
 			}else{
 			}

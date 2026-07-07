@@ -67,7 +67,9 @@ android {
     }
     defaultConfig {
         applicationId "com.mirwanda.nottiled"
-        minSdkVersion 19
+        // SAF document-tree APIs (ACTION_OPEN_DOCUMENT_TREE, buildChildDocumentsUriUsingTree)
+        // require API 21 — on 19/20 the file shim would crash on first use.
+        minSdkVersion 21
         targetSdkVersion 35
         versionCode 20301
         versionName "2.3.1"

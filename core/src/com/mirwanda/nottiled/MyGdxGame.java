@@ -636,7 +636,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         @Override
         public void confirm(String input) {
-            if (input == "") {
+            if (input == null || input.isEmpty()) {
                 return;
             }
             writeThis(basepath + "NotTiled/sample/json/" + input + ".json", clipProp);
@@ -653,7 +653,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         @Override
         public void confirm(String input) {
-            if (input == "") {
+            if (input == null || input.isEmpty()) {
                 return;
             }
             newobject.setText(input);
@@ -1414,6 +1414,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 face.selectFolder();
                 while (nativeStatus.equalsIgnoreCase("")) {
                     nativeStatus = face.getStatus();
+                    try { Thread.sleep(16); } catch (InterruptedException ignored) {}
                 }
 
                 if (nativeStatus.equalsIgnoreCase("cancel")) {
@@ -2403,7 +2404,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         batch.totalRenderCalls = 0;
 
-                        if (layers.size() > 0 && mode != "newpoly") {
+                        if (layers.size() > 0 && !"newpoly".equals(mode)) {
                             clampSelLayerToSelectable();
                             applyLayerModeForSelLayer();
                         }
@@ -2768,7 +2769,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) && Gdx.input.isKeyJustPressed(Input.Keys.Z)) {
-            if (mode == "tile") {
+            if ("tile".equals(mode)) {
                 try {
 
                     if (undolayer.size() > 0) {
@@ -2797,20 +2798,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     ErrorBung(e, "undo.txt");
                 }
             }
-            if (mode == "newpoly") {
+            if ("newpoly".equals(mode)) {
 
                 newobject.undoPoint();
             }
         }
 
-        if (kartu != "stage") {
+        if (!"stage".equals(kartu)) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
                 eraser = !eraser;
             }
             if (Gdx.input.isKeyJustPressed(Input.Keys.Q)) {
                 markermode = false;
             }
-            if (mode == "object"
+            if ("object".equals(mode)
                     && (Gdx.input.isKeyJustPressed(Input.Keys.DEL) || Gdx.input.isKeyJustPressed(Input.Keys.FORWARD_DEL)
                             || Gdx.input.isKeyJustPressed(Input.Keys.BACKSPACE))) {
                 if (stage.getKeyboardFocus() == null && selobjs.size() > 0) {
@@ -2834,7 +2835,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     pushUpdateIfCollaborating();
                 }
             }
-            if (is3DMode && kartu == "world") {
+            if (is3DMode && "world".equals(kartu)) {
                 float yawRad = (float) Math.toRadians(cam3dYaw);
                 float cosYaw = (float) Math.cos(yawRad);
                 float sinYaw = (float) Math.sin(yawRad);
@@ -2873,14 +2874,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         if (Gdx.input.isKeyPressed(Input.Keys.X)) {
-            if (kartu == "world") {
+            if ("world".equals(kartu)) {
                 if (is3DMode) {
                     cam3dZoom = Math.min(cam3dZoom * 1.05f, 10.0f);
                 } else if (cam.zoom < maxWorldZoomOut()) {
                     cam.zoom = Math.min(cam.zoom * 1.1f, maxWorldZoomOut());
                     cam.update();
                 }
-            } else if (kartu == "tile" || kartu == "pickanim") {
+            } else if ("tile".equals(kartu) || "pickanim".equals(kartu)) {
                 if (tilecam.zoom < 100) {
                     tilecam.zoom = tilecam.zoom * 1.1f;
                     tilecam.update();
@@ -2888,7 +2889,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         }
         if (Gdx.input.isKeyPressed(Input.Keys.C)) {
-            if (kartu == "world") {
+            if ("world".equals(kartu)) {
                 if (is3DMode) {
                     cam3dZoom = Math.max(cam3dZoom / 1.05f, 0.1f);
                 } else if (cam.zoom > Tsw / 320f) {
@@ -2897,7 +2898,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         cam.zoom = Tsw / 320f;
                     cam.update();
                 }
-            } else if (kartu == "tile" || kartu == "pickanim") {
+            } else if ("tile".equals(kartu) || "pickanim".equals(kartu)) {
                 float minZoom = tilePickerMinZoom();
                 if (tilecam.zoom > minZoom) {
                     tilecam.zoom = tilecam.zoom / 1.1f;
@@ -3112,9 +3113,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     backToMap();
                     break;
                 case "pickanim":
-                    if (tilePicker == "newterrain" || tilePicker == "newmacroterrain") {
+                    if ("newterrain".equals(tilePicker) || "newmacroterrain".equals(tilePicker)) {
                         resumeTerrainEditor();
-                    } else if (tilePicker == "terraineditor") {
+                    } else if ("terraineditor".equals(tilePicker)) {
                         lastStage = null;
                         if (frompick) {
                             restorePickAutoAfterTerrainEditor();
@@ -3123,7 +3124,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         } else {
                             gotoStage(tTileMgmt);
                         }
-                    } else if (tilePicker == "macroterraineditor") {
+                    } else if ("macroterraineditor".equals(tilePicker)) {
                         saveMacroAutoTerrain();
                         setToolsMap();
                         gotoStage(ttools);
@@ -3443,7 +3444,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             batch.begin();
             tileset ts = null;
             // tile, pick, pickanim
-            if (kartu == "tile" || kartu == "editor") {
+            if ("tile".equals(kartu) || "editor".equals(kartu)) {
                 seltset = this.seltset;
             } else {
                 switch (tilePicker) {
@@ -3873,7 +3874,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
             // debugMe=tilesets.get(seltset).getWidth() + "-" +
             // tilesets.get(seltset).getHeight();
-            if (kartu == "tile" || tilePicker == "massprops") {
+            if ("tile".equals(kartu) || "massprops".equals(tilePicker)) {
                 if (stamp) {
                     sr.setColor(1, 0, 0, 0.5f);
                     int SprW = tilesets.get(seltset).getWidth();
@@ -3884,7 +3885,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     sr.setColor(0, 0, 0, 1);
                 }
             }
-            if (kartu == "tile" && issettingtile) {
+            if ("tile".equals(kartu) && issettingtile) {
                 for (int y = startRow; y <= endRow; y++) {
                     for (int x = startCol; x <= endCol; x++) {
                         int i = y * wd + x;
@@ -3900,7 +3901,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             }
 
-            if (kartu == "pickanim" && tilePicker == "massprops") {
+            if ("pickanim".equals(kartu) && "massprops".equals(tilePicker)) {
                 sr.setColor(0, 1, 0, .5f);
                 for (int y = startRow; y <= endRow; y++) {
                     for (int x = startCol; x <= endCol; x++) {
@@ -4022,9 +4023,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             uisrect(gui.pickerback, mouse, null);// tool switch
 
         } else {
-            if (kartu == "pickanim") {
+            if ("pickanim".equals(kartu)) {
                 uisrect(gui.pickerback, mouse, null);// tool switch
-                if (tilePicker == "terraineditor" || tilePicker == "macroterraineditor") {
+                if ("terraineditor".equals(tilePicker) || "macroterraineditor".equals(tilePicker)) {
                     uisrect(gui.terraindelete, mouse, null);
                     uisrect(gui.terrainshape, mouse, null);
                     uisrect(gui.newterrain, mouse, null);// tool switch
@@ -4032,16 +4033,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     uisrect(gui.tilesetsright, mouse, null);
                     uisrect(gui.tilesetsmid, mouse, null);
                     uisrect(gui.terrainundo, mouse, null);
-                } else if (tilePicker == "massprops") {
+                } else if ("massprops".equals(tilePicker)) {
                     uisrect(gui.newterrain, mouse, null);
                 }
             }
 
         }
         /////
-        if (kartu == "editor")
+        if ("editor".equals(kartu))
             uisrect(gui.tilemode, mouse, null);
-        if (kartu == "tile" || kartu == "editor") {
+        if ("tile".equals(kartu) || "editor".equals(kartu)) {
             // Empty state shows only Back + Tilesets, so draw only the Tilesets box
             // here. The mid/terrain/arrow boxes belong to the populated picker.
             uisrect(gui.tilesetsbtn, mouse, null);
@@ -4092,7 +4093,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         ////
 
-        if (kartu == "editor") {
+        if ("editor".equals(kartu)) {
             uisrect(gui.editormode, mouse, null);
             uisrect(gui.editorcancel, mouse, null);
             uisrect(gui.editorsave, mouse, null);
@@ -4102,7 +4103,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             uisrect(gui.editordown, mouse, vis("editordown"));// tile/obj switch
 
         }
-        if (tilesets.size() != 0 && (kartu == "tile" || kartu == "editor")) {
+        if (tilesets.size() != 0 && ("tile".equals(kartu) || "editor".equals(kartu))) {
             uisrect(gui.pickerback, mouse, null);// tool switch
             if (issettingtile) {
                 uisrect(gui.tilewrite, mouse, null);
@@ -4116,14 +4117,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 uisrect(gui.tileproperties, mouse, null);
                 uisrect(gui.tileremove, mouse, null);
                 uisrect(gui.tileadd, mouse, null);
-            } else if (issettingtile || kartu == "editor") {
-                if (somethingisselected() || kartu == "editor") {
+            } else if (issettingtile || "editor".equals(kartu)) {
+                if (somethingisselected() || "editor".equals(kartu)) {
                     uisrect(gui.tileproperties, mouse, null);
                     uisrect(gui.tileoverlay, mouse, null);
                 }
             }
         }
-        if (tilesets.size() == 0 && (kartu == "tile" || kartu == "editor")) {
+        if (tilesets.size() == 0 && ("tile".equals(kartu) || "editor".equals(kartu))) {
             uisrect(gui.pickerback, mouse, null);
             uisrect(gui.tilesetsbtn, mouse, null);
         }
@@ -4151,7 +4152,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         } else {
 
-            if (kartu == "tile" || kartu == "editor") {
+            if ("tile".equals(kartu) || "editor".equals(kartu)) {
 
                 if (landscape) {
                     str1.getData().setScale(.7f);
@@ -4159,7 +4160,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     str1.getData().setScale(1f);
                 }
 
-                if (kartu == "editor") {
+                if ("editor".equals(kartu)) {
                     uidrawbutton(txmap, z.edit, gui.editormode, 1);
                     uidrawbutton(txundo, z.cancel, gui.editorcancel, 1);
                     uidrawbutton(txsave, z.save, gui.editorsave, 1);
@@ -4195,8 +4196,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     uidrawbutton(txinfo, z.swap, gui.tileproperties, 2);
                     uidrawbutton(txeraser, z.remove, gui.tileremove, 2);
                     uidrawbutton(txadd, z.addnew, gui.tileadd, 2);
-                } else if (issettingtile || kartu == "editor") {
-                    if (somethingisselected() || kartu == "editor") {
+                } else if (issettingtile || "editor".equals(kartu)) {
+                    if (somethingisselected() || "editor".equals(kartu)) {
                         uidrawbutton(txinfo, z.options != null ? z.options : "Options", gui.tileproperties, 2);
                         if (getSelectedTileCount() == 1) {
                             String txt = "";
@@ -4219,7 +4220,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                 }
 
-            } else if (kartu == "pickanim") {
+            } else if ("pickanim".equals(kartu)) {
                 uidrawbutton(txundo, z.back, gui.pickerback, 3);
                 switch (tilePicker) {
                     case "props":
@@ -7720,7 +7721,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     @Override
     public void resize(int width, int height) {
-        if (kartu == "game") {
+        if ("game".equals(kartu)) {
             mygame.resize(width, height);
             return;
         }
@@ -7770,7 +7771,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             landscape = false;
         }
         stage.getViewport().setScreenSize(width, height);
-        if (kartu == "stage") {
+        if ("stage".equals(kartu)) {
             // setMenuMap();
             gotoStage(lastStage);
             if (lastStage == tMenu || lastStage == tMap) {
@@ -8185,7 +8186,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             uisrect(gui.canceltutorial, mouse, vis("cancel"));// tile/obj switch
         }
 
-        if (kartu == "editor") {
+        if ("editor".equals(kartu)) {
             uisrect(gui.editorcancel, mouse, vis("editorcancel"));// tile/obj switch
             uisrect(gui.editormode, mouse, vis("editormode"));// layer switch
             uisrect(gui.editorsave, mouse, vis("editorsave"));// viewmode switch
@@ -8196,7 +8197,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             uisrect(gui.info, mouse, vis("infoinfo"));
         }
 
-        if (mode == "tile" || mode == "object" || mode == "image") {
+        if ("tile".equals(mode) || "object".equals(mode) || "image".equals(mode)) {
             uisrect(gui.mode, mouse, vis("addlayer"));// tile/obj switch
             uisrect(gui.layer, mouse, vis("layerlist"));// layer switch
             uisrect(gui.viewmode, mouse, vis("viewmode"));// viewmode switch
@@ -8242,7 +8243,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         }
 
-        if (mode == "tile") {
+        if ("tile".equals(mode)) {
             uisrect(gui.undo, mouse, vis("undo"));// undo
             uisrect(gui.redo, mouse, vis("redo"));// redo
 
@@ -8264,14 +8265,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             // show macro button in selection tool
 
-            if ((activetool == 3 && !assemblymode && !stamp) || kartu == "editor") {
+            if ((activetool == 3 && !assemblymode && !stamp) || "editor".equals(kartu)) {
                 uisrect(gui.addmacro, mouse, vis("addmacro"));// add macro
             }
 
             uisrect(gui.picker, mouse, vis("tilepick"));// select tile
-            if (autotiles.size() > 0 || kartu == "editor" || !macroTerrain.getTerrains().isEmpty())
+            if (autotiles.size() > 0 || "editor".equals(kartu) || !macroTerrain.getTerrains().isEmpty())
                 uisrect(gui.autopicker, mouse, vis("autotilepick"));// select auto tile
-            if (autotiles.size() > 0 || kartu == "editor")
+            if (autotiles.size() > 0 || "editor".equals(kartu))
                 uisrect(gui.autotile, mouse, vis("refresh"));// tool switch
 
             Color c1 = null, c2 = null, c3 = null, c4 = null, c5 = null;
@@ -8310,7 +8311,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         }
 
-        if (mode == "object") {
+        if ("object".equals(mode)) {
             uisrect(gui.objectpickermid, mouse, null);// objtools switch
             uisrect(gui.objectpickerleft, mouse, null);// objtools switch
             uisrect(gui.objectpickerright, mouse, null);// objtools switch
@@ -8344,11 +8345,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
         }
-        if (mode == "image") {
+        if ("image".equals(mode)) {
             uisrect(gui.objectpickermid, mouse, null);// objtools switch
 
         }
-        if (mode == "newpoly") {
+        if ("newpoly".equals(mode)) {
             uisrect(gui.undo, mouse, null);// undo
             uisrect(gui.tool, mouse, null);// tool switch
         }
@@ -8539,7 +8540,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         ui.setProjectionMatrix(uicam.combined);
         ui.begin();
         //////////
-        if (tilesets.size() > 0 && mode == "tile" && curspr != 0) {
+        if (tilesets.size() > 0 && "tile".equals(mode) && curspr != 0) {
             long num = curspr;
             int initset = resolveTilesetIndexForGid(num, curtset);
             if (initset >= 0) {
@@ -8554,7 +8555,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         }
 
-        if (tilesets.size() > 0 && mode == "tile" && swatches) {
+        if (tilesets.size() > 0 && "tile".equals(mode) && swatches) {
 
             for (int ii = 0; ii < 6; ii++) {
                 long num = swatchValue.get(ii);// ini intinyakah?
@@ -8620,7 +8621,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         // z.canceltutorial="Cancel Tutorial";
         if (tutoring)
             str1draw(ui, z.canceltutorial, gui.canceltutorial);
-        if (kartu == "editor") {
+        if ("editor".equals(kartu)) {
             uidrawbutton(txsave, z.save, gui.editorsave, 1);
             uidrawbutton(txundo, z.cancel, gui.editorcancel, 1);
             uidrawbutton(txmap, z.edit, gui.editormode, 1);
@@ -8630,7 +8631,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             uidrawbutton(txUp, "-", gui.editordown, 1);
         }
 
-        if (mode == "tile" || mode == "object" || mode == "image") {
+        if ("tile".equals(mode) || "object".equals(mode) || "image".equals(mode)) {
 
             if (sMinimap) {
                 if (txMinimap != null) {
@@ -8798,7 +8799,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         }
 
-        if (mode == "tile") {
+        if ("tile".equals(mode)) {
             if (is3DMode || isFull3DMode) {
                 if (is3DMoveMode) {
                     uidrawbutton(txmove, z.move != null ? z.move : "Move", gui.fps, 3);
@@ -8810,7 +8811,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             str1draw(ui, rotationName, gui.rotation);
             uidrawbutton(curspr == 0 ? txTypeTile : null, z.tile, gui.picker, 0);
 
-            if ((activetool == 3 && !assemblymode && !stamp) || kartu == "editor") {
+            if ((activetool == 3 && !assemblymode && !stamp) || "editor".equals(kartu)) {
                 uidrawbutton(txadd, z.macro, gui.addmacro, 2);
 
             }
@@ -8877,7 +8878,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
              * 
              */
 
-            if (autotiles.size() > 0 || kartu == "editor") {
+            if (autotiles.size() > 0 || "editor".equals(kartu)) {
                 uidrawbutton(txautopick, z.macrotiles, gui.autopicker, 2);
                 uidrawbutton(txplay, z.runmacro, gui.autotile, 2);
             } else if (!macroTerrain.getTerrains().isEmpty()) {
@@ -8933,7 +8934,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             uidrawbutton(pencilMode ? txpencil : txbrush, pencilMode ? z.pencil : z.brush, gui.tool5, 3);
             uidrawbutton(txundo, z.undo, gui.undo, 3.1f);
             uidrawbutton(txredo, z.redo, gui.redo, 3.1f);
-        } else if (mode == "object") {
+        } else if ("object".equals(mode)) {
             if (is3DMode || isFull3DMode) {
                 if (is3DMoveMode) {
                     uidrawbutton(txmove, z.move != null ? z.move : "Move", gui.fps, 3);
@@ -8968,7 +8969,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
             // str1draw(ui, magnetName, 85,100,10);
 
-        } else if (mode == "newpoly") {
+        } else if ("newpoly".equals(mode)) {
             uidrawbutton(txundo, z.undo, gui.undo, 3);
             str1draw(ui, z.ok, gui.tool);
         } else if (mode.equalsIgnoreCase("image")) {
@@ -8979,18 +8980,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         str1.getData().setScale(.4f);
         str1.setColor(1, 1, 0, 1);
-        if (mode == "tile" || mode == "object" || mode == "image") {
+        if ("tile".equals(mode) || "object".equals(mode) || "image".equals(mode)) {
             // str1drawlabel(ui, z.activelayer, gui.layer);
-            if (mode == "tile") {
+            if ("tile".equals(mode)) {
                 // str1drawbuttonlabel(ui, z.tilelayer, gui.layer);
-            } else if (mode == "object") {
+            } else if ("object".equals(mode)) {
                 // str1drawbuttonlabel(ui, z.objectgroup, gui.layer);
-            } else if (mode == "image") {
+            } else if ("image".equals(mode)) {
                 // str1drawbuttonlabel(ui, z.imagelayer, gui.layer);
             }
         }
 
-        if (mode == "tile") {
+        if ("tile".equals(mode)) {
             if (sShowFPS && !(is3DMode || isFull3DMode)) {
                 // FPS text is drawn near layer name
             }
@@ -9002,7 +9003,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         }
 
-        if (mode == "object") {
+        if ("object".equals(mode)) {
             // str1drawbuttonlabel(ui, z.activeobjecttool, gui.objectpickermid);
 
         }
@@ -9076,6 +9077,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         String root = face.getSafRoot();
         if (root == null || root.isEmpty()) return "";
         return root.endsWith("/") ? root.substring(0, root.length() - 1) : root;
+    }
+
+    /** Dispose the GPU textures and native pixmaps held by the current map.
+     *  Must run before the tileset/layer lists are cleared for a new map —
+     *  otherwise every load leaks the whole previous map (eventual OOM).
+     *  Each dispose is isolated: shared/already-disposed resources throw. */
+    private void disposeMapResources() {
+        for (tileset t : tilesets) {
+            try { if (t.getTexture() != null) t.getTexture().dispose(); } catch (Exception ignored) {}
+            try { if (t.getPixmap() != null) t.getPixmap().dispose(); } catch (Exception ignored) {}
+        }
+        for (layer l : layers) {
+            try { if (l.getTexture() != null) l.getTexture().dispose(); } catch (Exception ignored) {}
+            try { if (l.getPixmap() != null) l.getPixmap().dispose(); } catch (Exception ignored) {}
+        }
     }
 
     /** Local stand-in for handing a real java.io.File to libraries that need one.
@@ -9598,6 +9614,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         selLayer = 0;
         templastID = 1;
         seltset = 0;
+        disposeMapResources();
         layers.clear();
         properties.clear();
         tilesets.clear();
@@ -18117,12 +18134,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             try {
                 FileHandle f = Gdx.files.absolute(absolutePath);
                 if (f.exists()) {
+                    Texture oldTex = ts.getTexture();
+                    Pixmap oldPm = ts.getPixmap();
                     Pixmap pm = new Pixmap(f);
                     ts.setPixmap(pm);
-                    ts.setTexture(new Texture(pm));
+                    Texture tex = new Texture(pm);
                     if (ts.getTrans() != null) {
-                        ts.setTexture(chromaKey(ts.getTexture(), ts.getTrans()));
+                        Texture keyed = chromaKey(tex, ts.getTrans());
+                        tex.dispose();
+                        tex = keyed;
                     }
+                    ts.setTexture(tex);
+                    try { if (oldTex != null) oldTex.dispose(); } catch (Exception ignored) {}
+                    try { if (oldPm != null && oldPm != pm) oldPm.dispose(); } catch (Exception ignored) {}
                     // Update embedded_png if this tileset uses it
                     if (isEmbedded) {
                         updateEmbeddedPng(ts, f);
@@ -18147,14 +18171,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 try {
                     FileHandle f = Gdx.files.absolute(absolutePath);
                     if (f.exists()) {
+                        tileset ti = tilesets.get(i);
+                        Texture oldTex = ti.getTexture();
+                        Pixmap oldPm = ti.getPixmap();
                         Pixmap pm = new Pixmap(f);
-                        tilesets.get(i).setPixmap(pm);
-                        tilesets.get(i).setTexture(new Texture(pm));
-                        if (tilesets.get(i).getTrans() != null) {
-                            tilesets.get(i).setTexture(
-                                chromaKey(tilesets.get(i).getTexture(), tilesets.get(i).getTrans()));
+                        ti.setPixmap(pm);
+                        Texture tex = new Texture(pm);
+                        if (ti.getTrans() != null) {
+                            Texture keyed = chromaKey(tex, ti.getTrans());
+                            tex.dispose();
+                            tex = keyed;
                         }
-                        updateEmbeddedPng(tilesets.get(i), f);
+                        ti.setTexture(tex);
+                        try { if (oldTex != null) oldTex.dispose(); } catch (Exception ignored) {}
+                        try { if (oldPm != null && oldPm != pm) oldPm.dispose(); } catch (Exception ignored) {}
+                        updateEmbeddedPng(ti, f);
                     }
                 } catch (Exception e) {
                     ErrorBung(e, "errorlog.txt");
@@ -18447,7 +18478,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             @Override
             public void confirm(String input) {
-                if (input == "") {
+                if (input == null || input.isEmpty()) {
                     return;
                 }
 
@@ -18478,7 +18509,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             @Override
             public void confirm(String input) {
-                if (input == "")
+                if (input == null || input.isEmpty())
                     return;
                 try {
                     int s = Integer.parseInt(input);
@@ -18503,7 +18534,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             @Override
             public void confirm(String input) {
-                if (input == "") {
+                if (input == null || input.isEmpty()) {
                     return;
                 }
 
@@ -18583,7 +18614,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             @Override
             public void confirm(String input) {
-                if (input == "") {
+                if (input == null || input.isEmpty()) {
                     return;
                 }
 
@@ -18629,7 +18660,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             @Override
             public void confirm(String input) {
-                if (input == "") {
+                if (input == null || input.isEmpty()) {
                     return;
                 }
                 int dexo = llayerlist.getSelectedIndex();
@@ -18654,7 +18685,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             @Override
             public void confirm(String input) {
-                if (input == "") {
+                if (input == null || input.isEmpty()) {
                     input = "1";
                 }
                 try {
@@ -22586,7 +22617,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             @Override
             public void confirm(String input) {
-                if (input == "") {
+                if (input == null || input.isEmpty()) {
                     return;
                 }
                 int dexo = lframelist.getSelectedIndex();
@@ -22765,7 +22796,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (object.equals("OK")) {
                     try {
                         FileHandle file;
-                        exitDialog(exitpoint);
+                        // Opening a map returns to the editor; other pickers route
+                        // back to their caller table. exitDialog(exitpoint) here would
+                        // leave the menu stacked on top of the freshly-loaded map.
+                        if ("open".equalsIgnoreCase(dialog)) {
+                            exitDialog(null);
+                        } else {
+                            exitDialog(exitpoint);
+                        }
                         if (fileordir.equalsIgnoreCase("file")) {
                             file = getFile();
 
@@ -22800,7 +22838,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         @Override
                         public void confirm(String input) {
-                            if (input == "") {
+                            if (input == null || input.isEmpty()) {
                                 return;
                             }
                             FileHandle fl = Gdx.files.absolute(getDirectory().path() + "/" + input);
@@ -26385,6 +26423,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         try {
             // Clean up first
             loadingfile = true;
+            disposeMapResources();
             layers.clear();
             tilesets.clear();
             properties.clear();
@@ -26837,6 +26876,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void getRPDmap() {
         log("parsing rpd map...");
         loadingfile = true;
+        disposeMapResources();
         layers.clear();
         properties.clear();
         tilesets.clear();
@@ -27386,6 +27426,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             templastID = 1;
             seltset = 0;
 
+            disposeMapResources();
+
             layers.clear();
             properties.clear();
             tilesets.clear();
@@ -27740,6 +27782,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             templastID = 1;
             seltset = 0;
             // String owner = "";
+            disposeMapResources();
             layers.clear();
             tilesets.clear();
             properties.clear();
@@ -32836,11 +32879,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         velx = 0;
         vely = 0;
         pinchZoomActive = false;
-        if (kartu == "world") {
+        if ("world".equals(kartu)) {
             initialZoom = (is3DMode || isFull3DMode) ? cam3dZoom : cam.zoom;
             if (replaceRangePicking && beginReplaceRangeDrag(p1, p2))
                 return true;
-        } else if (kartu == "tile" || kartu == "pickanim") {
+        } else if ("tile".equals(kartu) || "pickanim".equals(kartu)) {
             initialZoom = tilecam.zoom;
             if (isActiveTerrainEditorPicker() && tilesets.size() > 0) {
                 Vector3 touch = new Vector3();
@@ -32927,7 +32970,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         touched = true;
                     }
                     log(touched + "");
-                    if (mode == "object")
+                    if ("object".equals(mode))
                         touched = true;
                     int num = 0;
 
@@ -32974,7 +33017,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         }
                     }
 
-                    if (mode == "tile" && touched && num >= 0) {
+                    if ("tile".equals(mode) && touched && num >= 0) {
 
                         if (activetool == 4) {
                             stampBrushAt(num);
@@ -32983,7 +33026,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             tapTile(num, false, true, false, curspr);
                         }
                         log(num + "");
-                    } else if (mode == "object") {
+                    } else if ("object".equals(mode)) {
                         final java.util.List<obj> foundObjs = new ArrayList<obj>();
                         Vector3 touchObj = new Vector3();
                         unprojectMain(touchObj.set(p1, p2, 0));
@@ -33033,7 +33076,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             }
                         }
 
-                    } else if (mode == "newpoly") {
+                    } else if ("newpoly".equals(mode)) {
                         tapNewPoly(num, ae, ab);
                     }
                     break;
@@ -34242,7 +34285,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Vector3 touch2 = new Vector3();
         uicam.unproject(touch2.set(p1, p2, 0));
         if (tapped(touch2, gui.pickerback)) {
-            if (kartu == "pickanim") {
+            if ("pickanim".equals(kartu)) {
                 switch (tilePicker) {
                     case "massprops":
                     case "tileprop":
@@ -34293,14 +34336,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         backToMap();
                         return true;
                 }
-            } else if (kartu == "tile") {
+            } else if ("tile".equals(kartu)) {
                 backToMap();
                 return true;
             }
         }
 
         if (tapped(touch2, gui.terrainundo)) {
-            if ((tilePicker == "terraineditor" || tilePicker == "macroterraineditor") && kartu == "pickanim") {
+            if (("terraineditor".equals(tilePicker) || "macroterraineditor".equals(tilePicker)) && "pickanim".equals(kartu)) {
                 tileset ts = getActiveTerrainEditorTileset();
                 if (ts != null)
                     undoTerrainEdit(ts);
@@ -34309,29 +34352,29 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         if (tapped(touch2, gui.terraindelete)) {
-            if ((tilePicker == "terraineditor" || tilePicker == "macroterraineditor") && kartu == "pickanim") {
+            if (("terraineditor".equals(tilePicker) || "macroterraineditor".equals(tilePicker)) && "pickanim".equals(kartu)) {
                 confirmDeleteSelectedTerrain();
                 return true;
             }
         }
 
         if (tapped(touch2, gui.terrainshape)) {
-            if ((tilePicker == "terraineditor" || tilePicker == "macroterraineditor") && kartu == "pickanim") {
+            if (("terraineditor".equals(tilePicker) || "macroterraineditor".equals(tilePicker)) && "pickanim".equals(kartu)) {
                 openTerrainShapeMenu();
                 return true;
             }
         }
 
         if (tapped(touch2, gui.newterrain)) {
-            if (tilePicker == "terraineditor" && kartu == "pickanim") {
+            if ("terraineditor".equals(tilePicker) && "pickanim".equals(kartu)) {
                 pickTile("newterrain");
                 return true;
             }
-            if (tilePicker == "macroterraineditor" && kartu == "pickanim") {
+            if ("macroterraineditor".equals(tilePicker) && "pickanim".equals(kartu)) {
                 pickTile("newmacroterrain");
                 return true;
             }
-            if (tilePicker == "massprops" && kartu == "pickanim") {
+            if ("massprops".equals(tilePicker) && "pickanim".equals(kartu)) {
                 for (int o = 0; o < massprops.size(); o++) {
                     int localId = tilesets.get(selTsetID).getTileIdAtGridIndex(o);
                     if (localId < 0)
@@ -34634,11 +34677,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 return true;
         } else {
             int seltset = 0;
-            if (kartu == "tile" || tilePicker == "newimgobj" || tilePicker == "props" || tilePicker == "rnda"
-                    || tilePicker == "rndb" || tilePicker == "repa" || tilePicker == "repb" || tilePicker == "gena"
-                    || tilePicker == "genb" || tilePicker == "sw1" || tilePicker == "sw2" || tilePicker == "sw3"
-                    || tilePicker == "sw4" || tilePicker == "sw5" || tilePicker == "sw6"
-                    || tilePicker == "newmacroterrain") {
+            if ("tile".equals(kartu) || "newimgobj".equals(tilePicker) || "props".equals(tilePicker) || "rnda".equals(tilePicker)
+                    || "rndb".equals(tilePicker) || "repa".equals(tilePicker) || "repb".equals(tilePicker) || "gena".equals(tilePicker)
+                    || "genb".equals(tilePicker) || "sw1".equals(tilePicker) || "sw2".equals(tilePicker) || "sw3".equals(tilePicker)
+                    || "sw4".equals(tilePicker) || "sw5".equals(tilePicker) || "sw6".equals(tilePicker)
+                    || "newmacroterrain".equals(tilePicker)) {
                 seltset = this.seltset;
             } else {
                 seltset = this.selTsetID;
@@ -34653,7 +34696,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         // Pixel Editor: swatch tap → copy to palette + map; palette tap → map with
         // palette GID
-        if (kartu == "tile" && isPixelArtMap() && (isPixelArtSwatchView() || isPixelArtPaletteView())) {
+        if ("tile".equals(kartu) && isPixelArtMap() && (isPixelArtSwatchView() || isPixelArtPaletteView())) {
             int tileIdx = pixelArtTileAt(ts, touch.x, touch.y);
             if (tileIdx >= 0) {
                 if (isPixelArtSwatchView()) {
@@ -34681,7 +34724,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             return true;
         }
 
-        if (kartu == "tile") {
+        if ("tile".equals(kartu)) {
             if (!issettingtile && pickAuto) {
                 int heit = ts.getTerrains().size();
                 if (touch.y < ts.getTileheight() && touch.y > -ts.getTileheight() * heit + ts.getTileheight()
@@ -34732,7 +34775,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             Integer num = ts.getFirstgid() + localPickId;
             Integer numis = gridIdx;
 
-            if (kartu == "tile") {
+            if ("tile".equals(kartu)) {
                 if (!issettingtile) {
                     curspr = num;
                     curtset = seltset;
@@ -37798,7 +37841,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             @Override
             public void confirm(String input) {
-                if (input == "") {
+                if (input == null || input.isEmpty()) {
                     return;
                 }
 
@@ -38502,7 +38545,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         if (tapped(touch2, gui.layerpick)) {
-            if (mode == "tile" || mode == "object" || mode == "image") {
+            if ("tile".equals(mode) || "object".equals(mode) || "image".equals(mode)) {
                 if (!softcue("layerpick") && lockUI)
                     return true;
                 showLayerManager();
@@ -38562,7 +38605,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         if (tapped(touch2, gui.minimap) && sMinimap) {
-            if (mode == "tile" || mode == "object" || mode == "image") {
+            if ("tile".equals(mode) || "object".equals(mode) || "image".equals(mode)) {
                 cacheTiles();
                 // updateMinimap(); new minimap, worse.
                 Vector3 ve = new Vector3();
@@ -38630,7 +38673,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (autotiles.size() > 0) {
             // autotile
             if (tapped(touch2, gui.autotile)) {
-                if (mode == "tile") {
+                if ("tile".equals(mode)) {
                     loadList("macro");
                     cacheTiles();
                     return true;
@@ -38641,7 +38684,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (autotiles.size() > 0 || !macroTerrain.getTerrains().isEmpty()) {
             // select auto tile / macro terrain brush
             if (tapped(touch2, gui.autopicker)) {
-                if (mode == "tile") {
+                if ("tile".equals(mode)) {
                     if (!softcue("autopick") && lockUI)
                         return true;
                     loadAutotileList();
@@ -38650,7 +38693,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             }
         }
-        if (mode == "tile") {
+        if ("tile".equals(mode)) {
 
             if (activetool == 3 && !stamp && !assemblymode) {
                 if (tapped(touch2, gui.addmacro)) {
@@ -38830,7 +38873,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 assemblymode = false;
                 return true;
             }
-        } else if (mode == "object") {
+        } else if ("object".equals(mode)) {
             if (tapped(touch2, gui.objtool1)) {
                 if (!cue("objtool1") && lockUI)
                     return true;
@@ -38906,7 +38949,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         // tool selector (btm right)
         if (tapped(touch2, gui.lock)) {
 
-            if (mode == "object") {
+            if ("object".equals(mode)) {
                 magnet += 1;
                 if (magnet >= 2)
                     magnet = 0;
@@ -38926,7 +38969,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         if (tapped(touch2, gui.tool)) {
 
-            if (mode == "newpoly") {
+            if ("newpoly".equals(mode)) {
                 if (newobject.getPointsSize() == 1) {
                     newobject.setShape("point");
                 }
@@ -39054,7 +39097,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             }
 
-            if (mode == "newpoly") {
+            if ("newpoly".equals(mode)) {
                 newobject.undoPoint();
             }
 
@@ -39064,7 +39107,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         // redo
         if (tapped(touch2, gui.redo)) {
 
-            if (mode == "tile") {
+            if ("tile".equals(mode)) {
                 if (!cue("redo") && lockUI)
                     return true;
                 if (redolayer.size() > 0) {
@@ -39211,7 +39254,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         // select tile button
         if (tapped(touch2, gui.picker)) {
-            if (mode == "tile") {
+            if ("tile".equals(mode)) {
                 if (!cue("tilepick") && lockUI)
                     return true;
                 adjustPickAuto();
@@ -39229,7 +39272,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         if (tapped(touch2, gui.objectpickermid)) {
-            if (mode == "image") {
+            if ("image".equals(mode)) {
                 fillImageLayerData();
                 gotoStage(tImageLayer);
 
@@ -39238,7 +39281,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
         // object tool selector
         if (tapped(touch2, gui.objectpickerleft)) {
-            if (mode == "object") {
+            if ("object".equals(mode)) {
                 activeobjtool -= 1;
                 if (activeobjtool < 0)
                     activeobjtool = 8;
@@ -39280,7 +39323,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         if (tapped(touch2, gui.objectpickerright)) {
-            if (mode == "object") {
+            if ("object".equals(mode)) {
 
                 if (touch2.x > 240 - 30)
                     activeobjtool += 1;
@@ -39324,7 +39367,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
         // rotation
         if (tapped(touch2, gui.rotation)) {
-            if (mode == "tile") {
+            if ("tile".equals(mode)) {
 
                 rotate += 1;
                 if (rotate == 8) {
@@ -39364,7 +39407,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         if (tapped(touch2, gui.menu)) {
-            if (mode == "object" || mode == "tile" || mode == "image") {
+            if ("object".equals(mode) || "tile".equals(mode) || "image".equals(mode)) {
                 setMenuMap();
                 gotoStage(tMenu);
                 cue("menu");
@@ -39375,7 +39418,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         if (tapped(touch2, gui.save)) {
-            if (mode == "object" || mode == "tile" || mode == "image") {
+            if ("object".equals(mode) || "tile".equals(mode) || "image".equals(mode)) {
 
                 try {
 
@@ -39402,7 +39445,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         if (tapped(touch2, gui.map)) {
-            if (mode == "object" || mode == "tile" || mode == "image") {
+            if ("object".equals(mode) || "tile".equals(mode) || "image".equals(mode)) {
                 setToolsMap();
                 gotoStage(ttools);
                 cue("map");
@@ -39505,7 +39548,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private boolean tapEditorMenu(Vector3 touch2) {
-        if (mode == "pick") {
+        if ("pick".equals(mode)) {
 
             if (tapped(touch2, gui.tilesetsmid)) {
                 editGUI(gui.tilesetsmid);
@@ -39661,7 +39704,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             // if (autotiles.size() > 0) {
             // autotile
             if (tapped(touch2, gui.autotile)) {
-                if (mode == "tile") {
+                if ("tile".equals(mode)) {
                     editGUI(gui.autotile);
                     return true;
 
@@ -39670,13 +39713,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             // select auto tile
             if (tapped(touch2, gui.autopicker)) {
-                if (mode == "tile") {
+                if ("tile".equals(mode)) {
                     editGUI(gui.autopicker);
                     return true;
                 }
             }
             // }
-            if (mode == "tile") {
+            if ("tile".equals(mode)) {
                 if (tapped(touch2, gui.tool1)) {
                     editGUI(gui.tool1);
                     return true;
@@ -39702,7 +39745,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     return true;
 
                 }
-            } else if (mode == "object") {
+            } else if ("object".equals(mode)) {
                 if (tapped(touch2, gui.objtool1)) {
                     editGUI(gui.objtool1);
                     return true;
@@ -39733,7 +39776,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             // tool selector (btm right)
             if (tapped(touch2, gui.lock)) {
 
-                if (mode == "object") {
+                if ("object".equals(mode)) {
                     editGUI(gui.lock);
                     return true;
 
@@ -39742,7 +39785,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             if (tapped(touch2, gui.tool)) {
 
-                if (mode == "newpoly") {
+                if ("newpoly".equals(mode)) {
                     editGUI(gui.tool);
                     return true;
 
@@ -39753,11 +39796,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             // undo
             if (tapped(touch2, gui.undo)) {
 
-                if (mode == "tile") {
+                if ("tile".equals(mode)) {
                     editGUI(gui.undo);
                     return true;
                 }
-                if (mode == "newpoly") {
+                if ("newpoly".equals(mode)) {
                     editGUI(gui.undo);
                     return true;
                 }
@@ -39767,7 +39810,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             // redo
             if (tapped(touch2, gui.redo)) {
 
-                if (mode == "tile") {
+                if ("tile".equals(mode)) {
                     editGUI(gui.redo);
                     return true;
                 }
@@ -39782,7 +39825,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             // select tile button
             if (tapped(touch2, gui.picker)) {
-                if (mode == "tile") {
+                if ("tile".equals(mode)) {
                     editGUI(gui.picker);
                     return true;
                 }
@@ -39790,7 +39833,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             if (tapped(touch2, gui.objectpickermid)) {
-                if (mode == "image" || mode == "object") {
+                if ("image".equals(mode) || "object".equals(mode)) {
                     editGUI(gui.objectpickermid);
                     return true;
                 }
@@ -39798,21 +39841,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             // object tool selector
             if (tapped(touch2, gui.objectpickerleft)) {
-                if (mode == "object") {
+                if ("object".equals(mode)) {
                     editGUI(gui.objectpickerleft);
                     return true;
                 }
             }
 
             if (tapped(touch2, gui.objectpickerright)) {
-                if (mode == "object") {
+                if ("object".equals(mode)) {
                     editGUI(gui.objectpickerright);
                     return true;
                 }
             }
             // rotation
             if (tapped(touch2, gui.rotation)) {
-                if (mode == "tile") {
+                if ("tile".equals(mode)) {
 
                     editGUI(gui.rotation);
                     return true;
@@ -39821,7 +39864,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             if (tapped(touch2, gui.menu)) {
-                if (mode == "object" || mode == "tile" || mode == "image") {
+                if ("object".equals(mode) || "tile".equals(mode) || "image".equals(mode)) {
                     editGUI(gui.menu);
                     return true;
 
@@ -39830,7 +39873,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             if (tapped(touch2, gui.save)) {
-                if (mode == "object" || mode == "tile" || mode == "image") {
+                if ("object".equals(mode) || "tile".equals(mode) || "image".equals(mode)) {
                     editGUI(gui.save);
                     return true;
 
@@ -39838,7 +39881,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             if (tapped(touch2, gui.map)) {
-                if (mode == "object" || mode == "tile" || mode == "image") {
+                if ("object".equals(mode) || "tile".equals(mode) || "image".equals(mode)) {
                     editGUI(gui.map);
                     return true;
                 }
@@ -39846,7 +39889,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             if (tapped(touch2, gui.fps)) {
-                if (mode == "object" || mode == "tile" || mode == "image") {
+                if ("object".equals(mode) || "tile".equals(mode) || "image".equals(mode)) {
                     editGUI(gui.fps);
                     return true;
                 }
@@ -39854,7 +39897,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
 
             if (tapped(touch2, gui.status)) {
-                if (mode == "object" || mode == "tile" || mode == "image") {
+                if ("object".equals(mode) || "tile".equals(mode) || "image".equals(mode)) {
                     editGUI(gui.status);
                     return true;
                 }
@@ -40757,10 +40800,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Vector3 touch3 = new Vector3();
         tilecam.unproject(touch3.set(p1, p2, 0));
 
-        if (kartu == "world") {
+        if ("world".equals(kartu)) {
             // autotile
             if (tapped(touch2, gui.autotile) && autotiles.size() > 0) {
-                if (mode == "tile" || mode == "object") {
+                if ("tile".equals(mode) || "object".equals(mode)) {
                     // msgbox("Longpress to run Auto tiles");
                     if (!softcue("refresh") && lockUI)
                         return true;
@@ -40769,7 +40812,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     return true;
                 }
             }
-            if (mode == "object" || mode == "tile" || mode == "image") {
+            if ("object".equals(mode) || "tile".equals(mode) || "image".equals(mode)) {
 
                 if (assemblymode && assemblynum != -1) {
                     assemblying = true;
@@ -40800,7 +40843,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     return true;
                 }
 
-                if (swatches && mode == "tile") {
+                if (swatches && "tile".equals(mode)) {
                     if (tapped(touch2, gui.sw1)) {
                         removeSW(swatchValue.get(0), "sw1");
                         swatchValue.set(0, 0);
@@ -40899,7 +40942,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             }
 
-            if (mode == "tile") {
+            if ("tile".equals(mode)) {
 
                 int ae = (int) touch.x;
                 int ab = (int) touch.y;
@@ -41018,7 +41061,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     // now I have the clipboard layer, just put it on tap...
                 }
 
-            } else if (mode == "object") {
+            } else if ("object".equals(mode)) {
                 if (tapped(touch2, gui.layer)) {
                     loadList("obj");
                     return true;
@@ -41063,7 +41106,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 longpressobj(p1, p2);
                 return true;
             }
-        } else if (kartu == "tile") {
+        } else if ("tile".equals(kartu)) {
             // No tilesets loaded: only Back/Tilesets exist. Long-pressing anywhere
             // else (e.g. the orphaned button regions) must not fall through to
             // tilesets.get(seltset) below, which would crash on an empty list.
@@ -41100,7 +41143,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 endSelect = startSelect;
                 initialSelect = startSelect;
             }
-        } else if (kartu == "pickanim") {
+        } else if ("pickanim".equals(kartu)) {
             switch (tilePicker) {
                 case "massprops":
                     stamp = true;
@@ -42184,7 +42227,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         // status(p1+"/"+p2+"/"+p3+"/"+p4,5);
 
         // this is for tile pickers
-        if (stamp && (kartu == "tile" || (kartu == "pickanim" && tilePicker == "massprops"))) {
+        if (stamp && ("tile".equals(kartu) || ("pickanim".equals(kartu) && "massprops".equals(tilePicker)))) {
             Vector3 touch = new Vector3();
             tilecam.unproject(touch.set(p1, p2, 0));
             int ae = (int) touch.x;
@@ -42197,7 +42240,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             int inity = 0;
             Integer num = -1;
             int usedtset;
-            if (kartu == "tile") {
+            if ("tile".equals(kartu)) {
                 usedtset = seltset;
             } else {
                 usedtset = selTsetID;
@@ -42344,7 +42387,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     tileset t = tilesets.get(seltset);
                     int scrollTw = t.getTilewidth();
                     int scrollTh = t.getTileheight();
-                    if (kartu != "tile") {
+                    if (!"tile".equals(kartu)) {
                         switch (tilePicker) {
                             case "terraineditor":
                             case "macroterraineditor":
@@ -42417,13 +42460,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         if (loadingfile)
             return true;
-        if (kartu == "game")
+        if ("game".equals(kartu))
             return true;
         // stop moving screen
         drag = false;
 
         // after finishing stamp selection, go to map
-        if (stamp && kartu == "tile") {
+        if (stamp && "tile".equals(kartu)) {
             if (!issettingtile) {
                 currentShape = ShapeTool.RECTANGLE;
                 curspr = (int) tilesets.get(seltset).getGidAtGridIndex(startSelect);
@@ -42457,7 +42500,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         // mass image properties, I am not dealing with this now.
-        if (stamp && kartu == "pickanim" && tilePicker == "massprops") {
+        if (stamp && "pickanim".equals(kartu) && "massprops".equals(tilePicker)) {
             stamp = false;
             tileset ts = tilesets.get(selTsetID);
             int widih = endSelect % tilesets.get(selTsetID).getWidth()
@@ -42816,7 +42859,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         prevy = (p3.y + p4.y) / 2;
         // pan((p1.x+p2.x)/2,(p1.y+p2.y)/2,((p1.x+p2.x)/2)/((p3.x+p4.x)/2),((p1.y+p2.y)/2)/((p3.y+p4.y)/2));
         // zooming=true;
-        if (kartu == "world") {
+        if ("world".equals(kartu)) {
             if (is3DMode || isFull3DMode) {
                 cam3dZoom = initialZoom * pa1 / pa2;
                 if (cam3dZoom > 10.0f)
@@ -42835,7 +42878,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
                 cam.update();
             }
-        } else if (kartu == "tile" || kartu == "pickanim") {
+        } else if ("tile".equals(kartu) || "pickanim".equals(kartu)) {
             tilecam.zoom = initialZoom * pa1 / pa2;
             float minZoom = tilePickerMinZoom();
 

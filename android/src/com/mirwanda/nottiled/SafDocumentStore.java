@@ -410,8 +410,10 @@ public class SafDocumentStore {
 			Uri newFile = DocumentsContract.createDocument(cr(), parentUri, mimeType, fileName);
 			if (newFile == null) return null;
 			// Some providers still rewrite the extension; rename back if so.
+			// renameDocument needs API 24; below that the rewritten name stays.
 			String actualName = queryDisplayName(newFile);
-			if (actualName != null && !actualName.equals(fileName)) {
+			if (actualName != null && !actualName.equals(fileName)
+					&& android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
 				try {
 					Uri renamed = DocumentsContract.renameDocument(cr(), newFile, fileName);
 					if (renamed != null) newFile = renamed;
