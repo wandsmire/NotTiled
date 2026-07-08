@@ -332,6 +332,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     int Tsw = 32, Tsh = 32, Tw = 5, Th = 5;
     public int nextlayerid = 1;
     public boolean infinite = false;
+    /** True when the map has edits newer than the last save/load — guards exit. */
+    private boolean mapDirty = false;
     // Compatibility guard + infinite-map (chunk) stitching — see TmxCompatScan.
     private TmxCompatScan compatScan;
     private boolean chunkStitchActive;
@@ -2965,22 +2967,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         case "tile":
                         case "object":
                             if (!stamp & !asked & !assemblymode) {
-                                Dialog dialog = new Dialog(z.confirmation, skin, "dialog") {
-                                    public void result(Object obj) {
-                                        System.out.println("result " + obj);
-                                        if ((boolean) obj)
-                                            Gdx.app.exit();
-                                        Gdx.input.setInputProcessor(im);
-                                        backToMap();
-                                        asked = false;
-                                    }
-                                };
-                                Gdx.input.setInputProcessor(stage);
-                                asked = true;
-                                dialog.text(z.quit);
-                                dialog.button(z.yes, true); // sends "true" as the result
-                                dialog.button(z.no, false); // sends "false" as the result
-                                dialog.show(stage);
+                                confirmExit();
                             }
                             assemblymode = false;
                             roll = false;
@@ -10840,7 +10827,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bExit.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                Gdx.app.exit();
+                // Never kill the app over unsaved work without asking.
+                confirmExit();
             }
         });
 
@@ -11387,6 +11375,42 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             tMenu.add(bBack);
 
         }
+    }
+
+    /** Exit with an unsaved-changes check — shared by the BACK key and menu Exit. */
+    private void confirmExit() {
+        Gdx.input.setInputProcessor(stage);
+        asked = true;
+        Dialog dialog = new Dialog(z.confirmation, skin, "dialog") {
+            @Override
+            public void result(Object obj) {
+                if ("save".equals(obj)) {
+                    saveMapBlocking(curdir + "/" + curfile);
+                    Gdx.app.exit();
+                    return;
+                }
+                if ("discard".equals(obj)) {
+                    Gdx.app.exit();
+                    return;
+                }
+                Gdx.input.setInputProcessor(im);
+                backToMap();
+                asked = false;
+            }
+        };
+        if (mapDirty) {
+            Label lab = new Label("You have unsaved changes.", skin);
+            lab.setWrap(true);
+            dialog.getContentTable().add(lab).width(btnx).pad(10).row();
+            dialog.button(z.save != null ? z.save : "Save", "save");
+            dialog.button("Discard", "discard");
+            dialog.button(z.cancel != null ? z.cancel : "Cancel", "cancel");
+        } else {
+            dialog.text(z.quit);
+            dialog.button(z.yes, "discard");
+            dialog.button(z.no, "cancel");
+        }
+        dialog.show(stage);
     }
 
     private void msgbox(String msg) {
@@ -16254,6 +16278,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 lh.setFollower(!first);
                 first = false;
                 undolayer.add(lh);
+                mapDirty = true;
                 redolayer.clear();
             }
         }
@@ -20712,9 +20737,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Table ct = dlg.getContentTable();
         ct.pad(20);
         final float bw = getDialogContentWidth();
-        ct.add(new Label("Save location", skin)).width(bw).pad(10).row();
+        ct.add(new Label("Where should your map be saved?", skin)).width(bw).pad(10).row();
+        // Plain-language consequences: "Internal Storage" reads as "my phone" to
+        // most users, who then can't find their file in any file manager.
         TextButton bDevice = new TextButton(
-                z.browseDevice != null ? z.browseDevice : "Browse Device / Cloud", skin);
+                (z.browseDevice != null ? z.browseDevice : "Browse Device / Cloud")
+                        + "\nRecommended - visible in your Files app",
+                skin);
         bDevice.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -20722,8 +20751,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 grantFolderThenFinishNewFile();
             }
         });
-        ct.add(bDevice).width(bw).height(btny).pad(5).row();
-        TextButton bInternal = new TextButton("Internal Storage", skin);
+        ct.add(bDevice).width(bw).height(btny * 1.6f).pad(5).row();
+        TextButton bInternal = new TextButton(
+                "App storage\nHidden from other apps - deleted if you uninstall", skin);
         bInternal.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -20731,7 +20761,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 finishInternalNewFile();
             }
         });
-        ct.add(bInternal).width(bw).height(btny).pad(5).row();
+        ct.add(bInternal).width(bw).height(btny * 1.6f).pad(5).row();
         dlg.show(stage);
     }
 
@@ -20785,6 +20815,29 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
         if (toDevice) {
             saveMap(curdir + "/" + curfile); // initial save so the file appears there now
+        }
+        mapDirty = false;
+        if (tilesets.isEmpty()) {
+            // An empty map is a dead end for a beginner: no tiles, silent taps.
+            // Offer the way forward immediately.
+            Gdx.input.setInputProcessor(stage);
+            Dialog dlg = new Dialog("", skin, "dialog") {
+                @Override
+                protected void result(Object o) {
+                    Gdx.input.setInputProcessor(im);
+                    if (Boolean.TRUE.equals(o)) {
+                        showAddTilesetDialog();
+                    }
+                }
+            };
+            Label lab = new Label(
+                    "This map has no tileset yet — you need one before you can draw.",
+                    skin);
+            lab.setWrap(true);
+            dlg.getContentTable().add(lab).width(btnx).pad(10).row();
+            dlg.button(z.addnew != null ? z.addnew + " " + z.tileset : "Add tileset", true);
+            dlg.button("Later", false);
+            dlg.show(stage);
         }
     }
 
@@ -25320,6 +25373,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void onSaveCommitted(FileHandle actualFile) {
+        mapDirty = false;
         recents.addrecent(actualFile.path(), actualFile.name(), "legacy");
         saveRecents();
         prefs.putString("lof", actualFile.path());
@@ -28619,6 +28673,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 event = myParser.next();
             }
 
+            // A fresh load is by definition unmodified.
+            mapDirty = false;
+
             // Stitched infinite maps are finite in memory from here on: image
             // layers move into the shifted origin space, and the flag is cleared
             // so every save/export path writes a consistent fixed-size map.
@@ -28654,7 +28711,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             kartu = "world";
             mode = "tile";
-            status(errors, 10);
+            if (filepath.endsWith("NotTiled/sample/island.tmx") && errors.trim().isEmpty()) {
+                // First-launch context: users assume the bundled sample is their
+                // own project unless told otherwise.
+                status("Sample map - experiment freely! Create your own via Menu > New File.", 8);
+            } else {
+                status(errors, 10);
+            }
 
         } catch (Exception e) {
             restoreViewAfterLoad = false;
@@ -28678,6 +28741,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         initPixelArtTilesets();
         updateObjectCollision();
         resetCaches();
+        // A ready brush: without a selected tile the first canvas taps do
+        // nothing, which first-time users read as "the app is broken".
+        if (curspr == 0 && !tilesets.isEmpty()) {
+            seltset = 0;
+            curspr = tilesets.get(0).getFirstgid();
+        }
         log("Size : " + xtree.toString());
         if (!keepView)
             clampSelLayerToSelectable();
@@ -29850,6 +29919,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             layerhistory lh = new layerhistory(!first, snap.layer, entry.getKey(), snap.fromStr, snap.toStr,
                     snap.fromTset, snap.toTset, snap.fromTile, snap.toTile);
             undolayer.add(lh);
+            mapDirty = true;
             uploaddata(lh);
             first = false;
         }
@@ -36051,6 +36121,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         } else if (oldStr != str) {
             layerhistory lh2 = new layerhistory(follower, lay, num, oldStr, str, oldTset, tsetID, oldTile, tileID);
             undolayer.add(lh2);
+            mapDirty = true;
             uploaddata(lh2);
             redolayer.clear();
             follower = true;
@@ -37404,6 +37475,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             h.newtile = frmtl;
         }
         undolayer.add(h);
+        mapDirty = true;
         redolayer.clear();
         layers.get(lay).getStr().set(loc, h.getTo());
         layers.get(lay).getTset().set(loc, h.getNewtset());
@@ -38754,11 +38826,34 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     rotating = !rotating;
                     return true;
                 } else if (p.getName().equalsIgnoreCase("tag") && p.getValue().equalsIgnoreCase("RW")) {
-                    copyToRW();
+                    // Play on an RW map exports a mod — that surprises anyone who
+                    // expected "play". Say what will happen before doing it.
+                    Gdx.input.setInputProcessor(stage);
+                    Dialog dlg = new Dialog(z.confirmation, skin, "dialog") {
+                        @Override
+                        protected void result(Object o) {
+                            Gdx.input.setInputProcessor(im);
+                            backToMap();
+                            if (Boolean.TRUE.equals(o))
+                                copyToRW();
+                        }
+                    };
+                    Label lab = new Label(
+                            "This is a Rusted Warfare map. Play exports it as a .rwmod file that you open inside the Rusted Warfare game. Continue?",
+                            skin);
+                    lab.setWrap(true);
+                    dlg.getContentTable().add(lab).width(btnx).pad(10).row();
+                    dlg.button(z.yes, true);
+                    dlg.button(z.no, false);
+                    dlg.show(stage);
                     return true;
                 }
 
             }
+            // No playable map type matched — explain instead of silently ignoring
+            // the most inviting button on the screen.
+            msgbox("Play mode runs maps made from game templates (Platformer, RPG, Music...).\n\nThis map isn't one, so there is nothing to run yet. Try Menu > New File > More templates to create a playable map.");
+            return true;
         }
 
         if (tapped(touch2, gui.minimap) && sMinimap) {
@@ -39296,6 +39391,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         // status(lh.getTset()+"",5);
                         undolayer.add(lh);
+                        mapDirty = true;
                         uploaddata(lh);
                         histcount++;
                         // redolayer.remove(lh);

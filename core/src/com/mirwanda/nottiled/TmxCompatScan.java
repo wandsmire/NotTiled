@@ -109,10 +109,10 @@ public class TmxCompatScan {
         if (infinite && stitchable()) out.add("Infinite map (opened as a fixed-size map)");
         if (infinite && tooLarge) out.add("Infinite map larger than supported bounds (tile data NOT loaded)");
         if (infinite && xmlChunks) out.add("XML-encoded infinite chunks (tile data NOT loaded)");
-        if (wangsets) out.add("Terrain sets (wang sets)");
-        if (templates) out.add("Object templates");
+        if (wangsets) out.add("Automatic terrain brushes (Tiled \"wang sets\")");
+        if (templates) out.add("Reusable object templates");
         if (tileoffset) out.add("Tileset drawing offset");
-        if (transformations) out.add("Tileset transformation flags");
+        if (transformations) out.add("Tileset flip/rotate settings");
         if (backgroundcolor) out.add("Map background color");
         return out;
     }
