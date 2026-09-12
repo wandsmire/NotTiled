@@ -518,7 +518,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private Texture fmTxBack;
     private Texture fmTxFolder;
     private Texture fmTxFile;
-    ImageButton bcc;
+    TextButton bcc;
     TextButton btiled, bCollaboration, bPatreon2, bTools, bBackground, bMacroTerrainEditor;
     TextButton bTutorOK, bTutorBack, bPatreon, bExporter, bImporter, credito;
     Table tMap, tLayerMgmt, tTileMgmt, tObjMgmt, tFrameMgmt, tPropsMgmt, tPreference, tProperties, tTsetMgmt, tAutoMgmt,
@@ -14775,21 +14775,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         });
         TextButton tLicenseBack = new TextButton(z.back, skin);
         tLicenseBack.addListener(listBack);
-        Texture myTexture = new Texture(Gdx.files.internal("cc.png"));
-        TextureRegion myTextureRegion = new TextureRegion(myTexture);
-        TextureRegionDrawable myTexRegionDrawable = new TextureRegionDrawable(myTextureRegion);
-        bcc = new ImageButton(myTexRegionDrawable); // Set the button up
+        bcc = new TextButton("GNU GPL v3.0", skin);
 
         bcc.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                Gdx.net.openURI("https://creativecommons.org/licenses/by-sa/3.0/");
+                Gdx.net.openURI("https://www.gnu.org/licenses/gpl-3.0.html");
             }
         });
         // safe
         Label title = new Label(z.nottiledlicense != null ? z.nottiledlicense : "NotTiled License", skin);
         Label label = new Label(
-                "NotTiled is licensed under a Creative Commons Attribution-ShareAlike 3.0 Unported License.", skin);
+                "NotTiled is licensed under the GNU General Public License v3.0 (or later).", skin);
         Label label2 = new Label(z.nottiledbasedon != null ? z.nottiledbasedon : "NotTiled is based on Tiled by Thorbjorn Lindeijer.", skin);
         label.setWrap(true);
         label.setAlignment(com.badlogic.gdx.utils.Align.left);
