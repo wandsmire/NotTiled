@@ -1,6 +1,6 @@
 # NotTiled
 
-[![License: CC BY-SA 4.0](https://img.shields.io/badge/License-CC%20BY--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-sa/4.0/)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
 [![Latest Release](https://img.shields.io/badge/release-v2.1.1-blue.svg)]()
 
 NotTiled is a powerful, open-source 2D and 3D map editor built for gamers and developers. Inspired by the popular Tiled Map Editor, NotTiled is optimized from the ground up for touch devices and mobile screens, enabling you to build, customize, and prototype game maps directly from your Android device or desktop.
@@ -45,6 +45,8 @@ Or open the project in **Android Studio** and click **Run**.
 
 ## 📄 License
 
-This project is licensed under the **Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0)**. 
+This project is licensed under the **GNU General Public License v3.0 (or later)**.
 
-To view a copy of this license, visit [Creative Commons BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) or see the [LICENSE.md](LICENSE.md) file.
+To view a copy of this license, visit [gnu.org/licenses/gpl-3.0.html](https://www.gnu.org/licenses/gpl-3.0.html) or see the [LICENSE.md](LICENSE.md) file.
+
+Versions prior to this relicensing were distributed under CC BY-SA 4.0; that license still applies to those earlier releases.
