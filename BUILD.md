@@ -39,6 +39,9 @@ The **New file** picker (“What do you want to create?”) is configured in **`
 
 Run these Gradle commands from the root directory of the project.
 
+### Day-to-day debug builds
+`./build_debug.sh` builds only the Play Store debug APK, incrementally (no `clean`). Use `./build_debug.sh --all` to also build the Standalone debug APK. Run `./gradlew clean` by hand if a build ever looks stale.
+
 ### Build APK (Android Package)
 - **Debug APK** (for testing on device/emulator):
   ```bash

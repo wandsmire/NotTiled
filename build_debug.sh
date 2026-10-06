@@ -5,7 +5,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 source "$SCRIPT_DIR/build_env.sh"
 
-echo "Building Debug APKs (Play Store & Standalone)..."
+# Default: Play Store debug only. --all also builds the standalone flavor.
+BUILD_ALL=false
+[ "$1" = "--all" ] && BUILD_ALL=true
+
+if [ "$BUILD_ALL" = true ]; then
+    echo "Building Debug APKs (Play Store & Standalone)..."
+    GRADLE_TASK=":android:assembleDebug"
+else
+    echo "Building Debug APK (Play Store)... use --all to also build Standalone."
+    GRADLE_TASK=":android:assemblePlayStoreDebug"
+fi
 chmod +x ./gradlew
 
 # Run python script to stamp icons
@@ -28,7 +38,7 @@ if [ ! -f "newfile-kinds/newfile-kinds.json" ]; then
 fi
 cp newfile-kinds/newfile-kinds.json android/assets/newfile-kinds.json
 
-if ./gradlew clean :android:assembleDebug; then
+if ./gradlew $GRADLE_TASK; then
     mkdir -p out
     VERSION=$(grep "versionName" android/build.gradle | head -n1 | cut -d'"' -f2)
     if [ -z "$VERSION" ]; then
@@ -51,6 +61,7 @@ if ./gradlew clean :android:assembleDebug; then
     fi
 
     # 2. Copy Standalone Debug APK
+    if [ "$BUILD_ALL" = true ]; then
     TYPE_SA="standalone-debug"
     SA_FILE="NotTiled_${VERSION}_${TYPE_SA}_${TIMESTAMP}.apk"
     
@@ -62,11 +73,12 @@ if ./gradlew clean :android:assembleDebug; then
             cp "$SRC_SA" "out/${SA_FILE}"
         fi
     fi
+    fi
 
     echo "--------------------------------------------------"
     echo "Build complete! Debug APKs copied to 'out/':"
     echo "  Play Store: out/${PS_FILE}"
-    echo "  Standalone: out/${SA_FILE}"
+    [ "$BUILD_ALL" = true ] && echo "  Standalone: out/${SA_FILE}"
     echo "--------------------------------------------------"
 
     # Keep only the latest Play Store and Standalone debug APKs in out/
@@ -77,9 +89,11 @@ if ./gradlew clean :android:assembleDebug; then
             *) [ "$f" = "out/${PS_FILE}" ] || rm -f "$f" ;;
         esac
     done
-    for f in out/NotTiled_*_standalone-debug_*.apk; do
-        [ "$f" = "out/${SA_FILE}" ] || rm -f "$f"
-    done
+    if [ "$BUILD_ALL" = true ]; then
+        for f in out/NotTiled_*_standalone-debug_*.apk; do
+            [ "$f" = "out/${SA_FILE}" ] || rm -f "$f"
+        done
+    fi
     shopt -u nullglob
 
 else
