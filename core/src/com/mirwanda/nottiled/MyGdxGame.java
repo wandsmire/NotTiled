@@ -5718,6 +5718,26 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         isupdatingcache = true;
     }
 
+    // libGDX caps indexed SpriteCaches at 8191 sprites; dense multi-layer chunks fall back to non-indexed (no cap).
+    private SpriteCache newChunkCache(int intex, int intey) {
+        int x0 = intex * widd, x1 = Math.min(x0 + widd, Tw);
+        int y0 = intey * heii, y1 = Math.min(y0 + heii, Th);
+        int count = 0;
+        for (layer l : layers) {
+            if (l.getType() != layer.Type.TILE) continue;
+            java.util.List<Long> str = l.getStr();
+            for (int y = y0; y < y1; y++) {
+                for (int x = x0; x < x1; x++) {
+                    int p = y * Tw + x;
+                    if (p < str.size() && str.get(p) != 0) count++;
+                }
+            }
+        }
+        if (count <= buffersz)
+            return new SpriteCache(buffersz, true);
+        return new SpriteCache(count, false);
+    }
+
     private void cacheTiles() {
 
         caching = true;
@@ -5729,7 +5749,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 com.badlogic.gdx.graphics.g2d.SpriteCache oldCache = tc.getCache();
                 com.badlogic.gdx.graphics.g2d.SpriteCache cache = null;
                 try {
-                    cache = new com.badlogic.gdx.graphics.g2d.SpriteCache(buffersz, true); // max8191indice
+                    cache = newChunkCache(tc.getIntex(), tc.getIntey());
                     if (sShowAnimations || is3DMode || isFull3DMode) {
                         int[] cids = cacheTilesOnLayered(cache, tc.getIntex(), tc.getIntey());
                         tc.setCache(cache);
