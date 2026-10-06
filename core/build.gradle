@@ -2,4 +2,11 @@ apply plugin: "java"
 java.targetCompatibility = JavaVersion.VERSION_1_8
 sourceCompatibility = 1.8
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+// The platformer package is shared with Not2D and lives in not2d/ (which also holds stale copies of other
+// NotTiled classes), so only that package is copied in. A symlink broke builds from Windows / GitHub ZIPs.
+task syncPlatformer(type: Sync) {
+    from('../not2d/core/src') { include 'com/mirwanda/nottiled/platformer/**' }
+    into layout.buildDirectory.dir('generated/platformer')
+}
 sourceSets.main.java.srcDirs = ["src/"]
+sourceSets.main.java.srcDir(syncPlatformer)
