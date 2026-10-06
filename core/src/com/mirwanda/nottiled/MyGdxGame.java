@@ -1389,7 +1389,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     Gdx.app.postRunnable(new Runnable() {
                         @Override
                         public void run() {
-                            exitDialog(T);
+                            exitDialogRebuild(T);
                         }
                     });
                     return;
