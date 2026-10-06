@@ -1,11 +1,15 @@
 # NotTiled
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
-[![Latest Release](https://img.shields.io/badge/release-v2.1.1-blue.svg)]()
+[![Latest Release](https://img.shields.io/github/v/release/wandsmire/NotTiled)](https://github.com/wandsmire/NotTiled/releases/latest)
 
 NotTiled is a powerful, open-source 2D and 3D map editor built for gamers and developers. Inspired by the popular Tiled Map Editor, NotTiled is optimized from the ground up for touch devices and mobile screens, enabling you to build, customize, and prototype game maps directly from your Android device or desktop.
 
 Whether you are designing tactical maps for *Rusted Warfare*, dungeon levels for *Remixed Dungeon*, farm layouts for *Stardew Valley*, or prototyping your own custom games, NotTiled provides a robust suite of tools to bring your worlds to life in both 2D and full 3D views.
+
+> **Maintenance:** NotTiled is a hobby project I maintain in my spare time. Bug reports are welcome and do get fixed, but replies and updates can take a while, and not every feature request will happen. Pull requests are appreciated.
+>
+> Report bugs in [GitHub Issues](https://github.com/wandsmire/NotTiled/issues) or on Discord. A log, screenshot or the map file helps a lot.
 
 ---
 
