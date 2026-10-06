@@ -3,9 +3,10 @@
 #
 # Usage:
 #   ./versioning.sh 2.3.4
-#   ./versioning.sh 2.3.4 --code 106
+#   ./versioning.sh 2.3.4 --code 2030405
 #
-# versionCode defaults to max(major*10000 + minor*100 + patch, currentCode + 1).
+# versionCode is MMmmppbb: major, minor, patch, build (2.3.4 build 1 = 2030401).
+# A new version starts at build 01; re-running with the current version bumps the build.
 
 set -euo pipefail
 
@@ -45,7 +46,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 IFS='.' read -r MAJOR MINOR PATCH <<< "$NEW_VERSION"
-COMPUTED_CODE=$(( MAJOR * 10000 + MINOR * 100 + PATCH ))
+BASE_CODE=$(( MAJOR * 1000000 + MINOR * 10000 + PATCH * 100 ))
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
@@ -55,10 +56,14 @@ CURRENT_CODE="$(grep -E '^[[:space:]]*versionCode[[:space:]]+[0-9]+' "$ANDROID_G
 CURRENT_NAME="$(grep -E '^[[:space:]]*versionName[[:space:]]+"' "$ANDROID_GRADLE" | head -1 | sed -E 's/.*"([^"]+)".*/\1/')"
 
 if [[ -z "$VERSION_CODE" ]]; then
-    if [[ "$COMPUTED_CODE" -le "$CURRENT_CODE" ]]; then
+    if [[ $(( CURRENT_CODE / 100 * 100 )) -eq "$BASE_CODE" ]]; then
         VERSION_CODE=$(( CURRENT_CODE + 1 ))
     else
-        VERSION_CODE="$COMPUTED_CODE"
+        VERSION_CODE=$(( BASE_CODE + 1 ))
+    fi
+    if [[ "$VERSION_CODE" -le "$CURRENT_CODE" ]]; then
+        echo "versionCode $VERSION_CODE would not be higher than the current $CURRENT_CODE; pass --code." >&2
+        exit 1
     fi
 fi
 
