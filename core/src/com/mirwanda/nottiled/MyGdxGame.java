@@ -21350,10 +21350,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                     continue;
                                 if (cb1.isChecked()) {
                                     if ((i) % Tw == 1) {
+                                        // i - 1 is the row's first cell; removing it repeatedly trims the left columns.
                                         for (int k = 1; k <= Tw - nTw; k++) {
-                                            layers.get(j).getStr().remove(i);
-                                            layers.get(j).getTset().remove(i);
-                                            layers.get(j).getTile().remove(i);
+                                            layers.get(j).getStr().remove(i - 1);
+                                            layers.get(j).getTset().remove(i - 1);
+                                            layers.get(j).getTile().remove(i - 1);
                                         }
                                     }
                                 } else {
