@@ -62,6 +62,7 @@ task distCollabServer(type: Jar) {
     with jar
 }
 
-dist.dependsOn classes
-distCollabServer.dependsOn classes
+// The fat JARs read the runtime classpath in a closure, which doesn't make Gradle build :core's JAR first.
+dist.dependsOn classes, configurations.runtimeClasspath
+distCollabServer.dependsOn classes, configurations.runtimeClasspath
 

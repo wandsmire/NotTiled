@@ -20770,6 +20770,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
      * ignores it doesn't silently end up internal-only.
      */
     private void chooseNewFileLocation() {
+        if (Gdx.app.getType() != Android) {
+            finishInternalNewFile(); // desktop has no SAF; its "internal" folder is a normal directory
+            return;
+        }
         final Dialog dlg = new Dialog("", skin, "dialog");
         Table ct = dlg.getContentTable();
         ct.pad(20);
@@ -22931,7 +22935,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void FileDialog(String prompt, final String dialog, final String fileordir, String[] filter,
             final Table exitpoint) {
 
-        FileChooser fc = new FileChooser(prompt, skin, "file", filter, OS, basepath, "open".equals(dialog)) {
+        FileChooser fc = new FileChooser(prompt, skin, "file", filter, OS, basepath, "open".equals(dialog) && Gdx.app.getType() == Android) {
             @Override
             protected void result(Object object) {
                 if (object.equals("OK")) {
