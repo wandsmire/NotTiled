@@ -1389,7 +1389,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     Gdx.app.postRunnable(new Runnable() {
                         @Override
                         public void run() {
-                            exitDialog(T);
+                            exitDialogRebuild(T);
                         }
                     });
                     return;
@@ -1480,6 +1480,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         } else {
             exitDialog(T);
         }
+    }
+
+    // Desktop has no SAF picker but full filesystem access, so it always uses the in-app browser.
+    private boolean canBrowseFiles() {
+        return Gdx.app.getType() != Android || (face.hasTreeAccess() && !face.getSafRoot().isEmpty());
     }
 
     private void nativeOpenSAF(final String tujuan, final Table T) {
@@ -10912,7 +10917,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 // Folder granted → unified browser (starts in the device folder,
                 // Storage toggles to app storage). No grant yet → system picker,
                 // which walks the user through granting folder access.
-                if (face.hasTreeAccess() && !face.getSafRoot().isEmpty()) {
+                if (canBrowseFiles()) {
                     FileDialog(z.opentmxfile, "open", "file",
                             new String[]{".tmx", ".png", ".ntp", ".json"}, tMenu);
                 } else {
@@ -11065,7 +11070,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 // Folder granted → browse it to pick a destination (Storage toggles to
                 // app storage). No grant → system create-document, which also lets the
                 // user save anywhere and grant a folder on the way.
-                if (face.hasTreeAccess() && !face.getSafRoot().isEmpty()) {
+                if (canBrowseFiles()) {
                     FileDialog(z.selectnewlocation, "saveas", "dir", new String[] {}, tMenu);
                 } else {
                     String suggested = (curfile != null && !curfile.isEmpty())
@@ -17914,7 +17919,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 addDlg.hide();
                 frompick = true;
                 pickAuto = false;
-                if (face.hasTreeAccess() && !face.getSafRoot().isEmpty()) {
+                if (canBrowseFiles()) {
                     FileDialog(z.selectfile, "addtset", "file",
                             new String[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif" }, nullTable);
                 } else {
@@ -17933,7 +17938,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 addDlg.hide();
                 frompick = true;
-                if (face.hasTreeAccess() && !face.getSafRoot().isEmpty()) {
+                if (canBrowseFiles()) {
                     FileDialog(z.selectfile, "seltsx", "file", new String[] { ".tsx" }, nullTable);
                 } else {
                     pickTsxViaSaf(new Runnable() {
@@ -20765,6 +20770,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
      * ignores it doesn't silently end up internal-only.
      */
     private void chooseNewFileLocation() {
+        if (Gdx.app.getType() != Android) {
+            finishInternalNewFile(); // desktop has no SAF; its "internal" folder is a normal directory
+            return;
+        }
         final Dialog dlg = new Dialog("", skin, "dialog");
         Table ct = dlg.getContentTable();
         ct.pad(20);
@@ -22926,7 +22935,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void FileDialog(String prompt, final String dialog, final String fileordir, String[] filter,
             final Table exitpoint) {
 
-        FileChooser fc = new FileChooser(prompt, skin, "file", filter, OS, basepath, "open".equals(dialog)) {
+        FileChooser fc = new FileChooser(prompt, skin, "file", filter, OS, basepath, "open".equals(dialog) && Gdx.app.getType() == Android) {
             @Override
             protected void result(Object object) {
                 if (object.equals("OK")) {

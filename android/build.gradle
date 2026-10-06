@@ -30,14 +30,15 @@ android {
             }
         }
     }
-    buildToolsVersion "34.0.0"
-    compileSdkVersion 34
+    namespace "com.mirwanda.nottiled"
+    compileSdk 36
+    buildFeatures {
+        buildConfig true
+    }
     sourceSets {
         main {
             manifest.srcFile 'AndroidManifest.xml'
             java.srcDirs = ['src']
-            aidl.srcDirs = ['src']
-            renderscript.srcDirs = ['src']
             res.srcDirs = ['res']
             assets.srcDirs = ['assets']
             jniLibs.srcDirs = ['libs']
@@ -70,8 +71,8 @@ android {
         // SAF document-tree APIs (ACTION_OPEN_DOCUMENT_TREE, buildChildDocumentsUriUsingTree)
         // require API 21 — on 19/20 the file shim would crash on first use.
         minSdkVersion 21
-        targetSdkVersion 35
-        versionCode 20301
+        targetSdkVersion 36
+        versionCode 2030103
         versionName "2.3.1"
         multiDexEnabled true
         manifestPlaceholders = [appName: "NotTiled"]
@@ -113,21 +114,20 @@ android {
         }
     }
 
-    applicationVariants.all { variant ->
-        def flavor = variant.flavorName
-        def buildType = variant.buildType.name
-        
+}
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
         def name = "NotTiled"
-        if (flavor == "standalone") {
+        if (variant.flavorName == "standalone") {
             name += " Standalone"
         }
-        if (buildType == "debug") {
+        if (variant.buildType == "debug") {
             name += " Debug"
-        } else if (buildType == "apkRelease") {
+        } else if (variant.buildType == "apkRelease") {
             name += " Release"
         }
-        
-        variant.mergedFlavor.manifestPlaceholders.appName = name
+        variant.manifestPlaceholders.put("appName", name)
     }
 }
 
@@ -170,9 +170,9 @@ task copyAndroidNatives {
     }
 }
 
-tasks.whenTaskAdded { packageTask ->
-    if (packageTask.name.contains("package")) {
-        packageTask.dependsOn 'copyAndroidNatives'
+tasks.whenTaskAdded { task ->
+    if (task.name.contains("package") || (task.name.startsWith("merge") && task.name.endsWith("JniLibFolders"))) {
+        task.dependsOn 'copyAndroidNatives'
     }
 }
 

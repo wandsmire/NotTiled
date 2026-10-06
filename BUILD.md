@@ -103,6 +103,28 @@ To sign your release packages for deployment or Play Store upload directly from 
 
 ---
 
+## 4b. Publishing to Google Play
+
+`play_upload.py` uploads the Play Store AAB through the Google Play Developer API (needs only `requests` and `cryptography`).
+
+### One-time setup
+1. In [Google Cloud Console](https://console.cloud.google.com/), pick or create a project and enable the **Google Play Android Developer API**.
+2. **IAM & Admin → Service Accounts → Create service account** (no roles needed). Open it → **Keys → Add key → JSON**, and save the file as `private/play-service-account.json`.
+3. In [Play Console](https://play.google.com/console/) → **Users and permissions → Invite new users**, paste the service account's email, add NotTiled under **App permissions**, and grant **Release apps to testing tracks** (plus **Release to production** if you want that automated too).
+4. Check it locally: `python3 play_upload.py out_release/<file>.aab --dry-run`. New permissions can take a while to start working on Google's side.
+
+### Each release
+1. Bump `versionCode` (and `versionName`) in `android/build.gradle`. Play rejects a versionCode it has already seen, and the script checks this before uploading.
+2. Build and upload:
+   ```bash
+   ./build_aab.sh
+   python3 play_upload.py out_release/NotTiled_<version>_release_<timestamp>.aab --notes "What changed"
+   ```
+   Defaults to the **internal** testing track. Options: `--track alpha|beta|production`, `--notes-file notes.txt`, `--draft` (create the release without rolling it out), `--dry-run`.
+3. Promote it from internal testing to production in Play Console when you're happy with it.
+
+---
+
 ## 5. Build Distribution Server
 
 To share the compiled APKs/AABs with others over your local network, you can start the lightweight Node.js distribution server:
