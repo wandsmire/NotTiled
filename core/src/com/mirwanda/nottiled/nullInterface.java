@@ -44,7 +44,7 @@ public class nullInterface implements Interface {
 
     @Override
     public String getStatus() {
-        return null;
+        return "error"; // no native picker on desktop: pollers must abort, not spin or NPE
     }
 
     @Override

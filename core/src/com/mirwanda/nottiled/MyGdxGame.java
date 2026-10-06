@@ -1482,6 +1482,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
+    // Desktop has no SAF picker but full filesystem access, so it always uses the in-app browser.
+    private boolean canBrowseFiles() {
+        return Gdx.app.getType() != Android || (face.hasTreeAccess() && !face.getSafRoot().isEmpty());
+    }
+
     private void nativeOpenSAF(final String tujuan, final Table T) {
         nativeData = null;
         nativeFilename = "";
@@ -10912,7 +10917,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 // Folder granted → unified browser (starts in the device folder,
                 // Storage toggles to app storage). No grant yet → system picker,
                 // which walks the user through granting folder access.
-                if (face.hasTreeAccess() && !face.getSafRoot().isEmpty()) {
+                if (canBrowseFiles()) {
                     FileDialog(z.opentmxfile, "open", "file",
                             new String[]{".tmx", ".png", ".ntp", ".json"}, tMenu);
                 } else {
@@ -11065,7 +11070,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 // Folder granted → browse it to pick a destination (Storage toggles to
                 // app storage). No grant → system create-document, which also lets the
                 // user save anywhere and grant a folder on the way.
-                if (face.hasTreeAccess() && !face.getSafRoot().isEmpty()) {
+                if (canBrowseFiles()) {
                     FileDialog(z.selectnewlocation, "saveas", "dir", new String[] {}, tMenu);
                 } else {
                     String suggested = (curfile != null && !curfile.isEmpty())
@@ -17914,7 +17919,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 addDlg.hide();
                 frompick = true;
                 pickAuto = false;
-                if (face.hasTreeAccess() && !face.getSafRoot().isEmpty()) {
+                if (canBrowseFiles()) {
                     FileDialog(z.selectfile, "addtset", "file",
                             new String[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif" }, nullTable);
                 } else {
@@ -17933,7 +17938,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 addDlg.hide();
                 frompick = true;
-                if (face.hasTreeAccess() && !face.getSafRoot().isEmpty()) {
+                if (canBrowseFiles()) {
                     FileDialog(z.selectfile, "seltsx", "file", new String[] { ".tsx" }, nullTable);
                 } else {
                     pickTsxViaSaf(new Runnable() {
