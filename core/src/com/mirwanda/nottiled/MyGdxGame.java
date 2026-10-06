@@ -29651,6 +29651,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
      * Like applyBrushCell but for single-tile shapes, bypassing tapTile() overhead.
      */
     private void applyShapeTile(int num, int gid, boolean terra) {
+        if (num < 0 || num >= Tw * Th)
+            return;
         trackBrushPreviewCell(num);
         if (!isTerrainBrushPaintMode()) {
             // Non-terrain mode: just compute rotated Gid and update
@@ -32719,14 +32721,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (l.getType() != layer.Type.TILE)
                 continue;
             l.getTile().clear();
+            // Can run mid-load (tileset renumbering) before getTset() is filled; CacheAllTset() redoes this after.
+            int filled = Math.min(l.getTset().size(), l.getStr().size());
             for (int k = 0; k < Tw * Th; k++) {
                 l.getTile().add(-1);
-                if (l.getTset().get(k) == -1)
+                if (k >= filled)
                     continue;
-                if (tilesets.get(l.getTset().get(k)).getTiles().size() > 0) {
-                    for (int j = 0; j < tilesets.get(l.getTset().get(k)).getTiles().size(); j++) {
-                        tile tt = tilesets.get(l.getTset().get(k)).getTiles().get(j);
-                        if (tt.getTileID() + tilesets.get(l.getTset().get(k)).getFirstgid() == l.getStr().get(k)) {
+                int ts = l.getTset().get(k);
+                if (ts < 0 || ts >= tilesets.size())
+                    continue;
+                if (tilesets.get(ts).getTiles().size() > 0) {
+                    for (int j = 0; j < tilesets.get(ts).getTiles().size(); j++) {
+                        tile tt = tilesets.get(ts).getTiles().get(j);
+                        if (tt.getTileID() + tilesets.get(ts).getFirstgid() == l.getStr().get(k)) {
                             l.getTile().set(k, j);
                             break;
                         }
@@ -41280,6 +41287,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 // isometric tile selection is so complicated, how did I make this? lol
                 if (orientation.equalsIgnoreCase("orthogonal")) {
                     mapstartSelect = orthogonalTileGridAt(touch.x, touch.y, Tw, Th, Tsw, Tsh);
+                    if (mapstartSelect < 0)
+                        return true;
                 } else if (orientation.equalsIgnoreCase("isometric")) {
 
                     // cool way to convert isometric to orthogonal, new iso tap detection
