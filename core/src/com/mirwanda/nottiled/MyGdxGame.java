@@ -1370,6 +1370,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private boolean newFileToDevice = false; // new map should be created in the granted SAF folder
 
     private void nativeOpen(final String tujuan, final Table T) {
+        // Decide now: resize() can rebuild tMenu while the picker is open, so a later T == tMenu check fails.
+        final boolean fromMenu = T == tMenu;
         nativeData = null;
         nativeFilename = "";
         nativeStatus = "";
@@ -1389,7 +1391,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     Gdx.app.postRunnable(new Runnable() {
                         @Override
                         public void run() {
-                            exitDialogRebuild(T);
+                            if (fromMenu) {
+                                setMenuMap();
+                                gotoStage(tMenu);
+                            } else {
+                                exitDialog(T);
+                            }
                         }
                     });
                     return;
@@ -1465,28 +1472,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }).start();
     }
 
-    /** Open a TMX file via the system SAF picker, then resolve and copy all
-     *  referenced tileset images from the granted folder tree into Temp. */
-    /**
-     * Like {@link #exitDialog(Table)}, but rebuilds the menu table first. Returning
-     * from the SAF picker (a separate activity) leaves the menu's contents stale, so
-     * {@code gotoStage(tMenu)} alone shows a blank stage — its children must be
-     * repopulated via setMenuMap() (this mirrors what resize() does on resume).
-     */
-    private void exitDialogRebuild(Table T) {
-        if (T == tMenu) {
-            setMenuMap();      // reassigns the tMenu field to a fresh, populated table
-            gotoStage(tMenu);  // show the new table, not the now-stale reference in T
-        } else {
-            exitDialog(T);
-        }
-    }
-
     // Desktop has no SAF picker but full filesystem access, so it always uses the in-app browser.
     private boolean canBrowseFiles() {
         return Gdx.app.getType() != Android || (face.hasTreeAccess() && !face.getSafRoot().isEmpty());
     }
 
+    /** Open a TMX file via the system SAF picker, then resolve and copy all
+     *  referenced tileset images from the granted folder tree into Temp. */
     private void nativeOpenSAF(final String tujuan, final Table T) {
         nativeData = null;
         nativeFilename = "";
