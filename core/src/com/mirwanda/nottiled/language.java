@@ -112,6 +112,7 @@ public class language
 	String tilepicker;
 	String copyall;
 	String setopacity;
+	String setparallax;
 	String addimagetileset;
 	String importcollection;
 	String newcollectiontileset;

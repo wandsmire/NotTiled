@@ -907,7 +907,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private EdgeFillJob edgeFillJob = null;
     private static final float EDGE_FILL_PREVIEW_SEC = 0.25f;
     private static final int EDGE_FILL_PAINT_BATCH = 200;
-    private String language;
+    private String language; // resolved language file name, never LANG_AUTO
+    private String languagePref; // what the user chose in Preferences; may be LANG_AUTO
+    private static final String LANG_AUTO = "Auto (System)";
     private boolean landscape;
     private int redux;
     private int reduy;
@@ -1102,7 +1104,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         isFull3DMode = prefs.getBoolean("isFull3DMode", false);
         int shutdowns = prefs.getInteger("abnormal_shutdowns", 0);
         prefs.putInteger("abnormal_shutdowns", shutdowns + 1).flush();
-        language = prefs.getString("language", "English");
+        languagePref = prefs.getString("language", LANG_AUTO);
+        language = resolveLanguage(languagePref);
         fontsize = prefs.getInteger("fontsize", 0);
         sCustomFont = prefs.getString("customfont", "");
 
@@ -1112,7 +1115,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         } catch (Exception e) {
             ErrorBung(e, "langeror.txt");
-            language = "English";
+            language = languagePref = "English";
             prefs.putString("language", "English");
             reloadLanguage();
             log("Language error, default to english!");
@@ -7722,6 +7725,35 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             Gdx.gl.glDepthMask(true);
         }
         batch.end();
+        drawSelectedTileObjectOverlay();
+    }
+
+    // Tile sprites are drawn after drawObjects(), so they hide its selection fill; repaint it on top.
+    private void drawSelectedTileObjectOverlay() {
+        if (selobjs.isEmpty())
+            return;
+        sr.setProjectionMatrix(isFull3DMode ? camFull3D.combined : (is3DMode ? cam3d.combined : cam.combined));
+        sr.begin(ShapeRenderer.ShapeType.Filled);
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        if (isFull3DMode)
+            Gdx.gl.glDepthMask(false);
+        sr.setColor(0.9f, 0.5f, 0.9f, 0.35f); // lighter than drawObjects() so the tile stays visible
+        for (int i = 0; i < layers.size(); i++) {
+            if (layers.get(i).getType() != layer.Type.OBJECT || !layerShownInViewMode(i))
+                continue;
+            if (isFull3DMode)
+                sr.setTransformMatrix(tmpTransformMatrix.setToTranslation(0, 0, i * Tsh * 0.75f + 0.1f));
+            for (obj ox : layers.get(i).getObjects()) {
+                if (ox.getGid() != 0 && "image".equals(ox.getShape()) && selobjs.contains(ox))
+                    sr.rect(ox.getX(), ox.getYantingelag(Tsh), 0, 0, ox.getW(), ox.getH(), 1, 1,
+                            360 - ox.getRotation());
+            }
+        }
+        if (isFull3DMode) {
+            sr.setTransformMatrix(IDT_MATRIX);
+            Gdx.gl.glDepthMask(true);
+        }
+        sr.end();
     }
 
     @Override
@@ -15490,6 +15522,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         sbLanguage = new SelectBox(skin);
 
         java.util.List<String> srr = new ArrayList<String>();
+        srr.add(LANG_AUTO);
         srr.add("English");
         srr.add("Spanish");
         srr.add("Russian");
@@ -15548,7 +15581,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 fFontsize.setText(Integer.toString(fontsize));
                 tfCustomFont.setText(sCustomFont);
                 frwpath.setText(rwpath);
-                sbLanguage.setSelected(language);
+                sbLanguage.setSelected(languagePref);
                 sbScreenOrientation.setSelectedIndex(sOrientation);
                 cbResize.setChecked(sResizeTiles);
                 oldlang = language;
@@ -15736,9 +15769,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
                 prefs.putString("background", sBgcolor).flush();
 
-                language = sbLanguage.getSelected().toString();
+                languagePref = sbLanguage.getSelected().toString();
+                language = resolveLanguage(languagePref);
 
-                prefs.putString("language", language).flush();
+                prefs.putString("language", languagePref).flush();
 
                 sOrientation = sbScreenOrientation.getSelectedIndex();
                 prefs.putInteger("screenorientation", sOrientation).flush();
@@ -15893,7 +15927,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             z = loaded;
         } catch (Exception e) {
             ErrorBung(e, "langeror.txt");
-            language = "English";
+            language = languagePref = "English";
             prefs.putString("language", "English").flush();
             z = english;
         }
@@ -15905,6 +15939,29 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             ErrorBung(e, "nyut.txt");
         }
 
+    }
+
+    // Maps the device locale to one of the bundled language files; anything else gets English.
+    private static String resolveLanguage(String pref) {
+        if (pref != null && !LANG_AUTO.equals(pref))
+            return pref;
+        String code = java.util.Locale.getDefault().getLanguage();
+        switch (code == null ? "" : code.toLowerCase(java.util.Locale.ROOT)) {
+            case "es": return "Spanish";
+            case "ru": return "Russian";
+            case "zh": return "Chinese";
+            case "ja": return "Japanese";
+            case "fr": return "French";
+            case "pt": return "Portuguese";
+            case "tl":
+            case "fil": return "Tagalog";
+            case "be": return "Belarusian";
+            case "tr": return "Turkish";
+            case "uk": return "Ukranian";
+            case "id":
+            case "in": return "Indonesian";
+            default: return "English";
+        }
     }
 
     private language loadLanguageFile(Json json, String langName) {
@@ -17245,6 +17302,37 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         });
         optionsTable.add(btnOpacity).width(dialogBtnWidth).height(btny).pad(5).row();
+
+        // Saved to TMX/JSON for game engines; the editor itself does not scroll layers at different speeds.
+        TextButton btnParallax = new TextButton(z.setparallax, skin);
+        btnParallax.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                optionsDlg.hide();
+                getNewTextInput(new TextPromptListener() {
+                    @Override
+                    public void confirm(String input) {
+                        if (input == null || input.trim().isEmpty())
+                            input = "1";
+                        try {
+                            String[] parts = input.split("[,;\\s]+");
+                            float px = Float.parseFloat(parts[0].trim());
+                            float py = parts.length > 1 ? Float.parseFloat(parts[1].trim()) : px;
+                            lay.setParallaxX(px);
+                            lay.setParallaxY(py);
+                            pushUpdateIfCollaborating();
+                            showLayerManager();
+                        } catch (Exception e) {
+                        }
+                    }
+
+                    @Override
+                    public void cancel() {
+                    }
+                }, z.setparallax, Float.toString(lay.getParallaxX()) + ", " + Float.toString(lay.getParallaxY()), "x, y");
+            }
+        });
+        optionsTable.add(btnParallax).width(dialogBtnWidth).height(btny).pad(5).row();
 
         if (lay.getParentGroupId() != -1) {
             TextButton btnUngroup = new TextButton(z.ungroup, skin);
@@ -35317,6 +35405,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     case "newimgobj":
 
                         newobject.setGid(num);
+                        // The "create" history entry was recorded before a tile was picked; without the gid, redo brings back an empty object.
+                        if (!undolayerobject.isEmpty()) {
+                            layerobjecthistory lastLoh = undolayerobject.get(undolayerobject.size() - 1);
+                            if (lastLoh.getRelatedobj() == newobject && "create".equals(lastLoh.getAction()))
+                                lastLoh.setData(serializeObject(newobject));
+                        }
                         // gotoStage(tPropsMgmt);
                         backToMap();
                         break;

@@ -164,7 +164,7 @@ public class obj implements Cloneable
 		objType = objecttype.OBJECT;
 
 		Vector2[] vertices = new Vector2[4];
-		if (shape=="image") {
+		if ("image".equals(shape)) {
 			bdef.position.set(x,-y+Tsh);
 			body = world.createBody(bdef);
 
@@ -179,7 +179,7 @@ public class obj implements Cloneable
 			fixture.setUserData(this);
 
 
-		}else if (shape=="polygon"){
+		}else if ("polygon".equals(shape)){
 			bdef.position.set(x,-y+Tsh);
 			body = world.createBody(bdef);
 
@@ -202,7 +202,7 @@ public class obj implements Cloneable
 			fixture.setUserData(this);
 
 
-		}else if (shape=="polyline"){
+		}else if ("polyline".equals(shape)){
 			bdef.position.set(x,-y+Tsh);
 			body = world.createBody(bdef);
 
@@ -231,7 +231,7 @@ public class obj implements Cloneable
 				}
 			}
 
-		}else if (shape=="point"){
+		}else if ("point".equals(shape)){
 			bdef.position.set(x,-y+Tsh);
 			body = world.createBody(bdef);
 
@@ -278,7 +278,7 @@ public class obj implements Cloneable
 		objType = objecttype.OBJECT;
 
 		Vector2[] vertices = new Vector2[4];
-		if (shape=="image") {
+		if ("image".equals(shape)) {
 			bdef.position.set(x,-y+Tsh);
 			body = world.createBody(bdef);
 
@@ -294,7 +294,7 @@ public class obj implements Cloneable
 			addMarker( "SEI", zoom );
 			//addMarker( "R" );
 
-		}else if (shape=="polygon"){
+		}else if ("polygon".equals(shape)){
 			bdef.position.set(x,-y+Tsh);
 			body = world.createBody(bdef);
 
@@ -318,7 +318,7 @@ public class obj implements Cloneable
 			//addMarker( "R" );
 
 
-		}else if (shape=="polyline"){
+		}else if ("polyline".equals(shape)){
 			bdef.position.set(x,-y+Tsh);
 			body = world.createBody(bdef);
 
@@ -348,7 +348,7 @@ public class obj implements Cloneable
 			}
 			//addMarker( "R" );
 
-		}else if (shape=="point"){
+		}else if ("point".equals(shape)){
 			bdef.position.set(x,-y+Tsh);
 			body = world.createBody(bdef);
 
@@ -361,7 +361,7 @@ public class obj implements Cloneable
 			fdef.shape = pshape;
 			fixture = body.createFixture(fdef);
 			fixture.setUserData(this);
-		}else if (shape=="text"){
+		}else if ("text".equals(shape)){
 			bdef.position.set(x,-y+Tsh);
 			body = world.createBody(bdef);
 
@@ -376,7 +376,7 @@ public class obj implements Cloneable
 			fixture.setUserData(this);
 			addMarker( "SE", zoom );
 
-		}else if (shape=="ellipse"){
+		}else if ("ellipse".equals(shape)){
 			bdef.position.set(x,-y+Tsh);
 			body = world.createBody(bdef);
 
