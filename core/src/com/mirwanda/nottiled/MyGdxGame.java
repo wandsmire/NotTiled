@@ -41296,7 +41296,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     int newab = (ae / (Tsw / Tsh)) + ab - Tsh / 2;
                     mapstartSelect = (Tw * ((-newab + Tsh) / Tsh) + (newae / Tsw));
 
-                    if (mapstartSelect < 0 || mapstartSelect > Tw * Th)
+                    if (mapstartSelect < 0 || mapstartSelect >= Tw * Th)
                         return true;
 
                     /*
