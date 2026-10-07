@@ -131,9 +131,12 @@ public final class PixelArtPalette {
     }
 
     public static FileHandle swatchTemplateFile(String basepath) {
-        FileHandle fh = Gdx.files.absolute(basepath + "NotTiled/sample/template/Pixel Editor/swatch.png");
-        if (fh.exists())
-            return fh;
+        // The template folder was renamed "Pixel Editor" -> "Pixel Art"; older installs may still have the old one.
+        for (String dir : new String[] { "Pixel Art", "Pixel Editor" }) {
+            FileHandle fh = Gdx.files.absolute(basepath + "NotTiled/sample/template/" + dir + "/swatch.png");
+            if (fh.exists())
+                return fh;
+        }
         return Gdx.files.absolute(basepath + "NotTiled/swatch.png");
     }
 
