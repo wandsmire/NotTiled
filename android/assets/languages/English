@@ -535,7 +535,16 @@ diamond: "Diamond"
 octagon: "Octagon"
 plus: "Plus"
 layerlisthint: "Tap to select  ·  Tap group again to fold/unfold  ·  Drag handle: top bar = root top, row top/bottom = reorder, group center = into group"
+trySampleMap: "Try Sample Map"
+editinnot2pix: "Edit in Not2Pix"
+browseDevice: "Browse Device / Cloud"
+grantFolderAccess: "Grant Folder Access"
+skipFolderAccess: "Skip (load without images)"
+tilesetImagesNotFound: "Tileset images not found"
+folderAccessInfo: "Grant access to the folder containing your .tmx\nfile so NotTiled can load tiles"
+clearTempCache: "Clear Temp Cache"
+clearTempCacheConfirm: "Delete all cached files in NotTiled/Temp?"
+home: "Home"
+newfolder: "New Folder"
+devicecloud: "Device / Cloud"
 }
-
-
-

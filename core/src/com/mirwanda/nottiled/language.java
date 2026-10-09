@@ -536,4 +536,7 @@ public class language
 	// File Manager
 	String clearTempCache;
 	String clearTempCacheConfirm;
+	String home;
+	String newfolder;
+	String devicecloud;
 }

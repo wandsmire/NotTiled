@@ -36,6 +36,10 @@ public class FileChooser extends Dialog
 	}
 
 	private String OS;
+	// Button captions, set from the active language by MyGdxGame.reloadLanguage().
+	public static String lblCancel = "Cancel", lblHome = "Home", lblDeviceCloud = "Device / Cloud",
+			lblNewFolder = "New Folder", lblOk = "-OK->";
+
 	private String basePath = "";
 	private String safRoot = "";
 
@@ -118,16 +122,16 @@ public class FileChooser extends Dialog
 		// No internal/external toggle: a granted user only ever wants their own
 		// folder here; app storage (samples, backups, templates) has dedicated
 		// entry points and the separate "Internal File Manager" menu item.
-		this.button("Cancel", "Cancel");
-		this.button("Home", "Home");
+		this.button(lblCancel, "Cancel");
+		this.button(lblHome, "Home");
 		this.getButtonTable().row();
 		// The SAF system-picker button only belongs to the map-open flow (it routes
 		// through nativeOpenSAF); other pickers converge on the in-app browser.
 		if (allowSaf) {
-			this.button("Device / Cloud", "SAF");
+			this.button(lblDeviceCloud, "SAF");
 		}
-		this.button("New Folder", "New Folder");
-		this.button("-OK->", "OK");
+		this.button(lblNewFolder, "New Folder");
+		this.button(lblOk, "OK");
 		this.setModal(false);
 		this.skin = skin;
 		this.setOS(OS);

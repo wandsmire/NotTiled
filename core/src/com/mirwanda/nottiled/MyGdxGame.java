@@ -15956,6 +15956,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             z = english;
         }
         applyLanguageFallbacks();
+        FileChooser.lblCancel = z.cancel != null ? z.cancel : "Cancel";
+        FileChooser.lblHome = z.home != null ? z.home : "Home";
+        FileChooser.lblDeviceCloud = z.devicecloud != null ? z.devicecloud : "Device / Cloud";
+        FileChooser.lblNewFolder = z.newfolder != null ? z.newfolder : "New Folder";
+        FileChooser.lblOk = "-" + (z.ok != null ? z.ok : "OK") + "->";
         try {
             generateTutorials();
             face.changelanguage("English");
