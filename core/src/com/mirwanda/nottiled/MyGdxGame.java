@@ -1477,7 +1477,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     // Desktop has no SAF picker but full filesystem access, so it always uses the in-app browser.
     private boolean canBrowseFiles() {
-        return Gdx.app.getType() != Android || (face.hasTreeAccess() && !face.getSafRoot().isEmpty());
+        // Standalone has "All files access": it can browse real folders (with "..") like before 2.3.1.
+        return Gdx.app.getType() != Android || hasAllFilesAccess()
+                || (face.hasTreeAccess() && !face.getSafRoot().isEmpty());
+    }
+
+    /** Android 11+ with MANAGE_EXTERNAL_STORAGE granted (the Standalone build). Older Android is left on the SAF flow. */
+    private boolean hasAllFilesAccess() {
+        return Gdx.app.getType() == Android && "android10+".equalsIgnoreCase(OS) && face.isAccessAllFilesGranted();
     }
 
     /** Open a TMX file via the system SAF picker, then resolve and copy all
@@ -2594,6 +2601,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     }
 
+    private final com.badlogic.gdx.graphics.g2d.GlyphLayout tileLabelLayout = new com.badlogic.gdx.graphics.g2d.GlyphLayout();
+
+    // Draws text inside one tile, shrinking it when it would spill into the neighbours
+    // (e.g. "434,294" on a 32px tile overlapped the next labels).
+    private void drawTileLabel(String text, float x, float y, float baseScale) {
+        str1.getData().setScale(baseScale);
+        tileLabelLayout.setText(str1, text);
+        float room = Tsw * 0.8f;
+        if (tileLabelLayout.width > room)
+            str1.getData().setScale(baseScale * room / tileLabelLayout.width);
+        str1.draw(batch, text, x, y);
+    }
+
     void drawCoordinates() {
         if (cam.zoom > 0.5f)
             return;
@@ -2614,7 +2634,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
 
                     if (cam.frustum.pointInFrustum(drawX, drawY, 0)) {
-                        str1.draw(batch, xx + "," + yy, drawX, drawY);
+                        drawTileLabel(xx + "," + yy, drawX, drawY, 0.01f + Tsw / 160f);
                     }
                 }
             }
@@ -2645,7 +2665,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 }
 
                                 if (cam.frustum.pointInFrustum(drawX, drawY, 0)) {
-                                    str1.draw(batch, spr + "", drawX, drawY);
+                                    drawTileLabel(spr + "", drawX, drawY, 0.01f + Tsw / 160f);
                                 }
                             }
                         }
@@ -13116,8 +13136,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     sb.wl("opacity = " + l.getOpacity() + ",");
                 }
 
-                sb.wl("offsetx = 0,");
-                sb.wl("offsety = 0,");
+                sb.wl("offsetx = " + l.getOffsetX() + ",");
+                sb.wl("offsety = " + l.getOffsetY() + ",");
+                sb.wl("parallaxx = " + l.getParallaxX() + ",");
+                sb.wl("parallaxy = " + l.getParallaxY() + ",");
                 sb.wprop(layers.get(n).getProperties());
                 sb.wl("encoding = \"lua\",");
                 sb.wlo("data = {");
@@ -13145,8 +13167,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 } else {
                     sb.wl("opacity = " + l.getOpacity() + ",");
                 }
-                sb.wl("offsetx = 0,");
-                sb.wl("offsety = 0,");
+                sb.wl("offsetx = " + l.getOffsetX() + ",");
+                sb.wl("offsety = " + l.getOffsetY() + ",");
+                sb.wl("parallaxx = " + l.getParallaxX() + ",");
+                sb.wl("parallaxy = " + l.getParallaxY() + ",");
                 sb.wl("draworder = \"topdown\",");
                 sb.wprop(l.getProperties());
 
@@ -23102,8 +23126,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         boolean treeGranted = face.hasTreeAccess() && !face.getSafRoot().isEmpty();
         FileHandle fhtest = Gdx.files.absolute(lastpath);
         log("LP:" + lastpath);
+        boolean allFiles = hasAllFilesAccess();
         if (isSafPath(lastpath) && fhtest.exists()) {
             fc.setDirectory(fhtest);
+        } else if (allFiles) {
+            fc.setDirectory(fhtest.exists() ? fhtest : Gdx.files.absolute(basepath));
         } else if (treeGranted) {
             fc.setDirectory(Gdx.files.absolute(safRootDir()));
         } else if (fhtest.exists()) {
