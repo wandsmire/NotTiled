@@ -1046,6 +1046,22 @@ public class MainActivity extends AndroidApplication implements Interface
 	}
 
 	@Override
+	public String getSafRealRoot() {
+		try {
+			Uri tree = safStore == null ? null : safStore.getTreeUri();
+			if (tree == null) return "";
+			// Tree document IDs look like "primary:rustedwarfare/maps"; only device storage maps to a path.
+			String id = android.provider.DocumentsContract.getTreeDocumentId(tree);
+			if (id == null || !id.startsWith("primary:")) return "";
+			String rel = id.substring("primary:".length());
+			String base = Environment.getExternalStorageDirectory().getAbsolutePath();
+			return rel.isEmpty() ? base : base + "/" + rel;
+		} catch (Exception e) {
+			return "";
+		}
+	}
+
+	@Override
 	public String resolveUriToTreePath(String uri) {
 		return safStore == null ? null : safStore.relPathForUri(uri);
 	}

@@ -39,6 +39,9 @@ public interface Interface
 	 *  SAF-backed FileHandle shim installed over Gdx.files. */
 	public String getSafRoot();
 
+	/** Real filesystem folder of the granted Device / Cloud tree when it is on device storage, else "". */
+	public String getSafRealRoot();
+
 	/** Tree-relative path of the document behind a picked content URI, or null
 	 *  if it lives outside the granted folder tree (or no tree is granted). */
 	public String resolveUriToTreePath(String uri);

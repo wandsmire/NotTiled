@@ -223,4 +223,8 @@ public class nullInterface implements Interface {
         return false;
     }
 
+    @Override
+    public String getSafRealRoot() {
+        return "";
+    }
 }

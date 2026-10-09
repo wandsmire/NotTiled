@@ -9140,6 +9140,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 && (path + "/").startsWith(root);
     }
 
+    /** Real folder for a path inside the SAF mount, or null when the tree isn't on device storage. */
+    private String safToRealPath(String safPath) {
+        String real = face.getSafRealRoot();
+        String root = safRootDir();
+        if (real == null || real.isEmpty() || root.isEmpty() || !safPath.startsWith(root)) return null;
+        return real + safPath.substring(root.length());
+    }
+
     /** The SAF mount point without trailing slash (e.g. "/saf"), or "" off-Android. */
     private String safRootDir() {
         String root = face.getSafRoot();
@@ -23111,7 +23119,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     // exitDialog(exitpoint);
                     return;
                 } else if (object.equals("Home")) {
-                    FileHandle ifh = Gdx.files.absolute(curdir);
+                    // Same rule as the starting folder: with All files access, a map opened through
+                    // Device / Cloud lives in the SAF tree, where ".." can't go up; use its real folder.
+                    String home = curdir;
+                    if (hasAllFilesAccess() && isSafPath(home)) {
+                        String real = safToRealPath(home);
+                        home = real != null && Gdx.files.absolute(real).isDirectory() ? real : basepath;
+                    }
+                    FileHandle ifh = Gdx.files.absolute(home);
                     setDirectory(ifh);
                     cancel();
                     return;
@@ -23132,10 +23147,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         FileHandle fhtest = Gdx.files.absolute(lastpath);
         log("LP:" + lastpath);
         boolean allFiles = hasAllFilesAccess();
-        if (isSafPath(lastpath) && fhtest.exists()) {
+        if (allFiles) {
+            // With All files access, never start inside the SAF tree: ".." stops at its root there.
+            // A remembered Device / Cloud location is reopened as the same real folder instead.
+            String start = isSafPath(lastpath) ? safToRealPath(lastpath) : lastpath;
+            FileHandle fh = start == null ? null : Gdx.files.absolute(start);
+            fc.setDirectory(fh != null && fh.exists() && fh.isDirectory() ? fh : Gdx.files.absolute(basepath));
+        } else if (isSafPath(lastpath) && fhtest.exists()) {
             fc.setDirectory(fhtest);
-        } else if (allFiles) {
-            fc.setDirectory(fhtest.exists() ? fhtest : Gdx.files.absolute(basepath));
         } else if (treeGranted) {
             fc.setDirectory(Gdx.files.absolute(safRootDir()));
         } else if (fhtest.exists()) {
