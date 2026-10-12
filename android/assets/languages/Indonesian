@@ -535,4 +535,6 @@ diamond: "Berlian"
 octagon: "Segidelapan"
 plus: "Plus"
 layerlisthint: "Ketuk untuk memilih · Ketuk grup lagi untuk lipat/buka lipatan · Tarik pegangan: bar atas = atas akar, baris atas/bawah = susun ulang, tengah grup = ke dalam grup"
+devicecloud: "Perangkat / Cloud"
+openAppStorage: "Penyimpanan Aplikasi"
 }

@@ -512,6 +512,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private Table tRestoreBackup;
     private com.badlogic.gdx.scenes.scene2d.ui.List<String> lbackupList;
     private FileHandle fileManagerDir;
+    // Last folder browsed in each realm, so the Storage toggle returns to where the user was.
+    private FileHandle fileManagerLastSafDir, fileManagerLastAppDir;
     private FileHandle fileManagerClipboardFile;
     private boolean fileManagerIsCopy;
     private Table tFileManager;
@@ -20937,6 +20939,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         });
         ct.add(bInternal).width(bw).height(btny * 1.6f).pad(5).row();
+        // Cancel: close without creating anything, back to the New File form.
+        TextButton bCancelLoc = new TextButton(z.cancel != null ? z.cancel : "Cancel", skin);
+        bCancelLoc.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                dlg.hide();
+            }
+        });
+        ct.add(bCancelLoc).width(bw).height(btny).pad(5).row();
         dlg.show(stage);
     }
 
@@ -23307,6 +23318,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             fileManagerDir.mkdirs();
         }
 
+        // With a Device / Cloud folder granted, the manager can sit inside the SAF tree,
+        // whose ".." stops at its root; a toggle below switches to app storage and back.
+        final String fmSafRoot = safRootDir();
+        final boolean fmTreeGranted = Gdx.app.getType() == Android && face.hasTreeAccess()
+                && !fmSafRoot.isEmpty();
+        final boolean fmInSaf = isSafPath(fileManagerDir.path());
+        if (fmInSaf)
+            fileManagerLastSafDir = fileManagerDir;
+        else
+            fileManagerLastAppDir = fileManagerDir;
+
         tFileManager = new Table();
         tFileManager.setFillParent(true);
         tFileManager.top().left();
@@ -23315,10 +23337,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         topBar.left().pad(10);
         topBar.defaults().left().pad(5);
 
-        String relativePath = fileManagerDir.path().replace(basepath, "");
+        String relativePath;
+        String pathPrefix;
+        if (fmInSaf) {
+            relativePath = fileManagerDir.path().length() > fmSafRoot.length()
+                    ? fileManagerDir.path().substring(fmSafRoot.length()) : "";
+            pathPrefix = (z.devicecloud != null ? z.devicecloud : "Device / Cloud") + " / ";
+        } else {
+            relativePath = fileManagerDir.path().replace(basepath, "");
+            pathPrefix = "NotTiled / ";
+        }
         if (relativePath.startsWith("/"))
             relativePath = relativePath.substring(1);
-        Label pathLabel = new Label("NotTiled / " + relativePath, skin);
+        Label pathLabel = new Label(pathPrefix + relativePath, skin);
         pathLabel.setWrap(true);
         topBar.add(pathLabel).expandX().fillX().colspan(3).row();
 
@@ -23426,7 +23457,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         listTable.top().left();
         listTable.defaults().left().pad(5);
 
-        String limitPath = basepath + "NotTiled";
+        String limitPath = fmInSaf ? fmSafRoot : basepath + "NotTiled";
         if (fileManagerDir.path().length() > limitPath.length()) {
             listTable.row();
             Image img = new Image(fmTxBack);
@@ -23506,6 +23537,30 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         });
         bottomBar.add(btnBack).width(Math.min(stageWidth * 0.6f, 300f)).height(btny);
+        if (fmTreeGranted) {
+            // Storage toggle: app storage (basepath, where pre-2.3.1 maps live) <-> granted folder.
+            String toggleLabel = fmInSaf
+                    ? (z.openAppStorage != null ? z.openAppStorage : "App Storage")
+                    : (z.devicecloud != null ? z.devicecloud : "Device / Cloud");
+            TextButton btnStorage = new TextButton(toggleLabel, skin);
+            btnStorage.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    FileHandle target;
+                    if (fmInSaf) {
+                        target = fileManagerLastAppDir;
+                        if (target == null || !target.exists() || !target.isDirectory())
+                            target = Gdx.files.absolute(basepath + "NotTiled");
+                    } else {
+                        target = fileManagerLastSafDir;
+                        if (target == null || !target.exists() || !target.isDirectory())
+                            target = Gdx.files.absolute(fmSafRoot);
+                    }
+                    showFileManager(target);
+                }
+            });
+            bottomBar.add(btnStorage).width(Math.min(stageWidth * 0.6f, 300f)).height(btny);
+        }
         tFileManager.add(bottomBar).expandX().fillX().pad(10);
 
         gotoStage(tFileManager);
@@ -23530,7 +23585,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private FileHandle resolveFileManagerStartDir() {
         if (curdir != null && !curdir.isEmpty()) {
             FileHandle projectDir = Gdx.files.absolute(curdir);
-            if (projectDir.exists() && projectDir.isDirectory())
+            // A map from a Device / Cloud folder whose grant was revoked: fall back to app storage.
+            boolean staleSaf = isSafPath(curdir) && !face.hasTreeAccess();
+            if (!staleSaf && projectDir.exists() && projectDir.isDirectory())
                 return projectDir;
         }
         return Gdx.files.absolute(basepath + "NotTiled");
@@ -29508,15 +29565,68 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private void clampCamToMap() {
         if (orientation.equalsIgnoreCase("isometric") || sNoScrollBoundary)
             return;
-        int onset = 0;
-        if (cam.position.x < 0 - onset)
-            cam.position.x = 0 - onset;
-        if (cam.position.x > Tsw * Tw - onset)
-            cam.position.x = Tsw * Tw - onset;
-        if (cam.position.y < -Tsh * Th)
-            cam.position.y = -Tsh * Th;
-        if (cam.position.y > 0)
-            cam.position.y = 0;
+        camBoundsStamp = 0; // called after map load: never reuse the previous map's bounds
+        clampCamToPanBounds();
+    }
+
+    // Pan bounds = map rect grown to include every object (triggers/units are
+    // often placed outside the map). Cached and refreshed at most every
+    // CAM_BOUNDS_REFRESH_MS so big object layers aren't walked on every pan event.
+    private static final long CAM_BOUNDS_REFRESH_MS = 300;
+    private long camBoundsStamp = 0;
+    private float camBoundMinX, camBoundMaxX, camBoundMinY, camBoundMaxY;
+
+    private void refreshCamPanBounds() {
+        long now = System.currentTimeMillis();
+        if (now - camBoundsStamp < CAM_BOUNDS_REFRESH_MS)
+            return;
+        camBoundsStamp = now;
+        float minX = 0, maxX = Tsw * Tw, minY = -Tsh * Th, maxY = 0;
+        try {
+            if (layers != null) {
+                for (int i = 0; i < layers.size(); i++) {
+                    layer l = layers.get(i);
+                    if (l == null || l.getType() != layer.Type.OBJECT || l.getObjects() == null)
+                        continue;
+                    float ox = l.getOffsetX(), oy = l.getOffsetY();
+                    java.util.List<obj> objs = l.getObjects();
+                    for (int k = 0; k < objs.size(); k++) {
+                        obj o = objs.get(k);
+                        if (o == null)
+                            continue;
+                        float x = o.getX() + ox;
+                        float y = o.getY() + oy;
+                        float w = Math.abs(o.getW());
+                        float h = Math.abs(o.getH());
+                        // World y is the negated TMX y; tile objects anchor at the
+                        // bottom, shapes at the top, so cover both directions.
+                        if (x < minX) minX = x;
+                        if (x + w > maxX) maxX = x + w;
+                        if (-y - h < minY) minY = -y - h;
+                        if (-y + h > maxY) maxY = -y + h;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // list mutated mid-walk (collab thread); keep map-only bounds this round
+            camBoundsStamp = 0;
+        }
+        camBoundMinX = minX;
+        camBoundMaxX = maxX;
+        camBoundMinY = minY;
+        camBoundMaxY = maxY;
+    }
+
+    private void clampCamToPanBounds() {
+        refreshCamPanBounds();
+        if (cam.position.x < camBoundMinX)
+            cam.position.x = camBoundMinX;
+        if (cam.position.x > camBoundMaxX)
+            cam.position.x = camBoundMaxX;
+        if (cam.position.y < camBoundMinY)
+            cam.position.y = camBoundMinY;
+        if (cam.position.y > camBoundMaxY)
+            cam.position.y = camBoundMaxY;
     }
 
     private boolean isPixelArtMap() {
@@ -29692,14 +29802,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             onset = Tsw * Tw / 2;
         }
         if (!orientation.equalsIgnoreCase("isometric") && !sNoScrollBoundary) {
-            if (cam.position.x < 0 - onset)
-                cam.position.x = 0 - onset;
-            if (cam.position.x > Tsw * Tw - onset)
-                cam.position.x = Tsw * Tw - onset;
-            if (cam.position.y < -Tsh * Th)
-                cam.position.y = -Tsh * Th;
-            if (cam.position.y > 0)
-                cam.position.y = 0;
+            clampCamToPanBounds();
         }
     }
 
