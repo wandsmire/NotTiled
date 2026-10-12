@@ -21113,7 +21113,21 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
      */
     private void finishInternalNewFile() {
         newFileToDevice = false;
-        final String dir = fNCurdir.getText().replace("//", "/");
+        String chosen = fNCurdir.getText().replace("//", "/");
+        // On Android this is the "App storage" choice. fNCurdir starts as the last folder
+        // browsed (prefs "lastpath"), which is often the granted Device / Cloud folder
+        // (/saf/...) or a real external folder; App storage must mean basepath.
+        if (Gdx.app.getType() == Android) {
+            String appRoot = normMapPath(basepath);
+            if (appRoot.endsWith("/"))
+                appRoot = appRoot.substring(0, appRoot.length() - 1);
+            String norm = normMapPath(chosen);
+            if (!(norm.equals(appRoot) || norm.startsWith(appRoot + "/"))) {
+                chosen = basepath + "NotTiled";
+                fNCurdir.setText(chosen); // newtmxfile(true) / newtmxfileplus read the field
+            }
+        }
+        final String dir = chosen;
         final String file = fNFilename.getText();
         final FileHandle target = Gdx.files.absolute(dir + "/" + file);
         if (target.exists()) {
@@ -24237,7 +24251,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 } else if (file.extension().equalsIgnoreCase("tmx")) {
                     log("loading tmx");
                     curdir = file.parent().path();
-                    loadtmx(openedfile);
+                    loadtmx(openedfile, reloadKeepView);
 
                     addandsaverecent(file.path(), file.name());
                 } else if (file.extension().equalsIgnoreCase("png")) {
@@ -26117,19 +26131,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             return;
         }
         mapDirty = false;
-        String ext = f.extension();
-        if (ext.equalsIgnoreCase("tmx")) {
-            curdir = f.parent().path();
-            openedfile = f.path();
-            loadtmx(f.path(), true);
-        } else if (ext.equalsIgnoreCase("json")) {
-            curdir = f.parent().path();
-            loadjsonmap(f);
-            backToMap();
-        } else {
-            tujuanDialog("open", f);
-        }
+        // Exactly what the file browser's Open does: back to the editor first (restores the
+        // map UI and input, clears the stage incl. this dialog), then the shared open dispatch
+        // (tmx / json / rpd, recents). Only difference: a reload keeps the camera where it was.
+        reloadKeepView = true;
+        exitDialog(null);
+        tujuanDialog("open", f);
+        reloadKeepView = false;
     }
+
+    /** One-shot: the next tmx open via tujuanDialog keeps the current view (reload from disk). */
+    private boolean reloadKeepView = false;
 
     /** App back in the foreground (Android onResume, desktop window focus): offer a reload when
      *  another app changed the open map. The file is fingerprinted off the GL thread. */
