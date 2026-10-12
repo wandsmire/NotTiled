@@ -221,6 +221,10 @@ public class language
 	String replacerangepick;
 	String replacealllayers;
 	String replacerangenone;
+	String replacechance = "Chance";
+	String replacechanceinvalid = "Invalid chance. Use e.g. 1/75, 0.25 or 25%";
+	String replaceremoveall = "Remove all";
+	String replaceremoved = "Tiles removed: ";
 	String from;
 	String to;
 	String selecttemplate;

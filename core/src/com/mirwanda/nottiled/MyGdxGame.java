@@ -989,7 +989,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private TextField fgencount;
     private TextField fbirthlim;
     private TextField fdeathlim;
-    private TextField flivestr, fprevstr;
+    private TextField flivestr, fprevstr, fReplaceChance;
     private TextField fgen1, fgen2;
     SelectBox sbGenerate, sbGenTerrain;
     private TextField flivetset;
@@ -12790,6 +12790,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         iReplaceTo.setSize(replacePreviewSize, replacePreviewSize);
 
         TextButton runreplace = new TextButton(z.replacetiles, skin);
+        TextButton runremoveall = new TextButton(
+                z.replaceremoveall != null ? z.replaceremoveall : "Remove all", skin);
+        fReplaceChance = new TextField("", skin);
+        fReplaceChance.setMessageText("1/75, 0.25, 25%");
         TextButton pickrepa = new TextButton(z.picktile1, skin);
         TextButton pickrepb = new TextButton(z.picktile2, skin);
         TextButton pickReplaceRange = new TextButton(
@@ -12856,17 +12860,47 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         treplacetiles.add(lReplaceRange).colspan(2).left().padBottom(2).row();
         treplacetiles.add(pickReplaceRange).colspan(2).row();
         treplacetiles.add(cbReplaceAllLayers).colspan(2).left().padBottom(2).row();
+        treplacetiles.add(new Label(z.replacechance != null ? z.replacechance : "Chance", skin));
+        treplacetiles.add(fReplaceChance).row();
         treplacetiles.add(runreplace).width(btnx).colspan(2).row();
+        treplacetiles.add(runremoveall).width(btnx).colspan(2).row();
         treplacetiles.add(repback).width(btnx).colspan(2);
 
         runreplace.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                double chance = parseReplaceChance(fReplaceChance.getText());
+                if (chance < 0) {
+                    status(z.replacechanceinvalid != null ? z.replacechanceinvalid
+                            : "Invalid chance. Use e.g. 1/75, 0.25 or 25%", 3);
+                    return;
+                }
                 long p1 = Long.parseLong(fprevstr.getText());
                 long p3 = Long.parseLong(fnextstr.getText());
                 int p4 = getTsetFromSpr((int) p3);
                 replacetiles(p1, p3, p4, cbReplaceAllLayers.isChecked(),
-                        cbReplaceRangeLimit.isChecked() && replaceRangeMaxX >= 0);
+                        cbReplaceRangeLimit.isChecked() && replaceRangeMaxX >= 0, chance);
+            }
+        });
+
+        runremoveall.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                double chance = parseReplaceChance(fReplaceChance.getText());
+                if (chance < 0) {
+                    status(z.replacechanceinvalid != null ? z.replacechanceinvalid
+                            : "Invalid chance. Use e.g. 1/75, 0.25 or 25%", 3);
+                    return;
+                }
+                long p1;
+                try {
+                    p1 = Long.parseLong(fprevstr.getText().trim());
+                } catch (NumberFormatException e) {
+                    return;
+                }
+                int removed = removeAllReplaceTiles(p1, cbReplaceAllLayers.isChecked(),
+                        cbReplaceRangeLimit.isChecked() && replaceRangeMaxX >= 0, chance);
+                status((z.replaceremoved != null ? z.replaceremoved : "Tiles removed: ") + removed, 2);
             }
         });
         ///////////////////
@@ -12997,7 +13031,72 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         gotoStage(treplacetiles);
     }
 
-    private void replacetiles(long p1, long p3, int p4, boolean allLayers, boolean useRange) {
+    /**
+     * Parses the Replace dialog "Chance" field. Accepts "1/75", "0.25", "25%".
+     * Empty means 1 (every matching tile). Returns -1 when the input is invalid.
+     */
+    static double parseReplaceChance(String text) {
+        if (text == null)
+            return 1;
+        String t = text.trim().replace(',', '.');
+        if (t.isEmpty())
+            return 1;
+        double v;
+        try {
+            if (t.endsWith("%")) {
+                v = Double.parseDouble(t.substring(0, t.length() - 1).trim()) / 100.0;
+            } else if (t.contains("/")) {
+                String[] parts = t.split("/");
+                if (parts.length != 2)
+                    return -1;
+                double num = Double.parseDouble(parts[0].trim());
+                double den = Double.parseDouble(parts[1].trim());
+                if (den <= 0)
+                    return -1;
+                v = num / den;
+            } else {
+                v = Double.parseDouble(t);
+            }
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+        if (Double.isNaN(v) || v <= 0 || v > 1)
+            return -1;
+        return v;
+    }
+
+    /** Sets every tile matching p1 (within the Replace scope) to empty, as one undo step. */
+    private int removeAllReplaceTiles(long p1, boolean allLayers, boolean useRange, double chance) {
+        if (layers.isEmpty())
+            return 0;
+        if (!allLayers && layers.get(selLayer).getType() != layer.Type.TILE)
+            return 0;
+        long fromGid = stripTileGidFlags(p1);
+        if (fromGid == 0)
+            return 0;
+        int layerStart = allLayers ? 0 : selLayer;
+        int layerEnd = allLayers ? layers.size() - 1 : selLayer;
+        int removed = 0;
+        this.follower = false; // Start a new undo group
+        for (int li = layerStart; li <= layerEnd; li++) {
+            if (layers.get(li).getType() != layer.Type.TILE)
+                continue;
+            List<Long> str = layers.get(li).getStr();
+            for (int i = 0; i < str.size(); i++) {
+                if (useRange && !replaceTileInRange(i))
+                    continue;
+                if (stripTileGidFlags(str.get(i)) != fromGid)
+                    continue;
+                if (chance < 1 && Math.random() >= chance)
+                    continue;
+                updateTileData(li, i, 0, -1, -1);
+                removed++;
+            }
+        }
+        return removed;
+    }
+
+    private void replacetiles(long p1, long p3, int p4, boolean allLayers, boolean useRange, double chance) {
         if (layers.isEmpty())
             return;
         if (!allLayers && layers.get(selLayer).getType() != layer.Type.TILE)
@@ -13009,6 +13108,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         eraser = false;
         long fromGid = stripTileGidFlags(p1);
         long toGid = p3;
+        this.follower = false; // Start a new undo group
 
         int layerStart = allLayers ? 0 : selLayer;
         int layerEnd = allLayers ? layers.size() - 1 : selLayer;
@@ -13023,7 +13123,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     continue;
                 long prev = layers.get(li).getStr().get(i);
                 if (stripTileGidFlags(prev) == fromGid) {
-                    tapTile(i, true, false, false, (int) toGid);
+                    if (chance < 1 && Math.random() >= chance)
+                        continue;
+                    tapTile(i, false, false, (int) toGid);
                 }
             }
         }
@@ -13041,7 +13143,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 if (useRange && !replaceTileInRange(i))
                     continue;
                 if (stripTileGidFlags(sprs.get(i)) == stripTileGidFlags(toGid) && isEdge(i, toGid, sprs)) {
-                    tapTile(i, true, true, false, (int) toGid);
+                    tapTile(i, true, false, (int) toGid);
                 }
             }
         }
