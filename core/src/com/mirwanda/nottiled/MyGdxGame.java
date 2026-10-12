@@ -2139,6 +2139,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 prefs.putInteger("abnormal_shutdowns", 0).flush();
             }
         }
+        if (!crashDialogChecked)
+            maybeShowCrashDialog();
         if (kartu.equalsIgnoreCase("game")) {
             if (!mygame.render())
                 backToMap();
@@ -9119,14 +9121,114 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private void initSD() {
     }
 
+    private static final String CRASH_PENDING_PREF = "crash_pending";
+    private static final String CRASH_LAST_FILE = "lastcrash.txt";
+    private boolean crashDialogChecked = false;
+
     private void initErrorHandling() {
         Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
             public void uncaughtException(Thread t, Throwable e) {
                 ErrorBung(e, "errorlog.txt");
-                Gdx.net.openURI("https://mirwanda.com/crash");
+                boolean alreadyPending = false;
+                try {
+                    alreadyPending = prefs.getBoolean(CRASH_PENDING_PREF, false);
+                    StringWriter sw = new StringWriter();
+                    e.printStackTrace(new PrintWriter(sw));
+                    String head = "NotTiled " + vers + " | " + OS + " | "
+                            + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
+                            + " | thread " + t.getName() + "\n";
+                    Gdx.files.local(CRASH_LAST_FILE).writeString(head + sw.toString(), false);
+                    prefs.putBoolean(CRASH_PENDING_PREF, true).flush();
+                } catch (Throwable ignored) {}
+                // The in-app crash dialog shows on next launch. Only fall back to the web page
+                // when the previous crash was never shown (crashing again before it could appear).
+                if (alreadyPending)
+                    Gdx.net.openURI("https://mirwanda.com/crash");
                 System.exit(1);
             }
         });
+    }
+
+    /** Called every frame once startup is stable; shows the crash dialog at most once per crash. */
+    private void maybeShowCrashDialog() {
+        if (crashDialogChecked || loadingfile || successfulFrames < 120)
+            return;
+        if (!kartu.equalsIgnoreCase("world") || stage.getActors().size > 0)
+            return; // wait until the editor is idle (no Safe Mode / other dialog up)
+        crashDialogChecked = true;
+        if (!prefs.getBoolean(CRASH_PENDING_PREF, false))
+            return;
+        prefs.putBoolean(CRASH_PENDING_PREF, false).flush();
+        String log = "";
+        try {
+            FileHandle fh = Gdx.files.local(CRASH_LAST_FILE);
+            if (fh.exists())
+                log = fh.readString();
+        } catch (Throwable ignored) {}
+        if (log.trim().isEmpty())
+            return;
+        showCrashDialog(log);
+    }
+
+    private void showCrashDialog(final String log) {
+        final String logPath = basepath + "errorlog.txt";
+        Gdx.input.setInputProcessor(stage);
+        final Dialog dlg = new Dialog("", skin, "dialog");
+        Table ct = dlg.getContentTable();
+        ct.pad(10);
+        ct.add(new Label(z.crashtitle != null ? z.crashtitle : "NotTiled crashed last time", skin))
+                .padBottom(8).row();
+
+        Label info = new Label((z.crashinfo != null ? z.crashinfo
+                : "Sorry! The crash log is below. Copy it and post it in #bug-reports on Discord, with what you were doing. Log file:")
+                + "\n" + logPath, skin);
+        info.setWrap(true);
+        ct.add(info).width(btnx).padBottom(8).row();
+
+        // Cap the on-screen text (StackOverflowError traces are huge); Copy still takes it all.
+        String shown = log.length() > 8000 ? log.substring(0, 8000) + "\n..." : log;
+        Label logLabel = new Label(shown, skin);
+        logLabel.setWrap(true);
+        logLabel.setFontScale(0.8f);
+        ScrollPane sp = new ScrollPane(logLabel, skin);
+        sp.setFadeScrollBars(false);
+        sp.setScrollingDisabled(true, false);
+        float logH = Math.max(btny * 3, Math.min(btny * 8, stage.getHeight() - btny * 7));
+        ct.add(sp).width(btnx).height(logH).padBottom(8).row();
+
+        Table row = new Table();
+        TextButton bCopy = new TextButton(z.crashcopy != null ? z.crashcopy : "Copy", skin);
+        bCopy.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                Gdx.app.getClipboard().setContents(log);
+                status(z.crashcopied != null ? z.crashcopied : "Crash log copied to clipboard", 3);
+            }
+        });
+        TextButton bReport = new TextButton(z.crashreport != null ? z.crashreport : "Copy & Report", skin);
+        bReport.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                Gdx.app.getClipboard().setContents(log);
+                status(z.crashcopied != null ? z.crashcopied : "Crash log copied to clipboard", 3);
+                Gdx.net.openURI("https://discord.gg/VywTZyaCB3");
+            }
+        });
+        row.add(bCopy).width(btnx * 0.48f).height(btny).padRight(4);
+        row.add(bReport).width(btnx * 0.48f).height(btny);
+        ct.add(row).padBottom(4).row();
+
+        TextButton bClose = new TextButton(z.crashclose != null ? z.crashclose : "Close", skin);
+        bClose.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                dlg.hide();
+                if (kartu.equalsIgnoreCase("world") || kartu.equalsIgnoreCase("tile"))
+                    Gdx.input.setInputProcessor(im);
+            }
+        });
+        ct.add(bClose).width(btnx).height(btny).row();
+        dlg.show(stage);
     }
 
     private void ErrorBung(Throwable e, String filenya) {
@@ -32276,7 +32378,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         objectListScrollPane = new ScrollPane(objectListRowTable, skin);
         objectListScrollPane.setFadeScrollBars(false);
         objectListScrollPane.setScrollingDisabled(true, false);
-        tObjectList.add(objectListScrollPane).width(btnx).expandY().fillY().height(btny * 12).padBottom(4).row();
+        // Flexible height: a fixed btny*12 list plus ~9 rows of controls overflowed tall/narrow
+        // screens (e.g. Mate40 Pro) and pushed Back off-screen. min/pref lets Table shrink it.
+        tObjectList.add(objectListScrollPane).width(btnx).expandY().fillY()
+                .minHeight(btny * 3).prefHeight(btny * 12).padBottom(4).row();
 
         lObjectListTruncated = new Label("", skin);
         lObjectListTruncated.setWrap(true);

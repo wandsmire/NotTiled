@@ -530,6 +530,12 @@ public class language
 	// SAF open flow
 	String browseDevice;
 	String openAppStorage;
+	String crashtitle;
+	String crashinfo;
+	String crashcopy;
+	String crashreport;
+	String crashcopied;
+	String crashclose;
 	String grantFolderAccess;
 	String skipFolderAccess;
 	String tilesetImagesNotFound;
