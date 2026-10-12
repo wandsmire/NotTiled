@@ -988,7 +988,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private float undohistory = 0f;
     private Table trandomgen, treplacetiles, tgenerateterrain, taiGenerate;
     private Image iReplaceFrom, iReplaceTo, iRandomLive, iRandomDead, iGenTerrain1, iGenTerrain2;
-    private Label lReplaceRange;
+    private Label lReplaceRange, lReplaceMsg;
     private CheckBox cbReplaceRangeLimit, cbReplaceAllLayers;
     private boolean replaceRangePicking;
     private int replaceRangeMinX, replaceRangeMinY, replaceRangeMaxX = -1, replaceRangeMaxY = -1;
@@ -12647,7 +12647,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         replacetiles.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                fprevstr.setText(curspr + "");
+                // Keep the last chosen From/To; only prefill From from the brush the first time.
+                // curspr can carry flip flags (e.g. after the map picker), so strip them.
+                long brushGid = stripTileGidFlags(curspr & 0xFFFFFFFFL);
+                if (brushGid > 0 && isReplaceFieldUnset(fprevstr))
+                    fprevstr.setText(brushGid + "");
+                setReplaceMessage(null, false);
                 updateReplaceTilePreviews();
                 updateReplaceRangeLabel();
                 gotoStage(treplacetiles);
@@ -12919,6 +12924,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 z.replaceremoveall != null ? z.replaceremoveall : "Remove all", skin);
         fReplaceChance = new TextField("", skin);
         fReplaceChance.setMessageText("1/75, 0.25, 25%");
+        fReplaceChance.setTextFieldListener(new TextField.TextFieldListener() {
+            @Override
+            public void keyTyped(TextField textField, char c) {
+                setReplaceMessage(null, false);
+            }
+        });
+        TextField.TextFieldListener replaceGidListener = new TextField.TextFieldListener() {
+            @Override
+            public void keyTyped(TextField textField, char c) {
+                updateReplaceTilePreviews();
+            }
+        };
+        fprevstr.setTextFieldListener(replaceGidListener);
+        fnextstr.setTextFieldListener(replaceGidListener);
+        lReplaceMsg = new Label("", skin);
+        lReplaceMsg.setWrap(true);
         TextButton pickrepa = new TextButton(z.picktile1, skin);
         TextButton pickrepb = new TextButton(z.picktile2, skin);
         TextButton pickReplaceRange = new TextButton(
@@ -12987,6 +13008,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         treplacetiles.add(cbReplaceAllLayers).colspan(2).left().padBottom(2).row();
         treplacetiles.add(new Label(z.replacechance != null ? z.replacechance : "Chance", skin));
         treplacetiles.add(fReplaceChance).row();
+        treplacetiles.add(lReplaceMsg).width(btnx).colspan(2)
+                .height(com.badlogic.gdx.scenes.scene2d.ui.Value.prefHeight).row();
         treplacetiles.add(runreplace).width(btnx).colspan(2).row();
         treplacetiles.add(runremoveall).width(btnx).colspan(2).row();
         treplacetiles.add(repback).width(btnx).colspan(2);
@@ -12996,12 +13019,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 double chance = parseReplaceChance(fReplaceChance.getText());
                 if (chance < 0) {
-                    status(z.replacechanceinvalid != null ? z.replacechanceinvalid
-                            : "Invalid chance. Use e.g. 1/75, 0.25 or 25%", 3);
+                    setReplaceMessage(z.replacechanceinvalid != null ? z.replacechanceinvalid
+                            : "Invalid chance. Use e.g. 1/75, 0.25 or 25%", true);
                     return;
                 }
-                long p1 = Long.parseLong(fprevstr.getText());
-                long p3 = Long.parseLong(fnextstr.getText());
+                long p1, p3;
+                try {
+                    p1 = Long.parseLong(fprevstr.getText().trim());
+                    p3 = Long.parseLong(fnextstr.getText().trim());
+                } catch (NumberFormatException e) {
+                    return;
+                }
+                setReplaceMessage(null, false);
                 int p4 = getTsetFromSpr((int) p3);
                 replacetiles(p1, p3, p4, cbReplaceAllLayers.isChecked(),
                         cbReplaceRangeLimit.isChecked() && replaceRangeMaxX >= 0, chance);
@@ -13013,8 +13042,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             public void changed(ChangeEvent event, Actor actor) {
                 double chance = parseReplaceChance(fReplaceChance.getText());
                 if (chance < 0) {
-                    status(z.replacechanceinvalid != null ? z.replacechanceinvalid
-                            : "Invalid chance. Use e.g. 1/75, 0.25 or 25%", 3);
+                    setReplaceMessage(z.replacechanceinvalid != null ? z.replacechanceinvalid
+                            : "Invalid chance. Use e.g. 1/75, 0.25 or 25%", true);
                     return;
                 }
                 long p1;
@@ -13025,10 +13054,24 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
                 int removed = removeAllReplaceTiles(p1, cbReplaceAllLayers.isChecked(),
                         cbReplaceRangeLimit.isChecked() && replaceRangeMaxX >= 0, chance);
-                status((z.replaceremoved != null ? z.replaceremoved : "Tiles removed: ") + removed, 2);
+                setReplaceMessage((z.replaceremoved != null ? z.replaceremoved : "Tiles removed: ") + removed,
+                        false);
             }
         });
         ///////////////////
+    }
+
+    private boolean isReplaceFieldUnset(TextField field) {
+        String t = field.getText() == null ? "" : field.getText().trim();
+        return t.isEmpty() || t.equals("0");
+    }
+
+    /** Message line inside the Replace dialog (status() is drawn under the dialog). */
+    private void setReplaceMessage(String msg, boolean error) {
+        if (lReplaceMsg == null)
+            return;
+        lReplaceMsg.setText(msg == null ? "" : msg);
+        lReplaceMsg.setColor(error ? Color.RED : Color.WHITE);
     }
 
     private void setReplaceTilePreview(Image img, long gid) {
@@ -13037,16 +13080,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 img.setDrawable(null);
             return;
         }
-        int initset = -1;
-        long stripped = stripTileGidFlags(gid);
-        for (int o = 0; o < tilesets.size(); o++) {
-            if (stripped >= tilesets.get(o).getFirstgid()
-                    && stripped < tilesets.get(o).getFirstgid() + tilesets.get(o).getTilecount()) {
-                initset = o;
-                break;
-            }
-        }
-        if (initset < 0) {
+        long stripped = stripTileGidFlags(gid & 0xFFFFFFFFL);
+        int initset = resolveTilesetIndexForGid(stripped, -1);
+        if (initset < 0 || tilesets.get(initset).getTexture() == null) {
             img.setDrawable(null);
             return;
         }
