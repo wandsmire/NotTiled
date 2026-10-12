@@ -539,4 +539,13 @@ public class language
 	String home;
 	String newfolder;
 	String devicecloud;
+	// External change detection
+	String diskchangedsave;
+	String diskchangedresume;
+	String diskchangedautosave;
+	String diskreloaddiscards;
+	String diskoverwrite;
+	String diskreload;
+	String diskkeepmine;
+	String maptempcopynote;
 }

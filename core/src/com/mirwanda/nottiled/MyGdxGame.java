@@ -501,6 +501,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     boolean newFileAdvancedVisible = false;
     // mp
     TextField fFilename, fCurdir, fTsw, fTsh, fTw, fTh, fTsx;
+    Label lMapPathNote;
     SelectBox sbMapFormat;
     SelectBox sbMapRenderOrder;
     SelectBox sbMapOrientation;
@@ -2291,7 +2292,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                         try {
                             Gdx.app.postRunnable(() -> {
-                                saveMap(curdir + "/" + curfile);
+                                saveMapAuto(curdir + "/" + curfile);
                             });
                             /*
                              * autosavePool.execute( new Runnable( ){
@@ -7909,6 +7910,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void run() {
                 resetCaches();
+                checkExternalMapChange();
             }
         });
     }
@@ -9698,6 +9700,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     public void newtmxfile(boolean user) {
+        clearDiskStamp();
         stamp = false;
         assemblymode = false;
         loadingfile = true;
@@ -10403,7 +10406,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void exportastmx(String fn) {
-        saveMapBlocking(curdir + "/" + curfile);
+        if (!saveMapBlocking(curdir + "/" + curfile))
+            return; // file changed by another app: conflict dialog is up
+
         FileHandle map = Gdx.files.absolute(curdir + "/" + curfile);
         byte[] b = map.readBytes();
         String outputName = fn;
@@ -11319,7 +11324,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             msgbox(z.saveas != null ? z.saveas : "Save the map first.");
             return;
         }
-        saveMapBlocking(curdir + "/" + curfile);
+        if (!saveMapBlocking(curdir + "/" + curfile))
+            return; // file changed by another app: conflict dialog is up
         FileHandle map = Gdx.files.absolute(curdir + "/" + curfile);
 
         createRWthumbnail(curfile.substring(0, curfile.length() - 4) + "_map");
@@ -11484,8 +11490,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void result(Object obj) {
                 if ("save".equals(obj)) {
-                    saveMapBlocking(curdir + "/" + curfile);
-                    Gdx.app.exit();
+                    if (saveMapBlocking(curdir + "/" + curfile)) {
+                        Gdx.app.exit();
+                    } else {
+                        // Another app changed the file; finish exiting only if the user overwrites.
+                        diskAfterOverwrite = new Runnable() {
+                            @Override
+                            public void run() {
+                                Gdx.app.exit();
+                            }
+                        };
+                        asked = false;
+                    }
                     return;
                 }
                 if ("discard".equals(obj)) {
@@ -16082,6 +16098,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             z.restorebackupprompt = "Could not open this map. Restore a recent backup?";
         if (z.backuprestored == null)
             z.backuprestored = "Backup restored";
+        if (z.diskchangedsave == null)
+            z.diskchangedsave = "This file was changed by another app since you opened it.";
+        if (z.diskchangedresume == null)
+            z.diskchangedresume = "This file was changed by another app. Reload it from disk?";
+        if (z.diskchangedautosave == null)
+            z.diskchangedautosave = "Autosave skipped: the file was changed by another app.";
+        if (z.diskreloaddiscards == null)
+            z.diskreloaddiscards = "Reloading discards your unsaved changes in NotTiled.";
+        if (z.diskoverwrite == null)
+            z.diskoverwrite = "Overwrite";
+        if (z.diskreload == null)
+            z.diskreload = "Reload from disk";
+        if (z.diskkeepmine == null)
+            z.diskkeepmine = "Keep mine";
+        if (z.maptempcopynote == null)
+            z.maptempcopynote = "This is a temporary copy in NotTiled/Temp: the original is outside the granted folder, so saves do not reach it. Grant access to its folder (Open > Device / Cloud) to edit it in place.";
         if (z.multiselect == null)
             z.multiselect = "Multi";
         if (z.removescrollboundary == null)
@@ -21558,7 +21590,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     return;
                 }
                 fFilename.setText(curfile);
-                fCurdir.setText(curdir);
+                // Real folder (not the internal /saf/ mount); flag NotTiled/Temp copies, whose
+                // saves never reach the file the user picked.
+                fCurdir.setText(displayRealPath(curdir));
+                fCurdir.setCursorPosition(fCurdir.getText().length());
+                lMapPathNote.setText(isTempMapCopy() ? z.maptempcopynote : "");
                 if (!tsxFile.equalsIgnoreCase(""))
                     fTsx.setText(tsxFile);
                 fTw.setText(Integer.toString(Tw));
@@ -21606,6 +21642,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tProperties.add(new Label(z.file, skin)).width(btnx / 2 - 2);
         tProperties.add(fFilename).padBottom(2).width(btnx / 2).row();
         tProperties.add(fCurdir).padBottom(2).colspan(2).row();
+        lMapPathNote = new Label("", skin);
+        lMapPathNote.setWrap(true);
+        lMapPathNote.setColor(Color.ORANGE);
+        tProperties.add(lMapPathNote).height(com.badlogic.gdx.scenes.scene2d.ui.Value.prefHeight).padBottom(2).colspan(2).row();
 
         tProperties.add(new Label(z.tilewidth, skin)).width(btnx / 2 - 2);
         tProperties.add(fTsw).padBottom(2).width(btnx / 2).row();
@@ -25409,28 +25449,45 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     // XML PROCESSOR
     //////////////////////////////////////////////////////
 
+    /** External-change guard for a save: ask, skip quietly (autosave), or write regardless. */
+    private static final int DISK_CHECK_PROMPT = 0, DISK_CHECK_AUTOSAVE = 1, DISK_CHECK_NONE = 2;
+
     public void saveMap(String actualPath) {
-        saveMap(actualPath, false, false);
+        saveMap(actualPath, false, false, DISK_CHECK_PROMPT);
+    }
+
+    /** Timed autosave: never overwrites a file another app changed; warns once per external version. */
+    public void saveMapAuto(String actualPath) {
+        saveMap(actualPath, false, false, DISK_CHECK_AUTOSAVE);
     }
 
     public void saveMapForBackup(String actualPath) {
         mapSaveNotifyManual = true;
         mapSaveNotifyMsgbox = false;
-        saveMap(actualPath, false, true);
+        saveMap(actualPath, false, true, DISK_CHECK_PROMPT);
     }
 
     /** Menu Save: rolling backup + confirmation dialog when finished. */
     public void saveMapFromMenu(String actualPath) {
         mapSaveNotifyManual = false;
         mapSaveNotifyMsgbox = true;
-        saveMap(actualPath, false, true);
+        saveMap(actualPath, false, true, DISK_CHECK_PROMPT);
     }
 
-    public void saveMapBlocking(String actualPath) {
-        saveMap(actualPath, true, false);
+    /** Synchronous save. Returns false when it was held back because another app changed the
+     *  file (the Overwrite / Reload / Cancel dialog is then shown); callers that go on to read
+     *  the file back (export, play) should stop. */
+    public boolean saveMapBlocking(String actualPath) {
+        return saveMap(actualPath, true, false, DISK_CHECK_PROMPT);
     }
 
-    private void saveMap(final String actualPath, final boolean blocking, final boolean createBackup) {
+    /** Synchronous save that skips the external-change check (collab sync must ship memory state). */
+    private void saveMapBlockingForced(String actualPath) {
+        saveMap(actualPath, true, false, DISK_CHECK_NONE);
+    }
+
+    private boolean saveMap(final String actualPath, final boolean blocking, final boolean createBackup,
+            final int diskCheck) {
         if (mapSaveExecutor == null) {
             mapSaveExecutor = Executors.newSingleThreadExecutor(r -> {
                 Thread t = new Thread(r, "NotTiled-save");
@@ -25446,22 +25503,42 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
             });
         }
-        Runnable task = new Runnable() {
+        final boolean notifyMsgbox = mapSaveNotifyMsgbox;
+        final boolean notifyManual = mapSaveNotifyManual;
+        java.util.concurrent.Callable<Boolean> task = new java.util.concurrent.Callable<Boolean>() {
             @Override
-            public void run() {
+            public Boolean call() {
                 synchronized (saveLock) {
+                    // Checked on the save thread so it is ordered after any earlier queued save
+                    // (which re-stamps the file) — no false alarms from our own writes.
+                    if (diskCheck != DISK_CHECK_NONE && diskChangedExternally(actualPath)) {
+                        Gdx.app.postRunnable(new Runnable() {
+                            @Override
+                            public void run() {
+                                mapSaveNotifyMsgbox = false;
+                                mapSaveNotifyManual = false;
+                                onSaveBlockedByExternalChange(actualPath, createBackup,
+                                        diskCheck == DISK_CHECK_AUTOSAVE, notifyMsgbox, notifyManual);
+                            }
+                        });
+                        return false;
+                    }
                     performSave(actualPath, createBackup);
+                    return true;
                 }
             }
         };
         if (blocking) {
             try {
-                mapSaveExecutor.submit(task).get(120, TimeUnit.SECONDS);
+                Boolean r = mapSaveExecutor.submit(task).get(120, TimeUnit.SECONDS);
+                return r == null || r;
             } catch (Exception e) {
                 e.printStackTrace();
+                return true;
             }
         } else {
-            mapSaveExecutor.execute(task);
+            mapSaveExecutor.submit(task);
+            return true;
         }
     }
 
@@ -25489,6 +25566,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     for (property p : properties) {
                         if (p.getName().equalsIgnoreCase("tag") && p.getValue().equalsIgnoreCase("remixed_dungeon")) {
                             exporttorpd(actualFile.nameWithoutExtension(), false);
+                            recordDiskStamp(actualFile.path());
                             onSaveCommitted(actualFile);
                             notifySaveFinished(true);
                             return;
@@ -25496,6 +25574,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     }
                     setjsonmap();
                     savejsonmap(actualFile);
+                    recordDiskStamp(actualFile.path());
                     onSaveCommitted(actualFile);
                     notifySaveFinished(okJson);
                 }
@@ -25538,6 +25617,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
 
         if (ok) {
+            // Remember what we just wrote so a later save / resume can tell our own write
+            // from another app's edit.
+            recordDiskStamp(actualFile.path());
             if (createBackup && sMapBackups) {
                 MapBackupStore.maybeBackup(basepath, actualFile.path(), actualFile, backupMaxCount,
                         backupMinIntervalMin, true, prefs);
@@ -25584,6 +25666,253 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         saveRecents();
         prefs.putString("lof", actualFile.path());
         prefs.flush();
+    }
+
+    //////////////////////////////////////////////////////
+    // EXTERNAL CHANGE DETECTION
+    // A map is parsed into memory and saved by rewriting the whole file, so an
+    // edit made by another app in between would be silently lost. We remember
+    // the file's signature when NotTiled reads or writes it and compare before
+    // every save and when the app comes back to the foreground.
+    //////////////////////////////////////////////////////
+
+    /** Files up to this size are fingerprinted by content (CRC32), so a "touch" or a
+     *  provider with a bogus lastModified doesn't raise false alarms. */
+    private static final long DISK_CRC_MAX_BYTES = 8L * 1024 * 1024;
+    private volatile String diskStampPath = null;
+    private volatile String diskStampSig = null;
+    /** External version we already told the user about (autosave / resume warn once each). */
+    private volatile String diskWarnedSig = null;
+    private Dialog diskConflictDialog = null;
+    /** Run after the user picks Overwrite (e.g. finish exiting). */
+    private Runnable diskAfterOverwrite = null;
+
+    private static String normMapPath(String p) {
+        return p == null ? "" : p.replace('\\', '/').replaceAll("/+", "/");
+    }
+
+    /** "length:crc" (or "length@lastModified" for very large files); null if unreadable / missing. */
+    private static String diskSignature(String path) {
+        try {
+            FileHandle f = Gdx.files.absolute(path);
+            if (!f.exists() || f.isDirectory())
+                return null;
+            long len = f.length();
+            if (len >= 0 && len <= DISK_CRC_MAX_BYTES) {
+                java.util.zip.CRC32 crc = new java.util.zip.CRC32();
+                InputStream in = f.read();
+                try {
+                    byte[] buf = new byte[64 * 1024];
+                    int n;
+                    long total = 0;
+                    while ((n = in.read(buf)) > 0) {
+                        crc.update(buf, 0, n);
+                        total += n;
+                    }
+                    return total + ":" + Long.toHexString(crc.getValue());
+                } finally {
+                    try { in.close(); } catch (Exception ignored) {}
+                }
+            }
+            return len + "@" + f.lastModified();
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /** Remember the on-disk state of the open map (after NotTiled loaded or wrote it). */
+    void recordDiskStamp(String path) {
+        String sig = diskSignature(path);
+        diskStampPath = sig == null ? null : normMapPath(path);
+        diskStampSig = sig;
+        diskWarnedSig = null;
+    }
+
+    /** GL thread: a map was just (re)loaded from path. */
+    private void onMapReadFromDisk(String path) {
+        recordDiskStamp(path);
+        diskAfterOverwrite = null;
+        if (diskConflictDialog != null) {
+            if (diskConflictDialog.getStage() != null)
+                diskConflictDialog.hide(null);
+            diskConflictDialog = null;
+        }
+    }
+
+    void clearDiskStamp() {
+        diskStampPath = null;
+        diskStampSig = null;
+        diskWarnedSig = null;
+    }
+
+    /** Current external signature if path is the open map and another app changed it since; else null. */
+    private String externalChangeSig(String path) {
+        String stampPath = diskStampPath, stampSig = diskStampSig;
+        if (stampPath == null || stampSig == null || !stampPath.equals(normMapPath(path)))
+            return null;
+        String now = diskSignature(path);
+        // A deleted / unreadable file isn't a conflict: saving just recreates it.
+        if (now == null || now.equals(stampSig))
+            return null;
+        return now;
+    }
+
+    boolean diskChangedExternally(String path) {
+        return externalChangeSig(path) != null;
+    }
+
+    private String currentMapPath() {
+        if (curfile == null || curfile.isEmpty())
+            return null;
+        return normMapPath(curdir + "/" + curfile);
+    }
+
+    /** GL thread: a save was held back because the file changed on disk. */
+    private void onSaveBlockedByExternalChange(final String path, final boolean createBackup, boolean autosave,
+            final boolean notifyMsgbox, final boolean notifyManual) {
+        String sig = externalChangeSig(path);
+        if (sig == null)
+            sig = "?";
+        if (autosave) {
+            if (sig.equals(diskWarnedSig))
+                return; // already warned about this external version: skip quietly
+            status(z.diskchangedautosave, 5);
+        }
+        diskWarnedSig = sig;
+        showDiskConflictDialog(path, true, createBackup, notifyMsgbox, notifyManual);
+    }
+
+    /**
+     * Overwrite / Reload from disk / Cancel (forSave), or Reload / Keep mine (on resume).
+     * Reload goes through the normal open path; it discards NotTiled's unsaved edits, which
+     * the dialog says when there are any.
+     */
+    private void showDiskConflictDialog(final String path, final boolean forSave, final boolean createBackup,
+            final boolean notifyMsgbox, final boolean notifyManual) {
+        if (diskConflictDialog != null && diskConflictDialog.getStage() != null)
+            diskConflictDialog.hide(null);
+        Gdx.input.setInputProcessor(stage);
+        final Dialog dlg = new Dialog(z.confirmation != null ? z.confirmation : "", skin, "dialog") {
+            @Override
+            protected void result(Object obj) {
+                diskConflictDialog = null;
+                Runnable after = diskAfterOverwrite;
+                diskAfterOverwrite = null;
+                if (kartu.equalsIgnoreCase("world") || kartu.equalsIgnoreCase("tile"))
+                    Gdx.input.setInputProcessor(im);
+                if ("overwrite".equals(obj)) {
+                    mapSaveNotifyMsgbox = notifyMsgbox;
+                    mapSaveNotifyManual = notifyManual || !notifyMsgbox;
+                    if (after != null) {
+                        saveMap(path, true, createBackup, DISK_CHECK_NONE);
+                        after.run();
+                    } else {
+                        saveMap(path, false, createBackup, DISK_CHECK_NONE);
+                    }
+                } else if ("reload".equals(obj)) {
+                    reloadMapFromDisk(path);
+                } else if ("keep".equals(obj)) {
+                    // Keep the in-memory map; the next save asks again (we didn't re-stamp).
+                    diskWarnedSig = externalChangeSig(path);
+                }
+            }
+        };
+        float w = getDialogContentWidth();
+        String msg = forSave ? z.diskchangedsave : z.diskchangedresume;
+        if (mapDirty)
+            msg += "\n\n" + z.diskreloaddiscards;
+        Label lab = new Label(msg, skin);
+        lab.setWrap(true);
+        lab.setAlignment(Align.center);
+        Label where = new Label(displayRealPath(path), skin);
+        where.setWrap(true);
+        where.setAlignment(Align.center);
+        dlg.getContentTable().add(lab).width(w).pad(10).row();
+        dlg.getContentTable().add(where).width(w).pad(4, 10, 10, 10).row();
+        if (forSave) {
+            dlg.button(z.diskoverwrite, "overwrite");
+            dlg.button(z.diskreload, "reload");
+            dlg.button(z.cancel != null ? z.cancel : "Cancel", "cancel");
+        } else {
+            dlg.button(z.diskreload, "reload");
+            dlg.button(z.diskkeepmine, "keep");
+        }
+        diskConflictDialog = dlg;
+        dlg.show(stage);
+    }
+
+    /** Re-open the map from disk through the normal open path (same as picking it again). */
+    private void reloadMapFromDisk(String path) {
+        FileHandle f = Gdx.files.absolute(path);
+        if (!f.exists()) {
+            msgbox(z.error);
+            return;
+        }
+        mapDirty = false;
+        String ext = f.extension();
+        if (ext.equalsIgnoreCase("tmx")) {
+            curdir = f.parent().path();
+            openedfile = f.path();
+            loadtmx(f.path(), true);
+        } else if (ext.equalsIgnoreCase("json")) {
+            curdir = f.parent().path();
+            loadjsonmap(f);
+            backToMap();
+        } else {
+            tujuanDialog("open", f);
+        }
+    }
+
+    /** App back in the foreground (Android onResume, desktop window focus): offer a reload when
+     *  another app changed the open map. The file is fingerprinted off the GL thread. */
+    public void checkExternalMapChange() {
+        final String path = currentMapPath();
+        if (path == null || diskStampPath == null || !diskStampPath.equals(path) || loadingfile)
+            return;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final String sig = externalChangeSig(path);
+                if (sig == null || sig.equals(diskWarnedSig))
+                    return;
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        // Still the same map, still changed, not mid-load, and not already asking?
+                        if (loadingfile || !path.equals(currentMapPath()) || sig.equals(diskWarnedSig))
+                            return;
+                        if (diskConflictDialog != null && diskConflictDialog.getStage() != null)
+                            return;
+                        diskWarnedSig = sig;
+                        showDiskConflictDialog(path, false, false, false, false);
+                    }
+                });
+            }
+        }, "NotTiled-diskcheck").start();
+    }
+
+    /** Location as the user knows it: the real path for /saf/… documents, unchanged otherwise. */
+    String displayRealPath(String dir) {
+        if (dir == null)
+            return "";
+        String d = normMapPath(dir);
+        String root = safRootDir();
+        if (!root.isEmpty() && (d.equals(root) || d.startsWith(root + "/"))) {
+            String real = safToRealPath(d);
+            if (real != null)
+                return real;
+            // Tree on a cloud / non-device provider: no filesystem path exists.
+            String label = z.devicecloud != null ? z.devicecloud : "Device / Cloud";
+            return "[" + label + "]" + d.substring(root.length());
+        }
+        return d;
+    }
+
+    /** True when the open map is NotTiled's own copy in NotTiled/Temp (picked outside the granted folder). */
+    private boolean isTempMapCopy() {
+        String tmp = normMapPath(basepath + "NotTiled/Temp");
+        String dir = normMapPath(curdir);
+        return dir.equals(tmp) || dir.startsWith(tmp + "/");
     }
 
     private java.util.List<FileHandle> backupListHandles = new ArrayList<FileHandle>();
@@ -27110,6 +27439,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 curdir = f.parent().path();
                 curfile = f.name();
                 getjsonmap();
+                mapDirty = false;
+                onMapReadFromDisk(f.path());
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -27141,6 +27472,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 curdir = f.parent().path();
                 curfile = f.name();
                 getRPDmap();
+                mapDirty = false;
+                onMapReadFromDisk(f.path());
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -28881,6 +29214,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
             // A fresh load is by definition unmodified.
             mapDirty = false;
+            onMapReadFromDisk(file.path());
 
             // Stitched infinite maps are finite in memory from here on: image
             // layers move into the shifted origin space, and the flag is cleared
@@ -37709,7 +38043,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void pushUpdate() {
         if (isCreateRoom || isJoinRoom) {
-            saveMapBlocking(curdir + "/" + curfile);
+            saveMapBlockingForced(curdir + "/" + curfile);
             FileHandle ff = Gdx.files.absolute(curdir + "/" + curfile);
             String dat = ff.readString();
 
@@ -38106,7 +38440,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 logNet("[CI] " + cmd.data + " entered the room.");
                                 if (isCreateRoom) {
                                     // send the map
-                                    saveMapBlocking(curdir + "/" + curfile);
+                                    saveMapBlockingForced(curdir + "/" + curfile);
                                     // read map as text
                                     FileHandle ff = Gdx.files.absolute(curdir + "/" + curfile);
 
@@ -39022,8 +39356,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         if (!l.isVisible() && l.getType() == layer.Type.OBJECT)
                             l.setVisible(true);
                     }
-                    saveMapBlocking(curdir + "/" + curfile);
-                    playgame(curdir, curfile);
+                    if (saveMapBlocking(curdir + "/" + curfile)) // false: changed by another app, dialog up
+                        playgame(curdir, curfile);
                     return true;
                 } else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled rpg")) {
                     if (!hasPlayerInstance()) {
@@ -39035,16 +39369,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             l.setVisible(true);
                     }
 
-                    saveMapBlocking(curdir + "/" + curfile);
-                    playgame(curdir, curfile);
+                    if (saveMapBlocking(curdir + "/" + curfile))
+                        playgame(curdir, curfile);
                     return true;
                 } else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled pianoroll")) {
-                    saveMapBlocking(curdir + "/" + curfile);
-                    playmusic(playback.PLAY, "");
+                    if (saveMapBlocking(curdir + "/" + curfile))
+                        playmusic(playback.PLAY, "");
                     return true;
                 } else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("NotTiled music")) {
-                    saveMapBlocking(curdir + "/" + curfile);
-                    playmusic(playback.PLAY, "");
+                    if (saveMapBlocking(curdir + "/" + curfile))
+                        playmusic(playback.PLAY, "");
                     return true;
                 } else if (p.getName().equalsIgnoreCase("type") && p.getValue().equalsIgnoreCase("Pixel Editor")) {
                     rotating = !rotating;
