@@ -2370,7 +2370,27 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     undohistory = 0;
                     // Gdx.app.log("Cache","Clearing...");
                     if (undolayer.size() > 100000) {
-                        undolayer.subList(0, undolayer.size() - 100000).clear();
+                        // Trim whole undo steps only. A step starts at its non-follower entry; cutting
+                        // inside one (e.g. a 230k-tile fill on a 480x480 map) left it half-undoable.
+                        int excess = undolayer.size() - 100000;
+                        int cut = -1;
+                        for (int n = excess; n < undolayer.size(); n++) {
+                            if (!undolayer.get(n).isFollower()) {
+                                cut = n;
+                                break;
+                            }
+                        }
+                        if (cut == -1) {
+                            // The newest step alone exceeds the cap: keep it whole, drop everything older.
+                            for (int n = excess - 1; n >= 0; n--) {
+                                if (!undolayer.get(n).isFollower()) {
+                                    cut = n;
+                                    break;
+                                }
+                            }
+                        }
+                        if (cut > 0)
+                            undolayer.subList(0, cut).clear();
                     }
                     // Gdx.app.log("Cache","Cleared");
                 }
@@ -10966,15 +10986,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bOpen.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                // Folder granted → unified browser (starts in the device folder,
-                // Storage toggles to app storage). No grant yet → system picker,
-                // which walks the user through granting folder access.
-                if (canBrowseFiles()) {
-                    FileDialog(z.opentmxfile, "open", "file",
-                            new String[]{".tmx", ".png", ".ntp", ".json"}, tMenu);
-                } else {
-                    nativeOpenSAF("open", tMenu);
-                }
+                // Always the in-app browser. Without a granted folder it starts in app storage,
+                // where maps made before 2.3.1 live (the system picker can't see that folder);
+                // its "Device / Cloud" button still goes to the system picker.
+                FileDialog(z.opentmxfile, "open", "file",
+                        new String[]{".tmx", ".png", ".ntp", ".json"}, tMenu);
             }
         });
 
@@ -23521,7 +23537,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private void showImageFilePreview(FileHandle imageFile) {
         try {
             Pixmap pm = new Pixmap(imageFile);
-            showPixmapPreviewDialog(pm, imageFile.name(), false, null);
+            // Opened from the Internal File Manager: closing the preview returns to the file list.
+            showPixmapPreviewDialog(pm, imageFile.name(), false, null, false);
         } catch (Exception e) {
             ErrorBung(e, "errorlog.txt");
             msgbox(z.error);
@@ -23530,6 +23547,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void showPixmapPreviewDialog(final Pixmap pixmap, String title, final boolean offerSave,
             final Runnable onSave) {
+        showPixmapPreviewDialog(pixmap, title, offerSave, onSave, true);
+    }
+
+    private void showPixmapPreviewDialog(final Pixmap pixmap, String title, final boolean offerSave,
+            final Runnable onSave, final boolean returnToMap) {
         if (pixmap == null)
             return;
         final Pixmap retainedPixmap = offerSave ? pixmap : null;
@@ -23548,7 +23570,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 } else if (retainedPixmap != null && !retainedPixmap.isDisposed()) {
                     retainedPixmap.dispose();
                 }
-                backToMap();
+                if (returnToMap)
+                    backToMap();
             }
         };
         Table content = previewDlg.getContentTable();
@@ -34289,6 +34312,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void beginTerrainPaintAt(float screenX, float screenY) {
+        // The hold timer starts the stroke after 0.4s; libGDX's longPress (~1.1s) used to start it
+        // again, pushing a second undo snapshot that already held the first cell, so one Undo left it.
+        if (terrainPainting)
+            return;
         terrainHoldPending = false;
         terrainPainting = true;
         terrainPaintMoved = true;
