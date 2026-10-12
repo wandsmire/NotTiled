@@ -454,6 +454,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     boolean curpickMacroTerrain = false;
     boolean macroTerrainEditorFromMacroMgmt = false;
     private final java.util.ArrayList<MacroTerrainStore> macroTerrainUndoStack = new java.util.ArrayList<>();
+    // Terrain ids a stamp covered per half-cell, so erasing that stamp restores them instead of clearing to -1.
+    private java.util.HashMap<Long, java.util.ArrayList<Integer>> terrainUnderlay = new java.util.HashMap<>();
+    private final java.util.ArrayList<java.util.HashMap<Long, java.util.ArrayList<Integer>>> terrainUnderlayUndoStack = new java.util.ArrayList<>();
+    private boolean terrainEditChanged = false;
+    private boolean terrainUndoStepOpen = false;
     int newMacroTerrainGid = -1;
     java.util.List<TextField> tf = new ArrayList<TextField>();
     java.util.List<Label> tla = new ArrayList<Label>();
@@ -2163,7 +2168,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     terrainPainting = false;
                     lastTerrainPaintCell = -1;
                     terrainHoldPending = false;
-                    if (isMacroTerrainEditorPicker())
+                    if (endTerrainUndoStep() && isMacroTerrainEditorPicker())
                         saveMacroAutoTerrain();
                 } else if (tilesets.size() > 0) {
                     Vector3 t = new Vector3();
@@ -22661,6 +22666,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (deletedIdx < 0 || deletedIdx >= trs.size())
                 return;
             trs.remove(deletedIdx);
+            remapTerrainUnderlayAfterDelete(deletedIdx);
             java.util.ArrayList<tile> metaTiles = new java.util.ArrayList<tile>(macroTerrain.getAllTileMeta());
             for (tile t : metaTiles) {
                 int[] tr = t.getTerrain();
@@ -22691,6 +22697,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (deletedIdx < 0 || deletedIdx >= ts.getTerrains().size())
             return;
         ts.getTerrains().remove(deletedIdx);
+        remapTerrainUnderlayAfterDelete(deletedIdx);
         java.util.List<tile> tiles = ts.getTiles();
         for (int n = 0; n < tiles.size(); n++) {
             tile t = tiles.get(n);
@@ -33635,7 +33642,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 return true;
         } else if ("tile".equals(kartu) || "pickanim".equals(kartu)) {
             initialZoom = tilecam.zoom;
-            if (isActiveTerrainEditorPicker() && tilesets.size() > 0) {
+            Vector3 uiTouch = new Vector3();
+            uicam.unproject(uiTouch.set(p1, p2, 0));
+            if (isActiveTerrainEditorPicker() && tilesets.size() > 0 && !terrainEditorButtonHit(uiTouch)) {
                 Vector3 touch = new Vector3();
                 tilecam.unproject(touch.set(p1, p2, 0));
                 boolean hitTile = false;
@@ -34096,6 +34105,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             t = getOrCreateTileMetaAtGrid(ts, gridIdx);
         }
         int[] cn = t.getTerrain();
+        if (cn[corner] != terrainId)
+            terrainEditChanged = true;
         int a = cn[0], b = cn[1], c = cn[2], d = cn[3];
         switch (corner) {
             case 0:
@@ -34118,11 +34129,96 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
+    private Long terrainUnderlayKey(tileset ts, int halfCellIndex) {
+        int gridW = ts.getWidth() * 2;
+        if (gridW <= 0)
+            return null;
+        int hcx = halfCellIndex % gridW;
+        int hcy = halfCellIndex / gridW;
+        int corner = (hcx % 2) + (hcy % 2) * 2;
+        int gridIdx = (hcy / 2) * ts.getWidth() + hcx / 2;
+        if (gridIdx < 0 || gridIdx >= CollectionTilesetOps.getPickerGridSlots(ts))
+            return null;
+        if (isMacroTerrainEditorPicker()) {
+            int gid = gridIndexToGid(ts, gridIdx);
+            if (gid < 0)
+                return null;
+            return (1L << 62) | ((long) gid << 2) | corner;
+        }
+        return ((long) tilesets.indexOf(ts) << 34) | ((long) gridIdx << 2) | corner;
+    }
+
+    private void overlayTerrainHalfCell(tileset ts, int halfCellIndex, int terrainId) {
+        int prev = getTerrainHalfCellValue(ts, halfCellIndex);
+        if (prev == terrainId)
+            return;
+        Long key = terrainUnderlayKey(ts, halfCellIndex);
+        if (key == null)
+            return;
+        if (prev != -1) {
+            java.util.ArrayList<Integer> under = terrainUnderlay.get(key);
+            if (under == null) {
+                under = new java.util.ArrayList<Integer>();
+                terrainUnderlay.put(key, under);
+            }
+            under.add(prev);
+        }
+        setTerrainHalfCell(ts, halfCellIndex, terrainId);
+    }
+
+    private void peelTerrainHalfCell(tileset ts, int halfCellIndex) {
+        Long key = terrainUnderlayKey(ts, halfCellIndex);
+        if (key == null)
+            return;
+        int restore = -1;
+        java.util.ArrayList<Integer> under = terrainUnderlay.get(key);
+        if (under != null && !under.isEmpty()) {
+            restore = under.remove(under.size() - 1);
+            if (under.isEmpty())
+                terrainUnderlay.remove(key);
+        }
+        setTerrainHalfCell(ts, halfCellIndex, restore);
+    }
+
+    private void stampTerrainCells(tileset ts, java.util.List<Integer> cells, int terrainId) {
+        if (cells.isEmpty())
+            return;
+        boolean erase = true;
+        for (int idx : cells) {
+            if (getTerrainHalfCellValue(ts, idx) != terrainId) {
+                erase = false;
+                break;
+            }
+        }
+        for (int idx : cells) {
+            if (erase)
+                peelTerrainHalfCell(ts, idx);
+            else
+                overlayTerrainHalfCell(ts, idx, terrainId);
+        }
+    }
+
+    private void remapTerrainUnderlayAfterDelete(int deletedIdx) {
+        java.util.Iterator<java.util.Map.Entry<Long, java.util.ArrayList<Integer>>> it = terrainUnderlay.entrySet()
+                .iterator();
+        while (it.hasNext()) {
+            java.util.ArrayList<Integer> under = it.next().getValue();
+            for (int i = under.size() - 1; i >= 0; i--) {
+                int id = remapTerrainIdAfterDelete(under.get(i), deletedIdx);
+                if (id < 0)
+                    under.remove(i);
+                else
+                    under.set(i, id);
+            }
+            if (under.isEmpty())
+                it.remove();
+        }
+    }
+
     private void toggleTerrainHalfCell(tileset ts, int halfCellIndex, int terrainId) {
-        if (getTerrainHalfCellValue(ts, halfCellIndex) == terrainId)
-            setTerrainHalfCell(ts, halfCellIndex, -1);
-        else
-            setTerrainHalfCell(ts, halfCellIndex, terrainId);
+        java.util.ArrayList<Integer> cells = new java.util.ArrayList<Integer>();
+        cells.add(halfCellIndex);
+        stampTerrainCells(ts, cells, terrainId);
     }
 
     private void stampTerrainFilledCornerBox(tileset ts, int anchorHcx, int anchorHcy, int cellSize, int terrainId) {
@@ -34134,15 +34230,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         int endHcy = anchorHcy + cellSize - 1;
         if (anchorHcx < 0 || anchorHcy < 0 || endHcx >= gridW || endHcy >= gridH)
             return;
-        boolean erase = true;
+        java.util.ArrayList<Integer> cells = new java.util.ArrayList<Integer>();
         for (int hcy = anchorHcy; hcy <= endHcy; hcy++)
             for (int hcx = anchorHcx; hcx <= endHcx; hcx++)
-                if (getTerrainHalfCellValue(ts, hcy * gridW + hcx) != terrainId)
-                    erase = false;
-        int setId = erase ? -1 : terrainId;
-        for (int hcy = anchorHcy; hcy <= endHcy; hcy++)
-            for (int hcx = anchorHcx; hcx <= endHcx; hcx++)
-                setTerrainHalfCell(ts, hcy * gridW + hcx, setId);
+                cells.add(hcy * gridW + hcx);
+        stampTerrainCells(ts, cells, terrainId);
     }
 
     private void stampTerrainHollowCornerBox(tileset ts, int anchorHcx, int anchorHcy, int cellSize, int terrainId) {
@@ -34154,22 +34246,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         int endHcy = anchorHcy + cellSize - 1;
         if (anchorHcx < 0 || anchorHcy < 0 || endHcx >= gridW || endHcy >= gridH)
             return;
-        boolean erase = true;
-        for (int hcy = anchorHcy; hcy <= endHcy; hcy++) {
-            for (int hcx = anchorHcx; hcx <= endHcx; hcx++) {
-                if (hcx == anchorHcx || hcx == endHcx || hcy == anchorHcy || hcy == endHcy) {
-                    if (getTerrainHalfCellValue(ts, hcy * gridW + hcx) != terrainId)
-                        erase = false;
-                }
-            }
-        }
-        int setId = erase ? -1 : terrainId;
+        java.util.ArrayList<Integer> cells = new java.util.ArrayList<Integer>();
         for (int hcy = anchorHcy; hcy <= endHcy; hcy++) {
             for (int hcx = anchorHcx; hcx <= endHcx; hcx++) {
                 if (hcx == anchorHcx || hcx == endHcx || hcy == anchorHcy || hcy == endHcy)
-                    setTerrainHalfCell(ts, hcy * gridW + hcx, setId);
+                    cells.add(hcy * gridW + hcx);
             }
         }
+        stampTerrainCells(ts, cells, terrainId);
     }
 
     private void stampTerrainCornersOnlyBox(tileset ts, int anchorHcx, int anchorHcy, int cellSize, int terrainId) {
@@ -34187,13 +34271,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 endHcy * gridW + anchorHcx,
                 endHcy * gridW + endHcx
         };
-        boolean erase = true;
+        java.util.ArrayList<Integer> cells = new java.util.ArrayList<Integer>();
         for (int idx : corners)
-            if (getTerrainHalfCellValue(ts, idx) != terrainId)
-                erase = false;
-        int setId = erase ? -1 : terrainId;
-        for (int idx : corners)
-            setTerrainHalfCell(ts, idx, setId);
+            cells.add(idx);
+        stampTerrainCells(ts, cells, terrainId);
     }
 
     private void stampTerrainCornersRevBox(tileset ts, int anchorHcx, int anchorHcy, int cellSize, int terrainId) {
@@ -34205,22 +34286,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         int endHcy = anchorHcy + cellSize - 1;
         if (anchorHcx < 0 || anchorHcy < 0 || endHcx >= gridW || endHcy >= gridH)
             return;
-        boolean erase = true;
-        for (int hcy = anchorHcy; hcy <= endHcy; hcy++) {
-            for (int hcx = anchorHcx; hcx <= endHcx; hcx++) {
-                boolean corner = (hcx == anchorHcx || hcx == endHcx) && (hcy == anchorHcy || hcy == endHcy);
-                if (!corner && getTerrainHalfCellValue(ts, hcy * gridW + hcx) != terrainId)
-                    erase = false;
-            }
-        }
-        int setId = erase ? -1 : terrainId;
+        java.util.ArrayList<Integer> cells = new java.util.ArrayList<Integer>();
         for (int hcy = anchorHcy; hcy <= endHcy; hcy++) {
             for (int hcx = anchorHcx; hcx <= endHcx; hcx++) {
                 boolean corner = (hcx == anchorHcx || hcx == endHcx) && (hcy == anchorHcy || hcy == endHcy);
                 if (!corner)
-                    setTerrainHalfCell(ts, hcy * gridW + hcx, setId);
+                    cells.add(hcy * gridW + hcx);
             }
         }
+        stampTerrainCells(ts, cells, terrainId);
     }
 
     private void stampTerrainPattern(tileset ts, int anchorHcx, int anchorHcy, boolean[][] pattern, int terrainId) {
@@ -34241,16 +34315,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     cells.add((anchorHcy + y) * gridW + (anchorHcx + x));
             }
         }
-        if (cells.isEmpty())
-            return;
-        boolean erase = true;
-        for (int idx : cells) {
-            if (getTerrainHalfCellValue(ts, idx) != terrainId)
-                erase = false;
-        }
-        int setId = erase ? -1 : terrainId;
-        for (int idx : cells)
-            setTerrainHalfCell(ts, idx, setId);
+        stampTerrainCells(ts, cells, terrainId);
     }
 
     private String terrainShapeLabel() {
@@ -34431,6 +34496,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void pushTerrainUndo(tileset ts) {
+        java.util.HashMap<Long, java.util.ArrayList<Integer>> under = new java.util.HashMap<>();
+        for (java.util.Map.Entry<Long, java.util.ArrayList<Integer>> e : terrainUnderlay.entrySet())
+            under.put(e.getKey(), new java.util.ArrayList<Integer>(e.getValue()));
+        terrainUnderlayUndoStack.add(under);
+        if (terrainUnderlayUndoStack.size() > 100)
+            terrainUnderlayUndoStack.remove(0);
         if (isMacroTerrainEditorMode()) {
             MacroTerrainStore snap = new MacroTerrainStore();
             snap.fromData(macroTerrain.toData());
@@ -34447,6 +34518,39 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private void clearTerrainUndoHistory() {
         terrainUndoStack.clear();
         macroTerrainUndoStack.clear();
+        terrainUnderlayUndoStack.clear();
+        terrainUnderlay.clear();
+        terrainUndoStepOpen = false;
+    }
+
+    private void popTerrainUnderlayUndo(boolean restore) {
+        if (terrainUnderlayUndoStack.isEmpty())
+            return;
+        java.util.HashMap<Long, java.util.ArrayList<Integer>> under = terrainUnderlayUndoStack
+                .remove(terrainUnderlayUndoStack.size() - 1);
+        if (restore)
+            terrainUnderlay = under;
+    }
+
+    private void beginTerrainUndoStep(tileset ts) {
+        pushTerrainUndo(ts);
+        terrainEditChanged = false;
+        terrainUndoStepOpen = true;
+    }
+
+    // Drops the snapshot taken by beginTerrainUndoStep when the edit changed nothing,
+    // so every Undo tap reverts a visible change. Returns whether anything changed.
+    private boolean endTerrainUndoStep() {
+        if (!terrainUndoStepOpen)
+            return false;
+        terrainUndoStepOpen = false;
+        if (terrainEditChanged)
+            return true;
+        java.util.ArrayList<?> stack = isMacroTerrainEditorMode() ? macroTerrainUndoStack : terrainUndoStack;
+        if (!stack.isEmpty())
+            stack.remove(stack.size() - 1);
+        popTerrainUnderlayUndo(false);
+        return false;
     }
 
     private void undoTerrainEdit(tileset ts) {
@@ -34454,12 +34558,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (macroTerrainUndoStack.isEmpty())
                 return;
             macroTerrain.fromData(macroTerrainUndoStack.remove(macroTerrainUndoStack.size() - 1).toData());
+            popTerrainUnderlayUndo(true);
             clearTerrainPickerCaches();
             return;
         }
         if (terrainUndoStack.isEmpty())
             return;
         java.util.ArrayList<tile> snap = terrainUndoStack.remove(terrainUndoStack.size() - 1);
+        popTerrainUnderlayUndo(true);
         java.util.HashMap<Integer, tile> snapById = new java.util.HashMap<>();
         for (tile c : snap)
             snapById.put(c.getTileID(), c);
@@ -34590,10 +34696,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private void applyTerrainEditorTap(tileset ts, float touchX, float touchY) {
         if (getActiveEditorTerrains().size() == 0)
             return;
-        pushTerrainUndo(ts);
         int halfIdx = terrainEditorHalfCellAt(ts, touchX, touchY);
         if (halfIdx < 0)
             return;
+        beginTerrainUndoStep(ts);
         int gridW = ts.getWidth() * 2;
         int anchorHcx = halfIdx % gridW;
         int anchorHcy = halfIdx / gridW;
@@ -34627,8 +34733,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 toggleTerrainHalfCell(ts, halfIdx, terrainId);
                 break;
         }
-        if (isMacroTerrainEditorPicker())
+        if (endTerrainUndoStep() && isMacroTerrainEditorPicker())
             saveMacroAutoTerrain();
+    }
+
+    private boolean terrainEditorButtonHit(Vector3 uiTouch) {
+        return tapped(uiTouch, gui.tilesetsleft) || tapped(uiTouch, gui.tilesetsright)
+                || tapped(uiTouch, gui.tilesetsmid) || tapped(uiTouch, gui.terrainundo)
+                || tapped(uiTouch, gui.pickerback) || tapped(uiTouch, gui.terraindelete)
+                || tapped(uiTouch, gui.terrainshape) || tapped(uiTouch, gui.newterrain);
     }
 
     private void beginTerrainPaintAt(float screenX, float screenY) {
@@ -34647,7 +34760,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (hitIdx >= 0 && hitIdx < tilesets.size()) {
                 tileset ts = tilesets.get(hitIdx);
                 seltset = hitIdx;
-                pushTerrainUndo(ts);
+                beginTerrainUndoStep(ts);
                 float[][] pos = computeMacroPackedPositions();
                 float localX = t.x - pos[0][hitIdx];
                 float localY = t.y - pos[1][hitIdx];
@@ -34656,7 +34769,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         } else {
             tileset ts = getActiveTerrainEditorTileset();
             if (ts != null) {
-                pushTerrainUndo(ts);
+                beginTerrainUndoStep(ts);
                 paintTerrainBrush(ts, t.x, t.y);
             }
         }
@@ -34668,7 +34781,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         int halfIdx = terrainEditorHalfCellAt(ts, touchX, touchY);
         if (halfIdx < 0 || halfIdx == lastTerrainPaintCell)
             return;
-        setTerrainHalfCell(ts, halfIdx, getActiveEditorSelTerrain());
+        overlayTerrainHalfCell(ts, halfIdx, getActiveEditorSelTerrain());
         lastTerrainPaintCell = halfIdx;
     }
 
@@ -41949,10 +42062,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     break;
 
                 case "terraineditor":
-                    if (tapped(touch2, gui.tilesetsleft) || tapped(touch2, gui.tilesetsright)
-                            || tapped(touch2, gui.tilesetsmid) || tapped(touch2, gui.terrainundo)
-                            || tapped(touch2, gui.pickerback) || tapped(touch2, gui.terraindelete)
-                            || tapped(touch2, gui.terrainshape) || tapped(touch2, gui.newterrain))
+                    if (terrainEditorButtonHit(touch2))
                         return true;
                     stamp = false; {
                     tileset tt = getActiveTerrainEditorTileset();
@@ -41962,9 +42072,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
                     return true;
                 case "macroterraineditor":
-                    if (tapped(touch2, gui.tilesetsmid) || tapped(touch2, gui.terrainundo)
-                            || tapped(touch2, gui.pickerback) || tapped(touch2, gui.terraindelete)
-                            || tapped(touch2, gui.terrainshape) || tapped(touch2, gui.newterrain))
+                    if (terrainEditorButtonHit(touch2))
                         return true;
                     stamp = false; {
                     int macroHitIdx = findMacroTilesetAtWorld(touch3.x, touch3.y);
@@ -43320,7 +43428,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (terrainPainting && isActiveTerrainEditorPicker()) {
             terrainPainting = false;
             lastTerrainPaintCell = -1;
-            if (isMacroTerrainEditorPicker())
+            if (endTerrainUndoStep() && isMacroTerrainEditorPicker())
                 saveMacroAutoTerrain();
         }
         terrainHoldPending = false;
@@ -43617,6 +43725,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (isActiveTerrainEditorPicker()) {
             terrainPainting = false;
             lastTerrainPaintCell = -1;
+            if (endTerrainUndoStep() && isMacroTerrainEditorPicker())
+                saveMacroAutoTerrain();
         }
         nofling = .3f;
         velx = 0;
