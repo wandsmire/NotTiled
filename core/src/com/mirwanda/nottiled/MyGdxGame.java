@@ -2145,8 +2145,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 prefs.putInteger("abnormal_shutdowns", 0).flush();
             }
         }
-        if (!crashDialogChecked)
-            maybeShowCrashDialog();
+        if (pendingCrashLog != null)
+            maybeShowCrashDialog(Gdx.graphics.getDeltaTime());
         if (kartu.equalsIgnoreCase("game")) {
             if (!mygame.render())
                 backToMap();
@@ -9128,53 +9128,93 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     private void initSD() {
     }
 
-    private static final String CRASH_PENDING_PREF = "crash_pending";
+    // Crash report flow: the uncaught handler writes lastcrash.txt (fsync'd). Its existence at the
+    // next launch IS the "pending" marker; it is renamed to lastcrash_seen.txt when shown.
+    // (Prefs can't be used: on Android, Preferences.flush() is SharedPreferences.apply(), which is
+    // asynchronous, so System.exit() in the handler kills the process before it reaches disk.)
     private static final String CRASH_LAST_FILE = "lastcrash.txt";
-    private boolean crashDialogChecked = false;
+    private static final String CRASH_SEEN_FILE = "lastcrash_seen.txt";
+    private static final float CRASH_DIALOG_TIMEOUT = 12f;
+    private String pendingCrashLog = null;
+    private float crashDialogWait = 0f;
 
     private void initErrorHandling() {
+        try {
+            FileHandle fh = Gdx.files.local(CRASH_LAST_FILE);
+            if (fh.exists()) {
+                String log = fh.readString("UTF-8");
+                if (log.trim().isEmpty())
+                    fh.delete();
+                else
+                    pendingCrashLog = log;
+            }
+        } catch (Throwable ignored) {}
+
         Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
             public void uncaughtException(Thread t, Throwable e) {
-                ErrorBung(e, "errorlog.txt");
                 boolean alreadyPending = false;
                 try {
-                    alreadyPending = prefs.getBoolean(CRASH_PENDING_PREF, false);
                     StringWriter sw = new StringWriter();
                     e.printStackTrace(new PrintWriter(sw));
                     String head = "NotTiled " + vers + " | " + OS + " | "
                             + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
                             + " | thread " + t.getName() + "\n";
-                    Gdx.files.local(CRASH_LAST_FILE).writeString(head + sw.toString(), false);
-                    prefs.putBoolean(CRASH_PENDING_PREF, true).flush();
+                    java.io.File f = Gdx.files.local(CRASH_LAST_FILE).file();
+                    alreadyPending = f.exists();
+                    java.io.FileOutputStream fos = new java.io.FileOutputStream(f, false);
+                    try {
+                        fos.write((head + sw.toString()).getBytes("UTF-8"));
+                        fos.flush();
+                        fos.getFD().sync();
+                    } finally {
+                        fos.close();
+                    }
+                } catch (Throwable ignored) {}
+                try {
+                    ErrorBung(e, "errorlog.txt");
                 } catch (Throwable ignored) {}
                 // The in-app crash dialog shows on next launch. Only fall back to the web page
                 // when the previous crash was never shown (crashing again before it could appear).
-                if (alreadyPending)
-                    Gdx.net.openURI("https://mirwanda.com/crash");
+                if (alreadyPending) {
+                    try {
+                        Gdx.net.openURI("https://mirwanda.com/crash");
+                    } catch (Throwable ignored) {}
+                }
                 System.exit(1);
             }
         });
     }
 
-    /** Called every frame once startup is stable; shows the crash dialog at most once per crash. */
-    private void maybeShowCrashDialog() {
-        if (crashDialogChecked || loadingfile || successfulFrames < 120)
+    private boolean stageHasDialog() {
+        for (Actor a : stage.getActors())
+            if (a instanceof Dialog)
+                return true;
+        return false;
+    }
+
+    /** Called every frame while a crash log is pending; shows it once, when the app is idle. */
+    private void maybeShowCrashDialog(float dt) {
+        if (kartu.equalsIgnoreCase("game"))
             return;
-        if (!kartu.equalsIgnoreCase("world") || stage.getActors().size > 0)
-            return; // wait until the editor is idle (no Safe Mode / other dialog up)
-        crashDialogChecked = true;
-        if (!prefs.getBoolean(CRASH_PENDING_PREF, false))
+        crashDialogWait += Math.min(dt, 0.5f);
+        boolean idle = !loadingfile && successfulFrames >= 30 && !stageHasDialog();
+        // Fallback: after the timeout, show anyway on whatever screen is up (unless the map is
+        // still loading in the editor view, where the stage is not drawn).
+        boolean timedOut = crashDialogWait >= CRASH_DIALOG_TIMEOUT
+                && (!loadingfile || kartu.equalsIgnoreCase("stage"));
+        if (!idle && !timedOut)
             return;
-        prefs.putBoolean(CRASH_PENDING_PREF, false).flush();
-        String log = "";
+        String log = pendingCrashLog;
+        pendingCrashLog = null;
         try {
             FileHandle fh = Gdx.files.local(CRASH_LAST_FILE);
-            if (fh.exists())
-                log = fh.readString();
+            fh.moveTo(Gdx.files.local(CRASH_SEEN_FILE));
         } catch (Throwable ignored) {}
-        if (log.trim().isEmpty())
-            return;
-        showCrashDialog(log);
+        try {
+            showCrashDialog(log);
+        } catch (Throwable ex) {
+            ErrorBung(ex, "errorlog.txt");
+        }
     }
 
     private void showCrashDialog(final String log) {
@@ -9230,7 +9270,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 dlg.hide();
-                if (kartu.equalsIgnoreCase("world") || kartu.equalsIgnoreCase("tile"))
+                if (!kartu.equalsIgnoreCase("stage"))
                     Gdx.input.setInputProcessor(im);
             }
         });
