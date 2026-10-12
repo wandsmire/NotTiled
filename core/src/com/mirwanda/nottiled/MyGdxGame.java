@@ -454,9 +454,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     boolean curpickMacroTerrain = false;
     boolean macroTerrainEditorFromMacroMgmt = false;
     private final java.util.ArrayList<MacroTerrainStore> macroTerrainUndoStack = new java.util.ArrayList<>();
-    // Terrain ids a stamp covered per half-cell, so erasing that stamp restores them instead of clearing to -1.
-    private java.util.HashMap<Long, java.util.ArrayList<Integer>> terrainUnderlay = new java.util.HashMap<>();
-    private final java.util.ArrayList<java.util.HashMap<Long, java.util.ArrayList<Integer>>> terrainUnderlayUndoStack = new java.util.ArrayList<>();
+    // Tileset-editor covered-terrain stacks; session-only (the macro editor keeps its own in macroTerrain).
+    private final java.util.IdentityHashMap<tileset, TerrainUnderlay> tilesetTerrainUnderlays = new java.util.IdentityHashMap<>();
+    private final java.util.ArrayList<TerrainUnderlay> terrainUnderlayUndoStack = new java.util.ArrayList<>();
     private boolean terrainEditChanged = false;
     private boolean terrainUndoStepOpen = false;
     int newMacroTerrainGid = -1;
@@ -22796,7 +22796,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (deletedIdx < 0 || deletedIdx >= trs.size())
                 return;
             trs.remove(deletedIdx);
-            remapTerrainUnderlayAfterDelete(deletedIdx);
+            macroTerrain.getUnderlay().remapAfterDelete(deletedIdx);
             java.util.ArrayList<tile> metaTiles = new java.util.ArrayList<tile>(macroTerrain.getAllTileMeta());
             for (tile t : metaTiles) {
                 int[] tr = t.getTerrain();
@@ -22827,7 +22827,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (deletedIdx < 0 || deletedIdx >= ts.getTerrains().size())
             return;
         ts.getTerrains().remove(deletedIdx);
-        remapTerrainUnderlayAfterDelete(deletedIdx);
+        terrainUnderlayFor(ts).remapAfterDelete(deletedIdx);
         java.util.List<tile> tiles = ts.getTiles();
         for (int n = 0; n < tiles.size(); n++) {
             tile t = tiles.get(n);
@@ -34565,9 +34565,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             int gid = gridIndexToGid(ts, gridIdx);
             if (gid < 0)
                 return null;
-            return (1L << 62) | ((long) gid << 2) | corner;
+            return TerrainUnderlay.key(gid, corner);
         }
-        return ((long) tilesets.indexOf(ts) << 34) | ((long) gridIdx << 2) | corner;
+        return TerrainUnderlay.key(gridIdx, corner);
+    }
+
+    private TerrainUnderlay terrainUnderlayFor(tileset ts) {
+        if (isMacroTerrainEditorMode())
+            return macroTerrain.getUnderlay();
+        TerrainUnderlay u = tilesetTerrainUnderlays.get(ts);
+        if (u == null) {
+            u = new TerrainUnderlay();
+            tilesetTerrainUnderlays.put(ts, u);
+        }
+        return u;
     }
 
     private void overlayTerrainHalfCell(tileset ts, int halfCellIndex, int terrainId) {
@@ -34577,14 +34588,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Long key = terrainUnderlayKey(ts, halfCellIndex);
         if (key == null)
             return;
-        if (prev != -1) {
-            java.util.ArrayList<Integer> under = terrainUnderlay.get(key);
-            if (under == null) {
-                under = new java.util.ArrayList<Integer>();
-                terrainUnderlay.put(key, under);
-            }
-            under.add(prev);
-        }
+        terrainUnderlayFor(ts).push(key, prev, terrainId);
         setTerrainHalfCell(ts, halfCellIndex, terrainId);
     }
 
@@ -34592,14 +34596,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         Long key = terrainUnderlayKey(ts, halfCellIndex);
         if (key == null)
             return;
-        int restore = -1;
-        java.util.ArrayList<Integer> under = terrainUnderlay.get(key);
-        if (under != null && !under.isEmpty()) {
-            restore = under.remove(under.size() - 1);
-            if (under.isEmpty())
-                terrainUnderlay.remove(key);
-        }
-        setTerrainHalfCell(ts, halfCellIndex, restore);
+        int cur = getTerrainHalfCellValue(ts, halfCellIndex);
+        setTerrainHalfCell(ts, halfCellIndex, terrainUnderlayFor(ts).peel(key, cur));
     }
 
     private void stampTerrainCells(tileset ts, java.util.List<Integer> cells, int terrainId) {
@@ -34617,23 +34615,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 peelTerrainHalfCell(ts, idx);
             else
                 overlayTerrainHalfCell(ts, idx, terrainId);
-        }
-    }
-
-    private void remapTerrainUnderlayAfterDelete(int deletedIdx) {
-        java.util.Iterator<java.util.Map.Entry<Long, java.util.ArrayList<Integer>>> it = terrainUnderlay.entrySet()
-                .iterator();
-        while (it.hasNext()) {
-            java.util.ArrayList<Integer> under = it.next().getValue();
-            for (int i = under.size() - 1; i >= 0; i--) {
-                int id = remapTerrainIdAfterDelete(under.get(i), deletedIdx);
-                if (id < 0)
-                    under.remove(i);
-                else
-                    under.set(i, id);
-            }
-            if (under.isEmpty())
-                it.remove();
         }
     }
 
@@ -34918,12 +34899,6 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void pushTerrainUndo(tileset ts) {
-        java.util.HashMap<Long, java.util.ArrayList<Integer>> under = new java.util.HashMap<>();
-        for (java.util.Map.Entry<Long, java.util.ArrayList<Integer>> e : terrainUnderlay.entrySet())
-            under.put(e.getKey(), new java.util.ArrayList<Integer>(e.getValue()));
-        terrainUnderlayUndoStack.add(under);
-        if (terrainUnderlayUndoStack.size() > 100)
-            terrainUnderlayUndoStack.remove(0);
         if (isMacroTerrainEditorMode()) {
             MacroTerrainStore snap = new MacroTerrainStore();
             snap.fromData(macroTerrain.toData());
@@ -34933,25 +34908,26 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             return;
         }
         terrainUndoStack.add(captureTerrainUndoSnapshot(ts));
-        if (terrainUndoStack.size() > 100)
+        terrainUnderlayUndoStack.add(terrainUnderlayFor(ts).copy());
+        if (terrainUndoStack.size() > 100) {
             terrainUndoStack.remove(0);
+            terrainUnderlayUndoStack.remove(0);
+        }
     }
 
     private void clearTerrainUndoHistory() {
         terrainUndoStack.clear();
         macroTerrainUndoStack.clear();
         terrainUnderlayUndoStack.clear();
-        terrainUnderlay.clear();
         terrainUndoStepOpen = false;
     }
 
-    private void popTerrainUnderlayUndo(boolean restore) {
+    private void popTerrainUnderlayUndo(tileset restoreTo) {
         if (terrainUnderlayUndoStack.isEmpty())
             return;
-        java.util.HashMap<Long, java.util.ArrayList<Integer>> under = terrainUnderlayUndoStack
-                .remove(terrainUnderlayUndoStack.size() - 1);
-        if (restore)
-            terrainUnderlay = under;
+        TerrainUnderlay under = terrainUnderlayUndoStack.remove(terrainUnderlayUndoStack.size() - 1);
+        if (restoreTo != null)
+            tilesetTerrainUnderlays.put(restoreTo, under);
     }
 
     private void beginTerrainUndoStep(tileset ts) {
@@ -34968,10 +34944,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         terrainUndoStepOpen = false;
         if (terrainEditChanged)
             return true;
-        java.util.ArrayList<?> stack = isMacroTerrainEditorMode() ? macroTerrainUndoStack : terrainUndoStack;
-        if (!stack.isEmpty())
-            stack.remove(stack.size() - 1);
-        popTerrainUnderlayUndo(false);
+        if (isMacroTerrainEditorMode()) {
+            if (!macroTerrainUndoStack.isEmpty())
+                macroTerrainUndoStack.remove(macroTerrainUndoStack.size() - 1);
+        } else if (!terrainUndoStack.isEmpty()) {
+            terrainUndoStack.remove(terrainUndoStack.size() - 1);
+            popTerrainUnderlayUndo(null);
+        }
         return false;
     }
 
@@ -34980,14 +34959,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             if (macroTerrainUndoStack.isEmpty())
                 return;
             macroTerrain.fromData(macroTerrainUndoStack.remove(macroTerrainUndoStack.size() - 1).toData());
-            popTerrainUnderlayUndo(true);
             clearTerrainPickerCaches();
             return;
         }
         if (terrainUndoStack.isEmpty())
             return;
         java.util.ArrayList<tile> snap = terrainUndoStack.remove(terrainUndoStack.size() - 1);
-        popTerrainUnderlayUndo(true);
+        popTerrainUnderlayUndo(ts);
         java.util.HashMap<Integer, tile> snapById = new java.util.HashMap<>();
         for (tile c : snap)
             snapById.put(c.getTileID(), c);

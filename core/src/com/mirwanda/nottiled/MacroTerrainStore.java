@@ -14,6 +14,7 @@ public class MacroTerrainStore {
 	private final java.util.List<terrain> terrains = new ArrayList<terrain>();
 	private final HashMap<Integer, tile> gidTiles = new HashMap<Integer, tile>();
 	private int selTerrain = 0;
+	private final TerrainUnderlay underlay = new TerrainUnderlay();
 	private Map<String, List<Integer>> terrainGidMap = null;
 
 	public java.util.List<terrain> getTerrains() {
@@ -31,12 +32,17 @@ public class MacroTerrainStore {
 	public void clear() {
 		terrains.clear();
 		gidTiles.clear();
+		underlay.clear();
 		selTerrain = 0;
 		clearTerrainCache();
 	}
 
 	public void clearTerrainCache() {
 		terrainGidMap = null;
+	}
+
+	public TerrainUnderlay getUnderlay() {
+		return underlay;
 	}
 
 	public tile getTileMeta(int gid) {
@@ -98,6 +104,7 @@ public class MacroTerrainStore {
 			entries.add(new gidterraintile(e.getKey(), t.getTerrainString()));
 		}
 		data.setTiles(entries);
+		data.setUnderlay(underlay.toStrings());
 		return data;
 	}
 
@@ -116,6 +123,15 @@ public class MacroTerrainStore {
 				gidTiles.put(gt.getGid(), t);
 			}
 		}
+		underlay.fromStrings(data.getUnderlay());
+		underlay.prune(new TerrainUnderlay.CornerLookup() {
+			@Override
+			public int valueAt(long key) {
+				tile t = gidTiles.get((int) (key >> 2));
+				int[] tr = t != null ? t.getTerrain() : null;
+				return tr != null ? tr[(int) (key & 3)] : -1;
+			}
+		});
 		clampSelTerrain();
 	}
 

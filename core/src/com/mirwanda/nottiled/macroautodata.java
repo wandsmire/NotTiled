@@ -6,6 +6,8 @@ public class macroautodata {
 	private int selTerrain;
 	private java.util.List<terrain> terrains = new ArrayList<terrain>();
 	private java.util.List<gidterraintile> tiles = new ArrayList<gidterraintile>();
+	/** Optional (absent in older files): see {@link TerrainUnderlay#toStrings()}. */
+	private java.util.List<String> underlay = new ArrayList<String>();
 
 	public macroautodata() {
 	}
@@ -32,5 +34,13 @@ public class macroautodata {
 
 	public void setTiles(java.util.List<gidterraintile> tiles) {
 		this.tiles = tiles;
+	}
+
+	public java.util.List<String> getUnderlay() {
+		return underlay;
+	}
+
+	public void setUnderlay(java.util.List<String> underlay) {
+		this.underlay = underlay;
 	}
 }
