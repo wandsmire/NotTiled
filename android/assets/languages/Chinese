@@ -547,4 +547,5 @@ clearTempCacheConfirm: "删除 NotTiled/Temp 中的所有缓存文件？"
 home: "主目录"
 newfolder: "新建文件夹"
 devicecloud: "设备 / 云端"
+openAppStorage: "应用存储"
 }

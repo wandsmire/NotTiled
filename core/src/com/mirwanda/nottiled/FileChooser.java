@@ -38,7 +38,13 @@ public class FileChooser extends Dialog
 	private String OS;
 	// Button captions, set from the active language by MyGdxGame.reloadLanguage().
 	public static String lblCancel = "Cancel", lblHome = "Home", lblDeviceCloud = "Device / Cloud",
-			lblNewFolder = "New Folder", lblOk = "-OK->";
+			lblNewFolder = "New Folder", lblOk = "-OK->", lblAppStorage = "App Storage";
+
+	/** Extra button that jumps to the app's own storage (result "APP"); used when a Device / Cloud folder is granted. */
+	public void addAppStorageButton() {
+		this.getButtonTable().row();
+		this.button(lblAppStorage, "APP");
+	}
 
 	private String basePath = "";
 	private String safRoot = "";

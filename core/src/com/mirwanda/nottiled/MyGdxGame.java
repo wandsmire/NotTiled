@@ -15985,6 +15985,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         FileChooser.lblDeviceCloud = z.devicecloud != null ? z.devicecloud : "Device / Cloud";
         FileChooser.lblNewFolder = z.newfolder != null ? z.newfolder : "New Folder";
         FileChooser.lblOk = "-" + (z.ok != null ? z.ok : "OK") + "->";
+        FileChooser.lblAppStorage = z.openAppStorage != null ? z.openAppStorage : "App Storage";
         try {
             generateTutorials();
             face.changelanguage("English");
@@ -23146,6 +23147,12 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     setDirectory(ifh);
                     cancel();
                     return;
+                } else if (object.equals("APP")) {
+                    // With a Device / Cloud folder granted, Open starts there and ".." stops at its root;
+                    // this is the way back to maps saved in app storage (where pre-2.3.1 maps live).
+                    setDirectory(Gdx.files.absolute(basepath));
+                    cancel();
+                    return;
                 } else if (object.equals("SAF")) {
                     // System document picker — also the way to (re)grant a folder.
                     exitDialog(exitpoint);
@@ -23156,6 +23163,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         };
         fc.setSafRoot(safRootDir());
+        if (Gdx.app.getType() == Android && !hasAllFilesAccess() && face.hasTreeAccess()
+                && !face.getSafRoot().isEmpty())
+            fc.addAppStorageButton();
 
         // The granted device/cloud folder is the primary location; app storage is
         // reachable via the Storage toggle. Remember the last browsed spot per realm.

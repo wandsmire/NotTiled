@@ -547,4 +547,5 @@ clearTempCacheConfirm: "Delete all cached files in NotTiled/Temp?"
 home: "Home"
 newfolder: "New Folder"
 devicecloud: "Device / Cloud"
+openAppStorage: "App Storage"
 }
