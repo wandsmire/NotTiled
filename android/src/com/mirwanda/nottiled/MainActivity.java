@@ -1050,11 +1050,18 @@ public class MainActivity extends AndroidApplication implements Interface
 		try {
 			Uri tree = safStore == null ? null : safStore.getTreeUri();
 			if (tree == null) return "";
-			// Tree document IDs look like "primary:rustedwarfare/maps"; only device storage maps to a path.
+			// Tree document IDs look like "primary:rustedwarfare/maps" (internal storage) or
+			// "1234-ABCD:maps" (SD card / USB volume); cloud providers have no filesystem path.
+			if (!"com.android.externalstorage.documents".equals(tree.getAuthority())) return "";
 			String id = android.provider.DocumentsContract.getTreeDocumentId(tree);
-			if (id == null || !id.startsWith("primary:")) return "";
-			String rel = id.substring("primary:".length());
-			String base = Environment.getExternalStorageDirectory().getAbsolutePath();
+			if (id == null) return "";
+			int colon = id.indexOf(':');
+			if (colon <= 0) return "";
+			String volume = id.substring(0, colon);
+			String rel = id.substring(colon + 1);
+			String base = "primary".equals(volume)
+					? Environment.getExternalStorageDirectory().getAbsolutePath()
+					: "/storage/" + volume;
 			return rel.isEmpty() ? base : base + "/" + rel;
 		} catch (Exception e) {
 			return "";

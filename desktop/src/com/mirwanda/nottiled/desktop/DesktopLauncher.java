@@ -5,6 +5,7 @@ package com.mirwanda.nottiled.desktop;
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowAdapter;
 
 import com.mirwanda.nottiled.MyGdxGame;
 import javax.swing.JOptionPane;
@@ -46,7 +47,16 @@ public class DesktopLauncher {
 		//cfg3.useOpenGL3( false,1,1 );
 		cfg3.setMaximized( true );
 		com.mirwanda.nottiled.nullInterface ni3= new com.mirwanda.nottiled.nullInterface();
-		new Lwjgl3Application(new MyGdxGame("",ni3), cfg3);
+		final MyGdxGame game = new MyGdxGame("",ni3);
+		// Desktop has no onResume when switching windows: check for edits made in
+		// another app (text editor, Tiled) whenever NotTiled regains focus.
+		cfg3.setWindowListener(new Lwjgl3WindowAdapter() {
+			@Override
+			public void focusGained() {
+				game.checkExternalMapChange();
+			}
+		});
+		new Lwjgl3Application(game, cfg3);
 
 	}
 }
