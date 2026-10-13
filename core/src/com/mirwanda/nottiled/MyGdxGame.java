@@ -9233,7 +9233,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         ct.add(info).width(btnx).padBottom(8).row();
 
         // Cap the on-screen text (StackOverflowError traces are huge); Copy still takes it all.
-        String shown = log.length() > 8000 ? log.substring(0, 8000) + "\n..." : log;
+        String shown = (log.length() > 8000 ? log.substring(0, 8000) + "\n..." : log).replace("\t", "    ");
         Label logLabel = new Label(shown, skin);
         logLabel.setWrap(true);
         logLabel.setFontScale(0.8f);
@@ -29681,6 +29681,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             resetMinimap();
             restoreViewAfterLoad = false;
             firstload = -1;
+            // uicam.zoom was set to 0.5 above; normally the firstload countdown calls uiAnim()
+            // to bring it back to 1. Without it the editor UI is drawn off-screen.
+            uiAnim();
         } else {
             firstload = loadtime;
         }
