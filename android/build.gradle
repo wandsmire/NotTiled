@@ -72,7 +72,7 @@ android {
         // require API 21 — on 19/20 the file shim would crash on first use.
         minSdkVersion 21
         targetSdkVersion 36
-        versionCode 2030301
+        versionCode 2030302
         versionName "2.3.3"
         multiDexEnabled true
         manifestPlaceholders = [appName: "NotTiled"]
