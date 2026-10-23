@@ -36698,6 +36698,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 break;
 
             case "C":
+                if ("point".equals(targetObj.getShape())) {
+                    targetObj.setX(ae);
+                    targetObj.setY(-ab + Tsh);
+                    break;
+                }
                 targetObj.setX(ae - targetObj.getW() / 2f);
                 targetObj.setY(-ab + Tsh - targetObj.getH() / 2f);
                 break;

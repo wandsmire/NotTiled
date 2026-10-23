@@ -413,8 +413,10 @@ public class obj implements Cloneable
 			///
 		}
 
-		// A point has no size, so it gets no resize handles; it is moved by dragging the point itself.
-		if (!"point".equals(shape)) {
+		// A point has no size, so it gets no resize handles, only the move handle (C) on the point itself.
+		if ("point".equals(shape)) {
+			addMarker( "C", zoom );
+		} else {
 			addMarker( "NW", zoom );
 			addMarker( "NE", zoom );
 			addMarker( "SW", zoom );
@@ -572,10 +574,13 @@ public class obj implements Cloneable
 				break;
 
 			case "C":
-				vertices[0] = new Vector2( -ow+w/2f, -ow-h/2f );
-				vertices[1] = new Vector2( -ow+w/2f, ow-h/2f );
-				vertices[2] = new Vector2( ow+w/2f, -ow-h/2f );
-				vertices[3] = new Vector2( ow+w/2f, ow-h/2f );
+				// A point's body origin is the point itself, so its move handle sits there.
+				float cx = "point".equals(shape) ? 0f : w/2f;
+				float cy = "point".equals(shape) ? 0f : h/2f;
+				vertices[0] = new Vector2( -ow+cx, -ow-cy );
+				vertices[1] = new Vector2( -ow+cx, ow-cy );
+				vertices[2] = new Vector2( ow+cx, -ow-cy );
+				vertices[3] = new Vector2( ow+cx, ow-cy );
 				pshape = new PolygonShape();
 				pshape.set(vertices);
 				fdef.shape = pshape;
