@@ -43446,6 +43446,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             return true;
         if (nofling > 0)
             return true;
+        // The gesture was an object handle drag, not a map pan: no camera momentum.
+        // Return false so the raw touchUp still runs and commits the drag.
+        if (markermode) {
+            velx = 0;
+            vely = 0;
+            return false;
+        }
 
         velx = p1;
         vely = p2;
