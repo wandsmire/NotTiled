@@ -413,14 +413,17 @@ public class obj implements Cloneable
 			///
 		}
 
-		addMarker( "NW", zoom );
-		addMarker( "NE", zoom );
-		addMarker( "SW", zoom );
-		addMarker( "N", zoom );
-		addMarker( "S", zoom );
-		addMarker( "E", zoom );
-		addMarker( "W", zoom );
-		addMarker( "C", zoom );
+		// A point has no size, so it gets no resize handles; it is moved by dragging the point itself.
+		if (!"point".equals(shape)) {
+			addMarker( "NW", zoom );
+			addMarker( "NE", zoom );
+			addMarker( "SW", zoom );
+			addMarker( "N", zoom );
+			addMarker( "S", zoom );
+			addMarker( "E", zoom );
+			addMarker( "W", zoom );
+			addMarker( "C", zoom );
+		}
 
 
 
