@@ -91,14 +91,10 @@ public class tile
 
 	public boolean isTerrainForEditor()
 	{
-		if (getTerrainString().equalsIgnoreCase( "-1,-1,-1,-1" ))
-		{
-			return false;
-		}
-		else
-		{
-			return true;
-		}
+		// Same as getTerrainString().equalsIgnoreCase("-1,-1,-1,-1") without building a string
+		// (called per cell while painting terrain).
+		int[] t = terrain;
+		return !(t[0] == -1 && t[1] == -1 && t[2] == -1 && t[3] == -1);
 	}
 	
 	

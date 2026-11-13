@@ -30622,77 +30622,62 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         brushDeferredTerrainAnchors.add(num);
     }
 
+    /**
+     * Flip/rotate flag byte for the current {@code rotate} setting put over the top byte of the GID.
+     * Arithmetic form of the old hex-string round trip (low 24 bits kept, top byte replaced).
+     */
+    private long rotatedBrushGid(int gid) {
+        long flags;
+        switch (rotate) {
+            case 1:
+                flags = 0xA0;
+                break;
+            case 2:
+                flags = 0xC0;
+                break;
+            case 3:
+                flags = 0x60;
+                break;
+            case 4:
+                flags = 0x80;
+                break;
+            case 5:
+                flags = 0xE0;
+                break;
+            case 6:
+                flags = 0x40;
+                break;
+            case 7:
+                flags = 0x20;
+                break;
+            default:
+                flags = 0x00;
+                break;
+        }
+        return (flags << 24) | (gid & 0xFFFFFFL);
+    }
+
+    /** Index in ts.getTiles() of the entry with tileID + firstgid == bareGid, or -1 (binary search). */
+    private static int tileListIndexForBareGid(tileset ts, long bareGid) {
+        if (ts.getTiles().isEmpty())
+            return -1;
+        long local = bareGid - (long) ts.getFirstgid();
+        if (local < Integer.MIN_VALUE || local > Integer.MAX_VALUE)
+            return -1;
+        return ts.findTileListIndex((int) local);
+    }
+
     private long computeBrushOutputGid(int gid) {
         if (eraser)
             return 0;
-        String hex = Long.toHexString(gid);
-        String trailer = "00000000" + hex;
-        hex = trailer.substring(trailer.length() - 8);
-        String spc;
-        switch (rotate) {
-            case 1:
-                spc = "A0";
-                break;
-            case 2:
-                spc = "C0";
-                break;
-            case 3:
-                spc = "60";
-                break;
-            case 4:
-                spc = "80";
-                break;
-            case 5:
-                spc = "E0";
-                break;
-            case 6:
-                spc = "40";
-                break;
-            case 7:
-                spc = "20";
-                break;
-            default:
-                spc = "00";
-                break;
-        }
-        return Long.decode("#" + spc + hex.substring(2));
+        return rotatedBrushGid(gid);
     }
 
     private long computeBrushOutputGid() {
         if (eraser)
             return 0;
         int drawGid = curspr;
-        String hex = Long.toHexString(drawGid);
-        String trailer = "00000000" + hex;
-        hex = trailer.substring(trailer.length() - 8);
-        String spc;
-        switch (rotate) {
-            case 1:
-                spc = "A0";
-                break;
-            case 2:
-                spc = "C0";
-                break;
-            case 3:
-                spc = "60";
-                break;
-            case 4:
-                spc = "80";
-                break;
-            case 5:
-                spc = "E0";
-                break;
-            case 6:
-                spc = "40";
-                break;
-            case 7:
-                spc = "20";
-                break;
-            default:
-                spc = "00";
-                break;
-        }
-        return Long.decode("#" + spc + hex.substring(2));
+        return rotatedBrushGid(drawGid);
     }
 
     private void runTerrainifyFromCenter(int num, tile t) {
@@ -31037,15 +31022,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (oi == 0 || tsetID < 0 || tsetID >= tilesets.size())
             return -1;
         long bareGid = stripTileGidFlags(oi);
-        tileset ts = tilesets.get(tsetID);
-        if (ts.getTiles().size() == 0)
-            return -1;
-        for (int j = 0; j < ts.getTiles().size(); j++) {
-            tile tt = ts.getTiles().get(j);
-            if (tt.getTileID() + ts.getFirstgid() == bareGid)
-                return j;
-        }
-        return -1;
+        return tileListIndexForBareGid(tilesets.get(tsetID), bareGid);
     }
 
     private boolean isTerrainBrushPaintMode() {
@@ -37187,18 +37164,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             int resolvedTset = resolveTilesetIndexForGid(str, tsetID);
             if (resolvedTset >= 0)
                 tsetID = resolvedTset;
-            if (tsetID >= 0 && tsetID < tilesets.size()) {
-                tileset ts = tilesets.get(tsetID);
-                if (ts.getTiles().size() > 0) {
-                    for (int j = 0; j < ts.getTiles().size(); j++) {
-                        tile tt = ts.getTiles().get(j);
-                        if (tt.getTileID() + ts.getFirstgid() == bareGid) {
-                            newtile = j;
-                            break;
-                        }
-                    }
-                }
-            }
+            if (tsetID >= 0 && tsetID < tilesets.size())
+                newtile = tileListIndexForBareGid(tilesets.get(tsetID), bareGid);
         }
 
         updateTileData(lay, num, str, tsetID, newtile);
@@ -37485,12 +37452,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         Long fillSource = layers.get(selLayer).getStr().get(num);
                         fillEdgesRegion(num, fillSource);
                     } else {
-                        snapWholeMapPhase1(selLayer);
+                        // Undo entries for only the filled cells, in ascending cell order (same
+                        // entries as the old whole-map snapshot diff, without copying the map).
                         disableHistoryRecording = true;
                         Long fillSource = layers.get(selLayer).getStr().get(num);
-                        fillthis(num, oi, fillSource, 0);
-                        disableHistoryRecording = false;
-                        snapWholeMapPhase2(selLayer);
+                        FillUndoLog fillLog = new FillUndoLog();
+                        try {
+                            fillthis(num, oi, fillSource, 0, fillLog);
+                        } finally {
+                            disableHistoryRecording = false;
+                        }
+                        fillLog.commit(selLayer);
                         pushUpdateIfCollaborating();
                     }
                     break;
@@ -37961,12 +37933,32 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         updateTileData(selLayer, cellIdx, pickGid, tsetIdx, -1);
     }
 
+    // findBestTile results per (A, B) for the current ATGraph instance. A sentinel marks pairs whose
+    // search threw (e.g. unknown terrain -> NPE inside A*), which leave ATPath unchanged as before.
+    private ATGraph bestTileCacheGraph;
+    private final HashMap<Long, GraphPath<AutoTile>> bestTileCache = new HashMap<Long, GraphPath<AutoTile>>();
+    private static final GraphPath<AutoTile> BEST_TILE_FAILED = new com.badlogic.gdx.ai.pfa.DefaultGraphPath<AutoTile>();
+
     private void findBestTile(int A, int B) {
+        if (bestTileCacheGraph != ATGraph) {
+            bestTileCache.clear();
+            bestTileCacheGraph = ATGraph;
+        }
+        Long key = Long.valueOf(((long) A << 32) | (B & 0xFFFFFFFFL));
+        GraphPath<AutoTile> cached = bestTileCache.get(key);
+        if (cached != null) {
+            if (cached != BEST_TILE_FAILED)
+                ATPath = cached;
+            return;
+        }
         try {
             AutoTile AT1 = ATGraph.getAT(A);
             AutoTile AT2 = ATGraph.getAT(B);
             ATPath = ATGraph.findPath(AT1, AT2);
+            if (ATPath != null)
+                bestTileCache.put(key, ATPath);
         } catch (Exception e) {
+            bestTileCache.put(key, BEST_TILE_FAILED);
         }
     }
 
@@ -41993,15 +41985,83 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
+    /** Before-values of cells changed by a flood fill, turned into undo entries afterwards. */
+    private final class FillUndoLog {
+        int size;
+        int[] idx = new int[64];
+        long[] fromStr = new long[64];
+        int[] fromTset = new int[64];
+        int[] fromTile = new int[64];
+
+        void record(layer l, int num) {
+            if (size == idx.length) {
+                int n = size * 2;
+                idx = java.util.Arrays.copyOf(idx, n);
+                fromStr = java.util.Arrays.copyOf(fromStr, n);
+                fromTset = java.util.Arrays.copyOf(fromTset, n);
+                fromTile = java.util.Arrays.copyOf(fromTile, n);
+            }
+            idx[size] = num;
+            fromStr[size] = l.getStr().get(num);
+            fromTset[size] = l.getTset().get(num);
+            fromTile[size] = l.getTile().get(num);
+            size++;
+        }
+
+        /** Same entries/order as snapWholeMapPhase2 would add for these cells. */
+        void commit(int zeLayer) {
+            if (size == 0)
+                return;
+            long[] order = new long[size];
+            for (int k = 0; k < size; k++)
+                order[k] = ((long) idx[k] << 32) | k;
+            java.util.Arrays.sort(order);
+            layer l = layers.get(zeLayer);
+            boolean first = true;
+            int prev = Integer.MIN_VALUE;
+            for (int o = 0; o < size; o++) {
+                int k = (int) (order[o] & 0xFFFFFFFFL);
+                int i = idx[k];
+                if (i == prev)
+                    continue; // keep the first (oldest) before-value for a cell
+                prev = i;
+                long toStr = l.getStr().get(i);
+                if (fromStr[k] != toStr) {
+                    layerhistory lh = new layerhistory(!first, zeLayer, i, fromStr[k], toStr, fromTset[k],
+                            l.getTset().get(i), fromTile[k], l.getTile().get(i));
+                    first = false;
+                    undolayer.add(lh);
+                    mapDirty = true;
+                    redolayer.clear();
+                }
+            }
+        }
+    }
+
     public void fillthis(int numa, long oia, long froma, int directiona) {
-        java.util.Queue<floodfill> q = new LinkedList<>();
-        q.add(new floodfill(numa, oia, froma, directiona));
-        while (!q.isEmpty()) {
-            floodfill n = q.remove();
-            int num = n.getNum();
-            long oi = n.getOi();
-            long from = n.getFrom();
-            int direction = n.getDirection();
+        fillthis(numa, oia, froma, directiona, null);
+    }
+
+    /**
+     * Flood fill (BFS, same visiting order as before) using a primitive ring queue instead of a
+     * LinkedList of objects (4 allocations per filled cell made big fills ANR).
+     */
+    private void fillthis(int numa, long oia, long froma, int directiona, FillUndoLog undoLog) {
+        final long oi = oia;
+        final long from = froma;
+        int cap = 1024;
+        int[] qNum = new int[cap];
+        byte[] qDir = new byte[cap];
+        int head = 0, count;
+        qNum[0] = numa;
+        qDir[0] = (byte) directiona;
+        count = 1;
+        layer fillLayer = layers.get(selLayer);
+        while (count > 0) {
+            int num = qNum[head];
+            int direction = qDir[head];
+            head = (head + 1) & (cap - 1);
+            count--;
 
             if (num < 0)
                 continue;
@@ -42022,18 +42082,43 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     break;
             }
 
-            long fromnew = layers.get(selLayer).getStr().get(num);
+            long fromnew = fillLayer.getStr().get(num);
             if (from != fromnew)
                 continue;
             if (oi == from)
                 continue;
 
+            if (undoLog != null)
+                undoLog.record(fillLayer, num);
             updateTileData(selLayer, num, oi, curtset);
 
-            q.add(new floodfill(num - Tw, oi, from, 1));
-            q.add(new floodfill(num + Tw, oi, from, 2));
-            q.add(new floodfill(num - 1, oi, from, 3));
-            q.add(new floodfill(num + 1, oi, from, 4));
+            if (count + 4 > cap) {
+                int ncap = cap * 2;
+                int[] nNum = new int[ncap];
+                byte[] nDir = new byte[ncap];
+                for (int k = 0; k < count; k++) {
+                    int src = (head + k) & (cap - 1);
+                    nNum[k] = qNum[src];
+                    nDir[k] = qDir[src];
+                }
+                qNum = nNum;
+                qDir = nDir;
+                cap = ncap;
+                head = 0;
+            }
+            int tail = (head + count) & (cap - 1);
+            qNum[tail] = num - Tw;
+            qDir[tail] = 1;
+            tail = (tail + 1) & (cap - 1);
+            qNum[tail] = num + Tw;
+            qDir[tail] = 2;
+            tail = (tail + 1) & (cap - 1);
+            qNum[tail] = num - 1;
+            qDir[tail] = 3;
+            tail = (tail + 1) & (cap - 1);
+            qNum[tail] = num + 1;
+            qDir[tail] = 4;
+            count += 4;
         }
 
     }
