@@ -21518,8 +21518,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             newtmxfile(true);
             cue("newmap");
         }
-        if (toDevice) {
-            saveMap(curdir + "/" + curfile); // initial save so the file appears there now
+        // Initial save so the file appears there now. Not for templates: those load later on another
+        // frame, so curdir/curfile still name the previous map and this save overwrote it with a
+        // half-loaded state. The template loader writes the new file to the target folder itself.
+        if (toDevice && newFileTemplateFolder == null) {
+            saveMap(curdir + "/" + curfile);
         }
         mapDirty = false;
         if (tilesets.isEmpty()) {
