@@ -195,11 +195,11 @@ public class tileset
 	// Sorted-order bookkeeping so lookups can binary search instead of scanning every tile.
 	// "tiles" is public and mutated in a few places, so the sorted state is re-verified whenever
 	// the list instance, its size or its end elements differ from what was last seen.
-	private java.util.List<tile> sortedRef = null;
-	private int sortedSize = -1;
-	private tile sortedFirst = null;
-	private tile sortedLast = null;
-	private boolean sortedOk = false;
+	private transient java.util.List<tile> sortedRef = null;
+	private transient int sortedSize = -1;
+	private transient tile sortedFirst = null;
+	private transient tile sortedLast = null;
+	private transient boolean sortedOk = false;
 
 	private void rememberSortedState(boolean ok) {
 		sortedRef = tiles;
