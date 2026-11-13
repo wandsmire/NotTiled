@@ -17666,6 +17666,43 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         return true;
     }
 
+    /**
+     * Deep copy of a layer. The per-cell lists (immutable boxed values) are copied directly; only
+     * the rest goes through the Json round trip, which was very slow for big tile layers.
+     */
+    private layer copyLayerDeep(layer lay) {
+        java.util.List<Long> g = lay.gid;
+        java.util.List<Integer> ts = lay.tset;
+        java.util.List<Integer> tl = lay.tile;
+        java.util.List<Color> col = lay.color;
+        layer copy;
+        lay.gid = new ArrayList<Long>();
+        lay.tset = new ArrayList<Integer>();
+        lay.tile = new ArrayList<Integer>();
+        lay.color = new ArrayList<Color>();
+        try {
+            Json json = new Json();
+            copy = json.fromJson(layer.class, json.toJson(lay));
+        } finally {
+            lay.gid = g;
+            lay.tset = ts;
+            lay.tile = tl;
+            lay.color = col;
+        }
+        copy.gid = g == null ? null : new ArrayList<Long>(g);
+        copy.tset = ts == null ? null : new ArrayList<Integer>(ts);
+        copy.tile = tl == null ? null : new ArrayList<Integer>(tl);
+        if (col == null) {
+            copy.color = null;
+        } else {
+            java.util.List<Color> cc = new ArrayList<Color>(col.size());
+            for (Color c : col)
+                cc.add(c == null ? null : new Color(c));
+            copy.color = cc;
+        }
+        return copy;
+    }
+
     private void showLayerOptionsDialog(final int layerIdx) {
         if (layerIdx < 0 || layerIdx >= layers.size())
             return;
@@ -17724,20 +17761,25 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 optionsDlg.hide();
-                Json json = new Json();
-                layer copy = json.fromJson(layer.class, json.toJson(lay));
-                copy.setName(lay.getName() + " (copy)");
-                copy.setId(nextlayerid++);
-                layers.add(copy);
-                if (copy.getType() != layer.Type.GROUP)
-                    selLayer = layers.size() - 1;
-                else
-                    clampSelLayerToSelectable();
-                refreshLayerList();
-                resetCaches();
-                updateObjectCollision();
-                pushUpdateIfCollaborating();
-                showLayerManager();
+                // Run on the next frame, outside the input callback.
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        layer copy = copyLayerDeep(lay);
+                        copy.setName(lay.getName() + " (copy)");
+                        copy.setId(nextlayerid++);
+                        layers.add(copy);
+                        if (copy.getType() != layer.Type.GROUP)
+                            selLayer = layers.size() - 1;
+                        else
+                            clampSelLayerToSelectable();
+                        refreshLayerList();
+                        resetCaches();
+                        updateObjectCollision();
+                        pushUpdateIfCollaborating();
+                        showLayerManager();
+                    }
+                });
             }
         });
         optionsTable.add(btnDup).width(dialogBtnWidth).height(btny).pad(5).row();
