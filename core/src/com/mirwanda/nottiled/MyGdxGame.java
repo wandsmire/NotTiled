@@ -23403,7 +23403,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 log(lastpath);
                                 prefs.putString("lastpath", lastpath);
                                 prefs.flush();
-                                tujuanDialog(dialog, file);
+                                postTujuanDialog(dialog, file, exitpoint);
                             }
 
                         } else {
@@ -23414,7 +23414,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 lastpath = file.path();
                                 prefs.putString("lastpath", lastpath);
                                 prefs.flush();
-                                tujuanDialog(dialog, file);
+                                postTujuanDialog(dialog, file, exitpoint);
                             }
 
                         }
@@ -24254,6 +24254,23 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         optionsTable.add(btnCancel).width(dialogBtnWidth).height(btny).pad(5).row();
 
         optionsDlg.show(stage);
+    }
+
+    /**
+     * Run a file-picker result on the next frame instead of inside the scene2d click callback:
+     * opening a map/PNG/tileset there held the Android input lock for the whole load (ANR).
+     */
+    private void postTujuanDialog(final String dialog, final FileHandle file, final Table exitpoint) {
+        Gdx.app.postRunnable(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    tujuanDialog(dialog, file);
+                } catch (Exception e) {
+                    exitDialog(exitpoint);
+                }
+            }
+        });
     }
 
     public void tujuanDialog(String dialog, FileHandle file) {
@@ -28398,14 +28415,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             l.setType(layer.Type.TILE);
             l.setVisible(true);
             l.setName("Tile 1");
-            java.util.List<Long> ls = new ArrayList<Long>();
-            java.util.List<Integer> lts = new ArrayList<Integer>();
-            java.util.List<Integer> ltl = new ArrayList<Integer>();
-
-            for (long i = 0; i < Tw * Th; i++) {
-                ls.add((long) 0);
-                lts.add(-1);
-                ltl.add(-1);
+            int cellCount = Math.max(0, Tw * Th);
+            java.util.List<Long> ls = new ArrayList<Long>(cellCount);
+            java.util.List<Integer> lts = new ArrayList<Integer>(cellCount);
+            java.util.List<Integer> ltl = new ArrayList<Integer>(cellCount);
+            Long zeroGid = Long.valueOf(0);
+            Integer none = Integer.valueOf(-1);
+            for (int i = 0; i < cellCount; i++) {
+                ls.add(zeroGid);
+                lts.add(none);
+                ltl.add(none);
             }
 
             l.setStr(ls);
@@ -28429,12 +28448,22 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             Pixmap px = pixmapfromtexture(txt, "FF00FF");
 
             List<Color> colors = new ArrayList<>();
-
+            // Palette index per colour (keyed like Color.equals, i.e. toIntBits), in first-seen
+            // order; replaces colors.contains/indexOf scans per pixel. Cell index per pixel is kept.
+            HashMap<Integer, Integer> colorIndex = new HashMap<>();
+            int[] pixelColorIdx = new int[Tw * Th];
             for (int y = 0; y < Th; y++) {
                 for (int x = 0; x < Tw; x++) {
-                    Color c = new Color(px.getPixel(x, y));
-                    if (!colors.contains(c))
+                    int rgba = px.getPixel(x, y);
+                    Color c = new Color(rgba);
+                    Integer key = Integer.valueOf(c.toIntBits());
+                    Integer idx = colorIndex.get(key);
+                    if (idx == null) {
+                        idx = Integer.valueOf(colors.size());
+                        colorIndex.put(key, idx);
                         colors.add(c);
+                    }
+                    pixelColorIdx[y * Tw + x] = idx.intValue();
                 }
             }
 
@@ -28451,13 +28480,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             int paletteIdx = getPixelArtPaletteIndex();
             int paletteGid = tilesets.get(paletteIdx).getFirstgid();
 
-            for (int y = 0; y < Th; y++) {
-                for (int x = 0; x < Tw; x++) {
-                    Color c = new Color(px.getPixel(x, y));
-                    int idx = colors.indexOf(c);
-                    l.getStr().set(y * Tw + x, (long) (paletteGid + idx));
-                    l.getTset().set(y * Tw + x, paletteIdx);
-                }
+            Integer paletteIdxBoxed = Integer.valueOf(paletteIdx);
+            Long[] gidForColor = new Long[colors.size()];
+            for (int ci = 0; ci < gidForColor.length; ci++)
+                gidForColor[ci] = Long.valueOf((long) (paletteGid + ci));
+            java.util.List<Long> strList = l.getStr();
+            java.util.List<Integer> tsetList = l.getTset();
+            for (int p = 0; p < Tw * Th; p++) {
+                strList.set(p, gidForColor[pixelColorIdx[p]]);
+                tsetList.set(p, paletteIdxBoxed);
             }
 
             CacheAllTset();
@@ -44225,36 +44256,126 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (!isPowerOf2(pixmap.getHeight())) {
             // hh=powerize(hh);
         }
-        Pixmap pm2 = new Pixmap(ww, hh, Pixmap.Format.RGBA8888);
-
         if (key != "") {
-            for (int y = 0; y < hh; y++) {
-                for (int x = 0; x < ww; x++) {
-
-                    com.badlogic.gdx.graphics.Color color = new com.badlogic.gdx.graphics.Color();
-                    com.badlogic.gdx.graphics.Color.rgba8888ToColor(color, pixmap.getPixel(x, y));
-                    // if (keycolor==pixmap.getPixel(x, y)){
-                    if (key != null) {
-                        if ((key + "ff").equalsIgnoreCase(color.toString())) {
-                            // pm2.setBlending(Pixmap.Blending.None);
-                            // pixmap.setColor(new com.badlogic.gdx.graphics.Color(0f, 0f, 0f, 0f));
-                            // pixmap.fillRectangle(x, y, 1, 1);
-                        } else {
-                            pm2.setColor(color);
-                            pm2.fillRectangle(x, y, 1, 1);
-                        }
-                    } else {
-                        pm2.setColor(color);
-                        pm2.fillRectangle(x, y, 1, 1);
-                    }
-
-                }
-            }
+            Pixmap pm2 = keyedCopyPixmap(pixmap, key);
+            // consumePixmap() handed us a private copy; free it (it used to leak native memory).
+            if (textureData.disposePixmap())
+                pixmap.dispose();
             return pm2;
         } else {
             return pixmap;
         }
 
+    }
+
+    // Per-(alpha, value) result of the old per-pixel "setColor(Color from pixel) + fillRectangle onto a
+    // blank RGBA8888 pixmap (SourceOver)" copy, measured once from the native blender so the fast
+    // path below produces byte-identical output.
+    private byte[] keyLutR, keyLutG, keyLutB, keyLutA;
+
+    private void ensureKeyLut() {
+        if (keyLutA != null)
+            return;
+        byte[] lr = new byte[65536], lg = new byte[65536], lb = new byte[65536], la = new byte[65536];
+        Pixmap probe = new Pixmap(256, 256, Pixmap.Format.RGBA8888);
+        try {
+            com.badlogic.gdx.graphics.Color color = new com.badlogic.gdx.graphics.Color();
+            for (int a = 0; a < 256; a++) {
+                for (int v = 0; v < 256; v++) {
+                    com.badlogic.gdx.graphics.Color.rgba8888ToColor(color, (v << 24) | (v << 16) | (v << 8) | a);
+                    probe.setColor(color);
+                    probe.fillRectangle(v, a, 1, 1);
+                }
+            }
+            for (int a = 0; a < 256; a++) {
+                for (int v = 0; v < 256; v++) {
+                    int px = probe.getPixel(v, a);
+                    int i = (a << 8) | v;
+                    lr[i] = (byte) (px >>> 24);
+                    lg[i] = (byte) (px >>> 16);
+                    lb[i] = (byte) (px >>> 8);
+                    la[i] = (byte) px;
+                }
+            }
+        } finally {
+            probe.dispose();
+        }
+        keyLutR = lr;
+        keyLutG = lg;
+        keyLutB = lb;
+        keyLutA = la;
+    }
+
+    /** Value Color.toString() prints for a channel byte after the float round trip. */
+    private static int colorRoundTrip(int v) {
+        return (int) (255 * (v / 255f));
+    }
+
+    /**
+     * New RGBA8888 copy of src with pixels equal to the 6-hex-digit key colour (fully opaque) left
+     * transparent. Same output as the old per-pixel Color/fillRectangle loop, without per-pixel
+     * allocations or JNI calls (that loop ANR'd on large tileset images).
+     */
+    private Pixmap keyedCopyPixmap(Pixmap src, String key) {
+        ensureKeyLut();
+        int ww = src.getWidth();
+        int hh = src.getHeight();
+        int kr = -1, kg = -1, kb = -1;
+        if (key != null && key.length() == 6 && key.matches("[0-9a-fA-F]{6}")) {
+            try {
+                int k = Integer.parseInt(key, 16);
+                kr = (k >>> 16) & 0xff;
+                kg = (k >>> 8) & 0xff;
+                kb = k & 0xff;
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        boolean[] rtR = new boolean[256], rtG = new boolean[256], rtB = new boolean[256];
+        boolean anyKey = kr >= 0;
+        if (anyKey) {
+            for (int v = 0; v < 256; v++) {
+                int rt = colorRoundTrip(v);
+                rtR[v] = rt == kr;
+                rtG[v] = rt == kg;
+                rtB[v] = rt == kb;
+            }
+        }
+        boolean[] opaqueA = new boolean[256];
+        for (int v = 0; v < 256; v++)
+            opaqueA[v] = colorRoundTrip(v) == 0xff;
+
+        Pixmap pm2 = new Pixmap(ww, hh, Pixmap.Format.RGBA8888);
+        pm2.setBlending(Pixmap.Blending.None);
+        pm2.drawPixmap(src, 0, 0); // exact format conversion, same as getPixel()
+        pm2.setBlending(Pixmap.Blending.SourceOver);
+        ByteBuffer buf = pm2.getPixels();
+        int rowBytes = ww * 4;
+        byte[] row = new byte[rowBytes];
+        byte[] lr = keyLutR, lg = keyLutG, lb = keyLutB, la = keyLutA;
+        for (int y = 0; y < hh; y++) {
+            int base = y * rowBytes;
+            buf.position(base);
+            buf.get(row, 0, rowBytes);
+            for (int i = 0; i < rowBytes; i += 4) {
+                int r = row[i] & 0xff, g = row[i + 1] & 0xff, b = row[i + 2] & 0xff, a = row[i + 3] & 0xff;
+                if (anyKey && rtR[r] && rtG[g] && rtB[b] && opaqueA[a]) {
+                    row[i] = 0;
+                    row[i + 1] = 0;
+                    row[i + 2] = 0;
+                    row[i + 3] = 0;
+                } else {
+                    int ai = a << 8;
+                    row[i] = lr[ai | r];
+                    row[i + 1] = lg[ai | g];
+                    row[i + 2] = lb[ai | b];
+                    row[i + 3] = la[ai];
+                }
+            }
+            buf.position(base);
+            buf.put(row, 0, rowBytes);
+        }
+        buf.position(0);
+        return pm2;
     }
 
     public Texture chromaKey(Texture texture, String key) {
@@ -44274,29 +44395,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (!isPowerOf2(pixmap.getHeight())) {
             // hh=powerize(hh);
         }
-        Pixmap pm2 = new Pixmap(ww, hh, Pixmap.Format.RGBA8888);
-        for (int y = 0; y < hh; y++) {
-            for (int x = 0; x < ww; x++) {
-
-                com.badlogic.gdx.graphics.Color color = new com.badlogic.gdx.graphics.Color();
-                com.badlogic.gdx.graphics.Color.rgba8888ToColor(color, pixmap.getPixel(x, y));
-                // if (keycolor==pixmap.getPixel(x, y)){
-                if (key != null) {
-                    if ((key + "ff").equalsIgnoreCase(color.toString())) {
-                        // pm2.setBlending(Pixmap.Blending.None);
-                        // pixmap.setColor(new com.badlogic.gdx.graphics.Color(0f, 0f, 0f, 0f));
-                        // pixmap.fillRectangle(x, y, 1, 1);
-                    } else {
-                        pm2.setColor(color);
-                        pm2.fillRectangle(x, y, 1, 1);
-                    }
-                } else {
-                    pm2.setColor(color);
-                    pm2.fillRectangle(x, y, 1, 1);
-                }
-
-            }
-        }
+        Pixmap pm2 = keyedCopyPixmap(pixmap, key);
 
         tex = new Texture(pm2);
         pixmap.dispose();
