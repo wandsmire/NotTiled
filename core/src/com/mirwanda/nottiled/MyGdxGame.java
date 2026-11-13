@@ -9594,12 +9594,19 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         if (!fh2.exists())
             fh2.mkdirs();
 
+        // Keyed on the bundled sample.zip too: a new build of the same versionName with changed
+        // templates (e.g. 2.3.4 build 2) must still re-copy them.
+        String sampleKey = vers;
+        try {
+            sampleKey = vers + "/" + Gdx.files.internal("sample.zip").length();
+        } catch (Exception ignored) {
+        }
         String lastVersion = prefs.getString("last_version", "");
-        if (vers != null && !vers.equals(lastVersion)) {
+        if (vers != null && !sampleKey.equals(lastVersion)) {
             justReloadSamples();
             isSampleReloaded = true;
             prefs.putBoolean("reloaded", isSampleReloaded);
-            prefs.putString("last_version", vers);
+            prefs.putString("last_version", sampleKey);
             prefs.flush();
             return;
         }
@@ -9626,7 +9633,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
             isSampleReloaded = true;
             prefs.putBoolean("reloaded", isSampleReloaded);
-            prefs.putString("last_version", vers);
+            prefs.putString("last_version", sampleKey);
             prefs.flush();
         }
     }
