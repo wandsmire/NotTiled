@@ -34388,11 +34388,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private tile getOrCreateTileMeta(tileset ts, int tileId) {
-        java.util.List<tile> tiles = ts.getTiles();
-        for (int n = 0; n < tiles.size(); n++) {
-            if (tiles.get(n).getTileID() == tileId)
-                return tiles.get(n);
-        }
+        tile existing = ts.getTileMeta(tileId);
+        if (existing != null)
+            return existing;
         tile tt = new tile();
         tt.setTileID(tileId);
         int idx = ts.addTileMetadata(tt);

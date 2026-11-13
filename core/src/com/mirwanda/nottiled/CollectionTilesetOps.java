@@ -213,12 +213,7 @@ public final class CollectionTilesetOps {
 	}
 
 	public static int nextTileId(tileset ts) {
-		int max = -1;
-		for (tile t : ts.getTiles()) {
-			if (t.getTileID() > max)
-				max = t.getTileID();
-		}
-		return max + 1;
+		return ts.maxTileId() + 1;
 	}
 
 	private static final class SheetBlock {

@@ -188,13 +188,86 @@ public class tileset
 				return Integer.compare(a.getTileID(), b.getTileID());
 			}
 		});
+		rememberSortedState(true);
 		clearTerrainCache();
+	}
+
+	// Sorted-order bookkeeping so lookups can binary search instead of scanning every tile.
+	// "tiles" is public and mutated in a few places, so the sorted state is re-verified whenever
+	// the list instance, its size or its end elements differ from what was last seen.
+	private java.util.List<tile> sortedRef = null;
+	private int sortedSize = -1;
+	private tile sortedFirst = null;
+	private tile sortedLast = null;
+	private boolean sortedOk = false;
+
+	private void rememberSortedState(boolean ok) {
+		sortedRef = tiles;
+		sortedSize = tiles.size();
+		sortedFirst = sortedSize > 0 ? tiles.get(0) : null;
+		sortedLast = sortedSize > 0 ? tiles.get(sortedSize - 1) : null;
+		sortedOk = ok;
+	}
+
+	/** True when tiles are known to be in ascending tile ID order (O(n) check only after outside changes). */
+	private boolean tilesSorted() {
+		int n = tiles.size();
+		if (sortedRef == tiles && sortedSize == n
+				&& (n == 0 || (sortedFirst == tiles.get(0) && sortedLast == tiles.get(n - 1))))
+			return sortedOk;
+		boolean ok = true;
+		for (int i = 1; i < n; i++) {
+			if (tiles.get(i - 1).getTileID() > tiles.get(i).getTileID()) {
+				ok = false;
+				break;
+			}
+		}
+		rememberSortedState(ok);
+		return ok;
+	}
+
+	/** First index whose tile ID is >= id (list must be sorted). */
+	private int lowerBound(int id) {
+		int lo = 0, hi = tiles.size();
+		while (lo < hi) {
+			int mid = (lo + hi) >>> 1;
+			if (tiles.get(mid).getTileID() < id)
+				lo = mid + 1;
+			else
+				hi = mid;
+		}
+		return lo;
+	}
+
+	/** Highest local tile ID in the metadata list, or -1 when empty. */
+	public int maxTileId() {
+		int n = tiles.size();
+		if (n == 0)
+			return -1;
+		if (tilesSorted())
+			return tiles.get(n - 1).getTileID();
+		int max = -1;
+		for (int i = 0; i < n; i++) {
+			int id = tiles.get(i).getTileID();
+			if (id > max)
+				max = id;
+		}
+		return max;
 	}
 
 	/** Insert or return index of tile metadata entry sorted by tile ID. */
 	public int addTileMetadata(tile t)
 	{
 		int id = t.getTileID();
+		if (tilesSorted()) {
+			int i = lowerBound(id);
+			if (i < tiles.size() && tiles.get(i).getTileID() == id)
+				return i;
+			tiles.add(i, t);
+			rememberSortedState(true);
+			clearTerrainCache();
+			return i;
+		}
 		for (int i = 0; i < tiles.size(); i++) {
 			int existing = tiles.get(i).getTileID();
 			if (existing == id)
@@ -469,6 +542,10 @@ public class tileset
 	}
 
 	public tile getTileMeta(int localTileId) {
+		if (tilesSorted()) {
+			int i = lowerBound(localTileId);
+			return i < tiles.size() && tiles.get(i).getTileID() == localTileId ? tiles.get(i) : null;
+		}
 		for (int i = 0; i < tiles.size(); i++) {
 			if (tiles.get(i).getTileID() == localTileId)
 				return tiles.get(i);
@@ -477,6 +554,10 @@ public class tileset
 	}
 
 	public int findTileListIndex(int localTileId) {
+		if (tilesSorted()) {
+			int i = lowerBound(localTileId);
+			return i < tiles.size() && tiles.get(i).getTileID() == localTileId ? i : -1;
+		}
 		for (int i = 0; i < tiles.size(); i++) {
 			if (tiles.get(i).getTileID() == localTileId)
 				return i;
