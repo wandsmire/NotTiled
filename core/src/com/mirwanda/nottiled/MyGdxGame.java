@@ -19185,12 +19185,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 int dexo = llayerlist.getSelectedIndex();
-                layer lay = new layer();
-                Json json = new Json();
-
-                String clip = json.toJson(layers.get(dexo));
-
-                lay = json.fromJson(layer.class, clip);
+                layer lay = copyLayerDeep(layers.get(dexo));
                 lay.setName(lay.getName() + " (copy)");
                 layers.add(lay);
 
