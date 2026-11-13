@@ -9934,14 +9934,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         l.setType(layer.Type.TILE);
         l.setVisible(true);
         l.setName("Tile 1");
-        java.util.List<Long> ls = new ArrayList<Long>();
-        java.util.List<Integer> lts = new ArrayList<Integer>();
-        java.util.List<Integer> ltl = new ArrayList<Integer>();
-
-        for (long i = 0; i < Tw * Th; i++) {
-            ls.add((long) 0);
-            lts.add(-1);
-            ltl.add(-1);
+        int cellCount = Math.max(0, Tw * Th);
+        java.util.List<Long> ls = new ArrayList<Long>(cellCount);
+        java.util.List<Integer> lts = new ArrayList<Integer>(cellCount);
+        java.util.List<Integer> ltl = new ArrayList<Integer>(cellCount);
+        Long zeroGid = Long.valueOf(0);
+        Integer none = Integer.valueOf(-1);
+        for (int i = 0; i < cellCount; i++) {
+            ls.add(zeroGid);
+            lts.add(none);
+            ltl.add(none);
         }
 
         l.setStr(ls);
@@ -28534,69 +28536,55 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     public void loadtmxnewplus(final String filepath) {
         loadingfile = true;
+        // Read the dialog fields on the GL thread; file copying/unzipping runs on the worker
+        // thread (it used to run inside the posted runnable and block the GL frame).
+        final String newCurdir = fNCurdir.getText().replace("//", "/");
+        final String newCurfile = fNFilename.getText();
+        final String newTwText = fNTw.getText();
+        final String newThText = fNTh.getText();
         new Thread(new Runnable() {
             @Override
             public void run() {
-                // do something important here, asynchronously to the rendering thread
-                // post a Runnable to the rendering thread that processes the result
+                boolean templateFound;
+                Throwable copyError = null;
+                try {
+                    templateFound = copyTemplateFiles(filepath, newCurdir, newCurfile);
+                } catch (Throwable t) {
+                    templateFound = true;
+                    copyError = t;
+                }
+                final boolean found = templateFound;
+                final Throwable err = copyError;
                 Gdx.app.postRunnable(new Runnable() {
                     @Override
                     public void run() {
                         log("here");
-                        curdir = fNCurdir.getText();
-                        curdir = curdir.replace("//", "/");
-                        curfile = fNFilename.getText();
-
-                        FileHandle from = Gdx.files.absolute(filepath + "/template.tmx");
-                        FileHandle to = Gdx.files.absolute(curdir + "/" + curfile);
-                        if (from.exists()) {
-                            to.write(from.read(), false);
-                        } else {
+                        curdir = newCurdir;
+                        curfile = newCurfile;
+                        if (!found) {
                             loadingfile = false;
                             backToMap();
                             msgbox("Error, template not found!");
                             return;
                         }
-                        //// Copy assets, which might contain macro anyway...
-                        FileHandle check = Gdx.files.absolute(filepath + "/assets.zip");
-                        if (check.exists()) {
-                            FileHandle check2 = Gdx.files.absolute(curdir + "/assets.zip");
-                            if (!check2.exists()) {
-                                to = Gdx.files.absolute(curdir);
-                                check.copyTo(to);
-                                check2 = Gdx.files.absolute(curdir + "/assets.zip");
-                                unzip(check2, to);
-                            }
-                        }
-
-                        // copy macro
-                        check = Gdx.files.absolute(filepath + "/auto.json");
-                        if (check.exists()) {
-                            FileHandle dest = Gdx.files.absolute(curdir + "/" + curfile + ".auto.json");
-                            dest.write(check.read(), false);
-                        }
-
-                        check = Gdx.files.absolute(filepath + "/" + MacroTerrainStore.FILE_NAME);
-                        if (check.exists()) {
-                            FileHandle dest = Gdx.files.absolute(curdir + "/" + curfile + ".macro.json");
-                            dest.write(check.read(), false);
-                        }
-
-                        String[] templateAssets = { "swatch.png", "basic_swatch.png" };
-                        for (String asset : templateAssets) {
-                            FileHandle src = Gdx.files.absolute(filepath + "/" + asset);
-                            if (src.exists())
-                                src.copyTo(Gdx.files.absolute(curdir + "/" + asset));
+                        if (err != null) {
+                            // Same outcome as an exception thrown inside the old GL-thread runnable,
+                            // but reported instead of crashing.
+                            loadingfile = false;
+                            backToMap();
+                            msgbox(z.error);
+                            ErrorBung(err, "errorlog.txt");
+                            return;
                         }
 
                         loadmap(curdir + "/" + curfile);
                         try {
-                            Tw = Integer.parseInt(fNTw.getText());
+                            Tw = Integer.parseInt(newTwText);
                         } catch (NumberFormatException e) {
                             Tw = 20;
                         }
                         try {
-                            Th = Integer.parseInt(fNTh.getText());
+                            Th = Integer.parseInt(newThText);
                         } catch (NumberFormatException e) {
                             Th = 20;
                         }
@@ -28612,18 +28600,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 setTsetFromCurspr();
                             }
                         }
+                        int cellCount = Math.max(0, Tw * Th);
                         for (int k = 0; k < layers.size(); k++) {
-                            java.util.List<Long> ls = new ArrayList<Long>();
-                            java.util.List<Integer> lts = new ArrayList<Integer>();
-
-                            for (long i = 0; i < Tw * Th; i++) {
-                                if (fill != -1 && k == 0) {
-                                    ls.add((long) curspr);
-                                    lts.add(seltset);
-                                } else {
-                                    ls.add((long) 0);
-                                    lts.add(-1);
-                                }
+                            java.util.List<Long> ls = new ArrayList<Long>(cellCount);
+                            java.util.List<Integer> lts = new ArrayList<Integer>(cellCount);
+                            boolean filled = fill != -1 && k == 0;
+                            Long gidVal = Long.valueOf(filled ? (long) curspr : 0L);
+                            Integer tsetVal = Integer.valueOf(filled ? seltset : -1);
+                            for (int i = 0; i < cellCount; i++) {
+                                ls.add(gidVal);
+                                lts.add(tsetVal);
                             }
                             layers.get(k).setStr(ls);
                             layers.get(k).setTset(lts);
@@ -28645,6 +28631,47 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 });
             }
         }).start();
+    }
+
+    /** File work for a new map from a template (worker thread). Returns false if template.tmx is missing. */
+    private boolean copyTemplateFiles(String filepath, String curdir, String curfile) {
+        FileHandle from = Gdx.files.absolute(filepath + "/template.tmx");
+        FileHandle to = Gdx.files.absolute(curdir + "/" + curfile);
+        if (!from.exists())
+            return false;
+        to.write(from.read(), false);
+        //// Copy assets, which might contain macro anyway...
+        FileHandle check = Gdx.files.absolute(filepath + "/assets.zip");
+        if (check.exists()) {
+            FileHandle check2 = Gdx.files.absolute(curdir + "/assets.zip");
+            if (!check2.exists()) {
+                to = Gdx.files.absolute(curdir);
+                check.copyTo(to);
+                check2 = Gdx.files.absolute(curdir + "/assets.zip");
+                unzip(check2, to);
+            }
+        }
+
+        // copy macro
+        check = Gdx.files.absolute(filepath + "/auto.json");
+        if (check.exists()) {
+            FileHandle dest = Gdx.files.absolute(curdir + "/" + curfile + ".auto.json");
+            dest.write(check.read(), false);
+        }
+
+        check = Gdx.files.absolute(filepath + "/" + MacroTerrainStore.FILE_NAME);
+        if (check.exists()) {
+            FileHandle dest = Gdx.files.absolute(curdir + "/" + curfile + ".macro.json");
+            dest.write(check.read(), false);
+        }
+
+        String[] templateAssets = { "swatch.png", "basic_swatch.png" };
+        for (String asset : templateAssets) {
+            FileHandle src = Gdx.files.absolute(filepath + "/" + asset);
+            if (src.exists())
+                src.copyTo(Gdx.files.absolute(curdir + "/" + asset));
+        }
+        return true;
     }
 
     private void parseTmxLayerAttributes(layer tempLayer, XmlPullParser myParser) {
@@ -32671,10 +32698,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             return new ArrayList<Integer>();
         }
         tilesetsize = tilesets.size();
-        java.util.List<Integer> nyot = new ArrayList<>();
-        for (int s = 0; s < spr.size(); s++) {
-            int idx = resolveTilesetIndexForGid(spr.get(s), -1);
-            nyot.add(idx);
+        int n = spr.size();
+        java.util.List<Integer> nyot = new ArrayList<>(n);
+        // Neighbouring cells usually repeat the same GID; reuse the last answer.
+        long lastGid = 0;
+        Integer lastIdx = Integer.valueOf(-1);
+        for (int s = 0; s < n; s++) {
+            long gid = spr.get(s);
+            if (gid != lastGid) {
+                lastIdx = Integer.valueOf(resolveTilesetIndexForGid(gid, -1));
+                lastGid = gid;
+            }
+            nyot.add(lastIdx);
         }
         return nyot;
     }
@@ -33559,17 +33594,20 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     public void CacheAllTset() {
 
         log("prepare caching tset...");
-        // hog
-        java.util.List<Integer> copy = new ArrayList<>();
-        for (int k = 0; k < Tw * Th; k++) {
-            copy.add(Integer.valueOf(-1));
-        }
+        // Only needed (and shared by all layers, as before) when there are no tilesets.
+        java.util.List<Integer> copy = null;
         log("caching tset...");
         for (int lay = 0; lay < layers.size(); lay++) {
 
             if (tilesets.size() > 0) {
                 layers.get(lay).setTset(cacheTset(layers.get(lay).getStr()));
             } else {
+                if (copy == null) {
+                    copy = new ArrayList<>(Math.max(0, Tw * Th));
+                    Integer none = Integer.valueOf(-1);
+                    for (int k = 0; k < Tw * Th; k++)
+                        copy.add(none);
+                }
                 layers.get(lay).setTset(copy);
             }
 
@@ -33589,25 +33627,33 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             layer l = layers.get(lay);
             if (l.getType() != layer.Type.TILE)
                 continue;
-            l.getTile().clear();
+            java.util.List<Integer> tileList = l.getTile();
+            java.util.List<Integer> tsetList = l.getTset();
+            java.util.List<Long> strList = l.getStr();
+            tileList.clear();
+            if (tileList instanceof ArrayList)
+                ((ArrayList<Integer>) tileList).ensureCapacity(Math.max(0, Tw * Th));
+            Integer none = Integer.valueOf(-1);
             // Can run mid-load (tileset renumbering) before getTset() is filled; CacheAllTset() redoes this after.
-            int filled = Math.min(l.getTset().size(), l.getStr().size());
+            int filled = Math.min(tsetList.size(), strList.size());
             for (int k = 0; k < Tw * Th; k++) {
-                l.getTile().add(-1);
+                tileList.add(none);
                 if (k >= filled)
                     continue;
-                int ts = l.getTset().get(k);
+                int ts = tsetList.get(k);
                 if (ts < 0 || ts >= tilesets.size())
                     continue;
-                if (tilesets.get(ts).getTiles().size() > 0) {
-                    for (int j = 0; j < tilesets.get(ts).getTiles().size(); j++) {
-                        tile tt = tilesets.get(ts).getTiles().get(j);
-                        if (tt.getTileID() + tilesets.get(ts).getFirstgid() == l.getStr().get(k)) {
-                            l.getTile().set(k, j);
-                            break;
-                        }
-                    }
-                }
+                tileset tso = tilesets.get(ts);
+                if (tso.getTiles().isEmpty())
+                    continue;
+                // Index of the metadata entry whose tileID + firstgid equals the raw cell value
+                // (binary search on the sorted list instead of a scan per cell).
+                long local = strList.get(k) - (long) tso.getFirstgid();
+                if (local < Integer.MIN_VALUE || local > Integer.MAX_VALUE)
+                    continue;
+                int j = tso.findTileListIndex((int) local);
+                if (j >= 0)
+                    tileList.set(k, j);
             }
         }
 
