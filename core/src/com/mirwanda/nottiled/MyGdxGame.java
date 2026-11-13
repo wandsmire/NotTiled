@@ -10748,6 +10748,50 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }).start();
     }
 
+    private void runImportTileset() {
+        try {
+            loadingfile = true;
+            errors = " ";
+            if (fImportWidth.getText().equalsIgnoreCase("")) {
+                fImportWidth.setText(Tsw + "");
+            }
+            if (fImportHeight.getText().equalsIgnoreCase("")) {
+                fImportHeight.setText(Tsh + "");
+            }
+            if (thefile.name().toLowerCase().contains(".tsx")) {
+                if (Gdx.files.getExternalStoragePath().contains("\\")) {
+                    loadtsx(thefile, tilesets, curdir);
+                } else {
+                    loadtsx(thefile, tilesets, curdir);
+                }
+
+            } else if (cImportCollection.isChecked()) {
+                addImageToCollectionTileset(thefile, null);
+            } else {
+                addImageTset(thefile);
+            }
+
+            CacheAllTset();
+            loadingfile = false;
+
+            seltset = tilesets.size() - 1;
+            curtset = seltset;
+            onToPicker();
+            recenterpick();
+            cue("importtilesetok");
+            pushUpdateIfCollaborating();
+        } catch (Exception e) {
+            loadingfile = false;
+            onToPicker();
+        }
+
+        if (errors != " ") {
+            status(errors, 5);
+        } else {
+            cue("tilesetadded");
+        }
+    }
+
     public void loadImport() {
 
         bImportOK = new TextButton(z.ok, skin);
@@ -10758,47 +10802,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bImportOK.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                try {
-                    loadingfile = true;
-                    errors = " ";
-                    if (fImportWidth.getText().equalsIgnoreCase("")) {
-                        fImportWidth.setText(Tsw + "");
+                // Importing a big image is heavy: run it on the next frame, outside input processing.
+                loadingfile = true;
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        runImportTileset();
                     }
-                    if (fImportHeight.getText().equalsIgnoreCase("")) {
-                        fImportHeight.setText(Tsh + "");
-                    }
-                    if (thefile.name().toLowerCase().contains(".tsx")) {
-                        if (Gdx.files.getExternalStoragePath().contains("\\")) {
-                            loadtsx(thefile, tilesets, curdir);
-                        } else {
-                            loadtsx(thefile, tilesets, curdir);
-                        }
-
-                    } else if (cImportCollection.isChecked()) {
-                        addImageToCollectionTileset(thefile, null);
-                    } else {
-                        addImageTset(thefile);
-                    }
-
-                    CacheAllTset();
-                    loadingfile = false;
-
-                    seltset = tilesets.size() - 1;
-                    curtset = seltset;
-                    onToPicker();
-                    recenterpick();
-                    cue("importtilesetok");
-                    pushUpdateIfCollaborating();
-                } catch (Exception e) {
-                    loadingfile = false;
-                    onToPicker();
-                }
-
-                if (errors != " ") {
-                    status(errors, 5);
-                } else {
-                    cue("tilesetadded");
-                }
+                });
             }
         });
 
@@ -25551,8 +25562,14 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                         selected.add(importable.get(i));
                 }
                 dlg.hide();
-                finishCollectionImport(dir, appendTsetIdx,
-                        selected.toArray(new FileHandle[selected.size()]), exitPoint);
+                final FileHandle[] chosen = selected.toArray(new FileHandle[selected.size()]);
+                // Run on the next frame, outside the input callback (big imports ANR'd here).
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        finishCollectionImport(dir, appendTsetIdx, chosen, exitPoint);
+                    }
+                });
             }
         });
         content.add(btnImport).width(dialogBtnWidth).height(btny).padBottom(4).row();
