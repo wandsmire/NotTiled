@@ -4647,6 +4647,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void drawTiles() {
+        AnimatedGidResolver animGids = new AnimatedGidResolver();
         if (is3DMode || isFull3DMode) {
             updateCam3d();
         }
@@ -4803,16 +4804,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 tiles = tilesets.get(initset).getTiles();
                                 tilesize = tiles.size();
 
-                                if (tilesize > 0) {
-                                    for (int n = 0; n < tilesize; n++) {
-                                        if (tiles.get(n).getAnimation().size() > 0) {
-                                            if (mm == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
-                                                mm = (long) tiles.get(n).getActiveFrameID()
-                                                        + tilesets.get(initset).getFirstgid();
-                                            }
-                                        }
-                                    }
-                                }
+                                mm = animGids.resolve(initset, mm);
 
                                 resolveSprite(tilesets.get(initset), (int) (mm - tilesets.get(initset).getFirstgid()));
                                 margin = tilesets.get(initset).getMargin();
@@ -5397,16 +5389,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 tiles = tilesets.get(initset).getTiles();
                                 tilesize = tiles.size();
 
-                                if (tilesize > 0) {
-                                    for (int n = 0; n < tilesize; n++) {
-                                        if (tiles.get(n).getAnimation().size() > 0) {
-                                            if (mm == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
-                                                mm = (long) tiles.get(n).getActiveFrameID()
-                                                        + tilesets.get(initset).getFirstgid();
-                                            }
-                                        }
-                                    }
-                                }
+                                mm = animGids.resolve(initset, mm);
 
                                 resolveSprite(tilesets.get(initset), (int) (mm - tilesets.get(initset).getFirstgid()));
                                 margin = tilesets.get(initset).getMargin();
@@ -13981,7 +13964,43 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }
     }
 
+    /**
+     * Per-call replacement for scanning a tileset's whole tile list per cell to swap animated tiles
+     * for their current frame. Visits only the animated tiles, in list order, so chained matches
+     * behave exactly as before.
+     */
+    private final class AnimatedGidResolver {
+        private final java.util.HashMap<Integer, tile[]> animatedByTset = new java.util.HashMap<Integer, tile[]>();
+
+        long resolve(int initset, long mm) {
+            Integer key = Integer.valueOf(initset);
+            tile[] anim = animatedByTset.get(key);
+            if (anim == null) {
+                java.util.List<tile> list = tilesets.get(initset).getTiles();
+                int n = 0;
+                for (int i = 0; i < list.size(); i++)
+                    if (list.get(i).getAnimation().size() > 0)
+                        n++;
+                anim = new tile[n];
+                n = 0;
+                for (int i = 0; i < list.size(); i++)
+                    if (list.get(i).getAnimation().size() > 0)
+                        anim[n++] = list.get(i);
+                animatedByTset.put(key, anim);
+            }
+            if (anim.length == 0)
+                return mm;
+            int firstgid = tilesets.get(initset).getFirstgid();
+            for (int i = 0; i < anim.length; i++) {
+                if (mm == anim[i].getTileID() + firstgid)
+                    mm = (long) anim[i].getActiveFrameID() + firstgid;
+            }
+            return mm;
+        }
+    }
+
     private Pixmap renderMapCoverBasePixmap(int cellPx) {
+        AnimatedGidResolver animGids = new AnimatedGidResolver();
         Gdx.gl.glEnable(GL20.GL_BLEND);
         int drawCell = Math.max(1, cellPx);
         Pixmap pm2 = new Pixmap(Tw * drawCell, Th * drawCell, Pixmap.Format.RGBA8888);
@@ -14051,16 +14070,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             }
                             tiles = tilesets.get(initset).getTiles();
                             tilesize = tiles.size();
-                            if (tilesize > 0) {
-                                for (int n = 0; n < tilesize; n++) {
-                                    if (tiles.get(n).getAnimation().size() > 0) {
-                                        if (mm == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
-                                            mm = (long) tiles.get(n).getActiveFrameID()
-                                                    + tilesets.get(initset).getFirstgid();
-                                        }
-                                    }
-                                }
-                            }
+                            mm = animGids.resolve(initset, mm);
                             resolveSprite(tilesets.get(initset), (int) (mm - tilesets.get(initset).getFirstgid()));
                             margin = tilesets.get(initset).getMargin();
                             spacing = tilesets.get(initset).getSpacing();
@@ -14224,6 +14234,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void exporttopng(String filenamenya, boolean export) {
+        AnimatedGidResolver animGids = new AnimatedGidResolver();
         try {
             Gdx.gl.glEnable(GL20.GL_BLEND);
             Pixmap pm2 = new Pixmap(Tw * Tsw, Th * Tsh, Pixmap.Format.RGBA8888);
@@ -14306,16 +14317,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 tiles = tilesets.get(initset).getTiles();
                                 tilesize = tiles.size();
 
-                                if (tilesize > 0) {
-                                    for (int n = 0; n < tilesize; n++) {
-                                        if (tiles.get(n).getAnimation().size() > 0) {
-                                            if (mm == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
-                                                mm = (long) tiles.get(n).getActiveFrameID()
-                                                        + tilesets.get(initset).getFirstgid();
-                                            }
-                                        }
-                                    }
-                                }
+                                mm = animGids.resolve(initset, mm);
 
                                 resolveSprite(tilesets.get(initset), (int) (mm - tilesets.get(initset).getFirstgid()));
                                 margin = tilesets.get(initset).getMargin();
@@ -14677,6 +14679,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     private void exportastileset(String filenamenya) {
+        AnimatedGidResolver animGids = new AnimatedGidResolver();
         try {
             double wide = Math.ceil(Math.sqrt(layers.size()));
             double tall = Math.ceil(layers.size() / wide);
@@ -14773,16 +14776,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             tiles = tilesets.get(initset).getTiles();
                             tilesize = tiles.size();
 
-                            if (tilesize > 0) {
-                                for (int n = 0; n < tilesize; n++) {
-                                    if (tiles.get(n).getAnimation().size() > 0) {
-                                        if (mm == tiles.get(n).getTileID() + tilesets.get(initset).getFirstgid()) {
-                                            mm = (long) tiles.get(n).getActiveFrameID()
-                                                    + tilesets.get(initset).getFirstgid();
-                                        }
-                                    }
-                                }
-                            }
+                            mm = animGids.resolve(initset, mm);
 
                             resolveSprite(tilesets.get(initset), (int) (mm - tilesets.get(initset).getFirstgid()));
                             margin = tilesets.get(initset).getMargin();
