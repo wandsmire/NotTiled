@@ -21733,162 +21733,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         bApplyMP.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                // newtmxfile(true);
-                try {
-                    // loadingfile=true;
-                    int nTh = Integer.parseInt(fTh.getText());
-
-                    if (nTh > Th) {// expand height
-
-                        java.util.List<Long> tStrs = new ArrayList<Long>();
-                        java.util.List<Integer> tTsets = new ArrayList<Integer>();
-                        java.util.List<Integer> tTiles = new ArrayList<Integer>();
-
-                        for (int k = 0; k < Tw; k++) {
-                            tStrs.add((long) 0);
-                            tTsets.add(-1);
-                            tTiles.add(-1);
-                        }
-
-                        for (int j = 0; j < layers.size(); j++) {
-                            if (layers.get(j).getType() != layer.Type.TILE)
-                                continue;
-                            java.util.List<Long> strs = layers.get(j).getStr();
-                            java.util.List<Integer> tsets = layers.get(j).getTset();
-                            java.util.List<Integer> tiles = layers.get(j).getTile();
-                            for (int i = 0; i < nTh - Th; i++) {
-
-                                if (cb2.isChecked()) {
-                                    strs.addAll(0, tStrs);
-                                    tsets.addAll(0, tTsets);
-                                    tiles.addAll(0, tTiles);
-                                } else {
-                                    strs.addAll(tStrs);
-                                    tsets.addAll(tTsets);
-                                    tiles.addAll(tTiles);
-                                }
-                            }
-                        }
-                    } else if (nTh < Th) {// shrink height
-                        for (int i = 0; i < Th - nTh; i++) {
-                            for (int k = 0; k < Tw; k++) {
-                                for (int j = 0; j < layers.size(); j++) {
-                                    if (layers.get(j).getType() != layer.Type.TILE)
-                                        continue;
-                                    if (cb2.isChecked()) {
-                                        layers.get(j).getStr().remove(0);
-                                        layers.get(j).getTset().remove(0);
-                                        layers.get(j).getTile().remove(0);
-                                    } else {
-                                        layers.get(j).getStr().remove(layers.get(j).getStr().size() - 1);
-                                        layers.get(j).getTset().remove(layers.get(j).getTset().size() - 1);
-                                        layers.get(j).getTile().remove(layers.get(j).getTile().size() - 1);
-
-                                    }
-                                }
-                            }
-                        }
+                // Run outside input processing so the Android UI thread is not blocked on the input lock.
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        applyMapProperties();
                     }
-                    Th = nTh;
-
-                    int nTw = Integer.parseInt(fTw.getText());
-                    if (nTw > Tw) {// expand width
-                        java.util.List<Long> tStrs = new ArrayList<Long>();
-                        java.util.List<Integer> tTsets = new ArrayList<Integer>();
-                        java.util.List<Integer> tTiles = new ArrayList<Integer>();
-
-                        for (int k = 0; k < nTw - Tw; k++) {
-                            tStrs.add((long) 0);
-                            tTsets.add(-1);
-                            tTiles.add(-1);
-                        }
-
-                        for (int j = 0; j < layers.size(); j++) {
-                            if (layers.get(j).getType() != layer.Type.TILE)
-                                continue;
-                            java.util.List<Long> strs = layers.get(j).getStr();
-                            java.util.List<Integer> tsets = layers.get(j).getTset();
-                            java.util.List<Integer> tiles = layers.get(j).getTile();
-
-                            for (int i = Th; i > 0; i--) {
-                                int moyeng = i * Tw;
-                                if (cb1.isChecked())
-                                    moyeng -= Tw;
-                                strs.addAll(moyeng, tStrs);
-                                tsets.addAll(moyeng, tTsets);
-                                tiles.addAll(moyeng, tTiles);
-                            }
-                        }
-                    } else if (nTw < Tw) {// shrink width
-                        for (int i = Tw * Th; i > 0; i--) {
-                            for (int j = 0; j < layers.size(); j++) {
-                                if (layers.get(j).getType() != layer.Type.TILE)
-                                    continue;
-                                if (cb1.isChecked()) {
-                                    if ((i) % Tw == 1) {
-                                        // i - 1 is the row's first cell; removing it repeatedly trims the left columns.
-                                        for (int k = 1; k <= Tw - nTw; k++) {
-                                            layers.get(j).getStr().remove(i - 1);
-                                            layers.get(j).getTset().remove(i - 1);
-                                            layers.get(j).getTile().remove(i - 1);
-                                        }
-                                    }
-                                } else {
-                                    if ((i) % Tw == 0) {
-                                        for (int k = 1; k <= Tw - nTw; k++) {
-                                            layers.get(j).getStr().remove(i - k);
-                                            layers.get(j).getTset().remove(i - k);
-                                            layers.get(j).getTile().remove(i - k);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Tw = nTw;
-
-                    int newTsh = Integer.parseInt(fTsh.getText());
-                    int newTsw = Integer.parseInt(fTsw.getText());
-
-                    if (cbAdjustObjects.isChecked()) {
-                        if (Tsw != newTsw || Tsh != newTsh) {
-                            float scaleX = (float) newTsw / (float) Tsw;
-                            float scaleY = (float) newTsh / (float) Tsh;
-                            for (layer lay : layers) {
-                                if (lay.getType() == layer.Type.OBJECT) {
-                                    for (obj ob : lay.getObjects()) {
-                                        ob.setX(ob.getX() * scaleX);
-                                        ob.setY(ob.getY() * scaleY);
-                                        ob.setW(ob.getW() * scaleX);
-                                        ob.setH(ob.getH() * scaleY);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Tsh = newTsh;
-                    Tsw = newTsw;
-
-                    if (fFilename.getText() != "")
-                        curfile = fFilename.getText();
-                    mapFormat = sbMapFormat.getSelected().toString();
-                    renderorder = sbMapRenderOrder.getSelected().toString();
-                    orientation = sbMapOrientation.getSelected().toString();
-                    resetCaches();
-                    resetMinimap();
-
-                    if (prevStage == tMenu) {
-                        gotoStage(tMenu);
-                    } else {
-                        backToMap();
-                    }
-                    // loadingfile=false;
-
-                } catch (Exception e) {
-                    msgbox(z.error);
-                    ErrorBung(e, "errorlog.txt");
-                }
+                });
             }
         });
 
@@ -21984,6 +21835,97 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tProperties.add(bApplyMP).padBottom(2).colspan(2).row();
         tProperties.add(bCancelMP).padBottom(2).colspan(2).row();
 
+    }
+
+    private void applyMapProperties() {
+                try {
+                    // loadingfile=true;
+                    int nTh = Integer.parseInt(fTh.getText());
+                    int nTw = Integer.parseInt(fTw.getText());
+                    if (nTh != Th || nTw != Tw) {
+                        // One pass per list (was O(n^2) addAll(0,..)/remove(0) shifting; ANR on big maps).
+                        // cb2: rows are added/removed at the top; cb1: columns at the left.
+                        int rowOff = cb2.isChecked() ? Th - nTh : 0;
+                        int colOff = cb1.isChecked() ? Tw - nTw : 0;
+                        for (int j = 0; j < layers.size(); j++) {
+                            if (layers.get(j).getType() != layer.Type.TILE)
+                                continue;
+                            resizeGridList(layers.get(j).getStr(), Tw, Th, nTw, nTh, rowOff, colOff, Long.valueOf(0));
+                            resizeGridList(layers.get(j).getTset(), Tw, Th, nTw, nTh, rowOff, colOff, Integer.valueOf(-1));
+                            resizeGridList(layers.get(j).getTile(), Tw, Th, nTw, nTh, rowOff, colOff, Integer.valueOf(-1));
+                        }
+                    }
+                    Th = nTh;
+                    Tw = nTw;
+
+                    int newTsh = Integer.parseInt(fTsh.getText());
+                    int newTsw = Integer.parseInt(fTsw.getText());
+
+                    if (cbAdjustObjects.isChecked()) {
+                        if (Tsw != newTsw || Tsh != newTsh) {
+                            float scaleX = (float) newTsw / (float) Tsw;
+                            float scaleY = (float) newTsh / (float) Tsh;
+                            for (layer lay : layers) {
+                                if (lay.getType() == layer.Type.OBJECT) {
+                                    for (obj ob : lay.getObjects()) {
+                                        ob.setX(ob.getX() * scaleX);
+                                        ob.setY(ob.getY() * scaleY);
+                                        ob.setW(ob.getW() * scaleX);
+                                        ob.setH(ob.getH() * scaleY);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Tsh = newTsh;
+                    Tsw = newTsw;
+
+                    if (fFilename.getText() != "")
+                        curfile = fFilename.getText();
+                    mapFormat = sbMapFormat.getSelected().toString();
+                    renderorder = sbMapRenderOrder.getSelected().toString();
+                    orientation = sbMapOrientation.getSelected().toString();
+                    resetCaches();
+                    resetMinimap();
+
+                    if (prevStage == tMenu) {
+                        gotoStage(tMenu);
+                    } else {
+                        backToMap();
+                    }
+                    // loadingfile=false;
+
+                } catch (Exception e) {
+                    msgbox(z.error);
+                    ErrorBung(e, "errorlog.txt");
+                }
+    }
+
+    /**
+     * Resize a row-major Tw*Th grid list in place in a single pass. New cell (r,c) takes old cell
+     * (r+rowOff, c+colOff) when inside the old grid, otherwise fill.
+     */
+    private static <T> void resizeGridList(java.util.List<T> list, int oldW, int oldH, int newW, int newH,
+            int rowOff, int colOff, T fill) {
+        int n = Math.max(0, newW) * Math.max(0, newH);
+        ArrayList<T> out = new ArrayList<T>(n);
+        int size = list.size();
+        for (int r = 0; r < newH; r++) {
+            int orow = r + rowOff;
+            boolean rowIn = orow >= 0 && orow < oldH;
+            for (int c = 0; c < newW; c++) {
+                int ocol = c + colOff;
+                if (rowIn && ocol >= 0 && ocol < oldW) {
+                    int oi = orow * oldW + ocol;
+                    out.add(oi < size ? list.get(oi) : fill);
+                } else {
+                    out.add(fill);
+                }
+            }
+        }
+        list.clear();
+        list.addAll(out);
     }
 
     public void loadTileManagement() {
