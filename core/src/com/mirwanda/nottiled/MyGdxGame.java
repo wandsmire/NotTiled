@@ -1764,25 +1764,36 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
         for (property p : properties) {
             if (p.getName().equalsIgnoreCase("sw1")) {
-                swatchValue.set(0, Integer.parseInt(p.getValue()));
+                swatchValue.set(0, parseSwatchValue(p.getValue()));
             }
             if (p.getName().equalsIgnoreCase("sw2")) {
-                swatchValue.set(1, Integer.parseInt(p.getValue()));
+                swatchValue.set(1, parseSwatchValue(p.getValue()));
             }
             if (p.getName().equalsIgnoreCase("sw3")) {
-                swatchValue.set(2, Integer.parseInt(p.getValue()));
+                swatchValue.set(2, parseSwatchValue(p.getValue()));
             }
             if (p.getName().equalsIgnoreCase("sw4")) {
-                swatchValue.set(3, Integer.parseInt(p.getValue()));
+                swatchValue.set(3, parseSwatchValue(p.getValue()));
             }
             if (p.getName().equalsIgnoreCase("sw5")) {
-                swatchValue.set(4, Integer.parseInt(p.getValue()));
+                swatchValue.set(4, parseSwatchValue(p.getValue()));
             }
             if (p.getName().equalsIgnoreCase("sw6")) {
-                swatchValue.set(5, Integer.parseInt(p.getValue()));
+                swatchValue.set(5, parseSwatchValue(p.getValue()));
             }
         }
 
+    }
+
+    /** Swatch property value; a malformed or empty value leaves the slot empty instead of crashing. */
+    private static int parseSwatchValue(String v) {
+        if (v == null)
+            return 0;
+        try {
+            return Integer.parseInt(v.trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     private void asyncinitiation() {
@@ -7864,7 +7875,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         stage.getViewport().setScreenSize(width, height);
         if ("stage".equals(kartu)) {
             // setMenuMap();
-            gotoStage(lastStage);
+            // lastStage is null while a stage-only dialog is up (safe mode, backup recovery):
+            // keep the dialog instead of crashing in gotoStage(null).
+            if (lastStage != null)
+                gotoStage(lastStage);
             if (lastStage == tMenu || lastStage == tMap) {
                 setMenuMap();
                 gotoStage(tMenu);
@@ -20692,7 +20706,18 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 properties at = new properties();
                 Json json = new Json();
                 FileHandle f = Gdx.files.absolute(basepath + "NotTiled/sample/json/" + lptlist.getSelected());
-                at = json.fromJson(properties.class, f);
+                try {
+                    at = json.fromJson(properties.class, f);
+                } catch (com.badlogic.gdx.utils.SerializationException e) {
+                    // corrupt / non-template JSON (or missing file): report instead of crashing
+                    status(z.error + ": " + f.name(), 3);
+                    ErrorBung(e, "errorlog.txt");
+                    return;
+                }
+                if (at == null || at.getProperties() == null) {
+                    status(z.error + ": " + f.name(), 3);
+                    return;
+                }
 
                 switch (sender) {
                     case "object":
@@ -25637,6 +25662,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
     }
 
     public void gotoStage(Table table) {
+        if (table == null) {
+            log("gotoStage(null) ignored");
+            return;
+        }
         prevStage = lastStage;
         stage.clear();
         stage.addActor(table);

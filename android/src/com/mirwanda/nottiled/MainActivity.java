@@ -763,6 +763,13 @@ public class MainActivity extends AndroidApplication implements Interface
 								}
 
 								SAFstatus = "OK";
+							} catch (FileTooLargeException e) {
+								showToast("File is too large to open (" + (e.size / (1024 * 1024)) + " MB).");
+								SAFstatus = "error";
+							} catch (OutOfMemoryError e) {
+								SAFdata = null;
+								showToast("Not enough memory to open this file.");
+								SAFstatus = "error";
 							} catch (Exception e) {
 								e.printStackTrace();
 								SAFstatus = "error";
@@ -861,7 +868,49 @@ public class MainActivity extends AndroidApplication implements Interface
 
 
 
+	static final class FileTooLargeException extends IOException {
+		final long size;
+
+		FileTooLargeException(long size) {
+			super("File too large: " + size);
+			this.size = size;
+		}
+	}
+
+	private void showToast(final String msg) {
+		runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					android.widget.Toast.makeText(MainActivity.this, msg, android.widget.Toast.LENGTH_LONG).show();
+				} catch (Exception ignored) {
+				}
+			}
+		});
+	}
+
+	/** Size reported by the provider, or -1 when unknown. */
+	private long queryUriSize(Uri uri) {
+		Cursor c = null;
+		try {
+			c = getContentResolver().query(uri, new String[] { OpenableColumns.SIZE }, null, null, null);
+			if (c != null && c.moveToFirst() && !c.isNull(0))
+				return c.getLong(0);
+		} catch (Exception ignored) {
+		} finally {
+			if (c != null)
+				c.close();
+		}
+		return -1;
+	}
+
 	private byte[] readBytes(Uri uri) throws IOException {
+		// The whole file is buffered (twice, briefly, by ByteArrayOutputStream.toByteArray), so refuse
+		// files that cannot fit in the Java heap instead of dying with OutOfMemoryError.
+		long limit = Runtime.getRuntime().maxMemory() / 4;
+		long size = queryUriSize(uri);
+		if (size > limit)
+			throw new FileTooLargeException(size);
 
 		InputStream inputStream =
 				getContentResolver().openInputStream(uri);
@@ -873,7 +922,13 @@ public class MainActivity extends AndroidApplication implements Interface
 
 		int len = 0;
 
+		long total = 0;
 		while ((len = inputStream.read(buffer)) != -1) {
+			total += len;
+			if (total > limit) {
+				inputStream.close();
+				throw new FileTooLargeException(total);
+			}
 			byteBuffer.write(buffer, 0, len);
 		}
 		inputStream.close();
