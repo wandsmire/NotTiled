@@ -11706,13 +11706,35 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             return;
         }
 
-        pbg = new Pixmap(background.getWidth(), background.getHeight(), Pixmap.Format.RGBA8888);
-        pbg = pixmapfromtexture(background, "ff00ff");
-        pbg = resizepixmap(pbg, Tw * Tsw, Th * Tsh);
+        if (seltset < 0 || seltset >= tilesets.size())
+            return;
+        if (pixmapTooLarge((long) Tw * Tsw, (long) Th * Tsh)) {
+            status("Map is too large to trace at full size.", 3);
+            return;
+        }
+
+        if (pbg != null) {
+            try {
+                pbg.dispose();
+            } catch (Throwable ignored) {
+            }
+            pbg = null;
+        }
+        try {
+            pbg = pixmapfromtexture(background, "ff00ff");
+            pbg = resizepixmap(pbg, Tw * Tsw, Th * Tsh);
+        } catch (Throwable e) {
+            // native allocation failure (GdxRuntimeException) or Java OOM
+            pbg = null;
+            status(z.error, 3);
+            ErrorBung(e, "errorlog.txt");
+            return;
+        }
         pts = tilesets.get(seltset).getPixmap();
 
         tileset tts = tilesets.get(seltset);
         tscolor = new ArrayList<Color>();
+        PixelReader tsReader = new PixelReader(pts);
 
         for (int yy = 0; yy < tts.getHeight(); yy++) {
             for (int xx = 0; xx < tts.getWidth(); xx++) {
@@ -11722,16 +11744,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
                 for (int j = 0; j < tts.getTileheight(); j++) {
                     for (int i = 0; i < tts.getTilewidth(); i++) {
-                        Color tc = new Color(pts.getPixel(xx * tts.getTilewidth() + i, yy * tts.getTileheight() + j));
-                        // if (tc.a >0){
+                        int px = tsReader.get(xx * tts.getTilewidth() + i, yy * tts.getTileheight() + j);
+                        // same values as new Color(px).r/g/b/a
                         tcell++;
-                        rr += tc.r;
-                        gg += tc.g;
-                        bb += tc.b;
-                        aa += tc.a;
-
-                        // }
-
+                        rr += ((px >>> 24) & 0xff) / 255f;
+                        gg += ((px >>> 16) & 0xff) / 255f;
+                        bb += ((px >>> 8) & 0xff) / 255f;
+                        aa += (px & 0xff) / 255f;
                     }
                 }
                 // if (aa/tcell<0.5f) continue;
@@ -11741,10 +11760,17 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             }
         }
 
-        for (int x = 0; x < Tw; x++) {
-            for (int y = 0; y < Th; y++) {
-                traceCell(x, y);
+        traceReader = new PixelReader(pbg);
+        traceMatchCache.clear();
+        try {
+            for (int x = 0; x < Tw; x++) {
+                for (int y = 0; y < Th; y++) {
+                    traceCell(x, y);
+                }
             }
+        } finally {
+            traceReader = null;
+            traceMatchCache.clear();
         }
         // background.dispose();
         // background=null;
@@ -11752,41 +11778,80 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     }
 
+    /** Reads RGBA8888 values like Pixmap.getPixel, straight from the buffer when possible (no JNI). */
+    private static final class PixelReader {
+        private final Pixmap pm;
+        private final ByteBuffer buf;
+        private final int w;
+
+        PixelReader(Pixmap pm) {
+            this.pm = pm;
+            this.w = pm.getWidth();
+            this.buf = pm.getFormat() == Pixmap.Format.RGBA8888 ? pm.getPixels() : null;
+        }
+
+        int get(int x, int y) {
+            if (buf == null || x < 0 || y < 0 || x >= w || y >= pm.getHeight())
+                return pm.getPixel(x, y);
+            int o = (y * w + x) * 4;
+            return ((buf.get(o) & 0xff) << 24) | ((buf.get(o + 1) & 0xff) << 16) | ((buf.get(o + 2) & 0xff) << 8)
+                    | (buf.get(o + 3) & 0xff);
+        }
+    }
+
+    private PixelReader traceReader;
+    // Average cell colour (r,g,b float bits) -> best gid; identical colours give identical matches.
+    private final HashMap<String, Long> traceMatchCache = new HashMap<String, Long>();
+
+    /** Guard for full-size pixmaps (native allocation failure aborts the process on some devices). */
+    private static final long MAX_PIXMAP_PIXELS = 40L * 1000L * 1000L;
+
+    private static boolean pixmapTooLarge(long w, long h) {
+        return w <= 0 || h <= 0 || w * h > MAX_PIXMAP_PIXELS;
+    }
+
     private void traceCell(int x, int y) {
         // Color bg = new Color(pbg.getPixel( x,y ));
         float tcell = 0;
         float rr = 0, gg = 0, bb = 0, aa = 0;
+        PixelReader reader = traceReader != null ? traceReader : new PixelReader(pbg);
         for (int i = 0; i < Tsw; i++) {
             for (int j = 0; j < Tsh; j++) {
-                Color tc = new Color(pbg.getPixel((int) (x * Tsw) + i, (int) (y * Tsh) + j));
-                // if (tc.a >0){
+                int px = reader.get((int) (x * Tsw) + i, (int) (y * Tsh) + j);
+                // same values as new Color(px).r/g/b/a
                 tcell++;
-                rr += tc.r;
-                gg += tc.g;
-                bb += tc.b;
-                aa += tc.a;
-                // }
-
+                rr += ((px >>> 24) & 0xff) / 255f;
+                gg += ((px >>> 16) & 0xff) / 255f;
+                bb += ((px >>> 8) & 0xff) / 255f;
+                aa += (px & 0xff) / 255f;
             }
         }
         // if (aa/tcell<0.5f) return;
         Color bg = new Color(rr / tcell, gg / tcell, bb / tcell, 0);
 
+        String matchKey = Float.floatToIntBits(bg.r) + ":" + Float.floatToIntBits(bg.g) + ":"
+                + Float.floatToIntBits(bg.b);
+        Long cachedMatch = traceMatchCache.get(matchKey);
         long cnum = 0;
-        float cnumdiff = 999999;
+        if (cachedMatch != null) {
+            cnum = cachedMatch.longValue();
+        } else {
+            float cnumdiff = 999999;
 
-        tileset tts = tilesets.get(seltset);
-        for (int xx = 0; xx < tts.getWidth(); xx++) {
-            for (int yy = 0; yy < tts.getHeight(); yy++) {
+            tileset tts = tilesets.get(seltset);
+            for (int xx = 0; xx < tts.getWidth(); xx++) {
+                for (int yy = 0; yy < tts.getHeight(); yy++) {
 
-                Color tc = tscolor.get(yy * tts.getWidth() + xx);
+                    Color tc = tscolor.get(yy * tts.getWidth() + xx);
 
-                float rdiff = Math.abs(tc.r - bg.r) + Math.abs(tc.g - bg.g) + Math.abs(tc.b - bg.b);
-                if (rdiff < cnumdiff) {
-                    cnumdiff = rdiff;
-                    cnum = (long) tts.getFirstgid() + (yy * tts.getWidth() + xx);
+                    float rdiff = Math.abs(tc.r - bg.r) + Math.abs(tc.g - bg.g) + Math.abs(tc.b - bg.b);
+                    if (rdiff < cnumdiff) {
+                        cnumdiff = rdiff;
+                        cnum = (long) tts.getFirstgid() + (yy * tts.getWidth() + xx);
+                    }
                 }
             }
+            traceMatchCache.put(matchKey, Long.valueOf(cnum));
         }
 
         layers.get(selLayer).getStr().set(y * Tw + x, cnum);
@@ -12573,8 +12638,13 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         tracebackground.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-
-                traceBackground();
+                // Heavy; run on the next frame, not inside the input callback.
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        traceBackground();
+                    }
+                });
             }
         });
 
@@ -14003,6 +14073,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         AnimatedGidResolver animGids = new AnimatedGidResolver();
         Gdx.gl.glEnable(GL20.GL_BLEND);
         int drawCell = Math.max(1, cellPx);
+        if (pixmapTooLarge((long) Tw * drawCell, (long) Th * drawCell))
+            return null;
         Pixmap pm2 = new Pixmap(Tw * drawCell, Th * drawCell, Pixmap.Format.RGBA8888);
         tilesetsize = tilesets.size();
         if (tilesetsize > 0 && !loadingfile) {
@@ -14237,6 +14309,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         AnimatedGidResolver animGids = new AnimatedGidResolver();
         try {
             Gdx.gl.glEnable(GL20.GL_BLEND);
+            if (pixmapTooLarge((long) Tw * Tsw, (long) Th * Tsh)) {
+                msgbox("Image too large to export (" + ((long) Tw * Tsw) + "x" + ((long) Th * Tsh) + " px).");
+                return;
+            }
             Pixmap pm2 = new Pixmap(Tw * Tsw, Th * Tsh, Pixmap.Format.RGBA8888);
             tilesetsize = tilesets.size();
             if (tilesetsize > 0 && !loadingfile) {
@@ -14433,6 +14509,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             int widih = mapendSelect % Tw - mapstartSelect % Tw + 1;
             int heih = mapendSelect / Tw - mapstartSelect / Tw + 1;
             status(posx + "-" + posx2 + "," + posy + "-" + posy2 + "(" + widih + "," + heih + ")", 5);
+            if (pixmapTooLarge((long) widih * Tsw, (long) heih * Tsh)) {
+                msgbox("Selection too large to export.");
+                return;
+            }
             Pixmap pm2 = new Pixmap(widih * Tsw, heih * Tsh, Pixmap.Format.RGBA8888);
             tilesetsize = tilesets.size();
             if (tilesetsize > 0 && !loadingfile) {
@@ -14688,6 +14768,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             int subsety = -1;
 
             Gdx.gl.glEnable(GL20.GL_BLEND);
+            if (pixmapTooLarge((long) Tw * Tsw * (int) wide, (long) Th * Tsh * (int) tall)) {
+                msgbox("Image too large to export.");
+                return;
+            }
             Pixmap pm2 = new Pixmap(Tw * Tsw * (int) wide, Th * Tsh * (int) tall, Pixmap.Format.RGBA8888);
             tilesetsize = tilesets.size();
             if (tilesetsize > 0 && !loadingfile) {
@@ -41364,7 +41448,7 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         pixmap100.drawPixmap(pixmap200,
                 0, 0, pixmap200.getWidth(), pixmap200.getHeight(),
                 0, 0, pixmap100.getWidth(), pixmap100.getHeight());
-        Texture texture = new Texture(pixmap100);
+        // (A Texture was created here and never used or disposed: leaked GPU memory per call.)
         pixmap200.dispose();
         return pixmap100;
     }
