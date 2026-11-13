@@ -5183,6 +5183,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     } else {
                         SpriteCache cache = (tc.isChanged() && tc.hasOldCache() && tc.getOldCache() != null)
                             ? tc.getOldCache() : tc.getCache();
+                        if (cache == null)
+                            cache = emptyChunkCache();
                         if (isFull3DMode) {
                             cache.setProjectionMatrix(camFull3D.combined);
                         } else {
@@ -5695,9 +5697,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 // Reuse existing TileCaches: save old rendered state as backup so the
                 // render loop can keep showing stale-but-valid tiles while rebuilding.
                 for (TileCache tc : tcaches) {
+                    // No new SpriteCache here: cacheTiles() builds a right-sized one per chunk (and used
+                    // to dispose this one immediately). Allocating ~100 big VBOs at once ANR'd/OOM'd.
                     tc.saveAsOldCache();
-                    SpriteCache newSC = new SpriteCache(buffersz, true);
-                    tc.setCache(newSC);
                     if (sShowAnimations || is3DMode || isFull3DMode) {
                         int[] newCids = new int[layers.size() * 3];
                         for (int i = 0; i < newCids.length; i++) newCids[i] = -1;
@@ -5715,12 +5717,11 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                 }
                 tcaches.clear();
 
-                SpriteCache cache;
+                SpriteCache cache = null; // built lazily per chunk by cacheTiles()
                 TileCache tcache;
 
                 for (int y = 0; y < maxy; y++) {
                     for (int x = 0; x < maxx; x++) {
-                        cache = new SpriteCache(buffersz, true);// 8191max
                         if (sShowAnimations || is3DMode || isFull3DMode) {
                             int[] cids = new int[layers.size() * 3];
                             for(int i=0; i<cids.length; i++) cids[i] = -1;
@@ -5766,6 +5767,15 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
             return;
         tcaches.get(tci).setChanged(true);
         isupdatingcache = true;
+    }
+
+    private SpriteCache emptyChunkCacheInstance;
+
+    /** Shared empty cache drawn for chunks whose real cache is not built yet (draws nothing). */
+    private SpriteCache emptyChunkCache() {
+        if (emptyChunkCacheInstance == null)
+            emptyChunkCacheInstance = new SpriteCache(1, false);
+        return emptyChunkCacheInstance;
     }
 
     // libGDX caps indexed SpriteCaches at 8191 sprites; dense multi-layer chunks fall back to non-indexed (no cap).
@@ -8536,6 +8546,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     // Use old backup while the chunk is being rebuilt (prevents blank minimap flicker).
                     boolean useOld = tc.isChanged() && tc.hasOldCache() && tc.getOldCache() != null;
                     cache = useOld ? tc.getOldCache() : tc.getCache();
+                    if (cache == null)
+                        cache = emptyChunkCache();
                     cache.setProjectionMatrix(minicam.combined);
                     cache.setTransformMatrix(IDT_MATRIX);
 
@@ -18778,7 +18790,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     private void invalidateTileCache() {
         for (TileCache cace : tcaches) {
-            cace.getCache().dispose();
+            if (cace.getCache() != null)
+                cace.getCache().dispose();
         }
         tcaches.clear();
         pickerCacheValid = false;
