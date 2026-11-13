@@ -23586,7 +23586,31 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
 
     }
 
-    public void getNewTextInput(TextPromptListener tpl, String title, String value, String hint) {
+    public void getNewTextInput(final TextPromptListener tpl, final String title, final String value,
+            final String hint) {
+        if (Gdx.app.getType() != Android) {
+            buildAndShowTextPrompt(tpl, title, value, hint);
+            return;
+        }
+        // AndroidGDXTextPrompt.build() posts to the UI thread and sleep-polls until it ran. On the GL
+        // thread (inside input processing, or while the UI thread waits for the frame on a keyboard
+        // resize) that deadlocks until an ANR. Build on a helper thread; listener callbacks are
+        // still delivered on the GL thread through postRunnable.
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    buildAndShowTextPrompt(tpl, title, value, hint);
+                } catch (Throwable e) {
+                    e.printStackTrace();
+                }
+            }
+        }, "text-prompt");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    private void buildAndShowTextPrompt(TextPromptListener tpl, String title, String value, String hint) {
         GDXTextPrompt textPrompt = dialogs.newDialog(GDXTextPrompt.class);
         textPrompt.setTitle(title);
         textPrompt.setMessage(hint);
