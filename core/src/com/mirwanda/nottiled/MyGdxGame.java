@@ -22035,6 +22035,10 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                     // loadingfile=true;
                     int nTh = Integer.parseInt(fTh.getText());
                     int nTw = Integer.parseInt(fTw.getText());
+                    if ((nTh != Th || nTw != Tw) && (long) nTw * nTh > MAX_NEW_MAP_CELLS) {
+                        msgbox("Map too large: " + nTw + "x" + nTh + " tiles (max " + MAX_NEW_MAP_CELLS + " tiles).");
+                        return;
+                    }
                     if (nTh != Th || nTw != Tw) {
                         // One pass per list (was O(n^2) addAll(0,..)/remove(0) shifting; ANR on big maps).
                         // cb2: rows are added/removed at the top; cb1: columns at the left.
