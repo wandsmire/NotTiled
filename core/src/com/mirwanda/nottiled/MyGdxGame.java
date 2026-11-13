@@ -21359,6 +21359,8 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
      * after the location is chosen, rather than blindly at Create time.
      */
     private void finishInternalNewFile() {
+        if (refuseHugeNewMap())
+            return; // before the overwrite prompt deletes an existing file
         newFileToDevice = false;
         String chosen = fNCurdir.getText().replace("//", "/");
         // On Android this is the "App storage" choice. fNCurdir starts as the last folder
@@ -21480,7 +21482,27 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
         }).start();
     }
 
+    /** Above this many cells per layer a new map runs out of memory / ANRs while being built. */
+    private static final long MAX_NEW_MAP_CELLS = 9L * 1000L * 1000L;
+
+    /** Shows a message and returns true when the requested new map size cannot be built. */
+    private boolean refuseHugeNewMap() {
+        try {
+            long nw = Long.parseLong(fNTw.getText().trim());
+            long nh = Long.parseLong(fNTh.getText().trim());
+            if (nw * nh > MAX_NEW_MAP_CELLS) {
+                msgbox("Map too large: " + nw + "x" + nh + " tiles (max " + MAX_NEW_MAP_CELLS + " tiles).");
+                return true;
+            }
+        } catch (NumberFormatException ignored) {
+            // newtmxfile falls back to its defaults for unparsable sizes
+        }
+        return false;
+    }
+
     private void doFinishNewFile() {
+        if (refuseHugeNewMap())
+            return;
         prefs.putString("Tsw", fNTsw.getText());
         prefs.putString("Tsh", fNTsh.getText());
         prefs.putString("Tw", fNTw.getText());
