@@ -5349,15 +5349,16 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                                 String[] ass = p.getName().split(",");
                                 int axpos = Integer.parseInt(ass[0]);
                                 int aypos = Integer.parseInt(ass[1]);
-                                int aspr = Integer.parseInt(p.getValue());
-                                int atst = getTsetFromSpr(aspr);
+                                // Long: gids with the horizontal-flip flag (bit 31) don't fit in an int.
+                                long aspr = Long.parseLong(p.getValue());
+                                int atst = getTsetFromSpr((int) (aspr & 0x0FFFFFFFL));
 
                                 //////
                                 int offsetx = 0;
                                 int offsety = 0;
 
                                 position = assemblynum;
-                                int ini = aspr;
+                                long ini = aspr;
                                 int initset = atst;
                                 xpos = (position % Tw) + axpos;
                                 ypos = (position / Tw) + aypos;
@@ -42461,8 +42462,9 @@ public class MyGdxGame extends ApplicationAdapter implements GestureListener {
                             int axpos = Integer.parseInt(ass[0]);
                             int aypos = Integer.parseInt(ass[1]);
 
-                            int aspr = Integer.parseInt(p.getValue());
-                            int atst = getTsetFromSpr(aspr);
+                            // Long: gids with the horizontal-flip flag (bit 31) don't fit in an int.
+                            long aspr = Long.parseLong(p.getValue());
+                            int atst = getTsetFromSpr((int) (aspr & 0x0FFFFFFFL));
                             int newnum = assemblynum + (axpos) + (aypos * Tw);
                             ////////////
 
